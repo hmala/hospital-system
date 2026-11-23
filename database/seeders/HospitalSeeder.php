@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Hospital;
+use Illuminate\Database\Seeder;
 
 class HospitalSeeder extends Seeder
 {
     public function run()
     {
         Hospital::create([
-            'name' => 'مستشفى الكفاءات الاهلي',
+            'name' => 'مستشفى الكفاءات الأهلي',
             'owner_name' => 'د. علي محمد',
             'phone' => '07701234567',
             'address' => 'بغداد - المنصور',

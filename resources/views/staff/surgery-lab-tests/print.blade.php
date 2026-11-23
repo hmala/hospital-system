@@ -947,38 +947,38 @@
         if (str_starts_with($cleanPhone, '07')) {
             $cleanPhone = '964' . substr($cleanPhone, 1);
         }
-        $waShareUrl = $cleanPhone ? 'https://wa.me/' . $cleanPhone . '?text=' . urlencode("مرحباً بك {$rawName}، تم إصدار تقرير تحاليل عمليتك الجراحية المعتمد من مستشفى الفرات الأهلي:\n" . $verifyUrl) : null;
+        $waShareUrl = $cleanPhone ? 'https://wa.me/' . $cleanPhone . '?text=' . urlencode("مرحباً بك {$rawName}، تم إصدار تقرير تحاليل عمليتك الجراحية المعتمد من مستشفى الكفاءات الأهلي:\n" . $verifyUrl) : null;
     @endphp
 
     <!-- Floating Print Toolbar -->
     <div class="print-toolbar">
         <button class="toolbar-btn btn-print" onclick="window.print()">
-            🖨️ طباعة التقرير
+            🖨️ {{ __("طباعة التقرير") }}
         </button>
 
         @if($waShareUrl)
-            <a href="{{ $waShareUrl }}" target="_blank" class="toolbar-btn" style="background: #25d366; color: #fff;" title="إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب">
-                💬 إرسال واتساب للمريض
+            <a href="{{ $waShareUrl }}" target="_blank" class="toolbar-btn" style="background: #25d366; color: #fff;" title="{{ __("إرسال رابط التقرير الطبي المعتمد للمريض عبر واتساب") }}">
+                💬 {{ __("إرسال واتساب للمريض") }}
             </a>
         @endif
 
         <div class="mode-toggle-group">
             <button type="button" class="mode-btn" id="btnModeLetterhead" onclick="setPrintMode('letterhead')">
-                📄 ورق مروس (Letterhead)
+                📄 {{ __("ورق مروس (Letterhead)") }}
             </button>
             <button type="button" class="mode-btn active" id="btnModeFull" onclick="setPrintMode('full')">
-                📑 ورق أبيض كامل (Full)
+                📑 {{ __("ورق أبيض كامل (Full)") }}
             </button>
         </div>
 
         <div class="margin-control-group" id="marginControls" style="display: none;">
-            <label for="topMarginInput">المسافة العلوية:</label>
+            <label for="topMarginInput">{{ __("المسافة العلوية:") }}</label>
             <input type="number" id="topMarginInput" min="10" max="120" step="1" value="45" oninput="changeTopMargin(this.value)">
-            <span>مم</span>
+            <span>{{ __("مم") }}</span>
         </div>
 
         <a href="{{ route('staff.surgery-lab-tests.show', $test) }}" class="toolbar-btn btn-close-window">
-            ✕ رجوع
+            ✕ {{ __("رجوع") }}
         </a>
     </div>
 
@@ -988,9 +988,9 @@
             <!-- Full Official Header -->
             <div class="report-header" style="direction: rtl;">
                 <div class="header-hospital-ar">
-                    <h2>مستشفى الفرات الأهلي</h2>
-                    <h4>قسم المختبر والتحاليل الطبية السريرية</h4>
-                    <p>فحوصات وتحاليل العمليات الجراحية المعتمدة</p>
+                    <h2>{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</h2>
+                    <h4>{{ __("قسم المختبر والتحاليل الطبية السريرية") }}</h4>
+                    <p>{{ __("فحوصات وتحاليل العمليات الجراحية المعتمدة") }}</p>
                 </div>
                 <div class="header-logo">
                     <img src="{!! $hospitalLogoSrc !!}" 
@@ -1008,7 +1008,7 @@
 
             <!-- Document Title Banner -->
             <div class="document-title-banner">
-                <h3>تقرير الفحوصات المخبرية للعمليات الجراحية (SURGERY CLINICAL LABORATORY REPORT)</h3>
+                <h3>{{ __("تقرير الفحوصات المخبرية للعمليات الجراحية (SURGERY CLINICAL LABORATORY REPORT)") }}</h3>
                 <div class="report-code-badge">
                     {{ $reportNo }}
                 </div>
@@ -1069,7 +1069,7 @@
                     <div class="qr-box">
                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($verifyUrl) }}" alt="QR Code" class="qr-img">
                         <span class="qr-tag">LAB-#{{ $test->id }}</span>
-                        <span class="qr-caption">تحقق الفحص</span>
+                        <span class="qr-caption">{{ __("تحقق الفحص") }}</span>
                     </div>
                 </div>
             </div>
@@ -1131,7 +1131,7 @@
                                     @if($val !== '')
                                         <span class="{{ $valClass }}">{{ $val }}</span>
                                     @else
-                                        <span class="val-status-pending">⏳ بانتظار الفحص</span>
+                                        <span class="val-status-pending">⏳ {{ __("بانتظار الفحص") }}</span>
                                     @endif
                                 </div>
 
@@ -1185,7 +1185,7 @@
             @endphp
             @if(!empty($allNotes))
                 <div class="notes-block">
-                    <strong>📋 الملاحظات والتوصيات السريرية (Clinical Notes & Recommendations):</strong>
+                    <strong>{{ __("📋 الملاحظات والتوصيات السريرية (Clinical Notes & Recommendations):") }}</strong>
                     <span>{{ $allNotes }}</span>
                 </div>
             @endif
@@ -1196,22 +1196,22 @@
             <div class="auth-block">
                 <div class="auth-cell" style="align-items: flex-start; text-align: left;">
                     <div class="signature-box-empty">
-                        <div class="sig-title">أخصائي / فاحص المختبر والتحاليل الطبية</div>
+                        <div class="sig-title">{{ __("أخصائي / فاحص المختبر والتحاليل الطبية") }}</div>
                         <div class="sig-subtitle">{{ auth()->user()->name ?? 'Clinical Laboratory Specialist' }}</div>
                         <div class="sig-empty-line">
-                            (مكان التوقيع والاعتماد)
+                            {{ __("(مكان التوقيع والاعتماد)") }}
                         </div>
                         <div style="font-size: 9px; color: #64748b; font-weight: 700; margin-top: 1px;">
-                            التاريخ: {{ now()->format('Y-m-d') }}
+                            {{ __("التاريخ:") }} {{ now()->format('Y-m-d') }}
                         </div>
                     </div>
                 </div>
                 <div class="auth-cell">
                     <div class="stamp-circle-box">
                         <div style="font-size: 7px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
-                        <div style="font-size: 8px; font-weight: 900; line-height: 1.1;">مستشفى الفرات</div>
+                        <div style="font-size: 8px; font-weight: 900; line-height: 1.1;">مستشفى الكفاءات</div>
                         <div style="font-size: 7px; font-weight: 800; color: #0284c7;">مختبر العمليات</div>
-                        <div style="font-size: 7px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                        <div style="font-size: 7px; color: #b91c1c; font-weight: 900; margin-top: 1px;">{{ __("مُعتمَــد") }}</div>
                     </div>
                 </div>
             </div>
@@ -1220,7 +1220,7 @@
             <div class="report-footer-wrapper">
                 <div class="report-footer">
                     <div class="footer-printed-by">
-                        Printed by : <span>{{ auth()->user()->name ?? 'موظف المختبر' }}</span>
+                        Printed by : <span>{{ auth()->user()->name ?? __('موظف المختبر') }}</span>
                     </div>
                     <div class="footer-datetime">
                         <span>{{ now()->format('d-m-Y h:i:sA') }}</span>
@@ -1228,7 +1228,7 @@
                 </div>
 
                 <div class="hospital-contact-line">
-                    📍 مستشفى الفرات الأهلي - قسم المختبرات والعمليات الجراحية &nbsp;|&nbsp; 📞 للاستفسار والمراجعة: مراجعة إدارة المختبر الطبي
+                    📍 {{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }} - قسم المختبرات والعمليات الجراحية &nbsp;|&nbsp; 📞 للاستفسار والمراجعة: مراجعة إدارة المختبر الطبي
                 </div>
             </div>
         </div>

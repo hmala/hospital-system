@@ -556,4 +556,31 @@ class RolePermissionsMatrixTest extends TestCase
         $role->givePermissionTo('create incubator reservations');
         $this->actingAs($user)->get(route('incubator-reservations.create'))->assertStatus(200);
     }
+
+    public function test_anesthesia_and_head_nurse_roles_display_proper_labels_and_categories_in_roles_edit(): void
+    {
+        $admin = User::factory()->create(['email' => 'admin_anesthesia_headnurse@hospital.com']);
+        $admin->assignRole('admin');
+
+        $anesthesiaRole = Role::firstOrCreate(['name' => 'anesthesia', 'guard_name' => 'web']);
+        $headNurseRole = Role::firstOrCreate(['name' => 'head_nurse', 'guard_name' => 'web']);
+
+        // 1. Role edit for anesthesia
+        $responseAnesthesia = $this->actingAs($admin)->get(route('roles.edit', $anesthesiaRole));
+        $responseAnesthesia->assertStatus(200);
+        $responseAnesthesia->assertSee('طبيب / مقيم تخدير (Anesthesia)');
+
+        // 2. Role edit for head_nurse
+        $responseHeadNurse = $this->actingAs($admin)->get(route('roles.edit', $headNurseRole));
+        $responseHeadNurse->assertStatus(200);
+        $responseHeadNurse->assertSee('رئيس / مشرف التمريض (Head Nurse)');
+        $responseHeadNurse->assertSee('إدارة وتوزيع جدول دوام التمريض اليومي وتسكين الطوابق');
+
+        // 3. Category checks
+        $anesthesiaCategory = RoleManagementController::getRoleCategory('anesthesia');
+        $this->assertEquals('medical', $anesthesiaCategory['key']);
+
+        $headNurseCategory = RoleManagementController::getRoleCategory('head_nurse');
+        $this->assertEquals('reception_nursing', $headNurseCategory['key']);
+    }
 }

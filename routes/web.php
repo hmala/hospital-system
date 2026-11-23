@@ -26,10 +26,62 @@ use Illuminate\Support\Facades\Route;
 // Ensure numeric IDs for {radiology} so '/radiology/types' isn't captured
 Route::pattern('radiology', '[0-9]+');
 
+// تبديل لغة النظام (عربي / إنجليزي)
+// تم اعتماد مسار /locale/{locale} لتجنب تعارض /lang مع مجلد النظام الفعلي lang/ على سيرفرات هوستنجر LiteSpeed (حل خطأ 403 Forbidden)
+Route::get('/locale/{locale}', function (string $locale, \Illuminate\Http\Request $request) {
+    if (in_array($locale, ['ar', 'en'])) {
+        session(['locale' => $locale]);
+    }
+
+    $referer = $request->header('referer');
+    if ($referer && ! str_contains($referer, '/locale/') && ! str_contains($referer, '/lang/')) {
+        return redirect()->to($referer);
+    }
+
+    return redirect()->back(fallback: '/');
+})->name('lang.switch');
+
+// مسارات بديلة متوافقة
+Route::get('/lang/{locale}', function (string $locale) {
+    if (in_array($locale, ['ar', 'en'])) {
+        session(['locale' => $locale]);
+    }
+
+    return redirect()->back(fallback: '/');
+});
+Route::get('/set-locale/{locale}', function (string $locale) {
+    if (in_array($locale, ['ar', 'en'])) {
+        session(['locale' => $locale]);
+    }
+
+    return redirect()->back(fallback: '/');
+});
+
 Route::get('/', function () {
     if (Auth::check()) {
-        if (Auth::user()->hasRole('thaman')) {
+        $user = Auth::user();
+        if ($user->hasRole('thaman')) {
             return redirect()->route('patients.index');
+        }
+
+        if ($user->hasRole(['nurse', 'تمريض']) || $user->user_type === 'nurse') {
+            return redirect()->route('nursing-station.index');
+        }
+
+        if ($user->hasRole(['surgery_staff', 'موظف عمليات']) || $user->user_type === 'surgery_staff') {
+            return redirect()->route('surgeries.index');
+        }
+
+        if ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || $user->name === 'حساب الجراحين') {
+            return redirect()->route('surgeon-station.index');
+        }
+
+        if ($user->hasRole(['التخدير', 'anesthesiologist']) || ($user->doctor && ($user->doctor->type === 'anesthesiologist' || $user->doctor->type === 'anesthesia')) || in_array($user->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير']) || $user->email === 'anth@hospital.com') {
+            return redirect()->route('anesthesia-station.index');
+        }
+
+        if ($user->hasRole('doctor')) {
+            return redirect()->route('doctor.visits.index');
         }
 
         return redirect('/dashboard');
@@ -211,6 +263,15 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/consultant-availability/{doctor}', [ConsultantAvailabilityController::class, 'updateAvailability'])->name('consultant-availability.update');
     Route::post('/consultant-availability/bulk-update', [ConsultantAvailabilityController::class, 'bulkUpdate'])->name('consultant-availability.bulk-update');
 
+    // إدارة جدول توفر ودوام التمريض وتوزيع الطوابق
+    Route::get('/nurse-availability', [\App\Http\Controllers\NurseAvailabilityController::class, 'index'])->name('nurse-availability.index');
+    Route::post('/nurse-availability/{nurse}/update-availability', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateAvailability'])->name('nurse-availability.update-availability');
+    Route::post('/nurse-availability/{nurse}/update-floor', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateFloor'])->name('nurse-availability.update-floor');
+    Route::post('/nurse-availability/{nurse}/update-shift', [\App\Http\Controllers\NurseAvailabilityController::class, 'updateShift'])->name('nurse-availability.update-shift');
+    Route::post('/nurse-availability/bulk-update', [\App\Http\Controllers\NurseAvailabilityController::class, 'bulkUpdate'])->name('nurse-availability.bulk-update');
+    Route::get('/nurse/off-duty', [\App\Http\Controllers\NurseAvailabilityController::class, 'offDuty'])->name('nurse.off-duty');
+    Route::get('/nurse/check-access', [\App\Http\Controllers\NurseAvailabilityController::class, 'checkAccess'])->name('nurse.check-access');
+
     // إدارة المرضى
     Route::get('/patients/insurance-alerts-poll', [PatientController::class, 'insuranceAlertsPoll'])->name('patients.insurance-alerts-poll');
     Route::patch('/patients/{patient}/quick-update', [PatientController::class, 'quickUpdate'])->name('patients.quick-update');
@@ -390,6 +451,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryExtraService'])->name('surgeries.extra-services.remove');
         Route::delete('/surgeries/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryLabTest'])->name('surgeries.lab-tests.remove');
         Route::delete('/surgeries/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryRadiologyTest'])->name('surgeries.radiology-tests.remove');
+        Route::delete('/surgeries/{surgery}/consultations/{consultation}', [\App\Http\Controllers\CashierController::class, 'cancelSurgeryConsultation'])->name('surgeries.consultations.cancel');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');
@@ -706,6 +768,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/surgeries/{surgery}/remove-operation/{additionalOp}', [SurgeryController::class, 'removeOperation'])->name('surgeries.removeOperation');
     Route::post('/surgeries/{surgery}/add-device', [SurgeryController::class, 'addDevice'])->name('surgeries.addDevice');
     Route::delete('/surgeries/{surgery}/remove-device/{device}', [SurgeryController::class, 'removeDevice'])->name('surgeries.removeDevice');
+    Route::post('/surgeries/{surgery}/supplies/dispense', [SurgeryController::class, 'dispenseOperationItem'])->name('surgeries.supplies.dispense');
+    Route::delete('/surgeries/{surgery}/supplies/dispense/{treatment}', [SurgeryController::class, 'reverseOperationItem'])->name('surgeries.supplies.reverse');
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
@@ -713,6 +777,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
     Route::post('/surgeries/theaters/quick-store', [SurgeryController::class, 'quickStoreTheater'])->name('surgeries.theaters.quick-store');
     Route::post('/surgeries/{surgery}/quick-update-schedule', [SurgeryController::class, 'quickUpdateSchedule'])->name('surgeries.quick-update-schedule');
+
+    // مسارات مباشرة لتوثيق وإلغاء الاستشارات السريرية من لوحة تحكم الطبيب أو الرابط المباشر
+    Route::post('/clinical/{surgery}/consultations/{consultation}/respond', [\App\Http\Controllers\ClinicalStationController::class, 'respondConsultation']);
+    Route::delete('/clinical/{surgery}/consultations/{consultation}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelConsultation']);
 
     // محطات العمليات
     Route::prefix('surgery-stations')->group(function () {
@@ -765,17 +833,30 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:manage surgery tab permissions')->group(function () {
             Route::get('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'index'])->name('surgery-stations.tab-settings.index');
             Route::post('/settings/tabs', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'update'])->name('surgery-stations.tab-settings.update');
+            Route::post('/settings/tabs/roles', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'addRole'])->name('surgery-stations.tab-settings.roles.add');
+            Route::delete('/settings/tabs/roles', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'removeRole'])->name('surgery-stations.tab-settings.roles.remove');
             Route::post('/settings/tabs/reset', [\App\Http\Controllers\SurgeryTabPermissionController::class, 'resetDefaults'])->name('surgery-stations.tab-settings.reset');
         });
 
         // المحطة السريرية الموحدة (Unified Clinical Station)
+        Route::get('/clinical/medicines/search', [\App\Http\Controllers\ClinicalStationController::class, 'searchMedicines'])->name('clinical-station.medicines.search');
         Route::get('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'show'])->name('clinical-station.show');
         Route::patch('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'update'])->name('clinical-station.update');
         Route::post('/clinical/{surgery}/follow-ups', [\App\Http\Controllers\ClinicalStationController::class, 'storeFollowUp'])->name('clinical-station.follow-ups.store');
         Route::post('/clinical/{surgery}/treatments', [\App\Http\Controllers\ClinicalStationController::class, 'storeTreatment'])->name('clinical-station.treatments.store');
         Route::post('/clinical/treatments/{treatment}/administer', [\App\Http\Controllers\ClinicalStationController::class, 'administerTreatment'])->name('clinical-station.treatments.administer');
+        Route::post('/clinical/treatments/{treatment}/toggle-dose', [\App\Http\Controllers\ClinicalStationController::class, 'toggleTreatmentDose'])->name('clinical-station.treatments.toggle-dose');
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
-        Route::post('/clinical/{surgery}/treatments/dispense-floor-stock', [\App\Http\Controllers\ClinicalStationController::class, 'dispenseFloorItem'])->name('clinical-station.treatments.dispense-floor-stock');
+        Route::post('/clinical/{surgery}/supplies/dispense', [\App\Http\Controllers\ClinicalStationController::class, 'dispenseFloorItem'])->name('clinical-station.supplies.dispense');
+        Route::post('/clinical/{surgery}/lab-tests', [\App\Http\Controllers\ClinicalStationController::class, 'storeLabTest'])->name('clinical-station.lab-tests.store');
+        Route::delete('/clinical/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteLabTest'])->name('clinical-station.lab-tests.delete');
+        Route::post('/clinical/{surgery}/radiology-tests', [\App\Http\Controllers\ClinicalStationController::class, 'storeRadiologyTest'])->name('clinical-station.radiology-tests.store');
+        Route::delete('/clinical/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteRadiologyTest'])->name('clinical-station.radiology-tests.delete');
+        Route::post('/clinical/{surgery}/consultations', [\App\Http\Controllers\ClinicalStationController::class, 'storeConsultation'])->name('clinical-station.consultations.store');
+        Route::post('/clinical/{surgery}/consultations/{consultation}/respond', [\App\Http\Controllers\ClinicalStationController::class, 'respondConsultation'])->name('clinical-station.consultations.respond');
+        Route::delete('/clinical/{surgery}/consultations/{consultation}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelConsultation'])->name('clinical-station.consultations.cancel');
+        Route::post('/clinical/{surgery}/physiotherapy', [\App\Http\Controllers\ClinicalStationController::class, 'storePhysiotherapy'])->name('clinical-station.physiotherapy.store');
+        Route::delete('/clinical/{surgery}/physiotherapy/{extraService}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelPhysiotherapy'])->name('clinical-station.physiotherapy.cancel');
         Route::post('/clinical/{surgery}/complete', [\App\Http\Controllers\ClinicalStationController::class, 'complete'])->name('clinical-station.complete');
         Route::patch('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'updateReading'])->name('clinical-station.readings.update');
         Route::delete('/clinical/readings/{reading}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteReading'])->name('clinical-station.readings.delete');
@@ -870,6 +951,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/services/{service}/toggle', [\App\Http\Controllers\NicuServiceController::class, 'toggle'])->name('services.toggle');
 
         // إدارة وتصنيفات أنواع حليب وتغذية الخدج
+        Route::get('/milk-types', [\App\Http\Controllers\NicuMilkTypeController::class, 'index'])->name('milk-types.index');
         Route::get('/milk-types/active-list', [\App\Http\Controllers\NicuMilkTypeController::class, 'getActiveList'])->name('milk-types.active-list');
         Route::post('/milk-types', [\App\Http\Controllers\NicuMilkTypeController::class, 'store'])->name('milk-types.store');
         Route::put('/milk-types/{milkType}', [\App\Http\Controllers\NicuMilkTypeController::class, 'update'])->name('milk-types.update');
@@ -969,6 +1051,15 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{surgicalOperation}', [\App\Http\Controllers\SurgicalOperationController::class, 'destroy'])->name('destroy');
     });
 
+    // إدارة مساعدي الجراحين
+    Route::prefix('surgical-assistants')->name('surgical-assistants.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SurgicalAssistantController::class, 'index'])->name('index');
+        Route::post('/', [\App\Http\Controllers\SurgicalAssistantController::class, 'store'])->name('store');
+        Route::put('/{surgicalAssistant}', [\App\Http\Controllers\SurgicalAssistantController::class, 'update'])->name('update');
+        Route::patch('/{surgicalAssistant}/toggle-status', [\App\Http\Controllers\SurgicalAssistantController::class, 'toggleStatus'])->name('toggle-status');
+        Route::delete('/{surgicalAssistant}', [\App\Http\Controllers\SurgicalAssistantController::class, 'destroy'])->name('destroy');
+    });
+
     // إدارة الطوارئ
     Route::prefix('emergency')->name('emergency.')->group(function () {
         Route::get('/', [\App\Http\Controllers\EmergencyController::class, 'index'])->name('index');
@@ -1032,6 +1123,8 @@ Route::middleware(['auth'])->group(function () {
 
         // سجل العقوبات والمكافآت للموظف
         Route::post('employees/{employee}/actions', [\App\Http\Controllers\HR\HrEmployeeController::class, 'storeAction'])->name('employees.actions.store');
+        Route::post('employees/actions/{action}/cancel', [\App\Http\Controllers\HR\HrEmployeeController::class, 'cancelAction'])->name('employees.actions.cancel');
+        Route::post('employees/actions/{action}/restore', [\App\Http\Controllers\HR\HrEmployeeController::class, 'restoreAction'])->name('employees.actions.restore');
         Route::delete('employees/actions/{action}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyAction'])->name('employees.actions.destroy');
 
         // طباعة باجة وهوية الموظف (ID Badge)
@@ -1055,6 +1148,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('schedules/swap', [\App\Http\Controllers\HR\HrScheduleController::class, 'swap'])->name('schedules.swap');
         Route::get('schedules/emergency-cover-search', [\App\Http\Controllers\HR\HrScheduleController::class, 'emergencyCoverSearch'])->name('schedules.emergency-cover-search');
         Route::post('schedules/copy-last-week', [\App\Http\Controllers\HR\HrScheduleController::class, 'copyLastWeek'])->name('schedules.copy-last-week');
+        Route::post('schedules/auto-fill-defaults', [\App\Http\Controllers\HR\HrScheduleController::class, 'autoFillDefaults'])->name('schedules.auto-fill-defaults');
+        Route::post('schedules/clear-range', [\App\Http\Controllers\HR\HrScheduleController::class, 'clearRange'])->name('schedules.clear-range');
+        Route::post('schedules/update-cell', [\App\Http\Controllers\HR\HrScheduleController::class, 'updateCell'])->name('schedules.update-cell');
         Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
 
         // المخصصات الثابتة

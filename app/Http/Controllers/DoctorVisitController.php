@@ -10,6 +10,7 @@ use App\Models\PrescribedMedication;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\Request as MedicalRequest;
+use App\Models\SurgeryConsultation;
 use App\Models\User;
 use App\Models\UserLabTestGroup;
 use App\Models\UserLabTestStat;
@@ -33,18 +34,19 @@ class DoctorVisitController extends Controller
             $todayVisits = collect();
             $upcomingVisits = collect();
             $appointments = collect();
+            $inpatientConsultations = collect();
 
-            return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments'))->with('error', 'بيانات الطبيب غير مكتملة');
+            return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments', 'inpatientConsultations'))->with('error', 'بيانات الطبيب غير مكتملة');
         }
 
         // جميع الزيارات (الحالية والسابقة) - مرتبة حسب الأولوية
         $allVisits = Visit::where('doctor_id', $doctor->id)
             ->with(['patient.user', 'appointment.emergency'])
             ->orderByRaw("CASE 
-                WHEN status != 'completed' AND status != 'cancelled' AND DATE(visit_date) < CURDATE() THEN 1
-                WHEN DATE(visit_date) = CURDATE() THEN 2
-                WHEN status = 'completed' AND DATE(visit_date) < CURDATE() THEN 3
-                WHEN DATE(visit_date) > CURDATE() THEN 4
+                WHEN status != 'completed' AND status != 'cancelled' AND DATE(visit_date) < CURRENT_DATE THEN 1
+                WHEN DATE(visit_date) = CURRENT_DATE THEN 2
+                WHEN status = 'completed' AND DATE(visit_date) < CURRENT_DATE THEN 3
+                WHEN DATE(visit_date) > CURRENT_DATE THEN 4
                 ELSE 5
             END")
             ->orderBy('visit_date', 'desc')
@@ -88,7 +90,26 @@ class DoctorVisitController extends Controller
             ->limit(50)
             ->get();
 
-        return view('doctors.visits.index', compact('doctor', 'allVisits', 'todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits'));
+        // استشارات العمليات والرقود الموجهة لهذا الطبيب (المعلقة والمكتملة فقط، مع استبعاد الملغاة)
+        $inpatientConsultations = SurgeryConsultation::where('doctor_id', $doctor->id)
+            ->where('status', '!=', 'cancelled')
+            ->whereHas('surgery', function ($sq) {
+                $sq->where('status', '!=', 'cancelled');
+            })
+            ->with([
+                'surgery.patient.user',
+                'surgery.patient.healthInsuranceCategory',
+                'surgery.room',
+                'surgery.doctor.user',
+                'requestedBy',
+                'respondedBy',
+            ])
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 1 ELSE 2 END")
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        return view('doctors.visits.index', compact('doctor', 'allVisits', 'todayVisits', 'upcomingVisits', 'appointments', 'doctorRequests', 'completedVisits', 'incompleteVisits', 'inpatientConsultations'));
     }
 
     public function convertAppointmentToVisit(Appointment $appointment)
@@ -955,7 +976,7 @@ class DoctorVisitController extends Controller
             );
 
             $hasPaidRequests = \App\Models\Request::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists()
-                || \App\Models\RadiologyRequest::where('visit_id', $visit->id)->where('payment_status', 'paid')->exists();
+                || \App\Models\RadiologyRequest::where('visit_id', $visit->id)->exists();
 
             $successMsg = 'تم إلغاء كشفية الطبيب بنجاح واسترجاع رسوم الكشف للمريض.';
             if ($hasPaidRequests) {

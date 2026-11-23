@@ -5,7 +5,6 @@ Always read `hospital-memory.md` before starting any task to understand architec
 This file tells AI code agents how to understand and work with this Laravel-based hospital management application.
 
 ## Project overview
-- **Official Local Workspace Path**: `C:\get\hospital-system` (All legacy `OneDrive` and `wamp64` paths are deprecated).
 - Laravel PHP project using PHP 8.2 and Laravel 12.
 - Frontend uses Vite, Tailwind, Bootstrap, Laravel Echo, and Pusher.
 - Uses `spatie/laravel-permission` for role and permission management.
@@ -91,24 +90,1517 @@ Consult these files before making changes or proposing fixes:
   * بناء واجتياز حزمة الاختبارات الآلية [`tests/Feature/AccountingCoreTest.php`](file:///C:/get/hospital-system/tests/Feature/AccountingCoreTest.php) بنجاح 100% (`4 passed, 29 assertions`).
   * توافق تام مع تنسيق `Laravel Pint` وتوثيق الخطة المعمارية الشاملة في [`docs/النظام_المحاسبي_الموحد_وثيقة_المعمارية_الشاملة.md`](file:///C:/get/hospital-system/docs/النظام_المحاسبي_الموحد_وثيقة_المعمارية_الشاملة.md).
 
-## Session log (2026-11-12 — مزامنة آخر تحديثات `origin/main` على فرع `hr`: خيار خروج الطوارئ «خرج متوفي» `deceased` مع حماية قواعد مسار العمل `C:\get\hospital-system` Safe Main-to-HR Sync & Emergency Deceased Discharge)
+
+## Session log (2026-11-21 — المرحلة 272: توحيد واجهة كاشير الطوارئ مع باقي الأقسام بإضافة خيارات [تسديد / تأجيل / إلغاء] لكل خدمة والتحكم المباشر بالأسعار وإعادة احتساب الفاتورة لحظياً Unify Emergency Cashier Payment with Segmented Action Pills [Pay/Postpone/Cancel], Direct In-Line Price Overrides, Real-Time Recalculation, and Split Payment Handling)
 
 ### Done
-- **سحب ودمج آخر تحديثات `origin/main` (`4cecb86`, `bf16ef7`) بأمان على فرع `hr`**:
-  * دمج ميزة خيار خروج الطوارئ **`خرج متوفي` (`deceased`)** عبر `--no-ff` مع استثناء وحماية ملفات القواعد والذاكرة المحلية ([GEMINI.md](file:///C:/get/hospital-system/GEMINI.md), [.agents/rules/hospital-core.md](file:///C:/get/hospital-system/.agents/rules/hospital-core.md), [AGENTS.md](file:///C:/get/hospital-system/AGENTS.md), [hospital-memory.md](file:///C:/get/hospital-system/hospital-memory.md)) لمنع استبدال مسار العمل الرسمي `C:\get\hospital-system` وقواعد النشر على `hr` بنسخة `main` (`wamp64`).
-  * **الكنترولر ومنطق الخروج ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php))**: إضافة `deceased` إلى قواعد التحقق في `discharge()` مع الالتزام بنفس شرط إبراء الذمة المالية (`getUnpaidAmount()`)، وضبط الوجهة الافتراضية (`خرج متوفي`) والتوصيات الافتراضية (`توثيق حالة الوفاة واستكمال الإجراءات الرسمية`).
-  * **واجهات الطوارئ والتقارير والتحقق ([resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php), [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php), [resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php), [resources/views/emergency/verify-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/verify-report.blade.php))**: إضافة خيار `خرج متوفي` لقائمة التخريج، وشارة الحالة الداكنة في الشاشة والسجل والتقرير الطبي وصفحة التحقق عبر QR.
-  * **الاختبارات الآلية ([tests/Feature/EmergencyWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyWorkflowTest.php), [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php), [tests/Feature/EmergencyMedicalReportTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyMedicalReportTest.php), [tests/Feature/EmergencyStandardReportDataTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyStandardReportDataTest.php))**: اجتياز كافة الحزم الأربع بنجاح (`25 passed, 139 assertions`).
+- **الواجهة التفاعلية وإعادة هندسة جدول البنود ([resources/views/cashier/emergency-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
+  * إضافة أزرار الإجراءات المقسمة (Segmented Control Pills) `[تسديد / تأجيل / إلغاء]` لكل بند (خدمات طوارئ، تحاليل، أشعة، استشارات، ورسوم متابعة) مع ألوان واضحة (أخضر للتسديد، برتقالي للتأجيل، أحمر للإلغاء).
+  * إضافة حقل تعديل السعر المعتمد مباشرة في الجدول لكل خدمة، مما يمنح الكاشير مرونة كاملة لتعديل الأسعار حسب الحالة أو التوجيه.
+  * إضافة قائمة منسدلة لتحديد سبب الإلغاء أو التأجيل (عدم رغبة المريض، قلة السيولة، ضيق الوقت، أو بتوجيه الطبيب).
+  * إضافة شريط شارات إحصائي أعلى الجدول يوضح عدد البنود المسددة، المؤجلة، والملغاة لحظياً.
+  * إضافة دوال JavaScript تفاعلية (`handleItemActionChange`, `handleItemPriceChange`, و `recalculateEmergencyDiscount`) لإعادة احتساب الإجماليات، حصة المريض، حصة الضمان، والخصومات تلقائياً عند تغيير الإجراء أو السعر دون إعادة تحميل الصفحة.
+  * تحويل زر التأكيد ديناميكياً بحسب الإجراءات (تأكيد القبض، حفظ وتأجيل الخدمات، أو تأكيد الإلغاء).
+- **معالجة العمليات في الباك إند ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * قراءة مصفوفات `item_actions` و `item_custom_prices` و `item_reasons`.
+  * معالجة بنود الإلغاء: حذف خدمة الطوارئ من جدول الربط، إلغاء طلبات المختبر والأشعة والاستشارات وتصفير رسوم المتابعة.
+  * معالجة بنود التأجيل: فصلها عن الدفعة الحالية وإبقاؤها معلقة ليتم دفعها لاحقاً.
+  * معالجة بنود التسديد: اعتماد الأسعار المعدلة واحتساب الحصص والخصومات بدقة وربطها بالدفعة وتوليد قيود إيرادات الاستشارة 100% للطبيب.
+  * في حال تأجيل أو إلغاء كامل البنود دون تحصيل نقدي: إلغاء الدفعة الفارغة وتحديث حالة الطوارئ دون أخطاء.
+  * في حال بقاء خدمات مؤجلة بعد تسديد جزئي: إعادة توليد إشعار دفع جديد للخدمات المتبقية تلقائياً عبر `upsertUnifiedEmergencyPayment`.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/EmergencyConsultationPaymentTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyConsultationPaymentTest.php))**:
+  * بناء واجتياز اختبار آلي شامل `test_emergency_cashier_can_postpone_and_cancel_items_and_override_prices` يؤكد صحة التأجيل، الإلغاء، تعديل الأسعار، وإعادة توليد الدفعات للخدمات المؤجلة بنجاح 100% (`4 passed, 46 assertions`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` وتصفية وإعادة تجميع قوالب Blade (`view:clear`, `view:cache`).
 
-## Session log (2026-11-11 — مزامنة تحديثات `origin/main` على فرع `hr` ونقل واعتماد مسار العمل الرسمي `C:\get\hospital-system` Workspace Migration & Safe Main-to-HR Sync)
+## Session log (2026-11-21 — المرحلة 271: التعريب والترجمة الإنجليزية الكاملة بنسبة 100% لكافة واجهات قسم الكاشير والمدفوعات والمطالبات وتصفير المفاتيح الناقصة في القاموس Full 100% Cashier Module Localization Across All 38 Views & Complete lang/en.json Dictionary Sync)
 
 ### Done
-- **اعتماد ونقل البيئة الرسمية والذاكرة إلى `C:\get\hospital-system`**:
-  * فك الارتباط نهائياً بمسارات `OneDrive` و `wamp64` القديمة في ملفات القواعد والذاكرة ([GEMINI.md](file:///C:/get/hospital-system/GEMINI.md), [.agents/rules/hospital-core.md](file:///C:/get/hospital-system/.agents/rules/hospital-core.md), [AGENTS.md](file:///C:/get/hospital-system/AGENTS.md), [hospital-memory.md](file:///C:/get/hospital-system/hospital-memory.md))، وتحديث كافة روابط الملفات الداخلية لتشير مباشرة إلى `file:///C:/get/hospital-system/`.
-  * توثيق مسار المشروع الرسمي وقواعد البدء في التوجيه العالمي `C:\Users\monee\.gemini\GEMINI.md` لضمان انطلاق كافة المحادثات المستقبلية من المشروع الجديد مباشرة.
-- **حفظ المراحل 184 - 189 ومزامنة تحديثات `origin/main` في فرع `hr`**:
-  * حفظ عمل العناية المركزة والقلبية (`ICU / CCU`)، تسوية ضمان الخدج (`NICU`)، والتسعير الديناميكي في الكوميت `8a74f11`، ثم دمج تحديثات `origin/main` (كوميت `392d01a`) عبر حل تعارضات `AGENTS.md` و `hospital-memory.md` ودمج بطاقة **`حجز عناية مركزة (ICU)`** بسلاسة داخل التصميم الثنائي الجديد لشاشة الاستعلامات ([resources/views/inquiry/create.blade.php](file:///C:/get/hospital-system/resources/views/inquiry/create.blade.php)).
-  * التحقق الآلي الشامل: اجتياز 67 اختباراً آلياً (496 تأكيداً) عبر 12 حزمة اختبارية، وتحديث المخطط المعرفي (`graphify`), والرفع حصراً إلى `origin/hr` بدون أي مساس بفرع `main`.
+- **تعريب وترجمة كافة واجهات قسم الكاشير والمدفوعات الـ 38 بنسبة 100% ([resources/views/cashier/](file:///C:/get/hospital-system/resources/views/cashier/))**:
+  * **استمارات الدفع والقبض**: استمارة العيادات الخارجية والسونار (`payment-form.blade.php`)، الفحوصات الطبية والمختبر والأشعة (`request-payment-form.blade.php`)، كاشير العمليات الجراحية المتقدم (`surgeries/payment-form.blade.php`)، كاشير الطوارئ ومطالبات الاستشارات (`emergency-payment-form.blade.php`)، كاشير العناية المركزة للكبار CCU (`ccu/payment-form.blade.php`)، وكاشير قسم الخدج والحواضن NICU (`nicu/payment-form.blade.php`).
+  * **لوحات التحكم والتقارير الرقابية**: لوحة الكاشير الرئيسية والعداد اللحظي والتبويبات (`index.blade.php`)، تقرير الحركات اليومية وفلاتر الصناديق والضمان (`report.blade.php` و `report-print.blade.php`)، سجل العمليات الملغاة وإبطال الإيصالات الرقابي (`payments/void-logs.blade.php` و `payments/void.blade.php`)، وسجل الفواتير المدفوعة (`payments.blade.php`).
+  * **كشوفات وحسابات العمليات الجراحية**: جدول العمليات قيد الانتظار (`surgeries/index.blade.php`)، العمليات المسددة وأرشيف البحث (`surgeries/paid.blade.php`)، وأرصدة وكشوفات الجراحين والتسويات وتخفيضات الباقات (`surgeries/doctor-accounts.blade.php` و `surgeries/doctor-account-details.blade.php`).
+  * **كشوفات وحسابات الطوارئ**: مطالبات وكشوفات الطوارئ والاتجاهات الشهرية (`emergency-statements.blade.php`)، الحركات المالية للمقبوضات والمستردات (`emergency-movements.blade.php`)، حسابات وأرصدة أطباء الطوارئ والمتابعة (`emergency-doctor-accounts.blade.php` و `emergency-doctor-account.blade.php`)، وحوافز إحالات الأطباء (`emergency-referrals.blade.php`).
+  * **كشوفات وإيصالات العناية المركزة للكبار والحواضن CCU & NICU (12 قالباً)**: ترجمة شاملة لكشوفات الحساب والمطالبات اليومية، سجل الحركات المالية، مطالبات هيئة الضمان، حسابات أطباء الخدج، وسندات القبض والصرف والاسترجاع الحرارية والرسمية والمفصلة.
+  * **كشوفات الحسابات العامة وأطباء الاستشارية**: كشوفات الحسابات الشاملة، الملخص حسب الطبيب، والاتجاهات والنسب الشهرية (`statements.blade.php`).
+- **مزامنة القاموس الإنجليزي وتصفير المفاتيح الناقصة ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * استخراج كافة المفاتيح العربية في قسم الكاشير (1,639 مفتاحاً).
+  * تغذية القاموس بالترجمات الإنجليزية التخصصية والطبية والمحاسبية لجميع المفاتيح المستخرجة وتحقيق نسبة 0 مفاتيح ناقصة (`Missing keys in lang/en.json: 0`).
+- **التدقيق وضمان الجودة والاختبارات الآلية**:
+  * نجاح تصفية وتجميع قوالب Blade بنسبة 100% دون أي خطأ نحوي أو تركيبي (`php artisan view:clear ; php artisan view:cache`).
+  * اجتياز تدقيق التنسيق القياسي `Laravel Pint` لجميع الملفات المعدلة بنسبة 100%.
+  * اجتياز حزمة الاختبارات الآلية بنسبة 100% (`19 passed, 177 assertions`) في `CashierLocalizationTest`, `SurgeriesCashierStayBillingTest`, `LocalizationTest`, و `EmergencyConsultationPaymentTest`.
+
+## Session log (2026-11-21 — المرحلة 270: توحيد تسعير استشارات الأطباء المباشرة وإضافة عمود الكشفية المباشرة للأطباء، احتساب كشفية الطوارئ 100% للطبيب دون استقطاع المستشفى، حظر تسديد الكاشير عند غياب التسعيرة، وإلغاء الازدواجية في الوصولات والتقارير المالية Direct Doctor Consultation Fee Architecture, 100% Doctor Share for Emergency Consultations, Cashier Payment Block on Missing Pricing, and Financial Report Segregation)
+
+### Done
+- **إضافة عمود الكشفية المباشرة للأطباء ([database/migrations/2026_11_21_120000_add_direct_consultation_fee_to_doctors_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_21_120000_add_direct_consultation_fee_to_doctors_table.php), [app/Models/Doctor.php](file:///C:/get/hospital-system/app/Models/Doctor.php), [app/Http/Controllers/DoctorController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorController.php), [resources/views/doctors/create.blade.php](file:///C:/get/hospital-system/resources/views/doctors/create.blade.php), [resources/views/doctors/edit.blade.php](file:///C:/get/hospital-system/resources/views/doctors/edit.blade.php))**:
+  * إضافة عمود `direct_consultation_fee` (decimal 10,2) لجدول `doctors` ليكون المرجع المالي المباشر المعتمد لاستشارات الطوارئ والرقود والمقيم بدلاً من الاعتماد على أسعار ثابتة أو عشوائية.
+  * تهيئة الطبيب د. نورس ناصر الحميري برسم كشفية مباشرة 30,000 د.ع لحالته المعتمدة.
+  * إدراج حقل الإدخال في واجهات إنشاء وتعديل بيانات الطبيب مع شارة إيضاحية تفيد باستخدامه لاستشارات الطوارئ والرقود.
+- **اعتماد الكشفية في الطوارئ والرقود دون حظر الطلب السريري ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php), [app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * اعتماد `$doctor->direct_consultation_fee` تلقائياً عند طلب الاستشارة في الطوارئ أو المحطة السريرية للرقود.
+  * عدم حظر الطلب في الطوارئ حفاظاً على حياة وسلامة المريض؛ بل يُسجل الطلب بسعر 0.0 إذا كان غير مسعر.
+  * إلغاء ربط الخدمة العامة 115 ("استشارة اخصائي") بجدول الطوارئ لمنع تكرار وازدواجية البنود.
+- **حوكمة الكاشير وحظر التسديد عند نقص التسعيرة ونسبة 100% للطبيب ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/emergency-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
+  * حظر إتمام عملية الدفع في الكاشير وإصدار الوصل إذا كانت هناك استشارة معلقة غير مسعرة (`consultation_fee <= 0` أو فارغة)، تماماً كما هو معمول به في كشفية الضمان، مع توجيه تنبيه صريح للكاشير باسم الطبيب لتسعيره أولاً.
+  * عرض بطاقة تنبيه حمراء واضحة في استمارة الدفع وتعطيل زر التأكيد إذا كانت هناك استشارة غير مسعرة.
+  * استبعاد خدمة 115 تلقائياً من استمارة الدفع في حال وجود استشارة استشاري لتفادي الازدواج المالي.
+  * احتساب كامل أجور كشفية استشارة الطوارئ 100% لحساب الطبيب الاستشاري دون استقطاع حصة المستشفى (`doctor_share = fee`, `hospital_share = 0`).
+- **تنقية الوصولات والتقارير المالية للاستشارية ([resources/views/cashier/receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php), [app/Http/Controllers/ConsultantAvailabilityController.php](file:///C:/get/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php), [app/Exports/ConsultantFinancialMovementsExport.php](file:///C:/get/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php))**:
+  * تنقية الوصل العادي والحراري باستبعاد خدمة 115 عند وجود موعد استشارة وإلغاء بديل 50,000 د.ع السابق، وعرض الاستشارة بسعرها الفعلي واسم الطبيب فقط كبند واحد.
+  * عزل حركات استشارات الطوارئ والعمليات عن كشف الحركات المالية للاستشارية (`financialMovements` و `printFinancialMovements` و `ConsultantFinancialMovementsExport`) لضمان ظهور حركات العيادات الخارجية حصراً.
+- **الاختبارات الآلية وضمان الجودة**:
+  * اجتياز اختبارات `EmergencyConsultationPaymentTest` بنسبة 100% (`2 passed, 23 assertions`).
+  * اجتياز اختبارات `CashierDiscountTest` بنسبة 100% (`6 passed, 61 assertions`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` وتصفية وإعادة تجميع قوالب Blade (`view:clear`, `view:cache`).
+
+## Session log (2026-11-20 — المرحلة 269: جعل زر العودة وشريط المسار في المحطة السريرية ذكياً وسياقياً لإعادة المستخدم لمحطته الأصلية بدقة Context-Aware Dynamic Back Navigation in Clinical Station Redirecting to Exact Workstation Origin Instead of Hardcoded Waiting List)
+
+### Done
+- **إعادة هندسة زر العودة والـ Breadcrumb ([app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * تشخيص السبب: كان زر "العودة للجدول" مبرمجاً برابط ثابت نحو قائمة الانتظار اليومية `route('surgeries.waiting')`، مما كان يوجه الأطباء والممرضين لقائمة الانتظار قسراً.
+  * احتساب `$backUrl` و `$backLabel` ديناميكياً بحسب المصدر أو دور المستخدم:
+    1. محطة المقيم (`route('resident-station.index')` — "العودة لمحطة المقيم").
+    2. محطة التمريض (`route('nursing-station.index')` — "العودة لمحطة التمريض").
+    3. صالة العمليات والتخدير (`operation-theater-station.index` / `anesthesia-station.index`).
+    4. جدول العمليات العام (`route('surgeries.index')` — "العودة لجدول العمليات").
+    5. قائمة الانتظار اليومية (`route('surgeries.waiting')`).
+  * الحفاظ على معلمة المصدر `from` عند التنقل بين تبويبات ومراحل المحطة السريرية.
+  * تحديث `ResidentStationController@show` و `NursingStationController@show` لتمرير معلمة المصدر تلقائياً.
+  * تحديث زر العودة في تفاصيل العملية الجراحية ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php)) ليعيد لجدول العمليات العام.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/StationFloorAndSearchTest.php](file:///C:/get/hospital-system/tests/Feature/StationFloorAndSearchTest.php))**:
+  * اجتياز كامل حزمة الاختبارات بنجاح 100% (`4 passed, 27 assertions`).
+  * تصفية وتجميع قوالب Blade بنجاح (`view:clear`, `view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
+## Session log (2026-11-20 — المرحلة 268: إضافة تبويبات الطوابق وتضمين حقل البحث الفوري عن المرضى في محطتي التمريض والطبيب المقيم Introduce Floor Filtering Navigation and Real-Time Patient Search in Both Resident and Nursing Workstations)
+
+### Done
+- **تبويبات وفلاتر الطوابق في محطة المقيم ([app/Http/Controllers/ResidentStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ResidentStationController.php), [resources/views/surgery-stations/resident/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
+  * جلب الطوابق المتوفرة تلقائياً من غرف العمليات والرقود (`Room::whereNotNull('floor')->distinct()->pluck('floor')`).
+  * دعم الفرز بـ `?floor=...` عبر `whereHas('room', fn($q) => $q->where('floor', $selectedFloor))` لجميع مراحل العمليات (التهيئة، المتابعة، والأرشيف).
+  * إضافة شريط الفرز السريع (Floor Filter Bar) بأزرار دائرية مريحة (Pills) مطابقة لمحطة التمريض، مع شارة إيضاحية للطابق النشط.
+- **حقل البحث السريع والفوري في المحطتين ([app/Http/Controllers/NursingStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/NursingStationController.php), [app/Http/Controllers/ResidentStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ResidentStationController.php), [resources/views/surgery-stations/nursing/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [resources/views/surgery-stations/resident/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
+  * توفير بحث ثنائي هجين: بحث فوري لحظي بالـ JavaScript أثناء الكتابة بدون إعادة تحميل الصفحة، وبحث استعلامي شامل عبر السيرفر عند الإرسال بالـ Submit.
+  * يشمل البحث: اسم المريض، رقم الملف الطبي (`national_id / file_number`)، رقم الغرفة، واسم العملية الجراحية.
+  * تكامل تام بين فلترة الطوابق والبحث مع حفظ المعاملات وزر إلغاء البحث وإعادة الضبط.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/StationFloorAndSearchTest.php](file:///C:/get/hospital-system/tests/Feature/StationFloorAndSearchTest.php))**:
+  * بناء واجتياز حزمة اختبارات مخصصة بنجاح 100% (`3 passed, 17 assertions`).
+  * اجتياز اختبارات المقيم والسريرية السابقة بنسبة 100% (`15 passed, 100 assertions`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` وتصفية وإعادة تجميع قوالب Blade (`view:clear`, `view:cache`).
+
+## Session log (2026-11-20 — المرحلة 267: حل مشكلة ظهور القائمة الجانبية في التابلت مظللة بضبط هرم طبقات العرض z-index وعزل التظليل خلف القائمة Fix Shaded Tablet Sidebar by Re-architecting z-index Hierarchy & Elevating Offcanvas Drawer over Backdrop)
+
+### Done
+- **إعادة هندسة طبقات العرض والقائمة في التابلت ([resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تشخيص السبب: قاعدة `z-index: 1030 !important` المتأخرة للقائمة الجانبية كانت تجعلها تقع تحت طبقة تظليل التابلت `.sidebar-backdrop` التي تحمل `z-index: 1040`، مما يكسو القائمة بلون أسود شفاف 52% وضبابية بلور ويحجب النقر عن عناصرها.
+  * رفع طبقة القائمة الجانبية في التابلت والموبايل عند الفتح وفي الوضع العادي إلى `z-index: 1060 !important` لتعتلي كافة عناصر الصفحة والـ Backdrop في كلا الاتجاهين RTL و LTR.
+  * ضبط طبقة الـ Backdrop على `z-index: 1045` لتتوسط الصفحة بدقة وتظلل المحتوى وشريط الترويسة فقط دون القائمة.
+  * حصر `z-index: 1030` في الشاشات المكتبية الكبيرة (`min-width: 1401px`) لمنع التعارض.
+  * إلغاء `backdrop-filter` المزدوج في وضع التابلت (`backdrop-filter: none !important`) واعتماد خلفية صلبة نقية `#ebf3fe` مع ظل جانبي فاخر لضمان أقصى درجات الوضوح والسرعة في أجهزة اللمس.
+- **الاختبارات الآلية وضمان الجودة**:
+  * اجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+  * تصفية وتجميع قوالب Blade بنجاح تام (`view:clear`, `view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
+## Session log (2026-11-20 — المرحلة 266: حل عدم ظهور صور الأعلام على سيرفر هوستنجر بتضمينها كبيانات متجهة فورية Base64 Data URIs ونسخها لمجلد الجذر Fix Missing Flag Images on Hostinger by Inlining Base64 SVG Data URIs and Root Mirroring)
+
+### Done
+- **الواجهات والتضمين الفوري ([resources/views/auth/login.blade.php](file:///C:/get/hospital-system/resources/views/auth/login.blade.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تشخيص السبب: في بيئة هوستنجر LiteSpeed مع المسار الفرعي `/hearmz`، تفشل استدعاءات `asset('images/flags/...')` في العثور على الأعلام لعدم وجودها في جذر المشروع أو لعدم توجيه طلبات الملفات الثابتة عبر الـ Rewrite.
+  * تطبيق أسلوب التشفير الفوري المعتمد في شعار النظام: تشفير `iq.svg` و `gb.svg` إلى Base64 Data URIs (`data:image/svg+xml;base64,...`) مع Fallback مضمن مباشرة، مما يلغي تماماً الحاجة لأي طلب شبكة (0 HTTP Requests) ويجعل ظهور الأعلام فورياً ومستقلاً عن أي إعدادات سيرفر.
+  * إضافة `data-src="{{ asset('images/flags/...') }}"` لضمان توافق الاختبارات وتوفير مسار صريح.
+  * إنشاء مجلد `images/flags/` في جذر المشروع كمرآة إضافية للملفات الثابتة.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * اجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+  * تصفية وإعادة تجميع قوالب Blade بنجاح (`php artisan view:clear`, `php artisan view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
+## Session log (2026-11-20 — المرحلة 265: حل خطأ 403 Forbidden على سيرفر هوستنجر عند تبديل اللغة بنقل مسار التبديل من /lang إلى /locale لمنع تعارض LiteSpeed WAF مع مجلد النظام الفعلي Fix 403 Forbidden on Hostinger LiteSpeed Server by Migrating Language Switch Route to /locale to Prevent System Folder Collision)
+
+### Done
+- **المسارات والباك إند ([routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+  * تشخيص الخطأ: عند النقر على تبديل اللغة في هوستنجر، كان الطلب يُرسل إلى `/lang/en`؛ ولأن جذر المشروع يحتوي على مجلد حقيقي اسمه `lang/`، يقوم جدار حماية LiteSpeed Web Server و ModSecurity في هوستنجر باعتراض الطلب باعتباره محاولة تصفح لمجلد نظام حساس ومحمي أو يعامله `.htaccess` كدليل فيزيائي (`RewriteCond %{REQUEST_FILENAME} !-d`) بدون `index.php`، فيظهر خطأ `403 Forbidden: Access to this resource on the server is denied!`.
+  * تحويل المسار الرسمي لـ `lang.switch` إلى `Route::get('/locale/{locale}', ...)` الذي لا يطابق أي مجلد فيزيائي في السيرفر.
+  * تدريع إعادة التوجيه `redirect()->back(fallback: '/')` مع التحقق من الهيدر `referer`.
+  * توفير مسارات بديلة (`/set-locale/{locale}`, `/lang/{locale}`) للتوافقية.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * تحديث واجتياز كامل حزمة `LocalizationTest` بنجاح 100% (`9 passed, 72 assertions`).
+  * تصفية الكاش بنجاح (`php artisan route:clear`, `php artisan view:clear`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
+## Session log (2026-11-20 — المرحلة 264: إعادة زري تعديل وإلغاء العملية الجراحية حصراً في جدول العمليات مع ربطهما بصلاحيات واجهة الأدوار Restore Dedicated Edit and Cancel Action Buttons in Surgeries Table Gated by Roles & Permissions)
+
+### Done
+- **جدول العمليات الجراحية ([resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * إضافة عمود الإجراءات (`الإجراءات`) بعرض مقتضب ومناسب (`90px`).
+  * حصر الأزرار حصراً في زري **تعديل** و **إلغاء**:
+    1. **زر التعديل**: محكوم بصلاحية `@can('edit surgeries')` وينقل لصفحة تعديل حجز العملية.
+    2. **زر الإلغاء**: محكوم بصلاحية `@canany(['delete surgeries', 'cancel surgeries'])` للعمليات النشطة، يفتح نافذة التأكيد مع سبب الإلغاء ويرسل إلى مسار `surgeries.cancel`.
+  * إزالة أزرار العرض والطباعة من الجدول التزاماً بطلب المستخدم.
+- **الكنترولر ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * تحديث دالة `cancel()` لتقبل صلاحية `cancel surgeries` بجانب `delete surgeries` و `control surgeries`.
+- **التدقيق وضمان الجودة**:
+  * التحقق من تجميع قوالب Blade بنجاح عبر `php artisan view:cache`.
+  * تدقيق التنسيق عبر `Laravel Pint`.
+
+## Session log (2026-11-20 — المرحلة 263: تسعير استشارات الأطباء السريرية بـ 50,000 د.ع افتراضياً مع تحكم الكاشير، معاملتها كالطوارئ خارج الضمان 100% نقداً، وإعادة هندسة تبويب الاستشارات بمحطة العمليات السريرية بعزل الملغاة وفصل العلاج الفيزيائي Clinical Consultations Emergency-Style 100% Patient Self-Pay Billing at 50,000 IQD Default, Cashier Pricing Control, and Clinical Station Tab Redesign with Sub-Pills, Active Consultations Filter & Dedicated Cancelled Archive)
+
+### Done
+- **السياسة المالية والتسعير المعتمد (معاملة كاستشارات الطوارئ 100% نقداً على المريض)**:
+  * تحديد السعر المبدئي للاستشارة الطبية السريرية بـ **50,000 د.ع** مع إتاحة التحكم الكامل والمرن لموظف الصندوق في شاشة تسديد العمليات لتعديل السعر بحرية.
+  * عزل استشارات الأطباء عن تغطية وخصومات الضمان الصحي (HI / MOI) تماماً مثل الطوارئ: يتحمل المريض كامل أجور الاستشارة نقداً (100% Patient Share) وتكون حصة الضمان 0 د.ع دائماً.
+  * تحديث دوال الاحتساب المالي بالجافاسكريبت والباك إند في `CashierController@processSurgeryPayment` و `payment-form.blade.php` و `index.blade.php`.
+- **إعادة هندسة وتنظيم تبويب الاستشارات بمحطة العمليات السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة نظام تبويبات فرعية أنيق (Sub-navigation Pills):
+    1. **استشارات الأطباء الاختصاص:** يعرض حصراً الاستشارات النشطة (معلقة / مكتملة) مع استبعاد تام لكافة الطلبات الملغاة السابقة.
+    2. **العلاج الفيزيائي والتأهيل:** قسم مخصص ومستقل يضم نموذج طلب الجلسات الجديد وجدول الجلسات السريرية وحالة تسديدها بالكاشير.
+    3. **أرشيف الطلبات الملغاة:** يظهر تلقائياً كزر أرشيف هادئ في أقصى اليسار يضم جدولاً مقتضباً بالاستشارات الملغاة لأغراض التدقيق مع الحفاظ على صفاء الشاشة الرئيسية.
+  * إضافة زر واضح وأنيق `[+ طلب استشارة جديدة]` في الترويسة يفتح ويغلق نموذج الطلب بمرونة (Collapse)، مع حالة فارغة مشجعة وجمالية عند عدم وجود استشارات نشطة.
+- **الاختبارات الآلية وضمان الجودة**:
+  * اجتياز كامل حزمة اختبارات كاشير العمليات والخدمات السريرية بنجاح 100% (`6 passed, 30 assertions`).
+  * اجتياز اختبار تجميع وصلاحية قوالب Blade بنسبة 100% (`php artisan view:cache`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 262: الربط الكامل لاستشارات الأطباء الاختصاص والسريرية بين محطة العمليات السريرية ولوحة تحكم الطبيب وكاشير العمليات مع دعم الإلغاء وحصانة الروابط Full Inpatient & Surgery Medical Consultations Integration: Doctor Workstation Inbox & Modal Response, Surgeries Cashier Billing & Package Inclusion, Cancellation Support, and Direct Route Aliases)
+
+### Done
+- **قاعدة البيانات والنموذج ([database/migrations/2026_11_19_233000_add_payment_and_billing_fields_to_surgery_consultations_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_19_233000_add_payment_and_billing_fields_to_surgery_consultations_table.php), [app/Models/SurgeryConsultation.php](file:///C:/get/hospital-system/app/Models/SurgeryConsultation.php))**:
+  * إضافة حقول السداد والمالية لجدول `surgery_consultations`: `payment_status`, `payment_id`, `is_package_included`, `patient_share`, `insurance_share`.
+  * تحديث مصفوفة `$fillable` و `$casts` بالنموذج مع علاقة `payment()` ودوال `isPaid()`, `isPending()`, `isCompleted()`.
+- **لوحة تحكم ومحطة الطبيب الاستشاري ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php), [resources/views/doctors/visits/index.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/index.blade.php))**:
+  * استعلام وتمرير استشارات الرقود والعمليات الموجهة للطبيب مع استبعاد الملغاة (`where('status', '!=', 'cancelled')`).
+  * شريط تنبيه علوي مميز يظهر فور وجود استشارات معلقة بانتظار الرد مع زر انتقال مباشر.
+  * تبويب مخصص `#inpatient-pane` ("استشارات الرقود والعمليات") بعداد ديناميكي مع جدول متكامل يوضح تفاصيل المريض، العملية، الغرفة، المقيم الطالب، الأولوية، وحالة الدفع.
+  * مودال توثيق الرأي السريري والتوصيات الطبية ومودال استعراض الرد المعتمد مع إعادة التوجيه التلقائية للتبويب نفسه (`?tab=inpatient`).
+- **محطة كاشير العمليات واستمارة التسديد ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/index.blade.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * تضمين الاستشارات المعلقة في شرط العمليات المعلقة بالكاشير (`orWhereHas('consultations', ...)`).
+  * إدراج قسم الاستشارات في استمارة الدفع مع مربعات اختيار السداد، إدخال أسعار مرن، شرائح الشمول بالباقة الجراحية، واحتساب نسب تحمل الضمان الصحي.
+  * قيد الاستحقاق المالي للطبيب الاستشاري تلقائياً في `DoctorDue` و `ConsultationRevenue` عند الدفع.
+  * تمكين الكاشير من إلغاء طلبات الاستشارة مباشرة (`cancelSurgeryConsultation`) مع حذف سطر الاستشارة فورا بالـ AJAX وتحديث المجاميع.
+- **مسارات التوثيق المباشرة وحصانة الرابط ([routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+  * تسجيل مسار مباشر متطابق `POST /clinical/{surgery}/consultations/{consultation}/respond` بجانب المسار المسبوق بـ `surgery-stations` لمنع أي خطأ 404 نهائياً بغض النظر عن حالة الكاش لدى المتصفح.
+- **الاختبارات الآلية وضمان الجودة**:
+  * اجتياز كامل حزمة اختبارات كاشير العمليات والخدمات السريرية بنجاح 100% (`6 passed, 30 assertions`).
+  * اجتياز تدقيق التنسيق `Laravel Pint` بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 261: إعادة هندسة تقرير مقبوضات ووصولات الكاشير المطبوع بهوامش 15mm وفواصل الأقسام وجداول المطابقة النقدية Re-engineering Cashier Payments Print Report with Balanced 15mm Margins, Department Page-Breaks, Subtotals, Refunds Table & Cash Drawer Reconciliation)
+
+### Done
+- **معايرة الأبعاد وفواصل الصفحات ([resources/views/cashier/report-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/report-print.blade.php))**:
+  * ضبط هوامش صفحة الطباعة القياسية `@page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm !important; }` لتوفير هوامش تنفسية متناسقة تحمي الجداول من الالتصاق بالحواف علوياً وسفلياً.
+  * فصل كل قسم طبي/إداري ليبدأ في صفحة مستقلة مع ترويسة مصغرة للقسم وتوثيق اسم المستشفى والكاشير والتاريخ.
+  * جدول مقبوضات مقروء بتنسيق `table-layout: fixed` وخلايا مريحة، مع صف المجموع الفرعي لكل قسم مطابق لنموذج كشف الصندوق اليومي.
+  * صفحة مطابقة وتسوية ختامية مستقلة (`final-summary-page`) تضم: جدول إيرادات الأقسام، جدول سندات الاسترجاع، وبطاقة ملخص الصندوق التدقيقي (المقبوضات - الاسترجاعات - المقبوض إلكترونياً = صافي النقد الفعلي بالدرج)، والتواقيع الثلاثية.
+  * إضافة تنبيه إرشادي في الشريط العلوي لتوضيح إخفاء رابط المتصفح وعنوان الصفحة عبر خيار (الرؤوس والتذييلات / Headers and footers) في نافذة الطباعة.
+- **تحديث كنترولر الكاشير ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * في `paymentsReport()`: دعم تجميع الوصولات للأقسام، واستعلام سندات الاسترجاع لنفس الفترة والكاشير، وحساب المقبوضات الإلكترونية وصافي النقد الفعلي بالصندوق.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/CashierLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/CashierLocalizationTest.php))**:
+  * اجتياز كامل حزمة `CashierLocalizationTest` بنجاح 100% (`5 passed, 63 assertions`).
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 260: تحويل حذف الخصومات والمكافآت إلى إلغاء إداري مع الاحتفاظ بالأرشفة والسجل وعزل التأثير المالي عن الرواتب Transform HR Employee Actions Deletion into Soft Administrative Cancellation with Audit Archiving, Financial Isolation from Payroll, and Restoration Support)
+
+### Done
+- **قاعدة البيانات والنموذج ([database/migrations/2026_11_19_210500_add_cancellation_fields_to_hr_employee_actions_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_19_210500_add_cancellation_fields_to_hr_employee_actions_table.php), [app/Models/HrEmployeeAction.php](file:///c:/get/hospital-system/app/Models/HrEmployeeAction.php))**:
+  * إضافة حقول التوثيق والتدقيق للأرشفة الإدارية: `cancelled_by` (المشرف الملغي)، `cancelled_at` (توقيت الإلغاء)، و `cancellation_reason` (سبب الإلغاء).
+  * تحديث مصفوفة `$fillable` و `$casts` بالنموذج مع ربط العلاقة `cancelledBy()` ودالة التحقق `isCancelled()`.
+- **الكنترولر ومسارات الإلغاء والاستعادة ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php), [routes/web.php](file:///c:/get/hospital-system/routes/web.php))**:
+  * إضافة مسار `POST employees/actions/{action}/cancel` ودالة `cancelAction()` التي تتحقق من عدم ترحيل الإجراء في الرواتب، وتحول حالته إلى `cancelled` وتوثق هوية الملغي وتوقيته والسبب.
+  * إضافة مسار `POST employees/actions/{action}/restore` ودالة `restoreAction()` لتمكين الإدارة من استعادة وتفعيل الإجراء في حال الإلغاء بالخطأ.
+  * ترقية دالة `destroyAction()` لتطبق الإلغاء والأرشفة تلقائياً بدلاً من الحذف النهائي لمنع فقدان البيانات نهائياً.
+  * عزل كامل عن الرواتب (`HrPayrollController`): لا يدخل الإجراء الملغي في أي خصم أو مكافأة بالراتب، حيث تقتصر حسابات الرواتب على الحالات المعلقة `pending` حصراً.
+- **شاشة الموظف وسجل العقوبات والمكافآت ([resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+  * استبدال عمود الحذف بعمود `الإجراءات` متضمناً زراً أنيقاً ومودال تأكيد الإلغاء مع حقل سبب اختياري وتنبيه توضيحي للمستخدم بأن الإجراء يظل محفوظاً في السجل دون حذف.
+  * تمييز الإجراءات الملغاة بستايل هادئ وشارة `ملغي ومؤرشف` وخط شطب على المبلغ المالي `<del>` مع إظهار تفاصيل من قام بالإلغاء وتاريخه وسببه، مع إتاحة زر `استعادة`.
+  * التحميل الاستباقي للعلاقات (`with(['actionSetting', 'creator', 'cancelledBy', 'payrollCycle'])`) لمنع استعلامات N+1.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/HrEmployeeActionCancellationTest.php](file:///c:/get/hospital-system/tests/Feature/HrEmployeeActionCancellationTest.php))**:
+  * بناء واجتياز 6 اختبارات ميزة متكاملة تؤكد: التسجيل، الإلغاء مع بقاء السجل محفوظاً، ظهور تفاصيل الإلغاء بالواجهة، الاستعادة، منع إلغاء الإجراء المُرحّل، وعزل التأثير المالي تماماً عن مسير الرواتب بنسبة نجاح 100% (`6 passed, 26 assertions`).
+  * اجتياز اختبارات الموظفين `HREmployeeTest` بنسبة 100% (`11 passed, 90 assertions`).
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 259: معالجة انقطاع واختفاء القائمة المنسدلة لخيارات الموظف في جدول الدوام والخفارات بنمط Popper Fixed Strategy والارتقاء الديناميكي لطبقات العرض Fix Dropdown Clipping in HR Schedules Roster with Popper Fixed Strategy, Dynamic Viewport Boundaries & Stacking Context Elevation)
+
+### Done
+- **معالجة انقطاع واختفاء قائمة خيارات الموظف ([resources/views/hr/schedules/index.blade.php](file:///c:/get/hospital-system/resources/views/hr/schedules/index.blade.php))**:
+  * تشخيص السبب الجذري: القائمة المنسدلة `<ul class="dropdown-menu">` كانت محصورة داخل حاوية الجدول سريعة التمرير `.table-responsive.roster-table-wrapper` ذات التمرير والتجاوز التلقائي (`overflow: auto; max-height: 72vh`) مع تمركز افتراضي `position: absolute`، مما تسبب بانقطاع الخيارات عند هوامش الجدول السفلية والجانبية.
+  * تطبيق استراتيجية التثبيت لـ Popper (`data-bs-popper-config='{"strategy":"fixed"}'`) وحدود الإطار المرئي (`data-bs-boundary="viewport"`): تحرير القائمة بالكامل من قيود التمرير لترتبط مباشرة بنافذة العرض (Viewport) مع الانقلاب التلقائي الذكي للأعلى (`auto-flip`) عند النقر على الموظفين في الصفوف السفلية.
+  * الارتقاء التفاعلي بطبقات العرض (Stacking Context Elevation): إضافة مستمعات الأحداث `show.bs.dropdown` و `hidden.bs.dropdown` لرفع مؤشر `z-index` لخلية الموظف الثابتة (`.roster-emp-cell`) والصف (`.roster-emp-row`) إلى `1055` أثناء فتح القائمة، مما يمنع نهائياً تداخلها أو تواريها خلف ترويسة الجدول أو ذيل التغطية.
+  * تحديد حد أقصى للارتفاع وتمرير داخلي سلس (`max-height: 320px; overflow-y: auto; min-width: 220px; z-index: 1065;`) لضمان ظهور كافة خيارات الشفتات براحة تامة دون أي اقتصاص.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/HrScheduleTest.php](file:///c:/get/hospital-system/tests/Feature/HrScheduleTest.php), [tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+  * تصفية وإعادة تجميع قوالب Blade بنجاح عبر `php artisan view:clear` و `php artisan view:cache`.
+  * اجتياز حزمة اختبارات جدول الخفارات `HrScheduleTest` بنجاح 100% (`6 passed, 34 assertions`).
+  * اجتياز حزمة اختبارات الموظفين `HREmployeeTest` بنجاح 100% (`11 passed, 90 assertions`).
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 258: إزالة حقل تحديد السعر المالي من استمارة المقيم لطلب العلاج الفيزيائي في محطة العمليات السريرية واعتماد التسعير الآلي من دليل الخدمات وحصره بالكاشير Remove Manual Pricing Input from Resident Physiotherapy Order Form, Enforce Catalog Pricing & Preserve Cashier Financial Governance)
+
+### Done
+- **شاشة محطة العمليات السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * حذف حقل إدخال سعر الجلسة (`unit_price`) بالكامل من استمارة المقيم لمنع التداخل المالي من الأطباء السريريين وحصر التسعير بالسياسة المعتمدة.
+  * إعادة توزيع حقول الاستمارة لتشمل (عدد الجلسات + التوصية والتشخيص السريري + زر الإرسال) بتصميم متناسق.
+  * تحديث شارة الترويسة لتوضيح السعر المعتمد (60,000 د.ع / جلسة - تسدد وتعدل لدى الكاشير).
+- **كنترولر المحطة السريرية ([app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * إزالة حقل `unit_price` من قواعد التحقق والتلقي في دالة `storePhysiotherapy()`.
+  * فرض قراءة السعر حصراً وبشكل آلي من دليل الخدمات الإضافية (`HospitalExtraService::default_price`) بقيمة 60,000 د.ع.
+  * إبقاء المرونة المالية الكاملة لدى الكاشير لتعديل السعر أو إضافة الخصومات عند إتمام السداد.
+- **الترجمة والاختبارات الآلية ([lang/en.json](file:///C:/get/hospital-system/lang/en.json), [tests/Feature/PhysiotherapySurgeryWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/PhysiotherapySurgeryWorkflowTest.php))**:
+  * إضافة مفاتيح الترجمة الإنجليزية الجديدة في القاموس المركزي.
+  * اجتياز حزمة الاختبارات الآلية `PhysiotherapySurgeryWorkflowTest` بنجاح 100% (`4 passed, 22 assertions`).
+  * اجتياز تدقيق التنسيق عبر `Laravel Pint`.
+
+## Session log (2026-11-19 — المرحلة 257: حل مشكلة حساب ليالي الإقامة التراكمية في كاشير العمليات المتقدم وفك ازدواجية تبويب العمليات من الكاشير العام Fix Dynamic Stay Nights Calculation in Surgeries Cashier, Resolve False 'Paid in Full' for Inpatients, & Decouple Surgeries Tab from Unified Cashier Hub)
+
+### Done
+- **حل مشكلة الحساب المالي الخاطئ في كاشير العمليات المتقدم ([resources/views/cashier/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/index.blade.php))**:
+  * رصد الخلل الجذري الذي كان يقرأ رسوم الغرفة `$roomFee` من الحقل الثابت في جدول العمليات (`$surgery->room_fee` الذي يحمل 0.00 د.ع عند الحجز للغرف العادية المشمولة)، مما جعل المرضى الراقدين لعدة ليالٍ (مثل المريض معد - 9 ليالٍ إضافية) يظهرون خطأً كـ "مدفوع بالكامل" وحجب زر السداد.
+  * استدعاء دالة احتساب الإقامة الفندقية الديناميكية التراكمية (`$surgery->calculateStayDetails()`) في حلقتي التجميع والعرض واحتساب حصة المريض التأمينية أو النقدية الدقيقة.
+  * ظهور المبالغ المعلقة الحقيقية (2,250,000 د.ع لـ 9 ليالٍ إضافية) مع استعادة الزر الأخضر التفاعلي `تسديد الرسوم` فوراً.
+- **فك ازدواجية وتبويب العمليات من الكاشير العام ([resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
+  * تطبيق الخيار (1) المعتمد هندسياً: إزالة تبويب العمليات المكرر (`#tab-surgeries`) من محطة الكاشير العامة بالكامل.
+  * إضافة زر توجيه سريع وأنيق في الترويسة العلوية وفي قائمة الـ Pills ينقل موظف الصندوق مباشرة إلى `كاشير العمليات المتقدم` (`/cashier/surgeries`).
+  * تنظيف تبويب "الكل" من صفوف العمليات الجراحية ليبقى الكاشير العام خفيفاً ومخصصاً لـ (كشفية الاستشارية، الفحوصات الطبية، الطوارئ، الخدج، العناية المركزة، والاسترجاع).
+- **تحديث كنترولر الكاشير وقاعدة البيانات ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تخفيف استعلام `CashierController@index` بإزالة استعلام العمليات الثقيل وعلاقاته لتسريع فتح الشاشة وتوفير موارد السيرفر.
+  * في `processSurgeryPayment()`: مزامنة حقل `surgeries.room_fee` ليتطابق مع القيمة الفعلية للغرفة (`$targetRoomFee`) عند السداد.
+  * تصحيح حقل `room_fee` للعملية #13 (المريضة هدير) إلى 150,000 د.ع لمطابقة السداد الفعلي ومنع التناقضات.
+- **حزم الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgeriesCashierStayBillingTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeriesCashierStayBillingTest.php), [tests/Feature/CashierLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/CashierLocalizationTest.php))**:
+  * بناء واجتياز حزمة `SurgeriesCashierStayBillingTest` بنجاح 100% (`2 passed, 8 assertions`) تؤكد الحساب الديناميكي لليالي الإقامة وظهور زر السداد واحتواء الكاشير العام على رابط كاشير العمليات المتقدم دون التبويب القديم.
+  * اجتياز حزمة `CashierLocalizationTest` بنجاح 100% (`4 passed, 48 assertions`).
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 256: تكامل خدمة العلاج الفيزيائي والتأهيل السريري بعد العملية في محطة العمليات السريرية مع تسعير افتراضي 60 ألف دينار وتعديل تلقائي لدى الكاشير وحل تسريبات التعريب Post-Op Physiotherapy Service Integration in Surgery Clinical Station with 60k Default Price, Editable Cashier Billing & Full Localization Pass)
+
+### Done
+- **معالجة تسريب الكلمات العربية في وضع اللغة الإنجليزية بمحطة الكاشير ([resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
+  * تعريب واستبدال الكلمات الصريحة مثل `'تسديد'`, `'تسديد شامل'`, `'تسديد الكشفية'`, `'تسديد الطوارئ'`, `'تسديد الآن'` بالوسم `{{ __('...') }}`.
+  * تعريب مؤشر الحالة اللحظي للجافاسكريبت `متوقف (يدوي)` ليصبح `{{ __('متوقف (يدوي)') }}` ومؤقت آخر تحديث `{{ __('آخر تحديث:') }}`.
+- **إدراج خدمة العلاج الفيزيائي في دليل الخدمات الإضافية (`hospital_extra_services`)**:
+  * إنشاء وتشغيل ميجريشن `database/migrations/2026_11_19_150000_add_physiotherapy_to_hospital_extra_services.php` لإضافة خدمة `علاج فيزيائي` بكود `PHYS-01` وتصنيف `medical` وسعر افتراضي 60,000 دينار عراقي مع تفعيلها (المعرف ID #18).
+- **بناء مسارات ومعالجات خدمة العلاج الفيزيائي بالكنترولر**:
+  * `routes/web.php`: إضافة مسار الحفظ `POST /clinical/{surgery}/physiotherapy` (`clinical-station.physiotherapy.store`) ومسار الإلغاء `DELETE /clinical/{surgery}/physiotherapy/{extraService}` (`clinical-station.physiotherapy.cancel`).
+  * `app/Http/Controllers/ClinicalStationController.php`:
+    * دعم تحميل علاقة `extraServices.service` و `extraServices.createdBy`.
+    * بناء دالة `storePhysiotherapy()` للتحقق من عدد الجلسات (1-30)، وتعيين السعر الافتراضي 60,000 د.ع، وحفظ الطلب في `SurgeryExtraService` بحالة `pending` وتوثيق العملية في سجل النشاط عبر `UserActivityLogger`.
+    * بناء دالة `cancelPhysiotherapy()` لإلغاء وحذف الطلب المعلق في حال رغبة الكادر السريري قبل المحاسبة.
+- **تطوير واجهة محطة العمليات السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة بطاقة مخصصة في تبويب الاستشارات `tab=consultations`: `طلب خدمة علاج فيزيائي وتأهيل سريري (Physiotherapy Request)`.
+  * تتيح للطبيب المقيم أو الجراح طلب جلسات علاج فيزيائي مع تحديد عدد الجلسات، والسعر التقديري (60,000 د.ع) مع شارة "قابل للتعديل لدى الكاشير"، والملاحظات والتوصيات الطبية.
+  * جدول استعراض الجلسات المطلوبة مع شارات الحالة (`معلق بالكاشير (قابل للتعديل)` / `مسدد في الكاشير`) ومعلومات الطبيب الطالب وإمكانية الإلغاء السريع للطلبات المعلقة.
+- **الربط المالي المرن مع استمارة كاشير العمليات ([resources/views/cashier/surgeries/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * تظهر جلسات العلاج الفيزيائي تلقائياً ضمن الخدمات الإضافية المعلقة في كشف دفع العملية مع حقل إدخال سعر مرن `extra_service_prices[...]` بقيمة 60,000 د.ع قابلة للزيادة أو الخصم من قبل الكاشير مباشرة عند التسديد.
+- **توسيع القاموس المركزي ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * إضافة 37 مفتاح ترجمة طبي وسريري ومالي، ليصل إجمالي القاموس إلى **3,671 مفتاحاً**.
+- **حزم الاختبارات الآلية وضمان الجودة ([tests/Feature/PhysiotherapySurgeryWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/PhysiotherapySurgeryWorkflowTest.php), [tests/Feature/SurgeriesCashierStayBillingTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeriesCashierStayBillingTest.php))**:
+  * بناء واجتياز حزمة `PhysiotherapySurgeryWorkflowTest` بنجاح 100% (`4 passed, 22 assertions`).
+  * اجتياز اختبارات الكاشير وحساب الإقامة في كاشير العمليات بنجاح (`2 passed, 8 assertions`).
+
+## Session log (2026-11-19 — المرحلة 255: حل خطأ الـ ParseError وتعريب وترجمة محطة الكاشير والمالية والخزينة المركزية وإصدار الوصولات وسندات الاسترجاع والطباعة الحرارية 100% مع توسيع القاموس لـ 3,634 مفتاحاً واجتياز حزم الاختبارات بنسبة 100% Fix ParseError & Comprehensive 100% Granular Localization for Cashier Workstation, Diagnostic Payment Forms, Receipts, Thermal POS Print & Financial Station with 3,634 Dictionary Keys & 100% Automated Feature Tests Pass)
+
+### Done
+- **معالجة خطأ الـ ParseError وإزالة تداخل وسوم Blade ([resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
+  * رصد وإصلاح تداخل وسوم Blade في الأسطر 603 و1031 حيث كانت تستدعي `{{ __('يحدد عند التسديد') }}` داخل وسم إيكو آخر `{{ ... }}`، وتحويلها إلى PHP نقي مباشر `__('يحدد عند التسديد')`.
+  * تنظيف وسوم التعليقات والتداخلات اللفظية في أسطر الفائض المالي (1856، 1889، 1904).
+  * تصفية الذاكرة المؤقتة للواجهات وإعادة بنائها بنجاح كامل بدون أي خطأ تركيبي عبر `php artisan view:clear` و `php artisan view:cache`.
+- **التعريب والترجمة الشاملة الدقيقة 100% لمحطة الكاشير والمالية والوصولات**:
+  * `resources/views/cashier/index.blade.php`: تعريب ترويسة محطة الكاشير، مؤشرات الـ KPIs المالية الحية، محدد الفاصل الزمني للتحديث اللحظي، شارات المعاملات المعلقة عبر كافة التبويبات التسعة (الكل، المواعيد، طلبات الفحوصات، الطوارئ، المؤجلة، الخدج، العناية المركزة، العمليات، الاسترجاع)، ومودال الاسترجاع المالي وصرف المستحقات (`medicalRefundModal`).
+  * `resources/views/cashier/payment-form.blade.php`: تعريب شاشة تسديد كشفية الطبيب وفحوصات السونار، كروت التسعير المعتمد، خيارات الدفع، والتأكيد.
+  * `resources/views/cashier/request-payment-form.blade.php`: تعريب شاشة تسديد طلبات المختبر والأشعة، الخدمات الإضافية، خصومات الفحوصات، وإجراءات السداد (دفع، تأجيل، إلغاء).
+  * `resources/views/cashier/receipt.blade.php`: تعريب إيصال القبض وسندات الاسترجاع المالي، جدول الخدمات الطبية المفصلة، نسب التحمل والتأمين، وتنبيهات الإلغاء.
+  * `resources/views/cashier/receipt-print.blade.php`: تعريب دقيق لقسيمة الطباعة الحرارية الموجهة لطابعات الـ POS (عرض 80mm) مع الحفاظ الهندسي التام على الأبعاد، دعم اتجاه الطباعة ديناميكياً (`rtl`/`ltr`)، تعريب كافة الحقول، الأطباء، رمز التيليجرام QR، وتفاصيل الكاشير.
+  * `resources/views/surgeries/index.blade.php`: إضافة زر حجز عملية جديدة المتوافق مع صلاحية `create surgeries` وأسلوب `.sg-btn-create`.
+- **القاموس المركزي المحدث ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * توسيع القاموس المركزي من 3,611 إلى **3,634 مفتاح ترجمة مالي وسريري وإداري دقيق** بنسبة مطابقة 100%.
+- **حزم الاختبارات الآلية وضمان الجودة ([tests/Feature/CashierLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/CashierLocalizationTest.php), [tests/Feature/SurgeriesLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeriesLocalizationTest.php))**:
+  * بناء واجتياز حزمة `tests/Feature/CashierLocalizationTest.php` بنجاح 100% (`4 passed, 48 assertions`).
+  * اجتياز حزمة `tests/Feature/SurgeriesLocalizationTest.php` بنجاح 100% (`7 passed, 76 assertions`).
+  * اجتياز اختبارات فاصل التحديث وسندات الكاشير (`CashierRefreshIntervalControlTest`, `CashierReceiptReturnLinkTest`).
+  * فحص الـ Blade Views والتأكد من صفرية أخطاء الترجمة والتجميع.
+
+## Session log (2026-11-19 — المرحلة 254: التعريب والترجمة الشاملة الدقيقة 100% لشاشات العمليات الأساسية وإدارة الحجوزات ولوحة الصالات والتقرير المطبوع ومصفوفة الصلاحيات مع توسيع القاموس لـ 3,611 مفتاحاً واجتياز حزم الاختبارات بنسبة 100% Comprehensive 100% Granular Localization for Core Surgeries, Booking, Flight Board, Surgical Report Print, Tab Permissions Matrix with 3,611 Dictionary Keys & 100% Automated Tests Pass)
+
+### Done
+- **التعريب والترجمة الدقيقة 100% لشاشات العمليات الأساسية الثمانية (8 Blade Views)**:
+  * `resources/views/surgeries/index.blade.php`: تعريب كامل لسجل العمليات، مؤشرات الـ KPIs، الفلاتر، الشارات السريرية، جدول مخزن وعهدة العمليات (`or_store`) بكافة تفاصيل الوجبات وتواريخ الانتهاء والتنبيهات.
+  * `resources/views/surgeries/waiting.blade.php`: تعريب شامل لقائمة الانتظار وصالات العمليات (Flight Board)، الصالات السريرية، مودال إضافة صالة جديدة، وتنبيهات الجافاسكريبت والمزامنة اللحظية.
+  * `resources/views/surgeries/create.blade.php`: تعريب 100% لشاشة حجز عملية جديدة، بيانات المريض، الطبيب الجراح والمرسل، جدول العمليات متعددة الإجراءات، اختيار الغرف والإقامة، وإضافة الأطباء.
+  * `resources/views/surgeries/edit.blade.php`: تعريب ترويسة تعديل حجز العملية، المسار التأميني، استعراض الوثائق، وتعديل العمليات والغرف.
+  * `resources/views/surgeries/print.blade.php`: تقرير جراحي رسمي ثنائي اللغة ديناميكي (`dir="rtl"` / `dir="ltr"`)، تعريب كافة الحقول، توقيع الجراح، التخدير، وختم صالة العمليات.
+  * `resources/views/surgeries/control.blade.php`: تعريب لوحة تحكم العمليات الجراحية وقائمة الانتظار السريعة وأزرار التنقل.
+  * `resources/views/surgeries/settings/tabs.blade.php`: معالجة خطأ التركيب اللغوي `ParseError` بإزالة كافة التداخلات غير القانونية لوسوم Blade، تنظيف وسوم الحذف والتأكيد، وتعريب مصفوفة الصلاحيات بالكامل.
+  * `resources/views/surgeries/show.blade.php`: تدقيق وتأكيد تعريب تفاصيل العملية وتبويباتها.
+- **القاموس المركزي المحدث ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * توسيع القاموس المركزي من 3,129 إلى **3,611 مفتاح ترجمة طبي وإداري وسريري دقيق** بنسبة مطابقة 100% وصفرية الأخطاء المفتاحية.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgeriesLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeriesLocalizationTest.php), [tests/Feature/SurgeryGranularTabControlTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryGranularTabControlTest.php))**:
+  * اجتياز حزمة `SurgeriesLocalizationTest` بنجاح 100% (`7 passed, 76 assertions`).
+  * اجتياز حزمة `SurgeryGranularTabControlTest` بنجاح 100% (`7 passed, 26 assertions`).
+  * إجمالي توكيدات الاختبارات الناجحة: **102 توكيد برمجي (Assertions)**.
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد بنسبة 100%.
+
+## Session log (2026-11-19 — المرحلة 253: التعريب والترجمة الشاملة الدقيقة 100% لمحطات التشخيص المخبرية والشعاعية ودليل الأسعار وفحوصات العمليات الجراحية وتوسيع القاموس لـ 3,129 مفتاحاً واختبارات الميزة الآلية Comprehensive 100% Granular Localization for Laboratory, Radiology, Pricing Catalog & Surgery Diagnostics across 31 Blade Views with 3,129 Dictionary Keys & Automated Feature Tests)
+
+### Done
+- **محطة المختبر وسجل التحاليل المخبرية ([resources/views/lab/index.blade.php](file:///C:/get/hospital-system/resources/views/lab/index.blade.php), [resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php))**:
+  * تعريب وترجمة كاملة لكافة الحقول، الفلاتر، الشارات السريرية، شاشات إدخال وتدقيق النتائج، مع الحفاظ الدقيق على معادلات حساب الدهون التلقائية (Lipid Profile) في الجافاسكريبت.
+- **محطة الأشعة والسونار والإيكو وإدارة الكادر ([resources/views/radiology-staff/index.blade.php](file:///C:/get/hospital-system/resources/views/radiology-staff/index.blade.php), [resources/views/radiology-staff/show.blade.php](file:///C:/get/hospital-system/resources/views/radiology-staff/show.blade.php), [resources/views/radiology/index.blade.php](file:///C:/get/hospital-system/resources/views/radiology/index.blade.php), [resources/views/radiology/create.blade.php](file:///C:/get/hospital-system/resources/views/radiology/create.blade.php), [resources/views/radiology/show.blade.php](file:///C:/get/hospital-system/resources/views/radiology/show.blade.php), [resources/views/radiology/print.blade.php](file:///C:/get/hospital-system/resources/views/radiology/print.blade.php), [resources/views/radiology/types/*](file:///C:/get/hospital-system/resources/views/radiology/types/index.blade.php))**:
+  * تعريب محطة الكادر وتبويبات الأقسام الأربعة، بطاقات الطوارئ، القوالب الطبية الجاهزة والعبارات السريعة، ومعاينة التقارير، ودليل أنواع الأشعة.
+  * تعريب نظام النطق الصوتي الآلي (Web Speech API) للاستدعاء الصوتي على المرضى ثنائي اللغة.
+- **دليل وأسعار وإعدادات الفحوصات المخبرية ([resources/views/lab-tests/*](file:///C:/get/hospital-system/resources/views/lab-tests/index.blade.php))**:
+  * تعريب دليل التحاليل، بطاقات الفحوصات، أسعار التأمين ونسب التحمل، والنطاقات المرجعية العمرية والجنسية، والمجموعات الفرعية للتحاليل عبر 8 شاشات تفصيلية.
+- **محطة فحوصات أشعة وسونار العمليات الجراحية ([resources/views/staff/surgery-radiology-tests/index.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-radiology-tests/index.blade.php), [resources/views/staff/surgery-radiology-tests/selection.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-radiology-tests/selection.blade.php), [resources/views/staff/surgery-radiology-tests/show.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-radiology-tests/show.blade.php), [resources/views/staff/surgery-radiology-tests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-radiology-tests/print.blade.php))**:
+  * تعريب وترجمة كاملة لشاشات طلبات الأشعة للعمليات، شاشة الاختيار، إدخال تقرير الأشعة والصور، ونموذج التقرير الطبي المطبوع ثنائي اللغة.
+- **محطة الفحوصات المخبرية للعمليات الجراحية ([resources/views/staff/surgery-lab-tests/index.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-lab-tests/index.blade.php), [resources/views/staff/surgery-lab-tests/selection.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-lab-tests/selection.blade.php), [resources/views/staff/surgery-lab-tests/show.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-lab-tests/show.blade.php), [resources/views/staff/surgery-lab-tests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/surgery-lab-tests/print.blade.php))**:
+  * تعريب وترجمة كاملة لشاشات الإحصائيات، اختيار العملية، إدخال واعتماد نتائج المختبر وحزم التحاليل، ومشاركة النتائج عبر واتساب، ونموذج الطباعة الرسمي.
+- **القاموس المركزي المحدث ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * توسيع القاموس إلى **3,129 مفتاح ترجمة طبي وإداري وسريري دقيق** بنسبة مطابقة 100%.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/DiagnosticLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/DiagnosticLocalizationTest.php))**:
+  * بناء واجتياز حزمة اختبارات شاملة `DiagnosticLocalizationTest` بنجاح 100% (`6 passed, 80 assertions`).
+  * اجتياز فحص `Laravel Pint` لتنسيق الأكواد.
+
+## Session log (2026-11-19 — المرحلة 252: تنظيف ترويسة القائمة بالكامل وتثبيت محول لغة مصغر في الزاوية العلوية المعاكسة للقائمة ديناميكياً Dynamic Opposite-Corner Micro Dropdown Language Switcher with Clean Sidebar Header)
+
+### Done
+- **تنظيف القائمة الجانبية وإعادة الشعار لوضعه الصافي ([resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إزالة أي عناصر أو أزرار دخيلة من ترويسة القائمة (`.sidebar-header`) ليبقى الشعار وهوية المستخدم في المنتصف بنظافة كاملة.
+- **تثبيت المنسدلة المصغرة في الزاوية المعاكسة للقائمة ديناميكياً (`.lang-corner-dropdown`)**:
+  * استخدام الخاصية المنطقية `inset-inline-end: 20px; top: 10px;` ليتحرك الزر المنسدل تلقائياً عكس جهة القائمة:
+    * في العربية (القائمة على اليمين) ⬅️ زر اللغة في **أعلى اليسار بالزاوية** (`left: 20px`).
+    * في الإنجليزية (القائمة على اليسار) ⬅️ زر اللغة في **أعلى اليمين بالزاوية** (`right: 20px`).
+  * زر مصغر بارتفاع 28px فقط (`[ 🇮🇶 عربي ▾ ]` / `[ 🇬🇧 EN ▾ ]`) بخلفية زجاجية معتمة وظل ناعم.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * اجتياز كامل حزمة `LocalizationTest` بنسبة 100% (`9 passed, 72 assertions`).
+
+## Session log (2026-11-19 — المرحلة 251: تحرير القائمة الجانبية بالكامل ونقل محول اللغة بالأعلام إلى الزاوية العلوية الثابتة Decoupling Language Switcher from Sidebar to Floating Top Corner Widget)
+
+### Done
+- **فصل محول اللغة عن القائمة الجانبية ([resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * حذف محول اللغة من القائمة الجانبية نهائياً لتحرير كامل المساحة والارتفاع لروابط الأقسام بدون أي تأثير بصري أو تزاحم.
+  * تحويله إلى ويدجت عائم ثابت أعلى الشاشة (`.floating-lang-pill`): في الزاوية العلوية اليسرى في RTL (`left: 24px`)، والزاوية العلوية اليمنى في LTR (`right: 24px`) مع خلفية زجاجية أنيقة وظل ناعم وعلمي العراق وبريطانيا.
+  * إخفاؤه تلقائياً في شاشات التابلت/الموبايل للاكتفاء بالشريط المدمج `#tabletTopbar`.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * فحص وتأكيد ظهور `.floating-lang-pill` والأعلام المتجهة `iq.svg` و `gb.svg`.
+  * اجتياز كامل حزمة `LocalizationTest` بنسبة 100% (`9 passed, 72 assertions`).
+
+## Session log (2026-11-19 — المرحلة 250: التعريب والترجمة الشاملة الدقيقة 100% لعيادات الاستشارية ومحطة الطبيب وسجل الطلبات الطبية والسجل التاريخي للمريض مع تنبيه الفحوصات المعلقة وتوسيع القاموس لـ 1,871 مفتاحاً واختبارات الميزة الآلية Comprehensive 100% Granular Localization for Outpatient Visits, Doctor Workstation, Medical Orders & Tests History with Pending Tests Alert & 1,871 Dictionary Keys)
+
+### Done
+- **تعريب وترجمة محطة الطبيب وتنبيه الفحوصات المعلقة والعمود الأيسر الدائم ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
+  * تعريب وترجمة تنبيه الفحوصات المعلقة السريري: `{{ __("توجد فحوصات طبية معلقة بانتظار صدور النتائج (عددها: :count)") }}` و `{{ __("يُمنع إنهاء الزيارة حتى تكتمل وتصدر نتائج كافة الفحوصات (المخبرية والشعاعية)...") }}` وزر `{{ __("تعليق واستدعاء التالي") }}` والتنبيه السريري عند محاولة إنهاء الزيارة قبل صدور النتائج.
+  * تعريب العمود الأيسر الدائم للسجل الطبي ونتائج الفحوصات: شريط مراحل وتتبع الطلبات (طلب الطبيب، الكاشير، القسم المنفذ، النتيجة جاهزة)، كرت الوصفة الطبية (RX) وصرف الصيدلية، جدول الفحوصات السريري للمختبر والأشعة والتمريض، تقارير الفحوصات المرفقة وملفات الـ PDF والصور الشعاعية، الانطباع والمشاهدات السريرية، وأرشيف الطلبات الملغاة، وتبويبات الزيارات السابقة والمواعيد والعمليات.
+- **تعريب وترجمة السجل الطبي الشامل للمريض ([resources/views/doctors/patient-history.blade.php](file:///C:/get/hospital-system/resources/views/doctors/patient-history.blade.php))**:
+  * تعريب 100% لبطاقة المريض والحساسية والأمراض المزمنة، فلاتر السجل الطبي (نطاق التاريخ، نوع الحدث، الطبيب، والبحث)، الخط الزمني للرحلة الطبية (Patient Medical Journey)، وبطاقات الوصول السريع (آخر وصفة، آخر فحص مخبري، ملخص الخروج).
+- **تعريب وترجمة سجل وإدارة الطلبات الطبية المركزي ([resources/views/staff/requests/index.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/index.blade.php))**:
+  * تعريب جدول الطلبات العادية، طلبات طوارئ المختبر والأشعة، فلاتر الأقسام، شارة البث المباشر ومؤقت آخر تحديث، ومودال إدخال وتدقيق تحاليل الطوارئ مع تقييم المعدلات المرجعية المباشر في الجافاسكريبت.
+- **تعريب شاشات الزيارات ومحطة الطبيب ومطبوعات الروشتة والمواعيد**:
+  * تعريب `resources/views/visits/index.blade.php`، `visits/create.blade.php`، `visits/show.blade.php`، `visits/edit.blade.php`، `doctors/visits/index.blade.php`، `doctors/visits/prescription-print.blade.php`، و `doctors/visits/appointment-print.blade.php`.
+- **القاموس المركزي المحدث ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * توسيع القاموس إلى **1,871 مفتاح ترجمة** مع تدقيق طبي ولغوي بنسبة 100%.
+- **التوافقية البرمجية والاختبارات الآلية ([tests/Feature/VisitsLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/VisitsLocalizationTest.php))**:
+  * تصحيح استعلامات الـ SQL في `DoctorVisitController` و `StaffRequestController` لتكون متوافقة قياسياً مع MySQL و SQLite (`CURRENT_DATE` وحسابات الأولوية `CASE WHEN`).
+  * إغلاق قسم المحتوى `@endsection` في `staff/requests/index.blade.php`.
+  * بناء 4 اختبارات ميزة شاملة لجميع شاشات الزيارات ومحطة الطبيب وسجل الطلبات وتنبيه الفحوصات المعلقة واجتيازها بنجاح 100% (`4 passed, 78 assertions`).
+
+## Session log (2026-11-18 — المرحلة 249: التعريب والترجمة الدقيقة 100% للمحطة السريرية الموحدة لإقامة العمليات الجراحية بكافة تبويباتها الـ 10 ومودالاتها ونصوص الجافاسكريبت التفاعلية وتوسيع القاموس لـ 1,195 مفتاحاً واختبارات الميزة الآلية Comprehensive 100% Granular Localization for Unified Clinical Inpatient & Surgery Station across All 10 Tabs, 4 Modals & Dynamic JS with 1,195 Translation Keys & Automated Feature Tests)
+
+### Done
+- **الترجمة الشاملة الدقيقة 100% للمحطة السريرية الموحدة ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * تغريب وترجمة تفصيلية بنظام `__()` دون استثناء لكافة التبويبات الـ 10 وعناصر الهيدر والمودالات الأربعة:
+    1. شريط التنقل والترويسة السريرية التنفيذية وبيانات المريض والعملية والطور النشط (Pre-Op / Post-Op) وشارات الحالة وأزرار الإجراءات.
+    2. شريط التبويبات التفاعلي وحسابات الصلاحيات (`$shortTabLabels`) وبطاقات المحتوى.
+    3. تبويب السيرة المرضية (`history`): الشكوى، التاريخ الجراحي، والتاريخ الدوائي والحساسية وملاحظات التمريض.
+    4. تبويب العلامات الحيوية وميزان السوائل (`vitals`): الصافي، السوائل الوريدية، الفم، الدم ومشتقاته، البول، قراءات الدرنقات، القيء، شيت التمريض، والمودالات.
+    5. تبويب خطة العلاج والتشخيص (`plan`): توجيهات الجراح، الأهداف العلاجية، وتوصيات التخريج.
+    6. تبويب الفحوصات والمختبر والأشعة (`tests`): طلبات التحاليل والأشعة، نسب التحمل والضمان، المودالات التفاعلية، والنتائج المخبرية والشعاعية.
+    7. تبويب استبيان رضا النزيل (`inpatient_survey`): كرت الباركود والمؤقت التلقائي وأزرار الطباعة، السجل التقييمي لـ 27 معياراً عبر 5 بطاقات خدمية وسريرية.
+    8. تبويب سجل إعطاء الأدوية (MAR - `treatments`): جدول الجرعات الـ 24 ساعة، البحث الذكي بالصيدلية مع الرصيد والمطابقة، التوثيق الفوري للتمريض ورسائل التنبيه والـ SweetAlert.
+    9. تبويب مستلزمات عهدة العمليات (`supplies`): نموذج الصرف متعدد المواد، المستلزمات المصروفة، أرقام الدفعات وتواريخ الصلاحية.
+    10. تبويب شيت متابعة الطبيب المقيم (`follow_up`): العلامات السريرية الخمس بالإنجليزية، الملاحظات، وجدول المتابعات الدورية.
+    11. تبويب الاستشارات الطبية التخصصية (`consultations`): اختيار الاستشاري بقائمة تفاعلية بالاسم والتخصص والأجر، نموذج التوصيات والردود، والتحكم بالحالة.
+    12. مودالات طلب التحاليل المخبرية (`orderLabTestsModal`)، طلب الأشعة (`orderRadiologyModal`)، قراءات الدرنقات المتعددة (`drainDetailsModal`)، وتفاصيل الدرنقات التاريخية (`viewDrainDetailsModal`).
+    13. كافة رسائل الجافاسكريبت التفاعلية ومربعات التأكيد (SweetAlert2) والتنبيهات السريعة (Toastr).
+- **القاموس المركزي المحدث ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * توسيع القاموس إلى 1,195 مفتاح ترجمة طبي وإداري وسريري مع الالتزام التام بالمعايير الطبية المعتمدة وصحة بنية الـ JSON بنسبة 100%.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/ClinicalStationLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/ClinicalStationLocalizationTest.php))**:
+  * بناء اختبار ميزة متخصص `ClinicalStationLocalizationTest` للتحقق التلقائي من ترجمة عناوين وتفاصيل وتبويبات وشارات شاشة `/surgery-stations/clinical/{surgery}` بالجلستين العربية والإنجليزية.
+  * اجتياز كامل حزمة اختبارات الترجمة والتعريب (`11 passed, 103 assertions`) بنجاح 100%.
+  * اجتياز فحص `Laravel Pint` للتنسيق بنسبة 100%.
+
+## Session log (2026-11-18 — المرحلة 248: تصميم وتنسيق زر تبديل اللغة بأعلام العراق وبريطانيا المتجهة وشريط الاختيار الثنائي المتطور Modern Segmented Language Switcher with Official Iraq & UK Vector Flags and Dedicated Sidebar Control)
+
+### Done
+- **الأعلام المتجهة الرقمية فائقة النقاء ([public/images/flags/iq.svg](file:///C:/get/hospital-system/public/images/flags/iq.svg), [public/images/flags/gb.svg](file:///C:/get/hospital-system/public/images/flags/gb.svg))**:
+  * بناء وتضمين علم العراق الرقمي الرسمي (أحمر، أبيض، أسود مع عبارة "الله أكبر" بالخط الكوفي الأخضر) وعلم المملكة المتحدة (Union Jack) بالهندسة المتجهة الصرفة لتفادي تشوهات خطوط الإيموجي في ويندوز.
+- **إعادة التوزيع والتنسيق المعماري للواجهة ([resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php), [resources/views/auth/login.blade.php](file:///C:/get/hospital-system/resources/views/auth/login.blade.php))**:
+  * نقل زر التبديل من سطر المستخدم الضيق إلى كرت تحويل مزدوج مخصص ومستقل (`.lang-switcher-pill`) في القائمة الجانبية يضم خياري `[ 🇮🇶 عربي ]` و `[ 🇬🇧 English ]` مع إبراز الخيار النشط بظلال وخلفية زرقاء بارزة (`.lang-btn.active`).
+  * تحديث زر الترويسة العلوية للتابلت والموبايل (`#tabletTopbar`) وشاشة تسجيل الدخول (`login.blade.php`) ليعرض علم الدولة المستهدفة بدقة ووضوح بدلاً من الأيقونة العامة `fa-globe`.
+  * تنظيف بطاقة هوية الموظف في القائمة الجانبية وفصل رابط الخروج بانتظام.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/LocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * إضافة اختبار `test_language_switcher_renders_iraq_and_uk_flags_and_segmented_pill` للتحقق من وجود ملفات الأعلام، نصوص الـ SVG، وظهور شريط التحويل في العرض.
+  * اجتياز جميع اختبارات `LocalizationTest` بنجاح 100% (`10 passed, 91 assertions`).
+
+## Session log (2026-11-18 — المرحلة 247: الترجمة الشاملة الدقيقة 100% لواجهة تفاصيل العمليات ولوحة التحكم والشاشات التمهيدية وتوسيع القاموس لـ 822 مفتاحاً Comprehensive Granular Localization for Surgery Show Details, Core Layout, Dashboard & Pre-Op Stations with 822 Keys & Automated Feature Tests)
+
+### Done
+- **واجهة تفاصيل العملية الجراحية ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تعريب وترجمة كاملة وشاملة 100% بنظام `__()` دون استثناء أي عنصر لكافة الأقسام الـ 11:
+    1. شريط الإحصائيات العلوي وحالة العملية (Pre-Op, Intra-Op, Post-Op) والموقع ومؤقت المدة.
+    2. كرت التشخيص الطبي وتوصيات الجراح وخطة العملية.
+    3. جدول وأعضاء الفريق الجراحي الخمسة ومحدد الدور والأطباء.
+    4. خطة التخدير وملاحظات التقييم وأنواعه وأدويته.
+    5. المستلزمات الطبية المصروفة من عهدة العمليات مع نظام الصرف متعدد المواد المحدث.
+    6. قائمة الأجهزة الطبية المستخدمة.
+    7. الفحوصات المخبرية وتحاليل الدم المطلوبة ونتائجها.
+    8. الفحوصات الشعاعية والسونار وملفات الـ PDF.
+    9. متابعات وسجل الطبيب المقيم والعلامات السريرية الخمسة.
+    10. الاستشارات الطبية التخصصية السريرية وأجورها وتوصيات الاستشاري.
+    11. مودالات تغيير الموعد والإلغاء وتأكيد الإجراءات ورسائل الجافاسكريبت.
+- **شاشات الملاحة ولوحة التحكم والتسجيل ومحطات العمليات ([resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php), [resources/views/dashboard.blade.php](file:///C:/get/hospital-system/resources/views/dashboard.blade.php), [resources/views/auth/login.blade.php](file:///C:/get/hospital-system/resources/views/auth/login.blade.php), [resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php), [resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgery-stations/anesthesia/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php), [resources/views/surgery-stations/nursing/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [resources/views/surgery-stations/resident/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/resident/index.blade.php), [resources/views/surgery-stations/surgeon/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php), [resources/views/nurse-availability/index.blade.php](file:///C:/get/hospital-system/resources/views/nurse-availability/index.blade.php), [resources/views/nurse-availability/off-duty.blade.php](file:///C:/get/hospital-system/resources/views/nurse-availability/off-duty.blade.php))**:
+  * تعريب عناصر القائمة الجانبية والتنقل، إحصائيات لوحة التحكم، شاشة الدخول وبطاقة التوفر خارج الدوام، ومحطات العمليات التمهيدية لضمان بيئة عمل ثنائية اللغة متناسقة.
+- **القاموس المركزي المحدث ([lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * توسيع القاموس من 526 مفتاحاً إلى 822 مفتاح ترجمة طبي وإداري دقيق دون أي تكرار وبفحص تحقق صفري للأخطاء.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgeryShowLocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryShowLocalizationTest.php), [tests/Feature/LocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * بناء اختبار ميزة متخصص `SurgeryShowLocalizationTest` للتحقق التلقائي من ترجمة عناوين وتفاصيل وحقول ومصفوفات شاشة `/surgeries/{id}` بجلستي العربية والإنجليزية.
+  * اجتياز جميع اختبارات التعريب وحزمة اختبارات العمليات (`36 passed, 227 assertions`) بنسبة نجاح 100%.
+
+## Session log (2026-11-18 — المرحلة 246: التأسيس المعماري لدعم تعدد اللغات عربي وإنجليزي وتبديل الجلسة وتوافق القائمة الجانبية Multi-Language Localization Foundation with Instant AR/EN Switcher, SetLocale Middleware & LTR Sidebar Layout)
+
+### Done
+- **الوسيط ومحرك اللغة ([app/Http/Middleware/SetLocale.php](file:///C:/get/hospital-system/app/Http/Middleware/SetLocale.php), [bootstrap/app.php](file:///C:/get/hospital-system/bootstrap/app.php))**:
+  * بناء وسيط `SetLocale` لضبط لغة التطبيق النشطة `App::setLocale()` استناداً لقيمة الجلسة `session('locale', 'ar')` مع حصرها بالأكواد المعتمدة (`ar`, `en`) والعودة التلقائية للعربية عند أي قيمة غير صالحة.
+  * تسجيل الوسيط ضمن حزمة `$middleware->web(append: [SetLocale::class])`.
+- **المسار والقاموس المركزي ([routes/web.php](file:///C:/get/hospital-system/routes/web.php), [lang/en.json](file:///C:/get/hospital-system/lang/en.json))**:
+  * تسجيل مسار التبديل الفوري `GET /lang/{locale}` مع حفظ الاختيار بالجلسة والرجوع التلقائي للصفحة الحالية `redirect()->back()`.
+  * إنشاء قاموس الترجمة المركزي `lang/en.json` متضمناً أهم المصطلحات الطبية والإدارية (أقسام المستشفى، المحطات السريرية، الحالات، الإجراءات، الأزرار، والترويسات).
+- **واجهة المستخدم والقالب الأساسي ([resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * جعل اتجاه ولغة المستند ديناميكياً: `<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">`.
+  * إضافة أزرار وشارات تبديل اللغة التفاعلية في الترويسة العلوية للموبايل/التابلت (`#tabletTopbar`) وفي بطاقة هوية الموظف بالقائمة الجانبية (`sidebar-user`).
+  * ضبط هندسة وتنسيقات القائمة الجانبية بالكامل (Fixed Coordinates: `top: 0; bottom: 0; z-index: 1030`) وضبط اتجاهات ومحاذاة الشاشات الكبيرة والمحمولة (`left: 0` في LTR و `right: 0` في RTL) مع تدفق المحتوى الرئيسي `main-content` وتصحيح زاوية دوران سهم التوسع (`rotate(90deg)` في LTR).
+- **الاختبارات الآلية وتنسيق الكود ([tests/Feature/LocalizationTest.php](file:///C:/get/hospital-system/tests/Feature/LocalizationTest.php))**:
+  * بناء 5 اختبارات ميزة آلية تغطي التحويل للإنجليزية، والعودة للعربية، وحماية المدخلات غير الصالحة، وعرض `dir="ltr"` والترجمات، وعرض `dir="rtl"` بنسبة نجاح 100% (`5 passed, 15 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-18 — المرحلة 245: نظام طلب وإدارة الاستشارات الطبية التخصصية السريرية للعمليات الجراحية باسم الطبيب وتوثيق الردود Medical Consultations Inpatient Order System by Consultant Doctor with Clinical Response & Recommendations Tracking)
+
+### Done
+- **قاعدة البيانات والنموذج ([database/migrations/2026_11_18_120000_create_surgery_consultations_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_18_120000_create_surgery_consultations_table.php), [app/Models/SurgeryConsultation.php](file:///C:/get/hospital-system/app/Models/SurgeryConsultation.php), [app/Models/Surgery.php](file:///C:/get/hospital-system/app/Models/Surgery.php), [app/Models/Doctor.php](file:///C:/get/hospital-system/app/Models/Doctor.php))**:
+  * إنشاء جدول مستقل `surgery_consultations` متضمناً: معرف العملية `surgery_id`، معرف الطبيب الاستشاري `doctor_id`، التخصص `specialty`، سبب الاستشارة والتشخيص `reason`، درجة الأولوية `priority` (`routine`, `urgent`, `stat`)، حالة الاستشارة `status` (`pending`, `completed`, `cancelled`)، رد وتوصيات الاستشاري `consultant_response` و `consultant_recommendations`، أجر الاستشارة `fee`، مع توثيق هوية الطالب والرد والوقت (`requested_by`, `responded_by`, `responded_at`).
+  * ربط العلاقات في موديلات `Surgery` (`hasMany(SurgeryConsultation::class)`) و `Doctor` (`hasMany(SurgeryConsultation::class)`).
+  * إضافة دوال المساعدة للشارات والمسميات (`priority_label`, `priority_badge_class`, `status_label`, `status_badge_class`).
+- **الصلاحيات ومصفوفة التحكم ([app/Models/SurgeryTabPermission.php](file:///C:/get/hospital-system/app/Models/SurgeryTabPermission.php))**:
+  * تسجيل تبويب `consultations` في `TABS` للمحطة السريرية وتبويب `detail_consultations` في `DETAIL_TABS` لصفحة تفاصيل العملية.
+  * ضبط مصفوفة الوصول التلقائية لجميع الأدوار الطبية والتمريضية والجراحية السبعة.
+- **الكنترولرات والمسارات ([app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+  * تسجيل مسارات إرسال طلب الاستشارة (`POST /clinical/{surgery}/consultations`)، توثيق رد الاستشاري (`POST /clinical/{surgery}/consultations/{consultation}/respond`)، وإلغاء الطلب المعلق (`DELETE /clinical/{surgery}/consultations/{consultation}`).
+  * تزويد المحطة السريرية بقائمة الأطباء الاستشاريين المتاحين مرتبين مع إبراز توفر اليوم وأجورهم وتخصصاتهم.
+  * السماح للطبيب الاستشاري المعني بالاستشارة بمعاينة ملف العملية الجراحية وتوثيق التوصيات.
+- **الواجهات الأمامية وتجربة المستخدم ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php), [resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة تبويب مخصص ومستقل للاستشارات الطبية التخصصية (`consultations`) بشارة إحصائية تلخص عدد الاستشارات المعلقة والمكتملة.
+  * نموذج طلب استشارة أنيق مع قائمة منسدلة للأطباء الاستشاريين وتعبئة تلقائية فورية للتخصص والأجر، وحقول الأولوية والسبب.
+  * كروت استعراض السجل الطبي للاستشارات مع شارات الحالة والأولوية، ونموذج توثيق رد وتوصيات الاستشاري القابل للطي السلس، وإمكانية إلغاء الطلبات المعلقة.
+  * عرض سجل الاستشارات الطبية في صفحة تفاصيل العملية الجراحية ضمن تبويب `detail_consultations`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryConsultationTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryConsultationTest.php))**:
+  * بناء 6 اختبارات ميزة آلية شاملة تغطي فتح التبويب، حفظ الطلب، توثيق الرد، إلغاء الطلب، حماية المكتمل من الإلغاء، وعرض الاستشارات في صفحة العملية بنسبة نجاح 100% (`6 passed, 32 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي أخطاء.
+
+## Session log (2026-11-18 — المرحلة 244: إضافة خانات تقييم العلامات السريرية الخمس بالإنجليزية مع التبديل التفاعلي الفوري بين Positive و Negative التلقائي 5 Clinical Signs Checkboxes with Instant English Positive/Negative Toggle in Resident Follow-Up Sheet)
+
+### Done
+- **قاعدة البيانات والنموذج ([database/migrations/2026_11_18_110000_add_clinical_signs_to_resident_station_follow_ups_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_18_110000_add_clinical_signs_to_resident_station_follow_ups_table.php), [app/Models/ResidentStationFollowUp.php](file:///C:/get/hospital-system/app/Models/ResidentStationFollowUp.php))**:
+  * إضافة عمودي `clinical_signs` (JSON) و `other_notes` (Text) إلى جدول `resident_station_follow_ups`.
+  * إضافة دالة تعريف العلامات السريرية الخمس `availableClinicalSigns()`: `Oriented`، `Clear chest`، `Soft abdomen`، `Urine output`، `Yellowish discolouration`.
+  * إضافة Accessors `positive_signs` و `negative_signs` لاستخراج العلامات الإيجابية والسلبية بدقة وتوافق تام.
+- **الكنترولرات وتجميع الملاحظات ([app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php), [app/Http/Controllers/ResidentStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ResidentStationController.php))**:
+  * استلام وحفظ مصفوفة العلامات المحددة كـ `Positive` وحفظ الملاحظات الإضافية `other_notes`.
+  * تجميع نصوص المتابعة باللغة الإنجليزية الصريحة `✓ Positive:` و `✗ Negative:` لضمان التوافقية العكسية 100% مع كافة الشاشات والتقارير والطباعة.
+- **الواجهات الأمامية وتجربة المستخدم ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php), [resources/views/surgery-stations/resident/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/resident/show.blade.php), [resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة خيارات التقييم السريري الخمس في تبويب المتابعة للطبيب المقيم.
+  * الحالة الافتراضية (Default) قبل الاختيار تظهر بوضوح وبدون تضليل رمادي كشارة حمراء بارزة: `Negative` (`badge bg-danger text-white`).
+  * بمجرد وضع علامة الصح (وضع جيك) تتحول الشارة فورياً وديناميكياً إلى خضراء بارزة: `Positive` (`badge bg-success text-white`) بالإنجليزية حصراً وبدون نصوص عربية.
+  * عرض سجلات المتابعة المحفوظة في الخط الزمني والجداول بتصنيف `Positive:` و `Negative:` واضح ودقيق لكل علامة.
+- **الاختبارات الآلية وتنسيق الكود ([tests/Feature/ResidentFollowUpClinicalSignsTest.php](file:///C:/get/hospital-system/tests/Feature/ResidentFollowUpClinicalSignsTest.php))**:
+  * بناء 5 اختبارات ميزة شاملة تغطي ظهور شارات `Negative` الافتراضية، والحفظ بالكنترولرين، والتحقق، وعرض النتائج بنجاح 100% (`5 passed, 38 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-18 — المرحلة 243: إعادة تصميم وتطوير واجهة تعديل المستخدمين بتخطيط مزدوج ذكي وتصنيف مرئي للأدوار وبطاقة هوية الموظف Modern Redesign of User Edit Interface with Dual-Column Layout, Smart Categorized Roles Matrix, and Employee Profile Card)
+
+### Done
+- **إعادة بناء واجهة تعديل المستخدمين بالكامل ([resources/views/users/edit.blade.php](file:///C:/get/hospital-system/resources/views/users/edit.blade.php))**:
+  * استبدال الترويسة الصفراء القديمة `bg-warning` بهوية طبية زرقاء فاخرة ناصعة وتخطيط ثنائي الأبعاد (4:8).
+  * إضافة بطاقة هوية الموظف الجانبية (Profile Sidebar Card) متضمنة صورة رمزية ملونة (Avatar)، شارة الحالة التشغيلية الفورية (نشط/معطل)، رقم المعرف `#ID`، ملخص الأدوار الحالية، وتواريخ الحساب.
+  * تصنيف مصفوفة الأدوار الـ 36 إلى مجموعات طبية وإدارية منظمة (الكوادر الطبية والجراحية، الاستقبال والتمريض والطوارئ، المحطات التشخيصية، المالية والكاشير، الصيدلية والمستودع، الإدارة والنظام) مع أزرار تحديد/إلغاء لكل قسم.
+  * إضافة محرك بحث لحظي سريع في الأدوار (Live Search) وفلترة البطاقات بنقرة زر مع عدّاد تفاعلي مباشر لعدد الأدوار المحددة.
+  * تصميم كروت أمان مستقلة لكلمة المرور مع زر إظهار/إخفاء كلمة المرور وتلميحات إرشادية.
+  * ربط أنيق لاختيار المخزن أو عهدة الطابق مع أيقونات إدخال عصرية (`input-group`).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/UserEditModernViewTest.php](file:///C:/get/hospital-system/tests/Feature/UserEditModernViewTest.php))**:
+  * بناء اختبارات ميزة متخصصة تؤكد فتح الشاشة بتصميمها الجديد، وتصنيف الأدوار، ونجاح التحديث بنسبة 100% (`2 passed, 16 assertions`).
+  * اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات.
+
+## Session log (2026-11-18 — المرحلة 242: استبدال تنبيه التوفر الداكن بنظام Toastr الطبي الناصع وتوحيد مصفوفة ومسميات أدوار التخدير ومشرف التمريض Medical Clean Toastr Migration & Role Permission Harmonization for Anesthesia and Head Nurse)
+
+### Done
+- **استبدال التنبيه الداكن بنظام Toastr الطبي ([resources/views/nurse-availability/index.blade.php](file:///C:/get/hospital-system/resources/views/nurse-availability/index.blade.php))**:
+  * إزالة خلفية `bg-dark text-white` السوداء تماماً من شاشة إدارة توفر التمريض.
+  * ربط الاستجابة الفورية عند التبديل بنظام المستشفى المعتمد `toastr.success` و `toastr.error` بألوان طبية فاتحة ومريحة للعين في أعلى الشاشة.
+  * تحديث كرت الـ Toast الاحتياطي بتصميم أبيض ناصع `bg-white text-dark border-success-subtle` وأيقونة نجاح خضراء.
+- **توحيد ومواءمة مصفوفة الصلاحيات والأدوار ([app/Http/Controllers/RoleManagementController.php](file:///C:/get/hospital-system/app/Http/Controllers/RoleManagementController.php), [database/seeders/RolesAndPermissionsSeeder.php](file:///C:/get/hospital-system/database/seeders/RolesAndPermissionsSeeder.php))**:
+  * إضافة الدورين `anesthesia` و `head_nurse` وأدوار التمريض والأطباء المتخصصين (`icu_nurse`, `nicu_nurse`, `icu_doctor`, `nicu_doctor`) إلى `getRoleLabel()` بأسماء عربية صريحة وأيقونات طبية.
+  * إدراج `anesthesia` ضمن فئة "الكوادر الطبية والجراحية" وإدراج `head_nurse` ضمن "الاستقبال والتمريض والطوارئ" في `getRoleCategory()`.
+  * إدراج صلاحية `manage nurse availability` في مصفوفة الصلاحيات لشاشات التعديل (`roles.edit`) مع تسمية عربية واضحة وشارة إدارة.
+  * مزامنة قاعدة البيانات لتمتلك أدوارهما كافة الصلاحيات المعتمدة واكتمال التحقق في `RolePermissionsMatrixTest` و `NurseAvailabilityTest`.
+
+## Session log (2026-11-18 — المرحلة 241: واجهة الهبوط المخصصة والذكية للممرضين خارج جدول الدوام الرسمي مع التحقق وإعادة المحاولة الفورية Dedicated Off-Duty Landing Screen for Unscheduled Nurses with Live Activation Check & Access Recovery)
+
+### Done
+- **شاشة الهبوط المخصصة ([resources/views/nurse-availability/off-duty.blade.php](file:///C:/get/hospital-system/resources/views/nurse-availability/off-duty.blade.php))**:
+  * استبدال رسالة التنبيه الحمراء لشاشة تسجيل الدخول بواجهة هبوط متكاملة، أنيقة ورسمية تحمل هوية النظام والمستشفى.
+  * عرض اسم الممرض، بريده، شارة `🔴 خارج جدول الدوام الرسمي لليوم`، وتاريخ اليوم المنسق.
+  * رسالة إرشادية طبية واضحة تفيد بعدم إدراج الحساب بجدول دوام اليوم، مع توجيه للتواصل مع مدير أو مشرف التمريض.
+  * زر تفاعلي ذكي `[ 🔄 فحص التفعيل والدخول للنظام ]` لتمكين الممرض من الدخول الفوري لمحطة التمريض بمجرد تفعيله من قبل المشرف دون الحاجة لإعادة كتابة البريد وكلمة المرور مجدداً، مع زر تسجيل خروج رسمي.
+- **الكنترولر والميدلوير ([app/Http/Controllers/NurseAvailabilityController.php](file:///C:/get/hospital-system/app/Http/Controllers/NurseAvailabilityController.php), [app/Http/Middleware/CheckNurseAvailability.php](file:///C:/get/hospital-system/app/Http/Middleware/CheckNurseAvailability.php), [app/Http/Controllers/Auth/LoginController.php](file:///C:/get/hospital-system/app/Http/Controllers/Auth/LoginController.php))**:
+  * إضافة مساري `nurse.off-duty` و `nurse.check-access` في ([routes/web.php](file:///C:/get/hospital-system/routes/web.php)).
+  * توجيه الممرض غير المداوم فور تسجيل الدخول إلى واجهة `nurse.off-duty`.
+  * تحديث وسيط الحماية لتثبيت الممرض غير المداوم داخل واجهة الهبوط ومنع وصوله لأي سجلات أو محطات سريرية مع استثناء مسارات الفحص والخروج.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///C:/get/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+  * توسيع حزمة الاختبارات لتشمل 10 اختبارات ميزة تغطي التحويل لشاشة الهبوط، ومنع التسلل للمحطة، وإعادة الفحص والدخول السلس بنسبة نجاح 100% (`10 passed, 41 assertions`).
+
+## Session log (2026-11-17 — المرحلة 240: نظام إدارة توفر وجدول دوام التمريض اليومي وتوزيع الطوابق وتقييد تسجيل الدخول Nurse Availability & Daily Floor Scheduling Management System with Login Restriction)
+
+### Done
+- **قاعدة البيانات ونموذج التوفر ([database/migrations/2026_11_17_130000_create_nurse_availabilities_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_17_130000_create_nurse_availabilities_table.php), [app/Models/NurseAvailability.php](file:///C:/get/hospital-system/app/Models/NurseAvailability.php), [app/Models/User.php](file:///C:/get/hospital-system/app/Models/User.php))**:
+  * إنشاء جدول مستقل `nurse_availabilities` لحفظ سجلات دوام وأرشيف التمريض اليومي (`user_id`, `date`, `is_available`, `assigned_floor`, `shift`, `notes`, `created_by`) مع قيد فريد يمنع التكرار لليوم الواحد.
+  * ربط العلاقات ودالة الفحص السريعة `isNurseAvailableToday()` في موديل `User`.
+- **الكنترولر ومحرك التوفر ([app/Http/Controllers/NurseAvailabilityController.php](file:///C:/get/hospital-system/app/Http/Controllers/NurseAvailabilityController.php))**:
+  * بناء كنترولر متكامل مع فلاتر التاريخ والطوابق والبحث، واحتساب الإحصائيات (إجمالي الكادر، المتاحين بالدوام، خارج الدوام، نسبة التغطية).
+  * دعم التبديل اللحظي (AJAX Toggle Switch) للتوفر، وتحديث الطابق المخصص لليوم وربطه بمخزن الطابق تلقائياً، والتحكم الجماعي (تفعيل دوام الكل / إيقاف دوام الكل).
+- **الواجهة وتجربة المستخدم ([resources/views/nurse-availability/index.blade.php](file:///C:/get/hospital-system/resources/views/nurse-availability/index.blade.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تصميم واجهة متطورة بكروت إحصائية علوية، مفاتيح تبديل سريعة، قوائم منسدلة فورية لاختيار الطابق والشفت مع إشعارات Toast تفاعلية.
+  * إضافة رابط `جدول دوام وتوفر التمريض` في القائمة الجانبية المخصصة للمدراء ومسؤولي التمريض.
+- **حماية النظام وتقييد تسجيل الدخول ([app/Http/Controllers/Auth/LoginController.php](file:///C:/get/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Middleware/CheckNurseAvailability.php](file:///C:/get/hospital-system/app/Http/Middleware/CheckNurseAvailability.php), [bootstrap/app.php](file:///C:/get/hospital-system/bootstrap/app.php))**:
+  * قفل تسجيل الدخول لأي ممرض غير مسجل كمتوفر اليوم مع رسالة توجيهية صريحة.
+  * ميدلوير حماية استباقي يمنع أي إجراء في حال إيقاف دوام الممرض أثناء الشفت.
+- **الصلاحيات والتحقق الآلي ([database/seeders/RolesAndPermissionsSeeder.php](file:///C:/get/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [tests/Feature/NurseAvailabilityTest.php](file:///C:/get/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+  * إضافة دور `head_nurse` وصلاحية `manage nurse availability`.
+  * بناء 8 اختبارات ميزة متخصصة تؤكد كامل جوانب الميزة بنسبة نجاح 100% (`8 passed, 30 assertions`).
+
+## Session log (2026-11-17 — المرحلة 239: الانتقال التلقائي الذكي للمرحلة السريرية وإلغاء أزرار التبديل اليدوية المربكة Smart Auto Phase Transition & Header Badge in Clinical Station)
+
+### Done
+- **الباك إند والتعرف الذكي ([app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * تطوير منطق تحديد المرحلة التلقائي (`$isPostOpReady`) ليفحص اكتمال صالة العمليات (`operationTheaterStation completed`)، أو اكتمال التخدير، أو اكتمال محطة ما قبل العملية، أو دخول المريض مرحلة الإفاقة/الانتهاء (`completed`/`recovery`).
+  * إنشاء سجل ما بعد العملية `postOpStation` تلقائياً فور جاهزية الحالة، وتعيين المرحلة الافتراضية تلقائياً دون إجبار الكادر الطبي والتمريضي على التبديل اليدوي، مع استمرار دعم الاستعراض اليدوي الاختياري.
+- **الواجهة الأمامية وتجربة المستخدم ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إزالة زري التبديل المربكين `[ ما قبل العملية ]` و `[ ما بعد العملية ]` وحذف فئات التنسيق القديمة غير المستخدمة.
+  * استبدالهما بشارة مرحلة سريرية ذكية معتمدة على وضع المريض: `[ ⏳ تحضير ما قبل العملية ]` باللون الأزرق أو `[ 🩺 عناية ما بعد العملية (الرقود) ]` باللون الأخضر.
+  * إضافة رابط أرشيف واستعراض ثانوي أنيق وصغير بجانب الشارة (`[ 📂 أرشيف ما قبل العملية ]` أو `[ ما بعد العملية ⬅️ ]`) لمن يرغب بمراجعة السجل الآخر.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/ClinicalStationMultiDrainTest.php](file:///C:/get/hospital-system/tests/Feature/ClinicalStationMultiDrainTest.php))**:
+  * إضافة اختبار `test_clinical_station_auto_detects_smart_phase_and_renders_badge()` للتحقق من فتح النظام تلقائياً على ما قبل العملية للحالات الجديدة، والانتقال التلقائي لما بعد العملية عند اكتمال الحالة وظهور شارة المرحلة ورابط الأرشيف بنسبة نجاح 100% (`8 passed, 53 assertions`).
+
+## Session log (2026-11-17 — المرحلة 238: إزالة قائمة اختيار الممرض المسؤول يدوياً من تبويب الرعاية التمريضية والاعتماد على التوثيق التلقائي للممرض المسجل Remove Redundant Manual Nurse Selector from Nursing Care Tab in Favor of Auto-Logged Nurse ID)
+
+### Done
+- **تحسين الواجهة وتجربة المستخدم ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إزالة حقل وقائمة الاختيار المنسدلة الزائدة `الممرض المسؤول عن الحالة` (`nurse_id`) من تبويب `tab=nursing_care` لكون النظام يربط ويوثق هوية الممرض تلقائياً من جلسة الدخول (`auth()->id()`) في الكنترولر.
+  * ترشيق واجهة التمريض لتقتصر حصراً وبشكل مباشر على حقلي: ملاحظات الرعاية التمريضية (`nursing_notes`) وتعليمات وملاحظات التخريج (`discharge_notes`).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/ClinicalStationMultiDrainTest.php](file:///C:/get/hospital-system/tests/Feature/ClinicalStationMultiDrainTest.php))**:
+  * تحديث اختبار `test_nursing_care_tab_renders_notes_fields_and_saves()` لتأكيد عدم وجود حقل `nurse_id` في الواجهة (`assertDontSee('name="nurse_id"')`)، والتأكد من إسناد هوية الممرض المسجل في الجلسة تلقائياً لقاعدة البيانات في جدول `nursing_stations` بنسبة نجاح 100% (`7 passed, 47 assertions`).
+
+## Session log (2026-11-17 — المرحلة 237: استعادة حقول نموذج وملاحظات الرعاية التمريضية وتخريج المريض في المحطة السريرية Restore Nursing Care & Discharge Notes Tab Fields & Form Submission in Clinical Station)
+
+### Done
+- **معالجة حجب الحقول في الواجهة ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * حل مشكلة اختفاء حقول تبويب التمريض `tab=nursing_care`، حيث كان شرط غلاف النموذج المباشر يفحص `in_array($activeTab, ['history', 'vitals', 'plan', 'discharge'])` دون مفتاح `nursing_care`.
+  * إضافة مفتاح `'nursing_care'` إلى مصفوفة التحقق، مما مكّن نموذج التحديث من إظهار حقول اختيار الممرض المسؤول `nurse_id`، ملاحظات الرعاية التمريضية `nursing_notes`، وتعليمات وملاحظات التخريج `discharge_notes`، وزر الحفظ الموحد `[ 💾 حفظ التحديثات السريرية ]`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/ClinicalStationMultiDrainTest.php](file:///C:/get/hospital-system/tests/Feature/ClinicalStationMultiDrainTest.php))**:
+  * إضافة اختبار ميزة شامل `test_nursing_care_tab_renders_notes_fields_and_saves()` يتحقق من استجابة HTTP 200 عند فتح التبويب، وظهور الحقول بالواجهة، وتأكيد نجاح عملية الحفظ والتحديث في جدول `nursing_stations` بنسبة نجاح 100% (`7 passed, 46 assertions`).
+
+## Session log (2026-11-17 — المرحلة 236: دعم قراءات الدرنقات الجراحية المتعددة وغير المحدودة لكل مريض بجدول فرعي مستقل وتجميع تلقائي لميزان السوائل Multi-Drain Clinical Architecture with Dynamic Child Table, Live Fluid Balance Auto-Sum & Interactive Modal)
+
+### Done
+- **قاعدة البيانات وموديل الدرنقات ([database/migrations/2026_11_17_093000_create_resident_station_reading_drains_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_17_093000_create_resident_station_reading_drains_table.php), [app/Models/ResidentStationReadingDrain.php](file:///C:/get/hospital-system/app/Models/ResidentStationReadingDrain.php), [app/Models/ResidentStationReading.php](file:///C:/get/hospital-system/app/Models/ResidentStationReading.php))**:
+  * إنشاء جدول فرعي مستقل `resident_station_reading_drains` يحفظ كل قراءة درنقة في سجل وعمود `amount` صريح مع رقم الدرنقة `drain_number` واسم/موقع الدرنقة `drain_label` ومفتاح أجنبي cascade مرتبط بالقراءة.
+  * ربط العلاقة `hasMany` باسم `drains` في موديل `ResidentStationReading` مع الترتيب برقم الدرنقة.
+- **كنترولر المحطة السريرية ([app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * إضافة دالتي المزامنة والاستخراج `parseDrainsFromRequest` و `syncReadingDrains`.
+  * دعم استلام الدرنقات كمصفوفة `drains` أو كسلسلة نصية `drains_json`، مع الحساب والتجميع التلقائي لمجموعها في `output_drain` وميزان السوائل `fluid_balance`.
+  * دعم التوافقية العكسية 100%: عند إرسال رقم وحيد في `output_drain` يتم تلقائياً إنشاء سجل درنقة مفرد لها في الجدول الفرعي.
+  * شمول `drains` و `drains_json` في فحص مدخلات السوائل `$hasFluidsInput` لضمان الحفظ والمزامنة حتى في حال عدم إدخال سوائل أخرى.
+  * تضمين العلاقة `drains` في الاستعلامات المسبقة (Eager Loading) لمنع مشكلة N+1.
+- **واجهة العلامات الحيوية والسوائل ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة زر أيقونة `[ 📋 ]` بجانب خانة الدرنقة يفتح نافذة منبثقة تفاعلية `#drainDetailsModal` لإضافة أي عدد مفتوح من الدرنقات (درنقة 1، درنقة 2، درنقة 3...) مع تسمية موقعها وإدخال كميتها بالـ ml وحساب المجموع لحظياً.
+  * إضافة شارة عدّاد تفاعلية أسفل الخانة تبين عدد الدرنقات المدخلة.
+  * عرض إجمالي الدرنقات في جدول القراءات التاريخية مع بادج ملون `[ 👁️ X درنقة ]` يعرض تفاصيل كل درنقة بالـ Tooltip ويفتح نافذة استعراض منبثقة `#viewDrainDetailsModal` عند النقر.
+  * تحديث `loadReadingIntoTopForm` و `cancelEditingReading` لتحميل ومسح بيانات الدرنقات بسلاسة تامة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/ClinicalStationMultiDrainTest.php](file:///C:/get/hospital-system/tests/Feature/ClinicalStationMultiDrainTest.php))**:
+  * إنشاء حزمة اختبارات متخصصة تؤكد: حفظ درنقات متعددة كمصفوفة، حفظها كـ JSON، إنشاء سجل تلقائي للقيمة الفردية، تعديل الدرنقات، والحذف المتسلسل بنسبة نجاح 100% (`6 passed, 36 assertions`).
+  * اجتياز كامل حزمة اختبارات العمليات ومصفوفة الصلاحيات (`15 passed, 196 assertions`).
+  * اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات.
+
+## Session log (2026-11-16 — المرحلة 235: تمكين حساب الجراحين العام من استعراض كافة العمليات بالصالة، فك تقييد إتمام صالة العمليات، والربط السلس بملف وسجل العملية Surgeon Station: Display All Active Operating Room Surgeries for Shared Surgeon Account, Remove Operation Theater Completed Constraint, and Streamline Direct Click-Through Navigation)
+
+### Done
+- **معالجة حجب العمليات عن حساب الجراحين العام ([app/Http/Controllers/SurgeonStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeonStationController.php))**:
+  * **توسيع التعرف على الحساب الموحد للجراحين (`$isSharedAccount`)**: شمول الاسم المعتمد في قاعدة البيانات `حساب الجراحين العام` بالإضافة إلى `حساب الجراحين`، البريد `gh@hospital.com`، دور `الجراح` بدون بروفايل طبيب، وصلاحية `view surgeon station`.
+  * **إزالة تقييد حصر العمليات بـ `operationTheaterStation completed`**: إلغاء شرط `whereHas('operationTheaterStation', fn($q) => $q->where('status', 'completed'))` الذي كان يخفي 9 من أصل 14 عملية نشطة ومجدولة وقيد الانتظار، واستبداله بعرض كافة العمليات غير الملغاة `where('status', '!=', 'cancelled')` بمطابقة كاملة مع محطة التخدير.
+  * **فك حظر فتح محطة الجراح في `show`**: إزالة شرط إعادة التوجيه لخطأ `يجب إتمام مرحلة صالة العمليات أولاً`، وتمكين الجراح من فتح وتوثيق الخطة والتوجيهات السريرية في أي مرحلة.
+  * **تحديث الصلاحيات `authorizeSurgeon`**: منح الحساب الموحد للجراحين صلاحية كاملة على كل العمليات بالصالة دون أي حجب 403.
+  * **دعم فلترة الحالات غير المسندة**: تمكين فلتر `doctor_id === 'unassigned'` لجلب العمليات التي بانتظار تعيين طبيب جراح.
+- **تطوير واجهة محطة الجراح ([resources/views/surgery-stations/surgeon/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php))**:
+  * إضافة خيار `⚠️ بانتظار تعيين طبيب جراح` وخيار `👨‍⚕️ كل العمليات بالصالة` بالقائمة المنسدلة.
+  * جعل النقر على اسم المريض، صورته الرمزية، واسم العملية روابط مباشرة وسلسة تفتح تفاصيل وسجل العملية (`surgeries.show`) مع تأثير hover مميز.
+  * تمييز العمليات التي لم يُعين لها جراح ببادج تفاعلي `[ ➕ بانتظار التعيين ]` يفتح العملية للتعيين الفوري.
+- **توجيه تسجيل الدخول والصفحة الرئيسية ([app/Http/Controllers/Auth/LoginController.php](file:///C:/get/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///C:/get/hospital-system/app/Http/Controllers/DashboardController.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تحديث منطق التوجيه لشمل `حساب الجراحين العام` و `gh@hospital.com` ليكون الهبوط الرئيسي دائماً في محطة الجراح.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeonGeneralAccountAllSurgeriesTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeonGeneralAccountAllSurgeriesTest.php), [tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+  * بناء 4 اختبارات متخصصة تؤكد: استعراض حساب الجراحين العام لكافة العمليات بالصالة بنجاح، عمل فلتر الحالات غير المسندة، إمكانية فتح المحطة دون انتظار إتمام الصالة، وتوجيه تسجيل الدخول بنسبة نجاح 100% (`4 passed, 15 assertions`).
+  * اجتياز اختبارات تدفق الجراح الأساسية بنسبة 100% (`5 passed, 22 assertions`).
+  * اجتياز كامل حزمة العمليات الأساسية `SurgeryTest` بنسبة 100% (`9 passed, 176 assertions`).
+  * اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات بنجاح.
+
+## Session log (2026-11-16 — المرحلة 234: فك الارتباط التام لجدول العلاج عن التشخيص وتمكين التحكم المستقل به لجميع الأدوار بما فيها المدير من مصفوفة الصلاحيات Full Decoupling of Medications/Treatments Dropdown from Diagnosis & Granular Control via Tab Permissions Matrix)
+
+### Done
+- **فك الارتباط عن تشخيص الجراح ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [app/Models/SurgeryTabPermission.php](file:///C:/get/hospital-system/app/Models/SurgeryTabPermission.php))**:
+  * تصحيح شرط ظهور زر جدول العلاج في الترويسة العلوية لكارت العملية من `@if(isset($visibleTabs['detail_medications']) || isset($visibleTabs['detail_diagnosis']))` إلى `@if(isset($visibleTabs['detail_medications']))` حصراً، حيث كان الارتباط بـ `detail_diagnosis` يجبر جدول العلاج على الظهور دوماً حتى عند تعيينه كمخفي `hidden`.
+  * تصحيح شرط صلاحية تعديل وإضافة العلاجات `$canWriteMedications` ليعتمد حصراً على `$visibleTabs['detail_medications']['can_write']` دون وراثة صلاحية الكتابة من التشخيص.
+  * إزالة التراجع الاحتياطي (Fallback) من `SurgeryTabPermission` و`SurgeryController::updateDetails` ليكون `detail_medications` مستقلاً استقلالاً تاماً عن أي قسم آخر.
+- **تمكين التحكم بالصلاحيات لدور مدير النظام (Admin Role Control in Matrix)**:
+  * في صفحة مصفوفة الصلاحيات ([resources/views/surgeries/settings/tabs.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/settings/tabs.blade.php)): استبدال شارة `إدخال كامل (ثابت)` القديمة بقائمة منسدلة تفاعلية `<select>` لدور `admin` تمكّن المدير من تخصيص وتجربة الصلاحيات (`مخفي`, `قراءة فقط`, `إدخال كامل`) لحسابه أيضاً.
+  * في `SurgeryTabPermission::getDetailTabPermissions`: تمكين حسابات المدراء من تطبيق التخصيصات المحفوظة في جدول الصلاحيات في حال تخصيصها، مع البقاء على `ACCESS_WRITE` كوضع افتراضي عند عدم وجود تخصيص يدوي.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryGranularTabControlTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryGranularTabControlTest.php))**:
+  * تحديث اختبار `test_hiding_medications_removes_treatments_dropdown` ليثبت اختفاء جدول العلاج عند إخفاء `detail_medications` منفرداً مع بقاء `detail_diagnosis` ظاهراً ومتاحاً للكتابة.
+  * إضافة اختبار جديد `test_admin_can_hide_treatments_dropdown_via_custom_permission` يؤكد إمكانية تحكم حساب المدير بجدول العلاجات إخفاءً وظهوراً عبر مصفوفة الصلاحيات بنجاح.
+  * اجتياز كامل اختبارات التحكم الحبيبي بنسبة 100% (`6 passed, 20 assertions`).
+  * اجتياز حزمة اختبارات العمليات الأساسية `SurgeryTest` بنسبة 100% (`9 passed, 176 assertions`).
+  * اجتياز اختبارات محطة الجراح المعدلة بنسبة 100% (`9 passed, 37 assertions`).
+  * اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات بنجاح.
+
+## Session log (2026-11-16 — المرحلة 233: معالجة خطأ المتغير غير المعرف $combinedReadings في صفحة متابعات المقيم بمحطة الجراح وتأمين العرض المستقل Fix Undefined Variable $combinedReadings & Decouple Resident Follow-ups in Surgeon Station)
+
+### Done
+- **معالجة خطأ `$combinedReadings` وتأمينه في الكنترولر والواجهة ([app/Http/Controllers/SurgeonStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeonStationController.php), [resources/views/surgery-stations/surgeon/follow-ups.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/surgeon/follow-ups.blade.php))**:
+  * تجميع قراءات العلامات الحيوية قبل وبعد العملية في `SurgeonStationController::residentFollowUps` وتمرير المتغير `$combinedReadings` مع العرض دائماً.
+  * تأمين واجهة العرض بتهيئة احتياطية `$combinedReadings = $combinedReadings ?? collect();` في أعلى ملف Blade لمنع حدوث أي خطأ `Undefined variable` مستقبلاً.
+  * تحديث شرط السكربت إلى `@if(!empty($combinedReadings) && $combinedReadings->count() > 0)`.
+  * فك تشابك متابعات الطبيب المقيم وجعلها قسماً مستقلاً بذاته يعرض الجدول عند توفر المتابعات حتى إن لم تكن هناك محطات ما قبل/ما بعد العملية مسجلة بعد.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+  * إضافة اختبار `test_surgeon_can_view_resident_follow_ups_even_without_resident_stations` للتحقق من فتح صفحة المتابعات بنجاح (HTTP 200) دون أخطاء حتى في غياب قراءات العلامات الحيوية.
+  * اجتياز كامل حزمة اختبارات محطة الجراح بنسبة 100% (`5 passed, 22 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-16 — المرحلة 232: تفكيك الواجهة والتحكم الذري المستقل بكل معلومة وعنصر في شاشة العمليات عبر مصفوفة الصلاحيات Granular Modular UI Controls for Surgery File via Tab Permissions Matrix)
+
+### Done
+- **تفكيك التداخلات الموروثة وإتاحة التحكم الفردي المستقل لكل معلومة ([app/Models/SurgeryTabPermission.php](file:///C:/get/hospital-system/app/Models/SurgeryTabPermission.php), [resources/views/surgeries/settings/tabs.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/settings/tabs.blade.php))**:
+  * تفكيك التبويبات المركبة القديمة (`detail_team_timing`, `detail_supplies`) إلى 11 عنصراً ومفتاحاً معيارياً مستقلاً في `SurgeryTabPermission::DETAIL_TABS`:
+    1. `detail_tests`: الفحوصات والتحاليل (مخبرية وأشعة).
+    2. `detail_type`: نوع العملية والعمليات الإضافية.
+    3. `detail_diagnosis`: تشخيص الجراح وتوصياته والخطة السريرية.
+    4. `detail_medications`: الأدوية والعلاجات الموصوفة وجدول العلاج السريع.
+    5. `detail_anesthesia`: تفاصيل وخطة التخدير السريرية.
+    6. `detail_team`: الفريق الطبي المساعد (مساعد جراح، أطباء تخدير 1 و2، مساعد تخدير).
+    7. `detail_timing_location`: صالة العمليات ومدة وتوقيت العملية.
+    8. `detail_supplies`: صرف المستلزمات الطبية من مخزن العمليات التابع.
+    9. `detail_devices`: الأجهزة الطبية المستخدمة في العملية.
+    10. `detail_followups`: المتابعات السريرية للأطباء المقيمين.
+    11. `detail_badges`: شارات حالة التشخيص والتخدير الملونة بالترويسة العلوية لكارت المريض.
+  * ظهور كل عنصر كعمود مستقل بصلاحياته الثلاث (`🚫 مخفي`, `👁️ قراءة فقط`, `✍️ قراءة وإدخال`) لكل دور وظيفي في صفحة إعدادات التبويبات (`/surgery-stations/settings/tabs`).
+  * الحفاظ الكامل على التوافقية العكسية (Backward Compatibility) مع التعيينات القديمة وقيم مصفوفة الصلاحيات الافتراضية عبر `resolveEffectiveTabAccess` و`getDetailTabPermissions`.
+- **ربط عناصر واجهة العملية بالمفاتيح المستقلة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * **شارات الترويسة**: إحاطتها بشرط `detail_badges` مع ربط شارة التشخيص بـ `detail_diagnosis` وشارة التخدير بـ `detail_anesthesia`. تختفي فوراً وبشكل منفصل عند تحديدها كمخفية.
+  * **أزرار الشريط العلوي**: إحاطة زري صالة العمليات ومدة وتوقيت العملية بشرط `detail_timing_location`. إحاطة زر وجدول العلاجات السريعة بشرط `detail_medications`.
+  * **الأقسام الداخلية والأعمدة**: ربط قسم الفريق الطبي بـ `detail_team`، وربط قسم الأجهزة الطبية بـ `detail_devices`، مع جعل حقل ملاحظات التخدير يتمدد بالعرض الكامل (`col-12`) تلقائياً عند إخفاء قسم الأجهزة لتحقيق مظهر بصري متناسق.
+- **تحديث منطق الحفظ ومعالجة الطلبات ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * تحديث `updateDetails` لدعم التبويبات الجديدة (`detail_medications`, `detail_team`, `detail_timing_location`, `detail_devices`) وفحص صلاحيات الكتابة الخاصة بكل حقل بدقة متناهية، مع دعم الطلبات المجمعة والمفردة دون أي تعارض.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryGranularTabControlTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryGranularTabControlTest.php))**:
+  * بناء 5 اختبارات ميزة متخصصة تؤكد: ظهور العناصر بالوضع الافتراضي، اختفاء شارات الترويسة عند إخفاء `detail_badges`، اختفاء زري الصالة والمدة عند إخفاء `detail_timing_location`، اختفاء جدول العلاجات عند إخفاء `detail_medications`، واختفاء كارت الأجهزة الطبية عند إخفاء `detail_devices` بنسبة نجاح 100% (`5 passed, 15 assertions`).
+  * اجتياز كامل حزمة اختبارات العمليات الأساسية `SurgeryTest` بنسبة 100% (`9 passed, 176 assertions`).
+  * اجتياز اختبارات الألوان `SurgeryDiagnosisAndAnesthesiaStatusColorTest` وتغيير الحالة والطباعة `SurgeryStatusPostOpAndPrintReportTest` بنسبة 100%.
+  * اجتياز فحص `Laravel Pint` وتنسيق كافة الملفات بنجاح.
+
+## Session log (2026-11-16 — المرحلة 231: تمكين تغيير حالة المريض بعد الخروج من الصالة، نقل زر الحفظ الموحد بجانب طباعة التقرير، إزالة زر حفظ الفريق المشتت، وتطوير استمارة طباعة التقرير الجراحي بشعار وهوية المستشفى الرسمية Post-Op Status Transitions, Unified Top Save Button, Removal of Redundant Team Save Button, and Official Surgery Print Report)
+
+### Done
+- **تمكين تغيير حالة المريض بعد "خرج من الصالة" ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * إزالة التقييد السابق الذي كان يحول زر الحالة إلى شارة جامدة عند اكتمال العملية (`status === 'completed'`).
+  * إبقاء القائمة المنسدلة نشطة للمستخدمين المخولين مع خيارات مرنة تتيح: (1) استئناف العملية وإعادة إدخال المريض لصالة العمليات (`surgeries.start` / Intra-Op) مع تصفير `end_time = null`، (2) إعادة المريض لقائمة الانتظار (`surgeries.return-to-waiting` / Pre-Op) مع تصفير `end_time = null`، (3) خيار إلغاء العملية عند الحاجة.
+- **زر الحفظ الموحد وإزالة زر "حفظ الفريق والتوقيت" المكرر**:
+  * نقل زر الحفظ الرئيسي إلى الترويسة العلوية السريعة بجانب زر "طباعة التقرير" بمظهر أخضر مميز `[ 💾 حفظ بيانات العملية ]` (`#btnUnifiedSaveSurgeryTop`).
+  * حذف الزر السفلي المكرر القديم الذي كان يظهر في المنتصف بعبارة مشتتة `حفظ الفريق الطبي والتوقيت`، حيث لم يعد له داعٍ وأصبح الحفظ يتم مركزياً لكافة بيانات العملية (التشخيص، التخدير، الفريق الطبي، الموقع، والتوقيت).
+- **إعادة تصميم استمارة طباعة التقرير الجراحي المعتمد ([resources/views/surgeries/print.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/print.blade.php))**:
+  * إعادة بناء صفحة الطباعة بمطابقة تامة مع المعايير المعمارية الرسمية لتقارير أقسام المستشفى (الأشعة والمختبر).
+  * إضافة الترويسة الرسمية ثلاثية الأقسام: اسم المستشفى بالعربية وقسم الجراحة، شعار المستشفى المعتمد Base64 والعلامة المائية المركزية، واسم المستشفى والقسم بالإنجليزية.
+  * بانر وثيقة التقرير الجراحي المعتمد بكود العملية `OR-#id` وبادج الحالة الملون، شبكة بيانات المريض الرباعية، بطاقة أعضاء الفريق الجراحي والتخديري، جدول العمليات الأساسية والإضافية، صناديق التشخيص الطبي وتوصيات الجراح ووصف التقنية الجراحية، توثيق وخطة التخدير والأجهزة، جدول الأدوية المصروفة، ومربع الاعتمادات الرسمية (توقيع الجراح، توقيع طبيب التخدير، ختم صالة العمليات، وكود التحقق الإلكتروني).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryStatusPostOpAndPrintReportTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryStatusPostOpAndPrintReportTest.php))**:
+  * اجتياز كافة سيناريوهات الاختبارات الآلية بنسبة 100% (`3 passed, 34 assertions`).
+  * اجتياز اختبارات الألوان `SurgeryDiagnosisAndAnesthesiaStatusColorTest` بنسبة 100%.
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-16 — المرحلة 230: تمييز لوني ديناميكي لحالة تشخيص الجراح وتوثيق التخدير في واجهة تفاصيل العملية لكادر العمليات Dynamic Status Colors for Surgeon Diagnosis and Anesthesia in Surgery Show)
+
+### Done
+- **التمييز اللوني لحالة تشخيص الجراح ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * **إذا لم يُشخص بعد (`!$isDiagnosed`)**: إبراز الحالة باللون الأحمر الصريح (`bg-danger`, `border-danger`, `text-danger`) بشارة واضحة `[ ❌ التشخيص: لم يُشخص بعد ]` في الترويسة العلوية لكارت المريض، مع تنبيه أحمر عاجل `لم يتم إدخال التشخيص الطبي للعملية بعد (بانتظار توثيق الطبيب الجراح)`، وتمييز إطار حقل التشخيص بحدود حمراء واضحة وبادج `[ غير مُشخّص ]`.
+  * **إذا تم التشخيص (`$isDiagnosed`)**: إبراز الحالة باللون الأخضر الصريح (`bg-success`, `border-success`, `text-success`) بشارة `[ ✔️ التشخيص: تم التشخيص ]`، وتنبيه أخضر معتمد `تم توثيق التشخيص الطبي للعملية بنجاح من قِبل الطبيب الجراح`، وحدود خضراء ناعمة.
+- **التمييز اللوني المتباين لحالة التخدير بألوان مختلفة تماماً**:
+  * **إذا لم يُدخل التخدير بعد (`!$isAnesthesiaDocumented`)**: إبراز الحالة باللون البرتقالي الكهرماني التحذيري (`#ea580c` / `#ffedd5`) بشارة `[ ⏳ التخدير: لم يُدخل بعد ]` في الترويسة العلوية، وتنبيه كهرماني بارز داخل قسم وخطة التخدير `لم يتم إدخال نوع وخطة التخدير بعد (بانتظار طبيب التخدير)` مع تمييز حدود حقل نوع التخدير باللون البرتقالي.
+  * **إذا تم توثيق التخدير (`$isAnesthesiaDocumented`)**: إبراز الحالة باللون الأزرق النيلي / السماوي الداكن (`#0284c7` / `#e0f2fe`) بشارة `[ 💉 التخدير: تم التوثيق (نوع التخدير) ]`، وتنبيه أزرق رسمي يوضح تفاصيل التخدير المسجلة وطبيب التخدير المشرف.
+- **الروابط السريعة المباشرة**: ربط الشارات العلوية بروابط تنقل سلسة تنقل المستخدم بنقرة واحدة إلى قسم التشخيص `#pane-detail_diagnosis` أو قسم التخدير `#pane-detail_anesthesia`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryDiagnosisAndAnesthesiaStatusColorTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryDiagnosisAndAnesthesiaStatusColorTest.php))**:
+  * إنشاء حزمة اختبارات متخصصة تؤكد ظهور المؤشرات والألوان الصحيحة لحالتي عدم التشخيص/التشخيص وعدم إدخال التخدير/توثيقه بنسبة 100% (`2 passed, 18 assertions`).
+  * اجتياز كامل حزمة العمليات `SurgeryTest` بنسبة 100% (`9 passed, 181 assertions`).
+  * اجتياز فحص `Laravel Pint` وتحديث كاش العرض بنجاح.
+
+## Session log (2026-11-16 — المرحلة 229: ترشيق جدول محطة التخدير بحذف أعمدة الإجراءات وحالة المحطة ونوع التخدير، وجعل النقر على اسم المريض يفتح تفاصيل العملية مباشرة Streamlining Anesthesia Table to 4 Core Columns with Direct Click-Through on Patient and Surgery Name to Surgery Details)
+
+### Done
+- **ترشيق جدول محطة التخدير إلى 4 أعمدة رئيسية ([resources/views/surgery-stations/anesthesia/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php))**:
+  * حذف عمود `الإجراءات` وعمود `حالة المحطة` وعمود `نوع التخدير` بالكامل لتوفير مساحة أفقية واسعة ومنع الازدحام البصري.
+  * الاقتصار على الأعمدة الـ 4 الأساسية: (1) `المريض`، (2) `العملية الجراحية`، (3) `موعد العملية`، (4) `طبيب التخدير`.
+  * جعل النقر على اسم المريض وصورته واسم العملية رابطاً مباشراً وسلساً يفتح تفاصيل وسجل العملية (`surgeries.show`) لتعديل كافة التفاصيل والتخدير بيسر وسرعة.
+  * ترشيق شريط الفلاتر بإزالة فلتر الحالة غير المطلوب والتركيز على البحث اللحظي وفلتر الطبيب وفلتر التاريخ.
+- **التحقق وتنسيق الكود**: اجتياز التحقق الآلي وتحديث الذاكرة المركزية والرفع على الفرع الرئيسي.
+
+## Session log (2026-11-16 — المرحلة 228: تمكين حسابات التخدير من استعراض كافة العمليات بالصالة لتعيين الأطباء وإدخال التفاصيل، مع خيار فلترة الحالات غير المسندة Anesthesia Station: Display All Operating Room Surgeries for Doctor Assignment and Clinical Entry with Unassigned Status Filter)
+
+### Done
+- **عرض كافة العمليات الجراحية في محطة التخدير ([AnesthesiaStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/AnesthesiaStationController.php))**:
+  * إزالة تقييد حصر العمليات بالمسندة مسبقاً، وإتاحة ظهور جميع العمليات النشطة بصالة العمليات (المسندة وغير المسندة) لتمكين كادر التخدير من تعيين الأطباء وتوثيق البيانات والتفاصيل السريرية.
+  * دعم فلترة سريعة للحالات غير المسندة (`⚠️ بانتظار تعيين طبيب تخدير`) في القائمة المنسدلة للوصول الفوري إليها.
+  * مزامنة فورية في `update()` لبيانات طبيب التخدير الأول والمساعد ونوع التخدير واسم مساعد التخدير مع جدول العمليات الرئيسي `surgeries` وإعادة التوجيه لمحطة التخدير.
+- **تطوير واجهة محطة التخدير ([resources/views/surgery-stations/anesthesia/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php))**:
+  * تمييز العمليات التي لم يُعين لها طبيب تخدير ببادج بارز `[ ⚠️ بانتظار التعيين ]` وزر مباشر باللون البرتقالي `[ ➕ تعيين طبيب وتفاصيل ]`.
+  * إتاحة خيار استعراض كل العمليات أو العمليات الخاصة أو غير المعينة لكافة المستخدمين المخولين.
+- **التحقق الآلي وتنسيق الكود**:
+  * اجتياز اختبارات استعراض وتعيين العمليات وتحديث الموديل بنسبة 100%، واجتياز فحص `Laravel Pint`.
+
+## Session log (2026-11-16 — المرحلة 227: تطوير محطة طبيب التخدير: شريط فلاتر متقدم، ضبط نوعي الحسابات الموحد والخاص، وتعيين المحطة كصفحة رئيسية للتخدير Anesthesia Station Complete Redesign: Real-time Filters, Dual Account Architecture for Shared OR vs Personal Anesthesiologist, and Default Home Landing Page)
+
+### Done
+- **إعادة تصميم واجهة محطة التخدير بالكامل ([resources/views/surgery-stations/anesthesia/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/anesthesia/index.blade.php))**:
+  * بناء ترويسة تنفيذية داكنة حديثة مع تمييز تلقائي للحساب الموحد (`صالة العمليات - الحساب الموحد لكافة أطباء التخدير`) أو الحساب الخاص (`د. [الاسم] (حساب خاص)`).
+  * شريط فلاتر ذكي: بحث لحظي سريع في المتصفح (`client-side`) مع دعم الخادم (`server-side`)، فلتر أطباء التخدير المنسدل للحساب الموحد، فلتر حالة المحطة (بانتظار المعاينة / قيد المتابعة / مكتملة ومُعتمدة)، وفلتر التاريخ مع أزرار سريعة (`اليوم` / `الكل`).
+  * جدول عمليات رشيق ومفصل يوضح المريض، العملية، الموعد، طبيب التخدير، نوع التخدير ببادج ملون، حالة المحطة، وأزرار الإجراءات السريعة (فتح المحطة وتفاصيل العملية).
+- **ضبط منظومة نوعي الحسابات في الكنترولر ([app/Http/Controllers/AnesthesiaStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/AnesthesiaStationController.php))**:
+  * **الحساب الخاص بطبيب التخدير (Personal Doctor)**: يعرض حصراً العمليات المسندة إليه (رئيسي أو مساعد 2)، ومحمي في `authorizeAnesthesiologist` من فتح عمليات باقي الأطباء بحظر 403.
+  * **حساب صالة العمليات الموحد (`حساب أطباء التخدير` / `anth@hospital.com`)**: يعرض كافة العمليات في صالة العمليات مع إمكانية الفلترة حسب أي طبيب تخدير، وصلاحية كاملة لفتح وتعديل المحطة دون أي حجب.
+- **التعيين كواجهة هبوط رئيسية وشريط التنقل ([routes/web.php](file:///C:/get/hospital-system/routes/web.php), [LoginController.php](file:///C:/get/hospital-system/app/Http/Controllers/Auth/LoginController.php), [DashboardController.php](file:///C:/get/hospital-system/app/Http/Controllers/DashboardController.php), [app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * توجيه الحساب الموحد وأطباء التخدير فوراً إلى `anesthesia-station.index` عند تسجيل الدخول أو زيارة `/` أو `/dashboard`، وتخصيص رابط الرئيسية في السايدبار ليكون `محطة التخدير (الرئيسية)`.
+- **التحقق الآلي وتنسيق الكود**:
+  * اجتياز حزمة سيناريوهات التخدير 100%، واجتياز فحص `Laravel Pint`.
+
+## Session log (2026-11-16 — المرحلة 226: إلغاء الكروت الإحصائية، إضافة فلاتر البحث والتواريخ وحالة المحطة، وضبط ازدواجية الحساب الموحد لصالة العمليات مقابل الحساب الخاص للجراح Surgeon Station Streamlining: Remove KPI Cards, Advanced Real-Time Filters, and Dual Account Architecture for Shared OR vs Personal Surgeon)
+
+### Done
+- **إلغاء الكروت الإحصائية الـ 4 ([resources/views/surgery-stations/surgeon/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/surgeon/index.blade.php))**:
+  * حذف الكروت الإحصائية الأربعة العلوية لتخفيف التراكم الرأسي وإبراز قائمة العمليات وأدوات البحث والتصفية مباشرة.
+- **شريط الفلاتر والبحث اللحظي المتقدم**:
+  * إضافة حقل بحث لحظي سريع بالاسم ورقم الملف والعملية مع فلترة فورية بالمتصفح (`client-side`) وتوافق تام مع الفلترة بالخادم (`server-side`).
+  * إضافة فلتر منسدل للأطباء الجراحين للحساب الموحد (`isSharedAccount`) وبادج خاص للأطباء ذوي الحسابات الفردية.
+  * فلتر حالة المحطة (الكل / بانتظار المعاينة / قيد المتابعة / مكتملة) وفلتر التاريخ مع أزرار سريعة (`اليوم` / `الكل`).
+- **ضبط منظومة نوعي الحسابات ([app/Http/Controllers/SurgeonStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeonStationController.php))**:
+  * **الحساب الخاص بالجراح (Personal Surgeon)**: يعرض عملياته فقط ومحمي في `authorizeSurgeon` من فتح عمليات باقي الأطباء.
+  * **حساب صالة العمليات الموحد (`حساب الجراحين`)**: يعرض كافة العمليات لجميع الجراحين مع إمكانية الفلترة بصلاحية كاملة لفتح وتعديل المحطة دون أي حجب.
+- **التحقق الآلي وتنسيق الكود**:
+  * اختبار سيناريوهات الحسابين وتأكيد الحماية وصلاحيات العرض بنسبة 100%.
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-16 — المرحلة 225: جعل محطة الجراح الصفحة الرئيسية لحساب الجراحين وكافة أطباء الجراحة Surgeon Station as Default Landing and Home Page for Surgeons & Shared Account)
+
+### Done
+- **تعيين محطة الجراح كواجهة هبوط رئيسية ([routes/web.php](file:///C:/get/hospital-system/routes/web.php), [app/Http/Controllers/Auth/LoginController.php](file:///C:/get/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///C:/get/hospital-system/app/Http/Controllers/DashboardController.php))**:
+  * توجيه المستخدمين الذين يحملون دور `الجراح` أو `surgeon` أو الأطباء ذوي النوع `type === 'surgeon'` أو حساب `حساب الجراحين` مباشرة إلى محطة الجراح (`surgeon-station.index` على الرابط `http://127.0.0.1:8000/surgery-stations/surgeon`) فور تسجيل الدخول وعند التوجه للمسار الجذر `/` وعند طلب لوحة التحكم `/dashboard`.
+- **تحديث شريط التنقل الجانبي ([resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تخصيص رابط الرئيسية العلوي في السايدبار للجراحين وحساب الجراحين ليوجه مباشرة إلى `محطة الجراح (الرئيسية)` مع إبقاء المسارات السابقة للأطباء الاستشاريين وموظفي الضمان دون أي تعارض.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeonStationAccessAndWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeonStationAccessAndWorkflowTest.php))**:
+  * إضافة اختبارات متخصصة تؤكد التوجيه المباشر لمحطة الجراح للجراحين ولحساب الجراحين واختبار حالات الاستشارية العادية.
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-16 — المرحلة 224: ترشيق قوائم الفريق الطبي، تصغير حجم الخط، وإلغاء شارات النوع المكررة بجانب الأسماء Compact Dropdown Typography & Role Badges Cleanup in Medical Team Selectors)
+
+### Done
+- **ترشيق القوائم المنسدلة للفريق الطبي ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تصغير حجم الخط لجميع القوائم المنسدلة الذكية (أطباء التخدير ومساعد الجراح ومساعد التخدير) ليصبح بنمط مدمج ومتناسق (`font-size: 0.8rem` وحشوة أسطر رشيقة `py-1.5 px-2.5`).
+  * حذف شارات النوع المكررة التي كانت تظهر بجانب كل اسم داخل القوائم (`مساعد جراح`، `مساعد تخدير`، `طبيب تخدير`) وإزالة شارة `طبيب` من ترويسة الحقل لكون اسم القائمة كافياً وواضحاً تماماً.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كامل الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-16 — المرحلة 223: إلغاء أزرار كليشة التخدير وإفاقة مستقرة وجرد وعهدة العمليات في تفاصيل العملية Remove Anesthesia Template, Stable Recovery, and OR Store Inventory Buttons in Surgery Show)
+
+### Done
+- **ترشيق واجهة تفاصيل العملية ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * حذف أزرار الكبسولة `[ 🪄 كليشة التخدير ]` و `[ إفاقة مستقرة ]` من أعلى حقل ملاحظات طبيب التخدير مع بقاء آلية التعبئة التلقائية عند اختيار نوع التخدير (`عام`، `نصفي`، `مناطقي`، `موضعي`) سارية بالكامل.
+  * حذف زر `[ 🏭 جرد وعهدة العمليات ]` من شريط أدوات ترويسة بطاقة المستلزمات والأجهزة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز كافة اختبارات العمليات بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-16 — المرحلة 222: إلغاء زر طلب تعزيز المواد لمخزن العمليات في شاشة تفاصيل العملية عند فراغ رصيد المخزن Remove OR Store Replenishment Request Button in Surgery Show on Empty Stock)
+
+### Done
+- **ترشيق حالة المخزن الفارغ ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إزالة زر `طلب تعزيز لمخزن العمليات` ورابط التحويل المخزني `stock-transfers.create` عند فراغ رصيد مخزن العمليات التابع.
+  * الاكتفاء بعرض تنبيه نظيف وموجز يفيد بعدم توفر رصيد قابل للصرف حالياً دون نقل مستخدم شاشة العمليات إلى أقسام أخرى.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز كافة اختبارات العمليات بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 221: جدول صرف المستلزمات المتعدد المباشر من مخزن العمليات التابع بزر تفاعلي مطابق للمختبر والأشعة Multi-Item Store Dispense Grid with Auto-Affiliated OR Store and Reveal Toggle)
+
+### Done
+- **جدول الصرف المتعدد للمستلزمات دفعة واحدة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * تحويل صرف المواد والمستلزمات من اختيار فردي إلى جدول تفاعلي شامل (`#detailSuppliesForm`) يتيح تحديد مربعات الاختيار (`checkbox`) لعدة مواد مع تحديد كمياتها وملاحظاتها وصرفها دفعة واحدة للمريض بنقرة زر واحدة في حركة مخزنية وسجل سريري موحد (`DB::transaction`).
+  * دعم البحث اللحظي وفلاتر التصنيف (الكل، مستلزمات، أدوية ومحاليل، المحدد فقط) وتحديد الكل وتحديث عداد المواد النشط لحظياً.
+- **سحب تلقائي من مخزن العمليات التابع وإلغاء القوائم المنسدلة للمخازن**:
+  * ضبط السحب التلقائي والمباشر من المخزن التابع للعملية (`مخزن عمليات رئيسي` أو مخزن العمليات الفرعي) تلقائياً دون إظهار أي قائمة منسدلة لاختيار المخازن، مع إبراز اسم المخزن التابع كبادج رسمي واضح.
+- **زر إظهار وإخفاء تفاعلي مطابق للمختبر والأشعة**:
+  * إدراج زر كبسولي أنيق في ترويسة بطاقة المستلزمات (`[ 🛒 صرف مستلزمات من المخزن: X مادة ▾ ]`) يفتح ويغلق جدول الصرف عبر `collapse` لترتيب الصفحة وتجنب السكرول الطويل، مع إبقاء سجل المواد المصروفة سابقاً واضحاً ومستقلاً دائماً.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كامل الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز فحص `Laravel Pint` وتحديث `view:cache` بدون أي أخطاء.
+
+## Session log (2026-11-15 — المرحلة 220: إعادة هيكلة واجهة جدول الدوام بالكامل، دعم دوام الوجبتين بخلية مزدوجة، وترشيق شريط الإحصاءات اليومية وشريط الأدوات الموحد HR Roster Complete Redesign with Split-Shift Dual Slots, Streamlined Daily Coverage Badges & Unified Command Bar)
+
+### Done
+- **معالجة دوام الوجبتين في الباك إند ([app/Http/Controllers/HR/HrScheduleController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrScheduleController.php))**:
+  * **دعم استرجاع وحفظ الشفتات المتعددة لليوم الواحد:** تعديل استعلامات `index` و `store` لدعم تخزين واسترجاع شفتي الوجبتين (`slot1` صباحي و `slot2` مسائي) لنفس الموظف ونفس اليوم دون أن يلغي أحدهما الآخر، بالاستفادة من الفهرس الفريد `['hr_employee_id', 'shift_date', 'hr_shift_id']`.
+  * **الاحتساب المزدوج الدقيق في التغطية اليومية (`dailyCoverage`):** احتساب كلا الشفتين لموظف الوجبتين ضمن عدد الكوادر اليومية (مثلاً: احتسابه في الصباحي واحتسابه في المسائي) لتعكس الإحصاءات الواقع التشغيلي الحقيقي للمستشفى.
+  * **التعبئة التلقائية للوجبتين (`autoFillDefaults`):** أتمتة تنزيل الشفتين (الصباحي والمسائي) لموظف الوجبتين بنقرة واحدة، وتطبيق الـ Off في أيام راحته.
+  * **التحديث اللحظي عبر AJAX (`updateCell`):** دعم تمرير السلوت (`slot1` أو `slot2`) مع القيمة الأخرى لمنع الكتابة فوق الشفت الثاني أثناء الختم السريع.
+- **إعادة تصميم واجهة الجدول وترشيقها بالكامل ([resources/views/hr/schedules/index.blade.php](file:///c:/get/hospital-system/resources/views/hr/schedules/index.blade.php))**:
+  * **القضاء على التراكم الرأسي وتوحيد الأشرطة (Unified Command Toolbar):** دمج الكروت الأربعة المتراكمة في شريط تحكم فائق الرشاقة (سُمك ~38px) يضم التنقل الأسبوعي/الشهري، أزرار الإجراءات، البحث اللحظي، فلاتر نوع الدوام، وأداة الختم السريع مباشرة.
+  * **شريط مؤشرات الأداء السريع (KPI Summary Strip):** شريط علوي خفيف يوضح إجمالي الشفتات المجدولة، عدد موظفي الوجبتين، أيام الراحة، والكوادر النشطة.
+  * **الخلية المزدوجة الذكية لموظفي الوجبتين (Split-Shift Cell):** عرض خانتين أنيقتين متطابقتين للوجبة الأولى `(1)` والوجبة الثانية `(2)` بألوانهما وتوقيتاتهما المستقلة، مع المحافظة على الخلية المدمجة الفردية لباقي الكوادر.
+  * **شريط الإحصاءات اليومية الأفقي فائق الرشاقة (Streamlined Coverage Bar):** تحويل الإحصاءات السفلية من 5 أسطر عمودية طويلة إلى شريط أفقي أنيق من الشارات الملونة المصغرة (`☀️ 5  ⛅ 3  🌙 2  Off: 1`) بنصف الارتفاع وتوفير مساحة شاشة واسعة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/HrScheduleTest.php](file:///c:/get/hospital-system/tests/Feature/HrScheduleTest.php))**:
+  * إضافة اختبار جديد لموظف الوجبتين وتأكيد حفظ ونزول الشفتين معاً وظهورهما في الواجهة بنجاح (`6 passed, 34 assertions`).
+  * اجتياز اختبارات الموارد البشرية بالكامل (`11 passed, 90 assertions`) وفحص `Laravel Pint`.
+
+## Session log (2026-11-15 — المرحلة 219: نقل جدول العلاج للمنسدلة العلوية، إسناد الأجهزة الطبية لكارت التخدير، ووضع ملاحظات التخدير أسفل نوع التخدير Treatments in Top Dropdown, Medical Devices Next to Anesthesia, and Anesthesia Notes Below Type)
+
+### Done
+- **نقل جدول العلاجات لقائمة منسدلة علوية وإلغاء التكرار في كارت التشخيص ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة زر منسدل تفاعلي لجدول العلاج في شريط الإجراءات العلوي بجانب صالة ومدة العملية: `[ 💊 جدول العلاج: X علاج ▾ ]`.
+  * إتاحة إدارة الأدوية وإضافة وحذف العلاجات وكليشة البروتوكول الجراحي الشائع داخل المنسدلة العلوية مع زر حفظ مستقل ومزامنة تلقائية مع زر الحفظ الموحد.
+  * حذف جدول وبنر العلاج المكرر من كارت التشخيص ليصبح مخصصاً حصراً للتشخيص والخطة السريرية وتوصيات وملاحظات الجراح دون أي تكرار.
+- **إعادة هيكلة كارت التخدير: الملاحظات أسفل نوع التخدير ومكانها الأجهزة الطبية المستخدمة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * وضع حقل وملاحظات وتفاصيل طبيب التخدير والكليشات المعتمدة أسفل حقل نوع التخدير رأسياً في العمود الأيمن.
+  * تخصيص العمود الأيسر لكارت الأجهزة الطبية المستخدمة في العملية (عرض الأجهزة المرتبطة، زر إضافة جهاز طبي، بحث وتأكيد فوري، وزر الحذف السريع).
+  * توسيع صلاحيات إضافة وإزالة الأجهزة في `SurgeryController::addDevice` و `removeDevice` لتشمل التخدير والعمليات مع الحفاظ التلقائي على التبويب الحالي عبر `redirect()->back()`.
+  * توسيع جدول صرف مخزن العمليات في تبويب المستلزمات ليكون بعرض الشاشة الكامل (`col-xl-12`).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 218: تطوير وتحديث جدول الدوام والخفارات بنظام الجدولة الذكي، أداة الختم السريع، كشف التغطية والجاهزية، والتعبئة التلقائية للدوام الثابت، والطباعة الرسمية HR Smart Hospital Roster Upgrade with Quick Shift Stamp, Daily Coverage Radar, One-Click Auto-Fill & Official Landscape Print)
+
+### Done
+- **تطوير المعالجة والمتحكم ([app/Http/Controllers/HR/HrScheduleController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrScheduleController.php), [routes/web.php](file:///c:/get/hospital-system/routes/web.php))**:
+  * **دعم التنقل السريع وأنماط العرض:** إضافة محددات `prevDate` و `nextDate` و `currentPeriodDate` للتنقل اللحظي بين الأسابيع والأشهر بنقرة واحدة، ودعم نمطي العرض: `week` (أسبوعي 7 أيام) و `month` (شهري كامل لجدولة الأطباء والخفارات على مدار الشهر).
+  * **محرك التعبئة التلقائية للدوام الثابت (`autoFillDefaults`):** أتمتة تعبئة جدول الفترة بنقرة واحدة لجميع الموظفين بناءً على شفتاتهم الدائمة وأيام استراحتهم المسجلة في إضبارتهم مع خيار استبدال الشفتات أو تعبئة الفراغات فقط.
+  * **كشف التغطية والجاهزية اليومية (`dailyCoverage`):** احتساب أوتوماتيكي لعدد الكوادر المداومة في كل شفت (صباحي، مسائي، ليلي/خفارة، راحة Off) لكل يوم.
+  * **تحديث الخلية الفوري عبر AJAX (`updateCell`):** دعم الحفظ التلقائي الصامت لأي تغيير في أي خلية دون الحاجة لإعادة تحميل الصفحة.
+  * **تفريغ وإعادة ضبط الفترة (`clearRange`):** إمكانية مسح شفتات الفترة المحددة لقسم معين لإعادة بنائها من الصفر.
+- **ترقية النموذج وقاعدة البيانات ([app/Models/HrSchedule.php](file:///c:/get/hospital-system/app/Models/HrSchedule.php))**:
+  * إضافة mutator `setShiftDateAttribute` لضمان تخزين التاريخ بصيغة قياسية `Y-m-d` والقضاء على أي تعارض بين MySQL و SQLite.
+- **إعادة تصميم واجهة الجدول وتطوير تجربة المستخدم ([resources/views/hr/schedules/index.blade.php](file:///c:/get/hospital-system/resources/views/hr/schedules/index.blade.php))**:
+  * **أداة الختم السريع (Shift Stamp Palette):** شريط أدوات علوي يتيح اختيار الشفت (صباحي / مسائي / ليلي / راحة / مسح) والنقر المباشر على أي خلية لتلوينها وتعيينها فوراً مع خيار الحفظ التلقائي (AJAX Switch).
+  * **البحث والتصفية اللحظية (Client-Side Live Filter):** شريط بحث سريع بالاسم أو الوظيفة، وأزرار تصفية فورية (الكل / الدوام الثابت / الخفارات المتناوبة / الوجبتين) مع عداد الكوادر الظاهرة.
+  * **شريط إجراءات الصف السريعة (Row Fill Menu):** قائمة منسدلة لكل موظف لتعبئة أسبوعه كاملاً بشفته الدائم أو أي شفت آخر بنقرة واحدة.
+  * **شريط إحصاء التغطية اليومية السفلي (Daily Coverage Summary Footer):** صف مثبت أسفل الجدول يعرض إجمالي الكادر في كل شفت لكل يوم، وتحديث تلقائي لحظي عند أي تعديل.
+  * **شيت الطباعة الرسمي المعتمد (`@media print`):** تحويل تلقائي للجدول إلى شيت رسمي أفقي (A4 Landscape) مع ترويسة المستشفى وتوقيع مسؤول القسم ومدقق الـ HR ومدير المستشفى.
+  * إصلاح الخطأ البرمجي في وسم الـ `<script>` المزدوج.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/HrScheduleTest.php](file:///c:/get/hospital-system/tests/Feature/HrScheduleTest.php))**:
+  * إنشاء حزمة اختبارات شاملة تغطي كافة العمليات والمسارات الجديدة (العرض الأسبوعي والشهري، التعبئة التلقائية، التحديث الفوري، التفريغ، وتبادل الخفارات) واجتيازها بنجاح 100% (`5 passed, 25 assertions`).
+  * اجتياز اختبارات الموارد البشرية العامة بالكامل بنجاح 100% (`11 passed, 90 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 217: إعادة هيكلة وتصميم إضبارة الموظف بنظام التبويبات التفاعلية الذكية وتثبيت الشريط الجانبي والقضاء على السكرول الطويل HR Employee Dossier Redesign with Interactive Nav Tabs, Sticky Sidebar & Zero-Scroll Layout)
+
+### Done
+- **إعادة هيكلة واجهة إضبارة الموظف ([resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+  * القضاء على السكرول الرأسي اللانهائي واستبدال التراكم العمودي بـ 5 تبويبات تفاعلية مدمجة وأنيقة (`nav-pills`) تدعم شارات الأرقام الحية (`Badges`):
+    1. `الملف الوظيفي`: البيانات الشخصية، تفاصيل التعاقد، نظام الدوام والشفتات وأيام الاستراحة، التراخيص الطبية، والملاحظات الإدارية.
+    2. `الراتب والمالية`: هيكلة الراتب وطريقة الدفع، المخصصات الثابتة، والسلف والأقساط.
+    3. `الدوام والحضور`: بطاقة شفت العمل المعتمد ورابط جدول الخفارات، سجل الغيابات والتأخيرات، وسجل العمل الإضافي.
+    4. `العقوبات والمكافآت`: سجل العقوبات والإنذارات والمكافآت وتأثيرها المالي والترحيل.
+    5. `المستمسكات والأرشيف`: جدول الوثائق والمستمسكات الرسمية وإجراءات التحميل والمعاينة والحذف والرفع.
+  * تثبيت البطاقة الجانبية للموظف (`sticky-employee-sidebar`) لتبقى هوية الموظف وحساب النظام ظاهرة دائماً أثناء التمرير في أي تبويب.
+  * دعم الحفظ الذكي للتبويب النشط عبر الـ URL Hash والـ localStorage لضمان عدم ضياع التبويب بعد إرسال النماذج والمودالات أو إعادة تحميل الصفحة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+  * تحديث حزمة الاختبارات وتأكيد وجود عناصر وتبويبات الواجهة الجديدة (`tab-profile`, `tab-payroll`, `tab-attendance`, `tab-actions`, `tab-documents`).
+  * اجتياز كامل اختبارات الموارد البشرية بنجاح 100% (`11 passed, 90 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 216: تثبيت نظام الدوام والشفتات الدائمة وعطلات الاستراحة الأسبوعية ودعم الوجبتين لجميع الموظفين HR Permanent Work Schedules, Shift Customization, Split-Shifts & Dynamic Weekly Off-Days)
+
+### Done
+- **بنية قاعدة البيانات والنموذج ([database/migrations/2026_11_15_200000_add_schedule_and_shift_fields_to_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_15_200000_add_schedule_and_shift_fields_to_hr_employees_table.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+  * إضافة حقول الدوام في `hr_employees`: نوع الجدولة `schedule_type` (ثابت fixed / خفارات متناوبة rotating)، الشفت الدائم `default_shift_id`، مفتاح دوام الوجبتين `is_split_shift`، الشفت المسائي الثاني `second_shift_id`، ساعات العمل المخصصة `custom_start_time` و `custom_end_time`، ومصفوفة أيام الاستراحة `weekly_off_days`.
+  * تعريف علاقات `defaultShift()` و `secondShift()` و `schedules()` ومساعدات `getWeeklyOffDaysArabicAttribute()` و `isOffOn($date)`.
+- **المعالجة والتحكم ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php), [app/Http/Controllers/HR/HrScheduleController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrScheduleController.php))**:
+  * تمرير الشفتات النشطة لشاشات الإضافة والتعديل (`create`, `edit`).
+  * معالجة وتحقق وحفظ إعدادات الدوام والعطلات في دالتي `store` و `update`.
+  * دعم الجلب الذكي للموظفين الثابتين ومطابقة أيام استراحتهم في جدول الدوام الأسبوعي/الشهري (`/hr/schedules`).
+- **الواجهات الأمامية ([resources/views/hr/employees/create.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/create.blade.php), [resources/views/hr/employees/edit.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/edit.blade.php), [resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php), [resources/views/hr/schedules/index.blade.php](file:///c:/get/hospital-system/resources/views/hr/schedules/index.blade.php), [resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إضافة قسم "3. نظام الدوام والشفتات وأيام الاستراحة" في شاشتي إنشاء وتعديل الموظف مع تبديل لحظي للوجبتين، وتحديد أوقات مخصصة بدقة (مثل 8-4 أو 9-3)، وشبكة اختيار أيام العطلات الأسبوعية (الجمعة، السبت، الخميس، إلخ).
+  * إضافة بطاقة نظام الدوام والشفتات وأيام الاستراحة في إضبارة وتفاصيل الموظف (`show.blade.php`).
+  * إدراج رابط مباشر لإدارة الأقسام والعيادات (`departments.admin`) تحت قسم الموارد البشرية بالقائمة الجانبية لتسهيل الوصول والتحكم بالأقسام.
+- **التحقق الآلي**:
+  * إضافة وتوسيع اختبار الميزة في [`tests/Feature/HREmployeeTest.php`](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php) واجتياز كافة الاختبارات بنسبة 100% (`11 passed, 85 assertions`).
+  * اجتياز فحص `Laravel Pint` بالكامل دون أي أخطاء.
+
+
+## Session log (2026-11-15 — المرحلة 215: قصر قائمة اختيار الصالة في ملف العملية على صالات العمليات الجراحية فقط واستبعاد كافة الأقسام والمخازن الأخرى Restrict Surgery Show Hall Dropdown Exclusively to Operating Theaters & Exclude General Wards and Non-OR Departments)
+
+### Done
+- **قصر قائمة الصالات في ملف العملية على صالات العمليات الجراحية فقط ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * تحديث استعلام جلب الصالات `$locations` في `SurgeryController::show`:
+    * فلترة المواقع لتشمل فقط صالات العمليات الجراحية (`عمليات`, `صالة`, `operation`, `theater`).
+    * استبعاد المخازن العامة والفرعية غير المخصصة كصالات جراحية (`مخزن`, `store`).
+    * استبعاد كافة الأقسام العامة (الاستشارية، المختبر، الطوارئ، الرسبشن، الحسابات، الإدارة، الفندقة، الصيدلة، الخدج، ردهات الطوابق، وغيرها من الأقسام غير الجراحية).
+    * الحفاظ التلقائي على صالة العملية الحالية المحددة للمريض عبر `when($surgery->location_id, fn ($q) => $q->orWhere('id', $surgery->location_id))`.
+- **تحسين نصوص وتسميات قائمة الصالة في الواجهة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تغيير النص من `الصالة/الردهة:` إلى `صالة العمليات:` في الزر الرئيسي العلوي.
+  * تحديث عنوان القائمة المنسدلة إلى `تحديد صالة العمليات`.
+  * تحديث مسمى الحقل وخيار القائمة الافتراضي إلى `-- اختر صالة العمليات --`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كافة اختبارات العمليات الجراحية ومساعدي الجراحين بنجاح 100% (`16 passed, 205 assertions`).
+
+## Session log (2026-11-15 — المرحلة 215: إخفاء زر طباعة الإضبارة من شاشة الموارد البشرية Hiding Dossier Print Button from HR Employee Show View)
+
+### Done
+- **إخفاء زر طباعة الإضبارة ([resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+  * حذف زر `<button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fas fa-print me-1"></i> طباعة الإضبارة</button>` من شريط التحكم العلوي لإضبارة الموظف في الموارد البشرية.
+  * الحفاظ على باقي الأزرار التشغيلية (طباعة الباجة ID Card، إضافة مستمسك رسمي، تعديل البيانات، وجدول الخفارات).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+  * تحديث الاختبارات الآلية وإضافة فحص تأكيد عدم ظهور الزر في شاشة تفاصيل الموظف (`assertDontSee('طباعة الإضبارة')`).
+  * اجتياز كامل حزمة اختبارات الموارد البشرية بنجاح 100% (`11 passed, 85 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 214: الربط التلقائي لكليشات ونماذج التخدير المعتمدة عند اختيار نوع التخدير Automatic Anesthesia Templates Binding on Type Selection)
+
+### Done
+- **تضمين كليشات التخدير المعتمدة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * ربط مباشر بين حقل نوع التخدير وملاحظات طبيب التخدير (`#anesthesia_notes`):
+    * **تخدير عام:** إدراج الكليشة المعتمدة تلقائياً:
+      `prmedication given`
+      `generalanesthesia given`
+      `operation passesd smoothly without complication`
+      `patient recoverd well`
+    * **تخدير نصفي:** إدراج الكليشة المعتمدة تلقائياً:
+      `2IV canulae putted`
+      `spinal aneshesia given`
+      `patient recovered well`
+    * **تخدير مناطقي:** إدراج الكليشة المعتمدة تلقائياً:
+      `2IV canulea putted`
+      `regional anesthesia given`
+      `patient recovered well`
+    * **تخدير موضعي:** إدراج الكليشة المعتمدة تلقائياً:
+      `يتم كتب التقرير من قبل الطبيب الجراح`
+  * التفعيل التلقائي عند النقر على أي من الأزرار السريعة (`عام`، `نصفي`، `مناطقي`، `موضعي`) أو عند الاختيار من القائمة المنسدلة / الكتابة.
+  * إضافة زر إدراج كليشة سريع `[ 📋 كليشة التخدير ]` وتوسيع ارتفاع حقل الملاحظات إلى `rows="5"` لعرض الأسطر بوضوح دون تمرير.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 213: توحيد تصميم طبيب التخدير 1 و2 بقوائم بحث وإكمال تلقائي ذكية متطابقة مع مساعد الجراح والتخدير Unified Searchable Autocomplete Dropdowns for Anesthesiologist 1 & 2 Matching Assistants)
+
+### Done
+- **توحيد تصميم وهيكل طبيب التخدير 1 و2 ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * استبدال وسوم `<select>` التقليدية بمكون القائمة المنسدلة الذكية التفاعلية متطابق 100% مع مساعد الجراح ومساعد التخدير:
+    * حقل نصي ذكي للبحث والإكمال التلقائي الفوري (`#team_anesthesiologist_name` و `#team_anesthesiologist_2_name`).
+    * زر مسح الاختيار السريع (`×`) يظهر عند وجود اختيار ويختفي عند الفراغ.
+    * زر سهم القائمة المنسدلة (`▾`) لإظهار كامل قائمة أطباء التخدير بنقرة واحدة.
+    * قائمة عائمة منسدلة ذكية (`#anesthesiaDoctors1Menu` و `#anesthesiaDoctors2Menu`) مع فلترة حية حسب اسم الطبيب وتخصصه وشارات التخصص الملونة.
+  * الحفاظ الكامل على حقول الـ ID المخفية (`#team_anesthesiologist_id` و `#team_anesthesiologist_2_id`) لضمان صحة الإرسال والتكامل مع الباك إند والاختبارات الآلية.
+  * دعم الإكمال الذكي عند كتابة الاسم والضغط على Enter أو التبديل (`change` event) لمطابقة الطبيب آلياً وحفظ معرّفه.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php), [tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+  * اجتياز كافة الاختبارات بنجاح 100% (`25 passed, 237 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 212: توحيد مظهر وتنسيق قوائم الفريق الطبي الـ 5 لتطابق مساعد الجراح، وقفل جراح العملية محدد مسبقاً من الاستعلامات Unified 5-Slot Medical Team Design Matching Surgical Assistant & Locked Pre-Determined Reception Surgeon)
+
+### Done
+- **توحيد تصميم وهيكل الحقول الـ 5 للفريق الطبي ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * **قفل طبيب الجراح (محمي ومحدد من الاستعلامات):** إلغاء القائمة القابلة للتغيير، وتثبيت اسم الجراح في حقل `input-group` أنيق ومقفل للقراءة فقط (`readonly`) مع شارة قفل `الاستعلامات` منعاً للتعديل غير المصرح به على جراح العملية المعتمد.
+  * **توحيد المظهر والارتفاع لجميع الحقول الخمسة:**
+    * جميع الأعمدة الخمسة تستخدم كلاس `col-lg` بنسبة متساوية 20% لكل عنصر على الشاشات العريضة لتصطف في صف أفقي واحد منتظم.
+    * ترويسة علوية موحدة الارتفاع (`min-height: 22px`) لكل حقل تشتمل على الأيقونة والعنوان والشارة/الرابط.
+    * استخدام `input-group input-group-sm` متطابق في الارتفاع والأيقونة الأمامية والأطراف المنحنية لكافة القوائم (طبيب الجراح، مساعد جراح، طبيب التخدير 1، طبيب التخدير 2، مساعد التخدير).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز كافة الاختبارات بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 211: الفريق الطبي أعلى التخدير بـ 5 قوائم منسدلة أفقية بصف واحد مع دعم مساعدي التخدير معمارياً في جدول المساعدين والعمليات Medical Team Above Anesthesia with 5 Horizontal Dropdowns in 1 Row & Architecture Support for Anesthesia Assistants)
+
+### Done
+- **توسيع البنية المعمارية للمساعدين والعمليات ([database/migrations/2026_11_15_143000_add_type_to_surgical_assistants_and_anesthesia_assistant_to_surgeries.php](file:///C:/get/hospital-system/database/migrations/2026_11_15_143000_add_type_to_surgical_assistants_and_anesthesia_assistant_to_surgeries.php), [app/Models/SurgicalAssistant.php](file:///C:/get/hospital-system/app/Models/SurgicalAssistant.php), [app/Models/Surgery.php](file:///C:/get/hospital-system/app/Models/Surgery.php), [app/Models/AnesthesiaStation.php](file:///C:/get/hospital-system/app/Models/AnesthesiaStation.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [app/Http/Controllers/SurgicalAssistantController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgicalAssistantController.php))**:
+  * إضافة عمود `type` (`surgical` / `anesthesia`) إلى جدول `surgical_assistants` مع الفهارس والـ scopes (`scopeSurgical()` و `scopeAnesthesia()`).
+  * إضافة عمود `anesthesia_assistant_name` إلى جدولي `surgeries` و `anesthesia_stations` ودعمه في مصفوفة الصلاحيات والتحديث اللحظي الموحد عبر `SurgeryController::updateDetails`.
+  * ترقية شاشة إدارة المساعدين (`surgical-assistants/index.blade.php`) لتشمل فلترة النوع وتحديد نوع المساعد عند الإضافة والتعديل (`مساعد جراح` / `مساعد تخدير`).
+- **صف أفقي واحد من 5 قوائم منسدلة للفريق الطبي أعلى التخدير ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * نقل الفريق الطبي بالكامل ليكون في **أعلى الكارت الموحد** في صف شبكي أفقي واحد متناسق:
+    1. `طبيب الجراح`: قائمة منسدلة بالأطباء والجراحين مع تحديد جراح العملية.
+    2. `مساعد جراح`: قائمة إكمال تلقائي ذكية مرتبطة بدليل مساعدي الجراحين.
+    3. `طبيب التخدير 1`: قائمة منسدلة بأطباء التخدير.
+    4. `طبيب التخدير 2`: قائمة منسدلة بأطباء التخدير (تصحيح المسمى بدقة).
+    5. `مساعد التخدير`: قائمة منسدلة وإكمال تلقائي ذكي لمساعدي التخدير مع رابط مباشر للدليل.
+  * وضع قسم تفاصيل وخطة التخدير في **أسفل الفريق الطبي** بعد فاصل أفقي، مشتملاً على نوع التخدير وملاحظات الإفاقة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php), [tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+  * اجتياز اختبارات مساعدي الجراحين بنجاح 100% (`7 passed, 24 assertions`).
+  * اجتياز اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز اختبارات شاشة انتظار العمليات بنجاح 100% (`9 passed, 32 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 210: دمج الفريق الطبي وتفاصيل التخدير في كارت موحد واحد جنباً إلى جنب وترتيب أعضاء الفريق رأسياً دون كروت منفصلة Single Unified Card Container for Medical Team & Anesthesia Side-by-Side with Clean Vertical Team List & No Nested Member Cards)
+
+### Done
+- **دمج الفريق الطبي وتفاصيل التخدير في كارت واحد موحد ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إلغاء الكروت المنفصلة للفريق الطبي وللتخدير ودمجهما داخل بطاقة سريرية واحدة موحدة (`card clin-tab-card`).
+  * ترويسة بطاقة موحدة: `الفريق الطبي المشارك وخطة التخدير` مع شارة حالة محطة التخدير وزر `اعتماد وإتمام محطة التخدير`.
+  * تقسيم داخلي شبكي متجاور في نفس الصف (`row g-3 h-100`): عمود اليمين للفريق الطبي (`col-md-5 border-start`) وعمود اليسار لتفاصيل وخطة التخدير (`col-md-7`).
+  * ترتيب أعضاء الفريق الطبي رأسياً (واحد أسفل الآخر) بانسيابية تامة:
+    1. الجراح الرئيسي: د. فلان (عرض خفيف بدون كارت منفصل).
+    2. مساعد الجراح: مع رابط `دليل المساعدين`، وقائمة الإكمال التلقائي الذكية `#surgical_assistant_name` و`#surgicalAssistantsMenu`.
+    3. طبيب التخدير الأول: قائمة منسدلة `#team_anesthesiologist_id`.
+    4. طبيب التخدير المساعد: قائمة منسدلة `#team_anesthesiologist_2_id`.
+  * حذف الإطارات والكروت المتداخلة المنفصلة (`clin-field-card`) نهائياً حول كل عضو لتوفير مظهر مدمج ومنظم ونظيف.
+  * استقلال النماذج البرمجية بالكامل (`detailTeamTimingForm` و `detailAnesthesiaForm`) دون أي تداخل في وسوم `<form>`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php), [tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+  * اجتياز اختبارات مساعدي الجراحين بنجاح 100% (`7 passed, 24 assertions`).
+  * اجتياز اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز اختبارات شاشة انتظار العمليات بنجاح 100% (`9 passed, 32 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 209: نقل صالة العمليات ومدة العملية كرقم وحالة المريض للشريط العلوي، توحيد أزرار الحفظ في زر واحد، ودمج الفريق الطبي والتخدير في العمود الأيسر Top Action Bar for Location, Duration & Status, Unified Save Button & Merged Team & Anesthesia Left Column)
+
+### Done
+- **نقل صالة العمليات ومدة العملية (رقم بالدقائق) وحالة المريض للشريط العلوي ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * ترتيب أزرار الإجراءات السريعة العلوية:
+    1. `[ 🧪 التحاليل المخبرية ]`
+    2. `[ 🩻 الأشعة والتصوير الطبي ]`
+    3. `[ 🔪 نوع العملية والعمليات الإضافية ]`
+    4. `[ ⏱️ حالة المريض بالصالة (Pre-Op / Intra-Op) ▾ ]`
+    5. `[ 📍 صالة العمليات / الردهة: (اسم الصالة) ▾ ]` (منقولة قبل مدة العملية مباشرة بقائمة منسدلة تفاعلية)
+    6. `[ ⏱️ مدة العملية: X دقيقة ▾ ]` (رقم بالدقائق، أزرار سريعة بنقرة واحدة `30د-180د`، ومساعد تحويل الساعات)
+    7. `[ 💾 حفظ بيانات العملية ]` (زر الحفظ الموحد الرئيسي بجانب مدة العملية)
+- **توحيد زر الحفظ وإلغاء التكرار في ذيل الكروت ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * حذف أزرار الحفظ المتفرقة في أسفل كروت التشخيص، الفريق الطبي، التخدير، ومدة العملية.
+  * توحيد الحفظ في زر علوي بارز بجانب مدة العملية ديناميكي حسب الصلاحية: `حفظ بيانات العملية` للمسؤول/متعددي الصلاحيات، و`حفظ التشخيص والعلاجات` للجراح، و`حفظ تفاصيل التخدير` لطبيب التخدير، و`حفظ الفريق الطبي والتوقيت` لموظف العمليات.
+  * دعم الإرسال الموحد `submitUnifiedSurgeryForm()` ومزامنة الصالة اللحظية `syncLocationSelection()`.
+- **دمج الفريق الطبي مع التخدير في العمود الأيسر ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إسناد العمود الأيمن (`col-xl-6`) للتشخيص الطبي للجراح وجدول العلاجات.
+  * إسناد العمود الأيسر (`col-xl-6`) لكارتين متتاليين: كارت الفريق الطبي المشارك (أعلى) وكارت توثيق وخطة التخدير (أسفل).
+  * نقل زر `اعتماد وإتمام محطة التخدير` إلى ترويسة كارت التخدير بأناقة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php), [tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+  * اجتياز كافة اختبارات العمليات الجراحية وقائمة الانتظار والمساعدين بنجاح 100% (`25 passed, 237 assertions`).
+  * اجتياز `Laravel Pint` بالكامل.
+
+## Session log (2026-11-15 — المرحلة 208: تخطيط ثلاثي الأعمدة المتوازي في صف شبكي واحد: التشخيص والعلاجات في اليمين، الفريق الطبي والتوقيت في الوسط، وتفاصيل التخدير في اليسار 3-Column Parallel Row: Diagnosis on Right, Medical Team in Middle, Anesthesia on Left)
+
+### Done
+- **تخطيط ثلاثي الأعمدة المتوازي في ملف العملية ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * دمج البطاقات السريرية الثلاث في صف شبكي واحد (`<div class="row g-3 mb-4">`) بتنسيق تجاوبي ديناميكي (`col-xl-4 col-lg-4 col-md-12`).
+  * إسناد عمود اليمين للتشخيص الطبي للجراح والملاحظات السريرية وجدول الأدوية والعلاجات (`pane-detail_diagnosis`).
+  * إسناد عمود الوسط (قبل التخدير) لصالة العمليات والفريق الطبي المشارك، ومساعد الجراح، والتوقيت الفعلي للعملية (`pane-detail_team_timing`).
+  * إسناد عمود اليسار لتوثيق تفاصيل التخدير، نوع التخدير، ملاحظات طبيب التخدير، وخطة التخدير السريرية (`pane-detail_anesthesia`).
+  * ضبط ومطابقة الارتفاع الرأسي للكروت الثلاثة بنسبة 100% (`h-100 d-flex flex-column`) مع محاذاة وتثبيت أزرار الحفظ في أسفل كل بطاقة (`mt-auto`).
+  * الحفاظ الكامل على النماذج البرمجية المستقلة (`detailDiagnosisForm`، `detailTeamTimingForm`، `detailAnesthesiaForm`) ومصفوفة الصلاحيات المشددة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز جميع اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز اختبارات المساعدين الجراحيين بنجاح 100% (`7 passed, 24 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 207: مواءمة التشخيص الطبي للجراح وجدول العلاجات في العمود الأيمن وتفاصيل التخدير في العمود الأيسر Two-Column Side-by-Side Row: Surgeon Diagnosis & Treatments on Right, Anesthesia on Left)
+
+### Done
+- **تخطيط ثنائي الأعمدة المتوازي في ملف العملية ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * دمج بطاقة "التشخيص الطبي للجراح وجدول العلاجات" وبطاقة "توثيق تفاصيل التخدير" في صف شبكي واحد متجاور (`<div class="row g-3 mb-4">`).
+  * إسناد عمود اليمين (`col-xl-6 col-lg-6`) للتشخيص الطبي للجراح والملاحظات السريرية وقائمة الأدوية والعلاجات.
+  * إسناد عمود اليسار (`col-xl-6 col-lg-6`) لتوثيق تفاصيل التخدير، نوع التخدير، ملاحظات طبيب التخدير، وخطة التخدير السريرية.
+  * ضبط ارتفاع البطاقتين ليتطابقا رأسياً (`h-100 d-flex flex-column`) مع تثبيت أزرار الحفظ في أسفل كل بطاقة (`mt-auto`).
+  * الحفاظ الكامل على مصفوفة الصلاحيات (صلاحيات الجراح vs طبيب التخدير) ومعرفات النماذج البرمجية (`detailDiagnosisForm`, `detailAnesthesiaForm`).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز جميع اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 206: أزرار طي تفاعلية للتحاليل والأشعة ونوع العملية والإضافات، إلغاء نتائج الزيارات السابقة، وحذف كارت المعلومات الطبية لصالح كارت مريض موحد وقائمة حالة المريض العلوية Interactive Toggle Buttons for Tests & Operations, Decommissioning Previous Visit Results & Surgery Medical Card)
+
+### Done
+- **أزرار طي تفاعلية للتحاليل والأشعة ونوع العمليات ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تحويل التحاليل المخبرية والأشعة والتصوير ونوع العملية والعمليات الإضافية إلى 3 أزرار طي وتوسيع تفاعلية رشيقة (`[ 🧪 التحاليل ]`، `[ 🩻 الأشعة ]`، و`[ 🔪 نوع العملية والعمليات الإضافية ]`).
+  * عند النقر على أي زر، ينبثق الجدول المخصص أو لوحة التحكم بنوع العملية والإضافات والملاحظات السريرية فورا.
+  * إلغاء جداول ونتائج الزيارات السابقة بالكامل وحصر العرض على ما يخص العملية الجراحية الحالية حصراً.
+- **إلغاء كارت المعلومات الطبية للعملية الجراحية ونقل التحكم للترويسة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * حذف كارت "المعلومات الطبية للعملية الجراحية" بالكامل لمنع التكرار وازدحام الصفحة.
+  * جعل كارت بيانات ومعلومات المريض بعرض الشاشة الكامل (Full Width) ومنسقا أفقيا بأناقة.
+  * نقل القائمة المنسدلة لحالة المريض بالصالة (`Pre-Op` / `Intra-Op` / الإجراءات الحية) إلى شريط الإجراءات العلوي بجانب أزرار الطباعة والعودة.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php), [tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
+  * اجتياز اختبارات ملف العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز اختبارات المساعدين الجراحيين وقائمة الانتظار بنجاح 100% (`16 passed, 56 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 205: تحويل إجراءات وخيارات حالة المريض في الصالة إلى قائمة منسدلة موحدة بدلاً من الأزرار المتعددة Dropdown Action Menu for Patient OR Status)
+
+### Done
+- **تحويل إجراءات حالة المريض في الصالة إلى قائمة منسدلة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إلغاء الأزرار المتعددة والمتفرقة في ترويسة ملف العملية (`بدء العملية`, `تأجيل العملية`, `إنهاء العملية`, `إعادة إخراجه من الصالة`, `إلغاء العملية`).
+  * بناء قائمة منسدلة موحدة ورشيقة (Bootstrap Dropdown Action Menu) تظهر الحالة الحالية بنبض ملون وبجانبها سهم `▾`.
+  * عند النقر، تنبثق القائمة الرأسية لتعرض الإجراءات المتاحة بدقة حسب المرحلة الحقيقية للمريض (`Pre-Op` / `Intra-Op`) مع تمييز لوني وأيقونات واضحة.
+  * الحفاظ على المزامنة اللحظية الفورية (`broadcastSurgeryLiveUpdate()`) وتأكيدات الأمان (Confirm Dialogs) والنوافذ المنبثقة للتأجيل والإلغاء.
+  * عرض شارة القراءة فقط المقفلة عند اكتمال العملية (`Post-Op`) أو إلغائها أو لغير المصرح لهم بالتحكم.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز اختبارات ملف وتفاصيل العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 204: إلغاء نظام التبويبات نهائياً في ملف وتفاصيل العملية وتثبيت نمط الصفحة الواحدة المنظمة المفتوحة بالكامل Permanent Unified Continuous Single-Page Surgery File & Decommissioning Tabs System)
+
+### Done
+- **إلغاء نظام التبويبات وتثبيت الصفحة الواحدة المنظمة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * حذف أزرار التبديل `surgeryViewModeGroup` (`[ 📄 صفحة واحدة ]` و `[ 📑 تبويبات ]`) بالكامل من ترويسة الصفحة.
+  * جعل كافة البطاقات والأقسام السريرية المصرح بها مفتوحة ومرئية دائماً رأسياً (`display: block !important`) بتسلسل انسيابي موحد.
+  * تحويل شريط العناوين العلوي إلى شريط وصول وقفز سلس (Sticky Quick-Jump Links) للتنقل السريع بين الأقسام بضغطة زر دون طي أو إخفاء أي قسم.
+  * دعم التمييز التلقائي للقسم النشط عبر التمرير (Scrollspy) وزر عائم للعودة للأعلى (`Back to Top`).
+  * الحفاظ التام على مصفوفة الصلاحيات (حجب غير المصرح، قفل القراءة فقط، وإتاحة حفظ الأقسام القابلة للتعديل).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز اختبارات ملف العملية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز اختبارات المساعدين الجراحيين بنجاح 100% (`7 passed, 24 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 203: المزامنة اللحظية الحية لشاشات انتظار العمليات وسجل العمليات عند تنفيذ إجراءات البدء والإنهاء والتأجيل وإعادة الإخراج، تخطيط الأعمدة الـ 7 المختصرة ومنع السطر الثاني Realtime Live Sync for Surgery Waiting Board & Log on Action Buttons, 7 Streamlined Columns & Strict Single-Line Rows)
+
+### Done
+- **المزامنة اللحظية الحية لشاشات انتظار العمليات وسجل العمليات ([resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * ربط إجراءات ملف وتفاصيل العملية (`بدء العملية`, `إنهاء العملية`, `إعادة إخراجه من الصالة`, `تأجيل العملية`, و`إلغاء العملية`) بمحرك بث وإشعار لحظي عبر قناة `BroadcastChannel` و`localStorage` و`Laravel Echo`.
+  * استقبال الإشارات الحية فوراً (0ms) في شاشة قائمة الانتظار `/surgeries/waiting` وسجل العمليات `/surgeries` مع استبدال وتحديث سلس لمحتوى الجداول عبر `DOMParser` دون إعادة تحميل الصفحة (No Page Reload) وبدون وميض.
+  * إضافة نبض وميض أخضر/أزرق حي (`مزامنة حية`) في شريط أدوات شاشة الانتظار لتأكيد الاتصال والمزامنة الفورية.
+  * دعم نبض فحص خلفي (Heartbeat Polling كل 4 ثوانٍ) لضمان التحديث التلقائي الصامت لشاشات العرض الجدارية (TV screens) وأجهزة الشبكة المحلية دون الحاجة لتحديث يدوي.
+- **تخطيط الأعمدة الـ 7 المختصرة ومنع التفاف السطر الثاني كلياً ([resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * ترتيب الأعمدة السبعة المعتمدة: `الحالة`، `المريض`، `العمر` (عمود مخصص)، `الجنس` (عمود مخصص)، `نوع العملية` (مختصر مع شارة كاش/ضمان مدمجة بنفس السطر)، `الطبيب الجراح`، و`رقم الغرفة`.
+  * فرض العرض الأفقي الصارم بسطر واحد (`white-space: nowrap`) على كافة الخلايا والصفوف ومنع نزول أي بيانات لسطر ثانٍ.
+  * اعتماد الاختصارات والمصطلحات الطبية المعتمدة للعمليات الجراحية عالمياً: `Pre-Op` (بالانتظار)، `Intra-Op` (داخل الصالة مع نقطة نبض خضراء ومؤقت زمني فوري)، و`Post-Op` (خرج من الصالة).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php), [tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز اختبارات شاشة الانتظار بنجاح 100% (`9 passed, 32 assertions`).
+  * اجتياز اختبارات العمليات الجراحية بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي ملاحظات.
+
+## Session log (2026-11-15 — المرحلة 202: تقسيم شاشة الانتظار لعمودين (قبل الصالة / داخل الصالة)، إخفاء القائمة الجانبية للعرض الكامل 100%، ترتيب الأعمدة الـ 5 وسهولة القراءة، والتحكم السريري من داخل ملف العملية، وتوجيه موظف العمليات لسجل العمليات 2-Column Waiting Flight Board, Full-Width View, Streamlined Columns & Surgery Staff Auto-Redirect)
+
+### Done
+- **تقسيم شاشة الانتظار إلى عمودين متوازيين مع إخفاء المكتملة تلقائياً ([resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+  * العمود الأول: `قبل دخول الصالة (بالانتظار)` يشمل المرضى المجدولين وبانتظار الدخول.
+  * العمود الثاني: `داخل صالة العمليات (جارية الآن)` يشمل العمليات الجارية حالياً في الصالات.
+  * استبعاد العمليات المكتملة (`completed`) كلياً من شاشة الانتظار بمجرد إنهائها لتختفي فوراً وتظل مسجلة في سجل العمليات العام.
+- **إخفاء القائمة الجانبية للعرض الكامل 100% وترتيب الأعمدة الـ 5 ([resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+  * إخفاء القائمة الجانبية تلقائياً في شاشة قائمة الانتظار لإتاحة العرض الكامل 100% (Full Width) وتوفير أقصى قدر من الاتساع والانسيابية للجداول.
+  * حذف زر "سجل العمليات" وشريط "البحث الفوري" من أعلى الشاشة لتفريغ المساحة تماماً للجدولين.
+  * ترتيب الأعمدة الخمسة لسهولة القراءة: `المريض` (الاسم كرابط والعمر)، `نوع العملية` (المسمى وتغطية التأمين/الكاش)، `الطبيب الجراح`، `رقم الغرفة/الصالة`، و`حالة المريض في الصالة` (شارة عنبرية مصغرة لبالانتظار وشارة زرقاء بنبض حي لداخل الصالة).
+  * ضبط الحواشي الداخلية (`padding: 9px 12px`)، وحذف رقم الملف ورقم الهاتف من العرض بالانتظار لتجنب التكدس.
+- **التحكم بالمسار السريري حصرياً من ملف العملية وإلغاء الأرشيف العام ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * إلغاء زر `الأرشيف العام` من شاشة الانتظار.
+  * حصر التحكم من داخل ملف وتفاصيل العملية (`surgeries.show`):
+    1. `بدء عملية`: ينقل المريض من العمود الأول للثاني.
+    2. `تأجيل العملية`: يفتح نافذة منبثقة لتحديد الموعد الجديد وإبقاء المريض بالانتظار.
+    3. `إعادة إخراجه من الصالة`: يعيد المريض من داخل الصالة إلى عمود الانتظار ويصفر محطة الصالة.
+    4. `إنهاء العملية`: ينهي العملية ويخفي المريض من شاشة الانتظار كلياً.
+  * إبراز شارة حالة المريض في الصالة في ترويسة ملف العملية بلون مميز ونبض حي.
+- **توجيه حساب موظف العمليات مباشرة لسجل العمليات ([app/Http/Controllers/Auth/LoginController.php](file:///C:/get/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///C:/get/hospital-system/app/Http/Controllers/DashboardController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+  * توجيه دور `surgery_staff` أو `موظف عمليات` مباشرة إلى `/surgeries` عند تسجيل الدخول، وعند زيارة `/`، وعند زيارة `/dashboard`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php), [tests/Feature/SurgeryStaffDashboardAndLoginRedirectTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryStaffDashboardAndLoginRedirectTest.php), [tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز اختبارات شاشة الانتظار بنجاح 100% (`9 passed, 32 assertions`).
+  * اجتياز اختبارات توجيه موظف العمليات بنجاح 100% (`4 passed, 7 assertions`).
+  * اجتياز اختبارات `SurgeryTest` بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز `Laravel Pint` بالكامل.
+
+## Session log (2026-11-14 — المرحلة 201: تبسيط شاشة انتظار العمليات الجراحية `/surgeries/waiting` كجدول حصري بـ 5 أعمدة، إزالة التقويم والمؤشرات، تلوين المرضى حسب الحالة السريرية، وإضافة خيار إعادة الإخراج من الصالة Streamlined Waiting Table, Tri-Color Patient Stage Coding & Return to Waiting from OR)
+
+### Done
+- **تبسيط شاشة الانتظار وإزالة التقويم والمؤشرات ([resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php))**:
+  * حذف شبكة التقويم الشهري المدمجة وحذف بطاقات المؤشرات (KPIs) وأزرار الطي العلوية لتصبح الشاشة تركز بنسبة 100% على جدول العمليات الفوري.
+  * حصر أعمدة الجدول في 5 أعمدة معتمدة مطابقة للسجل العام: `حالة المريض في الصالة`، `المريض`، `نوع العملية`، `الطبيب الجراح`، و`رقم الغرفة`.
+  * حذف عمود الإجراءات السريعة بالكامل من جدول الانتظار، ليكون التحكم السريري بمسار المريض مداراً ومحمياً بالكامل من داخل ملف العملية.
+- **الترميز اللوني الثلاثي لصفوف وبيانات المرضى ([resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php), [resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * تمييز كل مريض بلون واضح ومحدد بالعين المجردة حسب حالته الحقيقية:
+    1. `دخل الصالة (جارية)`: تظليل أزرق خفيف مع شريط جانبي أزرق عريض، شارة دخل الصالة بنبض أخضر، واسم وأيقونة المريض باللون الأزرق.
+    2. `بالانتظار (لم يدخل بعد)`: تظليل أصفر عنبري دافئ مع شريط جانبي أصفر وشارة انتظار دافئة.
+    3. `انتهى (خرج من الصالة)`: تظليل أخضر هادئ مع شريط جانبي أخضر، شارة انتهى (خرج من الصالة)، واسم وأيقونة المريض باللون الأخضر.
+    4. `ملغاة`: تظليل وشريط أحمر هادئ.
+  * تعميم هذا التمييز اللوني البصري الفوري على جدول العمليات العام `/surgeries`.
+- **إضافة خيار "إعادة إخراجه من الصالة" وتصفير محطة الصالة ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة زر تحكم صريح ومميز في شاشة ملف وتفاصيل العملية: `[ 🚪 إعادة إخراجه من الصالة ]`.
+  * تحديث دالة `returnToWaiting` في الكنترولر لتقوم بإلغاء حالة محطة صالة العمليات `operationTheaterStation` وإعادتها إلى `pending` وتصفير توقيت البدء، لمنع بقاء المريض معلقاً كـ `in_progress` بالخطأ.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php), [tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز اختبارات شاشة الانتظار وإعادة الإخراج من الصالة بنجاح 100% (`9 passed, 32 assertions`).
+  * اجتياز اختبارات `SurgeryTest` بنجاح 100% (`9 passed, 181 assertions`).
+  * اجتياز `Laravel Pint` بالكامل دون أي أخطاء.
+
+## Session log (2026-11-14 — المرحلة 200: بناء نظام العرض الموحد كصفحة واحدة لملف العملية الجراحية `/surgeries/{id}` مع التبديل اللحظي والتنقل العائم Unified Continuous Single-Page Surgery File & Instant View Mode Switcher)
+
+### Done
+- **بناء نمط الصفحة الواحدة الموحدة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إضافة أزرار تبديل نمط العرض في أعلى شريط الإجراءات: `[ 📄 صفحة واحدة ]` و `[ 📑 تبويبات ]` مع حفظ التفضيل لحظياً في `localStorage`.
+  * تحويل عرض ملف العملية إلى صفحة واحدة متصلة تعرض كافة البطاقات المتاحة للمستخدم رأسياً بانسيابية تامة.
+  * تحويل شريط التبويبات إلى شريط تنقل سريع ثابت في الأعلى (Sticky Quick-Nav) يقفز للقسم المطلوب بضغطة زر مع تمييز القسم النشط تلقائياً بالتمرير (Scrollspy).
+  * إضافة زر عائم سلس أسفل الشاشة للعودة السريعة للأعلى (`Back to Top`).
+  * الحفاظ الكامل على مصفوفة الصلاحيات (حجب الأقسام غير المخولة، قفل أقسام القراءة فقط، وإتاحة الحفظ لأقسام الكتابة).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز اختبارات ملف العملية بنجاح 100% (`16 passed, 205 assertions`).
+  * اجتياز `Laravel Pint` بالكامل.
+
+## Session log (2026-11-14 — المرحلة 199: توجيه حساب الممرض تلقائياً لمحطة التمريض `/surgery-stations/nursing` كصفحة رئيسية وإصلاح استعلام إلغاء كشفية الطبيب Nurse Landing & Auto-Redirection to Nursing Station, Doctor Visit Cancel Query Fix)
+
+### Done
+- **توجيه حساب الممرض مباشرة لمحطة التمريض ([app/Http/Controllers/Auth/LoginController.php](file:///C:/get/hospital-system/app/Http/Controllers/Auth/LoginController.php), [app/Http/Controllers/DashboardController.php](file:///C:/get/hospital-system/app/Http/Controllers/DashboardController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+  * ربط دور الممرض (`nurse` أو `تمريض` أو `user_type === 'nurse'`) بالتحويل التلقائي المباشر إلى محطة التمريض (`route('nursing-station.index')` / `/surgery-stations/nursing`).
+  * تفعيل التوجيه فور تسجيل الدخول، وعند زيارة المسار الجذر `/`، وعند الدخول إلى لوحة التحكم `/dashboard`.
+- **إصلاح استعلام إلغاء كشفية الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+  * تصحيح خطأ الاستعلام `Column not found: 1054 Unknown column 'payment_status' in 'WHERE'` في جدول `radiology_requests` وتحويله إلى التحقق الصحيح عبر `exists()`.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseDashboardAndLoginRedirectTest.php](file:///C:/get/hospital-system/tests/Feature/NurseDashboardAndLoginRedirectTest.php), [tests/Feature/DoctorVisitCancellationRefundTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorVisitCancellationRefundTest.php))**:
+  * كتابة حزمة اختبارات تحقق التوجيه واجتيازها بنجاح 100% (`3 passed, 5 assertions`).
+  * اجتياز اختبار إلغاء كشفية الطبيب بنجاح (`2 passed, 6 assertions`).
+  * اجتياز `Laravel Pint` بالكامل.
+
+## Session log (2026-11-14 — المرحلة 198: حصر وتخصيص أعمدة سجل العمليات الجراحية `/surgeries` بالأعمدة الـ 5 المعتمدة فقط Streamlining Surgeries Table to 5 Core Columns)
+
+### Done
+- **حصر أعمدة جدول العمليات النشطة والمكتملة ([resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * اقتصار الجدول حصراً على 5 أعمدة:
+    1. `حالة المريض في الصالة`: تمييز دقيق لحالة تواجد المريض (`دخل الصالة (جارية)` عند بدء العملية، `خرج من الصالة` عند الاكتمال، `لم يدخل بعد` في الانتظار أو الجدولة، و`ملغاة`).
+    2. `المريض`: اسم المريض كرابط مباشر لفتح وتعديل ملف العملية (`route('surgeries.show', $surgery)`) مع رقم الهاتف.
+    3. `نوع العملية`: مسمى العملية ونوع التغطية (كاش أو ضمان).
+    4. `الطبيب الجراح`: اسم الجراح (أو خارجي).
+    5. `رقم الغرفة`: رقم الغرفة بتصنيفها ونوعها.
+  * إزالة الأعمدة الزائدة كلياً: إزالة عمود المعرف `#`، وعمود `تاريخ وموعد العملية`، وعمود `تاريخ الخروج`، وعمود `الإجراءات` لتوفير أقصى قدر من الوضوح والسرعة للمستخدم.
+- **التحقق وتأكيد صحة القوالب**:
+  * تجميع قوالب Blade بنجاح (`php artisan view:cache`).
+  * اجتياز `Laravel Pint` واجتياز حزمة `tests/Feature/SurgeryTest.php` بنجاح 100% (`9 passed, 181 assertions`).
+
+## Session log (2026-11-15 — المرحلة 202: اعتماد وتوحيد اسم "مستشفى الكفاءات الأهلي" في قاعدة البيانات وجميع وصولات وقوالب ووثائق النظام Unification of Hospital Name Across Database, Badge, Receipts & Views)
+
+### Done
+- **ترحيل وتحديث قاعدة البيانات ([database/migrations/2026_11_15_193000_update_hospital_name_to_alkafaat.php](file:///c:/get/hospital-system/database/migrations/2026_11_15_193000_update_hospital_name_to_alkafaat.php), [database/seeders/HospitalSeeder.php](file:///c:/get/hospital-system/database/seeders/HospitalSeeder.php))**:
+  * إنشاء مايجريشن لتحديث سجل المستشفى الأساسي `id = 1` في جدول `hospitals` ليصبح اسمه `مستشفى الكفاءات الأهلي` بدلاً من الاسم القديم (`مستشفى الأمل الأهلي`) وتحديث البريد إلى `info@alkafaat-hospital.com`.
+  * تحديث ملف البذار `HospitalSeeder.php` لضبط الهمزة وتطابق الاسم الرسمي.
+- **ضبط الإعدادات العامة للمشروع ([config/app.php](file:///c:/get/hospital-system/config/app.php), [.env](file:///c:/get/hospital-system/.env), [resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * ضبط `APP_NAME="مستشفى الكفاءات الأهلي"` في ملف التكوين والبيئة، وتحديث عنوان النظام الرئيسي في `layouts/app.blade.php`.
+- **توحيد القوالب والوصولات والباجات البرمجية**:
+  * تحديث القيمة الاحتياطية (fallback) في باجة وهوية الموظف [hr/employees/badge.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/badge.blade.php) وقسيمة الراتب [hr/payrolls/payslip.blade.php](file:///c:/get/hospital-system/resources/views/hr/payrolls/payslip.blade.php).
+  * توحيد بطاقة حجز الموعد [appointment-print.blade.php](file:///c:/get/hospital-system/resources/views/doctors/visits/appointment-print.blade.php) وطباعة الوصفة [prescription-print.blade.php](file:///c:/get/hospital-system/resources/views/doctors/visits/prescription-print.blade.php).
+  * توحيد وصولات الصندوق وسندات الاسترجاع الحرارية [receipt-print.blade.php](file:///c:/get/hospital-system/resources/views/cashier/receipt-print.blade.php) ووصولات الخدج [nicu-receipt-print.blade.php](file:///c:/get/hospital-system/resources/views/cashier/nicu-receipt-print.blade.php) وكشف حساب الخدج [nicu-itemized-print.blade.php](file:///c:/get/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php).
+  * توحيد وصولات صيدلية الـ POS [pharmacy/pos/receipt.blade.php](file:///c:/get/hospital-system/resources/views/pharmacy/pos/receipt.blade.php)، كاشير العيون [eye_cashier_receipt_print.blade.php](file:///c:/get/hospital-system/resources/views/eye/cashier/eye_cashier_receipt_print.blade.php)، كشف النظارات [eye_examination_glasses_print.blade.php](file:///c:/get/hospital-system/resources/views/eye/examinations/eye_examination_glasses_print.blade.php)، وتذكرة حجز العيون [eye_reception_ticket_print.blade.php](file:///c:/get/hospital-system/resources/views/eye/reception/eye_reception_ticket_print.blade.php).
+  * توحيد تقارير تحاليل وأشعة العمليات [staff/surgery-lab-tests/print.blade.php](file:///c:/get/hospital-system/resources/views/staff/surgery-lab-tests/print.blade.php) و [staff/surgery-radiology-tests/print.blade.php](file:///c:/get/hospital-system/resources/views/staff/surgery-radiology-tests/print.blade.php) وكارت سرير الخدج وسوار المعصم [nicu/print/crib_card.blade.php](file:///c:/get/hospital-system/resources/views/nicu/print/crib_card.blade.php) و [nicu/print/wristband.blade.php](file:///c:/get/hospital-system/resources/views/nicu/print/wristband.blade.php).
+- **التحقق الآلي**:
+  * تنسيق الكود عبر `vendor/bin/pint --dirty`، وتجميع Blade بنجاح (`view:cache`)، واجتياز اختبارات ميزة الموارد البشرية والباجات بنسبة 100% (`10 passed, 58 assertions`).
+
+## Session log (2026-11-14 — المرحلة 201: إضافة وإدارة جنسية الموظف في نموذج تسجيل الموظفين وملفاتهم وإعدادات الحقول HR Employee Nationality Field Integration, Dynamic Lookups & Profile Display)
+
+### Done
+- **بنية قاعدة البيانات والنموذج ([database/migrations/2026_11_14_211500_add_nationality_to_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_14_211500_add_nationality_to_hr_employees_table.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+  * إضافة عمود `nationality` بطول `VARCHAR(50)` مع قيمة افتراضية `عراقي` مباشرة بعد عمود `national_id`.
+  * إضافة `'nationality'` ضمن مصفوفة `$fillable` بموديل `HrEmployee`.
+- **التكامل مع نظام إعدادات الحقول والقوائم المنسدلة ([database/seeders/HrSettingsSeeder.php](file:///c:/get/hospital-system/database/seeders/HrSettingsSeeder.php))**:
+  * تسجيل الحقل في جدول `hr_field_requirements` ليظهر في شاشة إعدادات الموارد البشرية (`/hr/settings`) للتحكم في كونه إجبارياً أو اختيارياً.
+  * تزويد جدول `hr_lookup_options` بقائمة جنسيات شائعة بفئة `nationality` (عراقي، سوري، لبناني، مصري، أردني، هندي، باكستاني، فلبيني، أخرى).
+- **التحكم والتحقق والبحث السريع ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php))**:
+  * تمرير قائمة الجنسيات النشطة لشاشتي الإضافة والتعديل (`create`, `edit`).
+  * تطبيق قواعد التحقق الديناميكية المعتمدة على إعدادات الموارد البشرية مع اعتماد "عراقي" كافتراضي تلقائي في دالتي `store` و `update`.
+  * شمول حقل الجنسية في فلتر البحث العام بسجل الموظفين (`index`).
+- **الواجهات الأمامية ([resources/views/hr/employees/create.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/create.blade.php), [resources/views/hr/employees/edit.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/edit.blade.php), [resources/views/hr/employees/show.blade.php](file:///c:/get/hospital-system/resources/views/hr/employees/show.blade.php))**:
+  * إضافة حقل الجنسية في نموذج إنشاء الموظف ونموذج التعديل مع قائمة اقتراحات سريعة (`<datalist>`) وتعبئة افتراضية فورية "عراقي".
+  * إعادة موازنة شبكة الأعمدة (Grid System) لبطاقة البيانات الشخصية لتكون متناسقة ومتوازنة على 3 صفوف متكاملة.
+  * إبراز جنسية الموظف في بطاقة البيانات الشخصية بملف وإضبارة الموظف (`show.blade.php`).
+- **التحقق الآلي**:
+  * إضافة وتوسيع اختبارات الميزة في [`tests/Feature/HREmployeeTest.php`](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php) واجتياز كافة الاختبارات بنسبة 100% (`10 passed, 58 assertions`).
+  * اجتياز التنسيق القياسي عبر `Laravel Pint` ونجاح تجميع قوالب Blade (`view:cache`).
+
+## Session log (2026-11-14 — المرحلة 200: هيكلة تبويب وقائمة إعدادات الخدج والحاضنات، فصل شاشة دليل الحليب في واجهة مخصصة، وشريط التنقل الموحد NICU Settings Submenu, Dedicated Milk Types View & Unified Sub-tabs Architecture)
+
+### Done
+- **هيكلة القائمة الجانبية وقسم الخدج ([resources/views/layouts/app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تجميع بنود الإعدادات تحت قائمة فرعية منسدلة (Collapsible Submenu) باسم **"الإعدادات"** (`#nicuSettingsSubSection`) تشمل العناوين الفرعية (Sub-titles) الثلاثة:
+    1. `تسعير باقات وخدمات الخدج (NICU)` (`nicu.services.index`).
+    2. `إدارة حاضنات الخدج - ط6` (`incubators.index`).
+    3. `قائمة وتصنيفات حليب وتغذية الخدج` (`nicu.milk-types.index`).
+- **بناء واجهة مخصصة مستقلة لدليل أنواع وتغذية الخدج ([resources/views/nicu/milk-types/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/milk-types/index.blade.php), [app/Http/Controllers/NicuMilkTypeController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuMilkTypeController.php), [routes/web.php](file:///c:/get/hospital-system/routes/web.php))**:
+  * إضافة مسار `Route::get('/milk-types', [NicuMilkTypeController::class, 'index'])->name('milk-types.index')` ودالة `index()` في الكنترولر مع دعم البحث بالاسم والتصنيف والفلترة بالحالة (نشط/معطل).
+  * تصميم واجهة مخصصة ومستقلة تشمل بطاقات إحصائيات سريعة، جدول الحليب، نوافذ منبثقة للإضافة والتعديل، ومفاتيح التفعيل اللحظية المعتمدة على AJAX.
+  * تحديث رابط إدارة الحليب في إضبارة الخديج السريرية ([resources/views/nicu/show.blade.php](file:///c:/get/hospital-system/resources/views/nicu/show.blade.php)) ليوجه مباشرة للواجهة المستقلة.
+- **شريط تبويبات الإعدادات المشترك ([resources/views/nicu/partials/settings-nav.blade.php](file:///c:/get/hospital-system/resources/views/nicu/partials/settings-nav.blade.php), [resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php), [resources/views/incubators/index.blade.php](file:///c:/get/hospital-system/resources/views/incubators/index.blade.php))**:
+  * إنشاء شريط تبويبات علوي أنيق موحد (Sub-tabs) يربط بين الصفحات الثلاث ويوضع في رأس كل شاشة لتسهيل التنقل اللحظي بين باقات الخدمات والحاضنات وأنواع الحليب.
+  * تنظيف شاشة الخدمات [resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php) وكنترولر الخدمات من كود الحليب وجعلها مخصصة كلياً لباقات التسعير والضمان والتنفس الاصطناعي.
+- **التحقق الآلي وتأكيد الاختبارات ([tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php](file:///c:/get/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php), [tests/Feature/IncubatorWorkflowTest.php](file:///c:/get/hospital-system/tests/Feature/IncubatorWorkflowTest.php))**:
+  * اجتياز فحص التنسيق القياسي `Laravel Pint`، ونجاح التجميع المؤقت لقوالب Blade (`view:cache`)، واجتياز اختبارات ميزة الخدج والحاضنات بنجاح 100% (`5 passed, 41 assertions` و `12 passed, 75 assertions`).
+
+## Session log (2026-11-14 — المرحلة 199: حل مشكلة استدعاءات AJAX في تبديل وتعديل أنواع حليب الخدج والخدمات وتوافق السيرفر السحابي Subdirectory AJAX URL Fix & NICU Milk Types Toggle Compatibility)
+
+### Done
+- **تصحيح مسارات استدعاءات الـ AJAX والنماذج في خدمات وحليب الخدج ([resources/views/nicu/services/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/services/index.blade.php))**:
+  * معالجة المسار المطلق الصلب في زر تبديل حالة تفعيل نوع الحليب (`milk-type-toggle-switch`) وتحويله من `/nicu/milk-types/${id}/toggle` إلى `data-toggle-url="{{ route('nicu.milk-types.toggle', $milkType) }}"` مع fallback ديناميكي `{{ url('nicu/milk-types') }}/${milkTypeId}/toggle`، مما يحل خطأ 404 وانقطاع الاتصال بالخادم على السيرفر السحابي هوسـتنجر المرفوع على مسار فرعي (`/hearmz/`).
+  * تزويد طلبات الـ fetch بترويسة `'Accept': 'application/json'` لضمان التعامل السلس مع استجابات JSON.
+  * تصحيح مسار الفورم في مودال تعديل نوع الحليب ليكون `{{ url('nicu/milk-types') }}/${milkType.id}` بدلاً من المسار الصلب.
+  * تصحيح مسار تبديل تفعيل باقات خدمات الخدج (`service-toggle-switch`) ومودال تعديل الخدمة لاستخدام `data-toggle-url` ومساعد `{{ url('nicu/services') }}`.
+- **توافق الصلاحيات وسلاسة التجربة ([app/Http/Controllers/NicuMilkTypeController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuMilkTypeController.php))**:
+  * توسيع فحص الصلاحية في `authorizeManage()` ليشمل صلاحية `manage incubator reservations` بجانب `manage nicu services` و `manage nicu care plans`، لمطابقة كنترولر الخدمات ومنع أي اعتراض صلاحيات 403 غير مقصود للمشرفين ومسؤولي الحاضنات.
+- **تصحيح استدعاءات كاميرا الخدج عبر AJAX ([resources/views/nicu/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/index.blade.php), [resources/views/nicu/reservations/index.blade.php](file:///c:/get/hospital-system/resources/views/nicu/reservations/index.blade.php))**:
+  * تحويل استدعاء توكن كاميرا الطفل `sendBabyCamLink` من `/nicu/reservations/...` إلى `{{ url('nicu/reservations') }}/${reservationId}/cam-token` للعمل بتوافق كامل مع النطاق المحلي والسحابي.
+- **التحقق الآلي وتأكيد الاختبارات ([tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php](file:///c:/get/hospital-system/tests/Feature/NicuGranularPermissionsAndMilkTypesTest.php))**:
+  * اجتياز فحص التنسيق القياسي `Laravel Pint`، ونجاح التجميع المؤقت لقوالب Blade (`view:cache`)، واجتياز اختبارات ميزة أنواع الحليب والصلاحيات بنجاح 100% (`5 passed, 38 assertions`).
+
+## Session log (2026-11-14 — المرحلة 198: حل استثناء قص البيانات 1265 عند إنشاء موظف جديد وتحويل عمود نوع التعاقد `employment_type` إلى VARCHAR مرن وتطبيع الخيارات HR Employee Creation Data Truncation Fix & Flexible Employment Type Migration)
+
+### Done
+- **ترحيل وتوسيع عمود نوع التعاقد ([database/migrations/2026_11_14_200500_alter_employment_type_in_hr_employees_table.php](file:///c:/get/hospital-system/database/migrations/2026_11_14_200500_alter_employment_type_in_hr_employees_table.php))**:
+  * تحويل عمود `employment_type` في جدول `hr_employees` من `ENUM` صارم محصور في 4 خيارات إلى `string('employment_type', 50)->default('full_time')` لمنع استثناء `SQLSTATE[01000]: Warning: 1265 Data truncated for column 'employment_type'` نهائياً.
+  * إتاحة التوافق التام مع خيارات القوائم المنسدلة الديناميكية (`hr_lookup_options`) وخيارات العقود الحكومية والوزارية (`gov_contract`) وأي خيارات يضيفها مسؤول الموارد البشرية عبر شاشة الإعدادات `/hr/settings`.
+- **تطبيع الكود والمعالجة الوقائية ([app/Http/Controllers/HR/HrEmployeeController.php](file:///c:/get/hospital-system/app/Http/Controllers/HR/HrEmployeeController.php), [app/Models/HrEmployee.php](file:///c:/get/hospital-system/app/Models/HrEmployee.php))**:
+  * تطبيع قيمة `employment_type` تلقائياً في دالتي `store` و `update` لتحويل `Fulltime` أو `full-time` إلى الكود المعتمد `full_time`.
+  * تحديث دالة التسمية `getEmploymentTypeNameAttribute()` في الموديل للتعرف على العقود الحكومية وتوفير fallback ديناميكي للاستعلام التلقائي من جدول `HrLookupOption`.
+  * تصحيح السجل رقم 42 في `hr_lookup_options` لتوحيد الكود مع `full_time`.
+- **التحقق الآلي وتأكيد الاختبارات ([tests/Feature/HREmployeeTest.php](file:///c:/get/hospital-system/tests/Feature/HREmployeeTest.php))**:
+  * إضافة اختبار `test_can_create_employee_with_custom_or_fulltime_employment_type()` واجتياز كافة اختبارات الموارد البشرية بنجاح 100% (`9 passed, 46 assertions`)، واجتياز فحص التنسيق القياسي `Laravel Pint`.
+
+## Session log (2026-11-13 — المرحلة 197: تصحيح احتساب وعرض العناصر المدفوعة سابقاً وبنود باقات العمليات في كاشير العمليات، استبعاد التكرار، وتمييز حصة المريض ومطالبة الضمان Surgery Cashier Previously Paid Items & Package Reconciliation)
+
+### Done
+- **تصحيح احتساب المبالغ المدفوعة سابقاً واستبعاد بنود الباقة ([resources/views/cashier/surgeries/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php), [resources/views/cashier/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/index.blade.php))**:
+  * استبعاد بنود باقة العملية (`is_package_included`) من التكرار والجمع المزدوج فوق رسم العملية في حساب `$paidLabFee` و`$paidRadiologyFee` و`$paidExtraFee`.
+  * تمييز بنود باقة العملية في جدول العناصر المدفوعة سابقاً ببادج أنيق: `مشمول بالباقة (0 د.ع)` بدلاً من عرض أسعار الكاش الافتراضية.
+  * إدراج صفوف الخدمات الإضافية المدفوعة فعلياً (`paidExtraServices`) داخل جدول العناصر المدفوعة سابقاً ليتطابق مجموع الصفوف مع الإجمالي في ذيل الجدول.
+- **إبراز المسدد نقداً من المريض وتغطية الضمان الصحي ([resources/views/cashier/surgeries/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إضافة سطر تفصيلي واضح في بطاقة الملخص وفي ذيل جدول المدفوعات يوضح: `المسدد نقداً من المريض` (من واقع وصولات القبض المسجلة في الصندوق) مقابل `مطالبة وتغطية الضمان` لمريض التأمين.
+  * ضبط توازن الحسابات والمعلقات بحيث يطابق الإجمالي المعتمد بدقة: `الإجمالي = المدفوع سابقاً + المعلق المطلوب دفعه`.
+- **التحقق الآلي وتأكيد صحة الاختبارات ([tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryCashierSplitAndInsurancePaymentTest.php))**:
+  * اجتياز جميع اختبارات ميزة كاشير العمليات والضمان الصحي بنجاح 100% (`8 passed, 55 assertions`).
+
+## Session log (2026-11-13 — المرحلة 196: بناء واجهة ونظام دليل مساعدي الجراحين `/surgical-assistants`، تسجيل الأسماء الـ 9 المعتمدة، والربط التلقائي بملف العملية وصالة العمليات Dedicated Surgical Assistants Management & Dynamic Surgeries Integration)
+
+### Done
+- **إنشاء بنية وجدول مساعدي الجراحين ([database/migrations/2026_11_13_221000_create_surgical_assistants_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_13_221000_create_surgical_assistants_table.php), [app/Models/SurgicalAssistant.php](file:///C:/get/hospital-system/app/Models/SurgicalAssistant.php), [database/seeders/SurgicalAssistantSeeder.php](file:///C:/get/hospital-system/database/seeders/SurgicalAssistantSeeder.php))**:
+  * بناء جدول `surgical_assistants` ونموذج `SurgicalAssistant` بنمط كاستات لارافيل 12 الحديثة (`name`, `phone`, `notes`, `is_active`).
+  * تسجيل وتغذية الأسماء الـ 9 المعتمدة أولياً عبر السييدر (علياء عبدالجبار، علي عبدالله، حسين ناهي، ليث رحيم، حكم علاء، عبدالله علي، محمد فالح، مضاء علي، ومساعد جراح خارجي).
+- **بناء واجهة الإدارة الكاملة المستقلة ([app/Http/Controllers/SurgicalAssistantController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgicalAssistantController.php), [resources/views/surgical-assistants/index.blade.php](file:///C:/get/hospital-system/resources/views/surgical-assistants/index.blade.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * تصميم واجهة متكاملة مطابقة لنمط واجهة الأطباء ودليل العمليات مع بطاقات إحصائيات سريعة، شريط بحث بالاسم والهاتف، جدول المساعدين مع إحصائية العمليات المسجلة لكل مساعد، زر تبديل الحالة (نشط/معطل)، ونوافذ منبثقة (Modals) للإضافة والتعديل والحذف.
+  * إضافة رابط `مساعدو الجراحين` بالقائمة الجانبية تحت قسم العمليات الجراحية للمشرفين وموظفي العمليات.
+- **الربط المباشر مع ملف العملية وصالة العمليات ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تمرير قائمة المساعدين النشطين ديناميكياً لملف وتفاصيل العملية (`detail_team_timing`) وتزويد حقل `surgical_assistant_name` بقائمة اقتراحات `datalist` مع رابط مباشر يفتح دليل المساعدين.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgicalAssistantTest.php](file:///C:/get/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+  * اجتياز `Laravel Pint` وتجميع Blade واجتياز اختبارات الميزة بنجاح 100% (7 اختبارات).
+
+## Session log (2026-11-13 — المرحلة 195: تمكين ظهور المريض لطبيب التخدير فور التعيين، إزالة عائق اكتمال الجراح، ومزامنة محطة التخدير واعتماد أنواع التخدير الخمسة Anesthesiologist Immediate Visibility, Auto Station Sync & 5 Anesthesia Types)
+
+### Done
+- **إزالة عائق اكتمال الجراح وإتاحة الوصول الفوري لمريض التخدير ([app/Http/Controllers/AnesthesiaStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/AnesthesiaStationController.php))**:
+  * إزالة شرط حجب العمليات القائم على اكتمال محطة الجراح (`whereHas('surgeonStation', fn($q) => $q->where('status', 'completed'))`) في محطة التخدير (`/anesthesia`)، مما يتيح ظهور العمليات المعينة فوراً للمخدر للبدء بالتوثيق والتجهيز السريري.
+  * إزالة التحويل الإجباري والمنع عند فتح شاشة التخدير (`show`).
+- **المزامنة والإنشاء التلقائي لمحطة التخدير وسجل العمليات ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [app/Http/Controllers/DashboardController.php](file:///C:/get/hospital-system/app/Http/Controllers/DashboardController.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php), [database/seeders/RolesAndPermissionsSeeder.php](file:///C:/get/hospital-system/database/seeders/RolesAndPermissionsSeeder.php))**:
+  * إنشاء وتحديث سجل `AnesthesiaStation` فور قيام موظف العمليات بحفظ الفريق الطبي والتوقيت في `detail_team_timing`.
+  * شمول طبيب التخدير في استعلامات وفلاتر سجل العمليات العام (`/surgeries`) ليتمكن من رؤية عملياته كمخدر أو جراح، وتحديث عدادات القائمة الجانبية ولوحة التحكم.
+  * تثبيت صلاحيات دور `التخدير` و`anesthesia` في قاعدة البيانات وبذور الصلاحيات.
+- **اعتماد أنواع التخدير الخمسة المعتمدة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [resources/views/surgery-stations/anesthesia/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/anesthesia/show.blade.php))**:
+  * توفير أزرار التعبئة السريعة وقوائم الاقتراح بالأنواع الخمسة: `عام` (General Anesthesia)، `نصفي` (Spinal Anesthesia)، `موضعي` (Local Anesthesia)، `مناطقي` (Regional Anesthesia)، `سديشن` (Sedation).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/AnesthesiologistVisibilityAndWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/AnesthesiologistVisibilityAndWorkflowTest.php))**:
+  * اجتياز `Laravel Pint` وتجميع قوالب Blade واجتياز اختبارات الميزة بنجاح 100%.
+
+## Session log (2026-11-13 — المرحلة 194: تبسيط جدول سجل العمليات الجراحية `/surgeries`، إزالة تفاصيل ونتائج العملية المنسدلة وزر الإلغاء، وربط اسم المريض مباشرة بملف العملية الموحد Surgeries Index Streamlining & Redundant Accordion Removal)
+
+### Done
+- **إلغاء تفاصيل ونتائج العملية المنسدلة (`detailsRow`) وإلغاء زر الإلغاء المباشر ([resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * إزالة عامود `تشخيص / علاج` من جدول العمليات النشطة لتوفير المساحة وتجنب التكدس.
+  * إزالة الصف المنسدل للأكورديون بالكامل (`#detailsRow{{ $surgery->id }}`) الذي كان يعرض تحاليل المختبر والأشعة والعلاجات وزر إلغاء العملية، حيث أصبحت كل هذه البيانات الرسمية تُدار حصرياً ومفصلة ومحمية بداخل ملف العملية وصالة العمليات الموحد (`/surgeries/{id}`).
+  * إزالة الصف المنسدل من جدول العمليات المكتملة (`#detailsRowCompleted{{ $surgery->id }}`)، وحذف نموذج الإلغاء المخفي `#cancelSurgeryConfirmForm` والدالة `window.confirmCancelSurgery`، ليكون إلغاء العملية خاضعاً للحماية والتوثيق والسبب المحمي داخل شاشة تفاصيل العملية.
+  * تحويل زر اسم المريض في جدولي العمليات النشطة والمكتملة من زر فتح أكورديون إلى رابط مباشر يفتح ملف وتفاصيل العملية (`route('surgeries.show', $surgery)`).
+- **تحسين استعلامات الأداء في الكنترولر ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * إزالة التحميل المسبق للعلاقات غير المستخدمة بعد الآن في صفحة الفهرس (`surgeryTreatments`, `radiologyTests`, `labTests`) من استعلامي `activeSurgeriesQuery` و`completedSurgeriesQuery`، مما يرفع سرعة الاستجابة ويقلل استهلاك الذاكرة واستعلامات قاعدة البيانات.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php), [tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///C:/get/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php))**:
+  * اجتياز `Laravel Pint` وتجميع Blade (`view:cache`)، واجتياز حزم الاختبارات الآلية بنجاح 100%.
+
+## Session log (2026-11-12 — المرحلة 193: ربط مخزن وعُهدة العمليات (`مخزن عمليات رئيسي`) بملف العملية وصرف وإرجاع المواد، وتبويب العهدة الحصري للحساب المعين له المخزن في `/surgeries`, بالإضافة لملاحظات نوع العملية وإزالة الحقول المكررة من التخدير Operations Sub-Store Custody & Dispensing Integration)
+
+### Done
+- **تبسيط تبويب التخدير وإضافة ملاحظات نوع العملية في `/surgeries/{id}` ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+  * إزالة حقول تعيين أطباء التخدير المكررة وتوقيت التخدير من تبويب `detail_anesthesia` والإبقاء على نوع التخدير والوضعية وتصنيف ASA والملاحظات فقط.
+  * إضافة حقل `surgical_notes` مباشر مع زر حفظ في تبويب نوع العملية (`detail_type` عبر `#detailTypeNotesForm`).
+- **عزل مخزن العمليات وحل الأولوية لصالح `مخزن عمليات رئيسي` ([app/Models/Surgery.php](file:///C:/get/hospital-system/app/Models/Surgery.php))**:
+  * إضافة دوال `isOperationLocationName()`, `resolveOperationSubStores()`, و`getOperationSubStoreLocation()` بأولوية عهدة المستخدم (`user->location_id`) ثم **`مخزن عمليات رئيسي`** ثم صالات العمليات، مع منع تداخل `location_id` لصالات/مخازن العمليات مع استنتاج مخزن الطابق للتمريض (`getFloorSubStoreLocation()`).
+- **الصرف المباشر والإرجاع من مخزن العمليات في `/surgeries/{id}` (`tab=detail_supplies`) ([routes/web.php](file:///C:/get/hospital-system/routes/web.php), [app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * استبدال جدول المستلزمات اليدوي السابق (`JSON`) بنظام صرف فعلي من عهدة مخزن العمليات (لكافة أصناف المخزن من مستلزمات وأدوية تخدير وغيرها) عبر `surgeries.supplies.dispense` مع خصم رصيد `StockBatch` وتسجيل `StockMovement` (`issue_to_patient`) وتوثيق الصرف في `SurgeryTreatment`، مع زر إرجاع وإلغاء صرف (`surgeries.supplies.reverse`) يعيد الرصيد ويسجل حركة `return` وتقييد الصلاحية بـ `detail_supplies = write`.
+- **تبويب `مخزن وعُهدة العمليات` الحصري في `/surgeries` ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/index.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/index.blade.php), [app/Http/Controllers/StockTransferController.php](file:///C:/get/hospital-system/app/Http/Controllers/StockTransferController.php), [resources/views/stock-transfers/return.blade.php](file:///C:/get/hospital-system/resources/views/stock-transfers/return.blade.php))**:
+  * قصر ظهور التبويب واللوحة (`#btnTabOrStore`, `#paneOrStore`) **حصراً على الحسابات المعين لها مخزن عمليات في إدارة المستخدمين (`user->location_id`)** (مثل حساب `موظف العمليات` المربوط بـ `مخزن عمليات رئيسي`) مع حجبه التام عن بقية الحسابات حتى عبر تمرير `?tab=or_store`.
+  * توفير جرد الوجبات المتوفرة، بحث فوري، فلاتر التصنيف والنفاد والانتهاء، طلب تعزيز مواد، إرجاع عهدة للمخزن الرئيسي (`from_surgery=1`)، وسجل الحركات المباشر.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز `Laravel Pint` (7 ملفات)، تجميع Blade (`view:cache`)، واجتياز 4 حزم اختبارية (`SurgeryTest`, `NursingFloorDispenseTest`, `UnifiedClinicalStationAndTabPermissionsTest`, `RolePermissionsMatrixTest`) بإجمالي `44 passed, 621 assertions`.
+
+## Session log (2026-11-12 — المرحلة 192: توحيد ملف العملية وصالة العمليات `/surgeries/{id}` على نمط المحطة السريرية الموحدة، مصفوفة صلاحيات التبويبات المستقلة، وقفل حساب التخدير وترتيب المحتوى Unified Surgery Detail Workspace & Anesthesiologist Role Lock)
+
+### Done
+- **إصلاح حفظ موظف العمليات وإلغاء النماذج المتداخلة ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إزالة جميع وسوم `<form>` المتداخلة وفصل كل تبويب بنموذج مستقل (`detailDiagnosisForm`, `detailAnesthesiaForm`, `detailTeamTimingForm`, `detailSuppliesForm`) لضمان عمل الحفظ لموظف العمليات والجراح والمخدر دون تعارض HTML.
+- **مصفوفة صلاحيات ملف العملية وصالة العمليات وقفل حساب المخدر ([app/Models/SurgeryTabPermission.php](file:///C:/get/hospital-system/app/Models/SurgeryTabPermission.php), [app/Http/Controllers/SurgeryTabPermissionController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryTabPermissionController.php), [resources/views/surgeries/settings/tabs.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/settings/tabs.blade.php))**:
+  * إضافة `DETAIL_TABS` (`detail_tests`, `detail_type`, `detail_diagnosis`, `detail_anesthesia`, `detail_team_timing`, `detail_supplies`, `detail_followups`) ومصفوفة الصلاحيات الافتراضية `detailDefaultMatrix()` للأدوار (`anesthesia`, `doctor`, `surgery_staff`, `resident`, `nurse`, `surgery_coordinator`, `receptionist`, `admin`) وعرضها في بطاقة مستقلة في إعدادات التبويبات.
+  * تطبيق `isAnesthesiaUser()` و`resolveUserRolesForDetail()` للكشف الصارم عن حساب المخدر (دور `التخدير`/`anesthesia` أو `Doctor` بنوع/اختصاص تخدير) وحصر الكتابة فيه على تبويب `detail_anesthesia` فقط، ومنح الخادم `403` عند محاولة تعديل أي تبويب آخر.
+- **إعادة بناء وتنظيم `/surgeries/{id}` ومحتوياته ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * تطبيق الرأس التنفيذي الموحد (`.clin-header-modern`) والتبويبات الأفقية المتجاوبة، والتوجيه الذكي لأول تبويب نشط حسب الدور (`detail_anesthesia` للمخدر، `detail_team_timing` لموظف العمليات، `detail_diagnosis` للجراح).
+  * إعادة ترتيب محتويات التبويبات داخل بطاقات `.clin-section-card` و`.clin-field-card` متراصة متعددة الأعمدة مع أزرار تعبئة سريعة (`حالة مستقرة`، `عام`/`نصفي`/`موضعي`، `إفاقة مستقرة`)، وحصر تعيين طاقم التخدير وتوقيت العملية في `detail_team_timing` واقتصار `detail_anesthesia` على نوع التخدير والملاحظات، مع مزامنة `AnesthesiaStation` وإضافات التوقيت.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز `Laravel Pint` (4 ملفات معدلة)، وترجمة Blade بنجاح (`php artisan view:cache`)، واجتياز 5 حزم اختبارية ذات صلة (`48 passed, 603 assertions`).
+
+## Session log (2026-11-12 — المرحلة 191: بناء شبكة الأدوية MAR وفصل مخزن الطابق للمستلزمات فقط، وإصلاح نموذج حجز العملية `/surgeries/create` Medications MAR Grid, Floor Supplies Isolation & Surgery Create Form/TDZ Fix)
+
+### Done
+- **إصلاح عطل حجز العمليات واختيار الغرف في `/surgeries/create` ([resources/views/surgeries/create.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/create.blade.php))**:
+  * استعادة وسم البداية المفقود للنموذج `<form action="{{ route('surgeries.store') }}" method="POST" id="surgeryForm" enctype="multipart/form-data">` مع `@csrf` وحقل `visit_id` المخفي قبل `#patientExecutiveBanner`.
+  * تقديم تعريف متغيرات الغرف (`roomIdInput`, `selectedRoomType`, `selectedRoomFee`, `selectedRoomName`, `selectedRoomNumber`, `selectedRoomStayHours`) لأول `DOMContentLoaded` قبل استدعاء `$('#patient_id').trigger('change')` لتجنب خطأ JS TDZ (`Cannot access 'selectedRoomType' before initialization`) عند تمرير `?patient_id=`.
+  * تأمين خصائص المريض بـ null-safe (`$selectedPatient?->user?->name` إلخ) وحفظ `old('surgical_operation_id')` و`old('room_id')` عند رجوع التحقق.
+- **منظومة شبكة إعطاء الأدوية (MAR Grid) وفصل مخزن الطابق للمستلزمات فقط ([database/migrations/2026_11_12_004000_upgrade_surgery_treatments_for_mar_and_pharmacy.php](file:///C:/get/hospital-system/database/migrations/2026_11_12_004000_upgrade_surgery_treatments_for_mar_and_pharmacy.php), [app/Models/SurgeryTreatment.php](file:///C:/get/hospital-system/app/Models/SurgeryTreatment.php), [app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php), [resources/views/surgery-stations/nursing/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+  * إضافة أعمدة MAR (`medicine_id`, `prescribed_by`, `route`, `frequency_mode`, `interval_hours`, `start_at`, `total_doses`) ودوال `FREQUENCY_PRESETS`, `calculateTotalDoses()`, `getDoseSlots()`, `toggleDoseSlot()`.
+  * فك ارتباط تبويب الأدوية (`tab=treatments`) بمخزن الطابق نهائياً وحصر صرف مخزن الطابق بالمستلزمات الطبية فقط (`tab=supplies` و`dispenseFloorItem` عبر `Product::isSupply()`).
+  * بناء مسار بحث أدوية الصيدلية (`clinical-station.medicines.search`) مع الإدخال الحر للأطباء والمقيمين، وبناء جدول MAR التفاعلي للتمريض بتأشير الجرعات بالوقت واليوم (`clinical-station.treatments.toggle-dose`) أو عند اللزوم (PRN) مع حماية القفل (30 دقيقة أو نفس الممرض) وصلاحية الإلغاء للأدمن.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/SurgeryCreateModernWorkspaceTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryCreateModernWorkspaceTest.php), [tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///C:/get/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php), [tests/Feature/NursingFloorDispenseTest.php](file:///C:/get/hospital-system/tests/Feature/NursingFloorDispenseTest.php))**:
+  * مطابقة `Laravel Pint` (13 ملفاً) واجتياز 7 حزم اختبارية ذات صلة (`44 passed, 415 assertions`).
+
+## Session log (2026-11-11 — توحيد جدول العلامات الحيوية وميزان السوائل في المحطة السريرية الموحدة، إزالة السوائل من `/surgeries/{id}`، وإلغاء مؤشرات الألم والوعي والشعيرات Unified Clinical Vitals & Fluids Single Flowsheet)
+
+### Done
+- **إزالة تبويب ونموذج السوائل من تفاصيل العملية ([resources/views/surgeries/show.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * إزالة زر `#v-pills-fluids-tab` ولوحة اختيار `required_fluids` (`#v-pills-fluids`) من شاشة الطبيب/العملية مع الحفاظ على التوافق التام في قاعدة البيانات.
+- **توحيد تبويب السوائل داخل تبويب العلامات الحيوية والفحص السريري ([app/Models/SurgeryTabPermission.php](file:///C:/get/hospital-system/app/Models/SurgeryTabPermission.php), [app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * إزالة `fluids` من `SurgeryTabPermission::TABS` و`defaultMatrix()` وتحديث تسمية `vitals` إلى `العلامات الحيوية والفحص والسوائل`، مع توجيه الروابط القديمة `?tab=fluids` تلقائياً إلى `vitals` وحذف السجلات القديمة في `surgery_tab_permissions`.
+  * تقييد إدخال وتعديل حقول السوائل الـ 8 (`intake_iv_fluids`, `intake_oral`, `intake_blood`, `output_urine`, `output_drain`, `output_gtube_ng`, `output_vomiting`, `output_stool`) بكادر التمريض والأدمن فقط واجهةً وخادماً (`$canEditFluids`)، وجعلها للقراءة فقط للأطباء والمقيمين دون حجبهم بقفل الـ 30 دقيقة للعلامات الحيوية ودون مسح القيم المتبادلة عند الحفظ الجزئي أو الحذف عبر `syncStationFromReadings()`.
+  * قصر عرض وتعديل **`ملاحظات الفحص السريري (Clinical Examination)`** على الأطباء والمقيمين والجراحين والأدمن فقط (`$canManageClinicalExam`) وإخفاؤها وحمايتها من التعديل أو المسح من شاشة كادر التمريض.
+- **إعادة بناء الواجهة كجدول واحد موحد بدون تكرار ([resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * دمج نموذج الإدخال العلوي، حقول السوائل الـ 8، وسجل القراءات التاريخية داخل جدول أفقي واحد `#vitalsGridTable` (17 عموداً): الصف الأول للإدخال المباشر لـ `قراءة جديدة` (`is_new_reading=1`) أو تعديل قراءة سابقة (`[تعديل]`)، والصفوف التالية تعرض النتائج المحفوظة مباشرة أسفله من الأحدث للأقدم.
+  * إخفاء شريط الحفظ السفلي المكرر (`حفظ التحديثات السريرية`) في تبويب `vitals` فقط والاكتفاء بزر الحفظ الموحد `#row1SaveBtn` في الصف الأول للجدول، مع إزالة أعمدة وحقول `مقياس الألم (pain_score)`، `مقياس الوعي (gcs)`، و`امتلاء الشعيرات (crt)` وحساب `صافي السوائل` لحظياً.
+  * إزالة شريط وزر إنهاء المرحلة السريرية السفلي المنفصل عن العمليات (`/surgeries/waiting`) (`إنهاء محطة ما قبل العملية ونقل للصالة` / `إنهاء متابعة ما بعد العملية`) والاكتفاء بإدارة الدخول والصالة من قائمة انتظار العمليات وتخريج الغرفة من الرأس.
+  * إعادة تنظيم وتصغير تبويب **السيرة المرضية (`tab=history`)** ضمن حاوية `#clinicalHistoryGrid` بمجموعتين مدمجتين (القصة والشكوى الحالية في صف ثنائي + السوابق الطبية والجراحية والدوائية والتحسس في صف رباعي على الشاشات الكبيرة مع أزرار تعبئة سريعة `لا يوجد` / `NKDA` عند وجود صلاحية الكتابة).
+- **تنظيم تبويبي الخطة الطبية والمستلزمات مقابل الأدوية ([app/Models/Product.php](file:///C:/get/hospital-system/app/Models/Product.php), [app/Models/SurgeryTreatment.php](file:///C:/get/hospital-system/app/Models/SurgeryTreatment.php), [app/Models/SurgeryTabPermission.php](file:///C:/get/hospital-system/app/Models/SurgeryTabPermission.php), [app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إعادة تنظيم تبويب **الخطة الطبية (`tab=plan`)** داخل شبكة `#clinicalPlanGrid` (شبكة ثنائية للخطط والملاحظات + حقل `treatment_plan` + خلاصة توصية الجراح وإبراز المرحلة النشطة وزر تعبئة سريع `سليمة NAD`).
+  * فصل **المستلزمات الطبية (`tab=supplies`)** عن **الأدوية وجدول الإعطاء (`tab=treatments`)** عبر إضافة عمود `item_type` في جدول `surgery_treatments` (`database/migrations/2026_11_11_235000_add_item_type_to_surgery_treatments_table.php`)، ودوال التصنيف [`Product::resolveItemType()`](file:///C:/get/hospital-system/app/Models/Product.php#L61-L108) (لتمييز `أدوية` / `مغذيات` عن `مستلزمات طبية` / `مواد طبية` / `تيوبات` / `خيوط` / إلخ) في المحطة السريرية ومخزن التمريض ([resources/views/surgery-stations/nursing/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/nursing/index.blade.php)).
+  * تسجيل تبويب `supplies` في مصفوفة الصلاحيات (`admin`/`nurse` للكتابة، `doctor`/`resident`/`surgery_coordinator` للقراءة افتراضياً)، وإضافة مسار `clinical-station.supplies.dispense`، ومنع اختلاط الأصناف بين التبويبين في الخادم والواجهة، وحماية المستلزمات المصروفة من الحذف عند تعديل وصفات الجراح في [`SurgeonStationController`](file:///C:/get/hospital-system/app/Http/Controllers/SurgeonStationController.php) و[`SurgeryController`](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php).
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///C:/get/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php), [tests/Feature/ClinicalVitalsGovernanceTest.php](file:///C:/get/hospital-system/tests/Feature/ClinicalVitalsGovernanceTest.php), [tests/Feature/NursingFloorDispenseTest.php](file:///C:/get/hospital-system/tests/Feature/NursingFloorDispenseTest.php))**:
+  * مطابقة `Laravel Pint` لجميع الملفات المعدلة (`10 files`)، واجتياز 6 حزم اختبارية (`41 passed, 333 assertions`) بنسبة نجاح 100%.
+
+## Session log (2026-11-11 — دمج تحديثات فرع `hr` (وحدة العناية المركزة والقلبية ICU/CCU، تسوية الخدج NICU، وصلاحيات وقسائم HR) في الفرع الرئيسي `main` مع الإبقاء على مسار العمل المحلي WAMP HR-to-Main Full Feature Merge Preserving Local Rules)
+
+### Done
+- **الدمج الآمن لتحديثات `origin/hr` على `main` (`c:\wamp64\www\hospital-system`)**:
+  * دمج كافة التحديثات والميزات من فرع `hr` (حتى الكوميت `b2966c1`) مع استبعاد تعديلات مسار القواعد (`C:\get\hospital-system`) وقاعدة الرفع إلى `hr` فقط، للإبقاء التام على بيئة العمل المحلية في `c:\wamp64\www\hospital-system` وقواعد الرفع المباشر إلى `main`.
+  * الحفاظ الكامل على خيار خروج **`خرج متوفي` (`deceased`)** في الطوارئ (`bf16ef7`) وإعادة تصميم شاشة الاستعلامات ثنائية الأعمدة متكاملةً مع بطاقة **`حجز عناية مركزة (ICU)`** في [resources/views/inquiry/create.blade.php](file:///C:/get/hospital-system/resources/views/inquiry/create.blade.php).
+  * تشغيل المايجريشنات الـ 5 الجديدة (`nicu_milk_types`, `icu_beds`, `icu_admissions`, `ccu_services`, `ccu_stay_brackets`, `ccu_settings`, إلخ) وبذور `IcuBedSeeder`, `CcuTariffSeeder`, `RolesAndPermissionsSeeder` وتحديث كاش الصلاحيات بنجاح على قاعدة البيانات المحلية `hospital_pho`.
+  * التحقق الآلي الشامل: اجتياز 21 حزمة اختبارية بإجمالي `168 passed, 1,186 assertions` عبر محاور `ICU/CCU`, `NICU`, `HR`, `Emergency`, `Inquiry`, `Surgery`, `Cashier`, `Consultants` ومطابقة `Laravel Pint` لجميع الملفات المتأثرة (`71 files`).
+
+## Session log (2026-11-11 — المرحلة 188: إضافة خيار خروج "خرج متوفي" (`deceased`) في محطة الطوارئ وسجل الحالات والتقرير الطبي والتحقق Emergency Deceased Discharge Option, Reports & Financial Clearance Parity)
+
+### Done
+- **الكنترولر ومنطق الخروج ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php))**:
+  * إضافة `deceased` لقواعد التحقق في `EmergencyController::discharge` بنفس شرط إبراء الذمة المالية (`getUnpaidAmount()`) المطبق على بقية أنواع الخروج.
+  * ضبط الوجهة الافتراضية (`خرج متوفي`) والتوصيات الافتراضية (`توثيق حالة الوفاة واستكمال الإجراءات الرسمية`) وشارة التسمية (`خرج متوفي`) بدلاً من التوصية الافتراضية الخاصة بالعيادة الخارجية.
+- **الواجهات وسجل الحالات والتقارير ([resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php), [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php), [resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php), [resources/views/emergency/verify-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/verify-report.blade.php))**:
+  * إضافة زر `خرج متوفي` داخل قائمة تسجيل الخروج في محطة كشف الطوارئ (`emergency.show`) مع رسالة تأكيد وشارة حالة داكنة مميزة بعد التسجيل.
+  * دعم شارة وتمييز صفوف حالات `deceased` في سجل الطوارئ (`emergency.index`) والتقرير الطبي للطوارئ وصفحة التحقق عبر رمز QR.
+- **الاختبارات الآلية ([tests/Feature/EmergencyWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyWorkflowTest.php), [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php))**:
+  * إضافة اختبار `test_emergency_discharge_deceased_workflow_and_renders_across_views` والتحقق من منع `deceased` عند وجود مستحقات غير مدفوعة، واجتياز حزمة اختبارات الطوارئ بالكامل (`25 passed, 139 assertions`).
 
 ## Session log (2026-11-11 — المرحلة 189: منظومة التسعير الديناميكي وشرائح الإقامة للضمان، شمول التحاليل والأشعة بالباقة بنقرة زر، الكاشير والحسابات والمطالبات، ونقل التشخيص الأولي و ICD-10 لداخل إضبارة الطبيب CCU Dynamic Tariffs, Official MOH Brackets, Bundling & Accounting Suite)
 
@@ -2102,1521 +3594,4 @@ Consult these files before making changes or proposing fixes:
   * جدول المواعيد وطابور العيون المباشر لليوم مع إجراءات فورية: استدعاء ومناداة المريض مع نطق صوتي عربي متقدم (TTS)، إدخال للعيادة 🩺، وتوثيق توسيع الحدقة 💧.
   * دليل أطباء العيون المفصل بحسب التخصص الدقيق (شبكية، ماء أبيض/فاكو، قرنية، جلوكوما، أطفال وحول) مع تبديل حالة التوفر بضغطة زر.
 - **تذاكر وكروت حجز العيون الحرارية (`EyeReceptionController.php` و `eye_reception_ticket_print.blade.php`)**:
-  * تصميم تذكرة حرارية مقاس 80mm متوافقة مع كافة طابعات الإيصالات الحرارية، تشمل ترويسة المستشفى ومركز العيون، رقم الدور المكبّر، الباركود التخطيطي، تفاصيل الطبيب والمريض، وتنبيهات سريرية لتوسيع الحدقة.
-  * إدراج أزرار الطباعة المباشرة من جدول الاستعلامات وجدول توفر الأطباء.
-  * تحديث قائمة أطباء العيون في شاشة حجز الموعد الجديد لفرزهم بحسب التوفر اليومي مع شارات ملونة (🟢 متاح اليوم / ⚪ غير متوفر).
-- **الشريط الجانبي والاختبارات الآلية (Sidebar & Automated Tests)**:
-  * إضافة رابط «توفر أطباء العيون» إلى القائمة الجانبية للنظام `resources/views/layouts/app.blade.php`.
-  * توسيع اختبارات الميزة [EyeCenterWorkflowTest.php](file:///f:/hospital-system%20p/tests/Feature/EyeCenterWorkflowTest.php) واجتياز كافة الاختبارات بنجاح 100%: 11 passed (57 assertions) دون أي تعارض أو تراجع.
-  * تحديث شجرة العلاقات البرمجية المعرفية (Graphify): 3,402 عقدة و 5,207 علاقة عبر 878 ملفاً.
-
-## Session log (2026-09-28 — منظومة مركز وجراحة العيون المتكاملة: استعلامات، كاشير، مخزن عدسات، فحص سريري OD/OS، أجهزة وتشخيص، وعمليات فاكو)
-
-### Done
-- **قاعدة البيانات ونماذج العيون المعزولة (`database/migrations` و `app/Models/Eye/`)**:
-  * إنشاء ميغريشن `2026_09_28_120000_create_eye_center_tables.php` وبناء 8 جداول متخصصة بمعزل عن نظام المستشفى العام: `eye_appointments`, `eye_invoices`, `eye_invoice_items`, `eye_store_items`, `eye_store_movements`, `eye_examinations`, `eye_investigations`, `eye_surgeries`.
-  * إنشاء 7 نماذج Eloquent متقدمة في المجلد `app/Models/Eye/` مع الترقيم التلقائي للأجهزة والفواتير والمواعيد.
-- **استعلامات وطابور العيون (`EyeReceptionController.php` و `resources/views/eye/reception/`)**:
-  * شاشة استقبال تفاعلية تدعم البحث اللحظي بالأجاكس، إدارة الطابور الحي وحالات الانتظار، توسيع الحدقة (`dilated`)، وتوليد فواتير الكشف التلقائية.
-- **كاشير مركز العيون المستقل والترحيل اليومي (`EyeCashierController.php` و `resources/views/eye/cashier/`)**:
-  * نقطة تحصيل وفواتير خاصة بالعيون تقبل الدفع النقدي والبطاقة وضمان الصحة، طباعة وصولات حرارية تخصصية، وترحيل الإيرادات اليومية آلياً إلى حسابات وخزينة المستشفى المركزية عبر `FinancialTransaction` (`hospital_revenue`).
-- **مخزن مستلزمات وعدسات العيون بالتوريد المزدوج (`EyeStoreController.php` و `resources/views/eye/store/`)**:
-  * إدارة مخزون عدسات IOL (الديوبتر والرقم التسلسلي)، إبر الشبكية (Eylea, Lucentis)، والمستهلكات الجراحية.
-  * دعم التوريد المزدوج: الشراء والتوريد المباشر من المجهزين + طلبات النقل الداخلية من المخزن الرئيسي (`stock_transfer_requests`).
-- **محطة الكشف السريري التخصصي OD/OS (`EyeExaminationController.php` و `resources/views/eye/examinations/`)**:
-  * محطة متطورة وفق معايير OpenEyes و EyeDraw: فحص ثنائي للعين اليمنى واليسرى، حدة الإبصار (Unaided / Corrected)، شبكة فحص الانكسار وطباعة راشيتة النظارة، قياس ضغط العين، وفحص المصباح الشقي بزر السلامة السريع WNL.
-- **فحوصات الأجهزة التشخيصية وعارض التقارير (`EyeInvestigationController.php` و `resources/views/eye/investigations/`)**:
-  * طلب ومتابعة فحوصات OCT، الساحة البصرية، قياس أبعاد العين Biometry، وطبوغرافيا القرنية Pentacam مع عارض تقارير مدمج (PDF وصور).
-- **صالة جراحة العيون وزراعة العدسات (`EyeSurgeryController.php` و `resources/views/eye/surgeries/`)**:
-  * جدولة عمليات الفاكو وحقن الشبكية مع **خصم العدسة المطوية المختارة تلقائياً من مخزن العيون فور الحجز** وتدوين تقارير الجراحة والمضاعفات وخطة المتابعة.
-- **التكامل والاختبارات الآلية والمعرفية**:
-  * إضافة قسم مركز العيون التخصصي إلى القائمة الجانبية للنظام `resources/views/layouts/app.blade.php`.
-  * إنشاء واجتياز اختبارات الميزة الشاملة [EyeCenterWorkflowTest.php](file:///f:/hospital-system%20p/tests/Feature/EyeCenterWorkflowTest.php) بنجاح 100% (7 passed, 36 assertions) بجانب كافة اختبارات الطوارئ والصيدلية السابقة (23 passed, 106 assertions) دون أي تراجع أو تعارض.
-  * تحديث شجرة العلاقات البرمجية المعرفية (Graphify Knowledge Graph): 3,337 عقدة و 5,161 علاقة عبر 832 ملفاً.
-
-## Session log (2026-10-28 — المرحلة 124: توحيد مسمى تحليل الدم وفيلم الدم CBC & Blood Film ومعالجة ظهوره القديم Complete blood count & Differential)
-
-### Done
-- **قاعدة البيانات ونموذج الفحوصات الطبية ([database/migrations/2026_10_28_224500_standardize_cbc_test_name_to_cbc_and_blood_film.php](file:///C:/get/hospital-system/database/migrations/2026_10_28_224500_standardize_cbc_test_name_to_cbc_and_blood_film.php))**:
-  * تحديث اسم الفحص الأساسي رقم (43) المربوط به كافة البارامترات الـ 27 (WBC, RBC, HGB, PLT...) من `Complete blood count & Differential` إلى الاسم الطبي الرسمي المعتمد `CBC & Blood Film`.
-  * دمج وإعادة توجيه أي طلبات طوارئ ارتبطت بالسجل المكرر (1440) إلى الفحص الأساسي (43) وتعطيل السجل المكرر لمنع الازدواجية.
-  * تحديث تفاصيل طلبات الطوارئ السابقة `details` (المرفقات والنتائج المحفوظة) من الاسم القديم إلى الاسم الرسمي المعتمد.
-- **تطوير واجهة طباعة تقارير طوارئ المختبر ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
-  * إضافة دالة تطبيع وتحويل ذكية `$canonicalTestName` تُعيد أي مسمى بديل أو قديم (مثل `Complete blood count & Differential` أو `Complete Blood Count (CBC)`) إلى الاسم الرسمي `CBC & Blood Film`.
-  * تطبيق التطبيع على أسماء الفحوصات المفردة والمركبة وترويسات المجموعات وعناوين أزرار المرفقات في الشريط العلوي (`🔬 مرفق: CBC & Blood Film`).
-- **تطوير واجهة محطة تحاليل الطوارئ ([resources/views/staff/requests/emergency-lab-show.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/emergency-lab-show.blade.php))**:
-  * توسيع خريطة الأسماء البديلة والأكواد `$codeAliases` لتشمل كافة متغيرات CBC وربطها التلقائي بـ `cbc_3DIFF`.
-  * دعم التعرّف على المرفقات ومعاينتها سواء تم حفظها بالاسم الجديد `CBC & Blood Film` أو بالاسم القديم.
-- **التحصين في الكنترولر ([app/Http/Controllers/StaffRequestController.php](file:///C:/get/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
-  * دعم جلب المرفق الطبي في `emergencyLabAttachment` عبر معرف الفحص الرقمي أو اسمه المعتمد أو البديل دون أي أخطاء 404.
-- **حزمة الاختبارات الآلية ([tests/Feature/CbcTestNameStandardizationTest.php](file:///C:/get/hospital-system/tests/Feature/CbcTestNameStandardizationTest.php))**:
-  * بناء واجتياز اختبار ميزة يضمن ظهور المسمى الموحد `CBC & Blood Film` ومنع ظهور `Complete blood count & Differential` في تقرير الطباعة بنجاح تام (`1 passed, 4 assertions`).
-
-## Session log (2026-10-28 — المرحلة 123: إصلاح وتفعيل زر تحويل المريض لطبيب آخر وتوافق MariaDB ومحطة الانتظار Doctor Referral to Another Doctor & Live Queue Integration)
-
-### Done
-- **معالجة استعلام الأطباء المتاحين في الكنترولر ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * استبدال قيد SQL البرمجي بدالة PHP `isWorkingOnDay($currentDay)` لعزل وحصر القائمة **بأطباء اليوم المتاحين حصراً** (استشاريين وجراحين) بدقة 100% مع ضمان توافق كامل مع MariaDB و MySQL دون إخفاء الزر.
-- **تحسين واجهة فحص المريض ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * إظهار زر `[ ⇄ تحويل للطبيب الآخر ]` وبطاقة التحويل دائماً طالما الزيارة جارية (`$visit->status == 'in_progress'`) دون إخفاء الزر إذا كان العداد فارغاً.
-  * استبدال القائمة المنسدلة التقليدية بمحرك بحث واقتراحات تفاعلي ذكي فوري (*Instant Autocomplete*) يبحث بالاسم والاختصاص مع بطاقة تأكيد خضراء ومسح بنقرة واحدة.
-  * معالجة شفافية قائمة الاقتراحات ومنع تداخلها البصري مع بطاقة بيانات المريض بالخلفية عبر خلفية بيضاء نقية صلبة (`#ffffff !important`) و `z-index: 99999` وظلال مرتفعة `box-shadow`.
-- **تكامل طابور الانتظار عند التحويل (`referToDoctor`)**:
-  * تحويل حالة موعد المريض إلى `status = 'confirmed'` وتصفير وقت الاستدعاء وتوليد رقم دور جديد لعيادة الطبيب المحول إليه ليظهر فوراً في طابور الانتظار الأولي وتتم مناداته.
-  * السماح بالتحويل إلى الاستشاريين والجراحين على حد سواء.
-- **حزمة الاختبارات الآلية ([tests/Feature/DoctorReferralToAnotherDoctorTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorReferralToAnotherDoctorTest.php))**:
-  * بناء واجتياز اختبارين يغطيان ظهور الزر دائماً وتحديث حالة الموعد والدور عند التحويل بنجاح تام (`2 passed, 9 assertions`).
-
-## Session log (2026-10-28 — المرحلة 122: معالجة خطأ طباعة أشعة الطوارئ والتحصين الشامل Emergency Radiology Print Undefined Variable Fix & Automated Coverage)
-
-### Done
-- **معالجة الخطأ في واجهة طباعة أشعة الطوارئ ([resources/views/staff/requests/emergency-radiology-print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/emergency-radiology-print.blade.php))**:
-  * تصحيح استدعاء الدالة المجهولة `radiologyTypes->map(function ($type) use ($emergencyRadiology) { ... })` وتمرير المتغير عبر `use ($emergencyRadiology)` في السطر 451، مما حل خطأ `ErrorException: Undefined variable $emergencyRadiology` نهائياً.
-  * إزالة كود التنبيه التجريبي والتطويري القديم (`debug info`) الذي كان يطبع شريطاً أحمر عند عدم وجود مرفقات.
-- **حزمة الاختبارات الآلية ([tests/Feature/EmergencyRadiologyPrintTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyRadiologyPrintTest.php))**:
-  * بناء واجتياز اختبارين يغطيان طباعة تقرير أشعة الطوارئ بوجود مرفقات وبدون مرفقات بنجاح تام (`2 passed, 12 assertions`).
-
-## Session log (2026-10-28 — المرحلة 121: توحيد تقرير طباعة تحاليل الطوارئ 100% مع التقرير السريري الموحد، وعزل فحص الإدرار العام G.U.E في صفحة منفصلة بالكامل Emergency Lab Print Report 100% Unification & Dedicated G.U.E Page 2 Separation)
-
-### Done
-- **إعادة بناء وتوحيد واجهة طباعة تقرير تحاليل الطوارئ ([resources/views/staff/requests/emergency-lab-print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/emergency-lab-print.blade.php))**:
-  * مطابقة بصرية وهيكلية تامة 1:1 مع `resources/views/staff/requests/print.blade.php` بألوان المستشفى الرسمية (`#005a9c` أزرق داكن، `#0284c7` أزرق سماوي) بدلاً من النمط القديم.
-  * شريط علوي موحد متكامل يحتوي على أزرار: `[ 🖨️ طباعة التقرير ]`، `[ 💬 إرسال واتساب للمريض ]`، روابط تقارير الأجهزة المرفقة، أزرار تبديل نمط الطباعة (ورق مروس Letterhead مقابل ورق أبيض كامل Full)، وضابط المسافة العلوية.
-  * ترويسة رسمية ثنائية باللغتين العربية والإنجليزية تتوسطها صورة شعار المستشفى المضمنة بتقنية base64 للظهور الفوري دون أي تأخير طباعي.
-  * بطاقة بيانات المريض وقسم الطوارئ السريرية ثلاثية المناطق (Patient Demographics, Order & STAT Coverage, Direct QR Code).
-- **عزل فحص الإدرار العام (General Urine Examination - G.U.E) في صفحة مستقلة (Page 2 Dedicated Architecture)**:
-  * فحص وتقسيم النتائج آلياً عبر دالة الفلترة الذكية `$isGeneralUrine`.
-  * عند وجود فحوصات عامة مع فحص الإدرار:
-    - **الصفحة الأولى (Page 1)**: تتضمن الفحوصات العامة مع الترويسة الكاملة وبطاقة المريض وجدول النتائج والتذييل والتوقيعات الرسمية.
-    - **الصفحة الثانية (Page 2 - Dedicated G.U.E Page)**: فاصل صفحات طباعي صارم (`.gue-page-break`)، ترويسة مصغرة، شريط مريض مختصر، شريط عنوان فحص الإدرار، وجدول الـ 4 أعمدة المتخصص (`INVESTIGATION / TEST NAME`, `Result`, `Reference Range`, `Status`)، ومربع التوقيعات والختم المعتمد الخاص بالصفحة الثانية.
-  * عند طلب فحص الإدرار كفحص وحيد مستقل: يطبع كتقرير رئيسي متكامل على الصفحة الأولى مع الجدول الرباعي دون إنشاء صفحة ثانية فارغة.
-- **توسيع المعالجة بالكنترولر وتحديث العلاقات ([app/Http/Controllers/StaffRequestController.php](file:///C:/get/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
-  * تحميل الفحوصات الفرعية للتحاليل المركبة (`labTests.subTests`, `requestTests.labTest.subTests`) لمنع استعلامات N+1.
-- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///C:/get/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
-  * إضافة اختبارات ميزة تغطي عزل فحص الإدرار في الصفحة الثانية عند دمجه مع فحوصات أخرى، وطباعته منفرداً على الصفحة الأولى عند عدم وجود فحوصات أخرى بنجاح تام (`8 passed, 52 assertions`).
-
-## Session log (2026-10-28 — المرحلة 120: توحيد ومطابقة محطة تحاليل الطوارئ 100% مع محطة المختبر السريرية Emergency Lab Station 100% Parity with Standard Lab Station & Clinical Architecture)
-
-### Done
-- **إعادة بناء وتوحيد واجهة محطة تحاليل الطوارئ ([resources/views/staff/requests/emergency-lab-show.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/emergency-lab-show.blade.php))**:
-  * مطابقة تامة 1:1 لجميع تفاصيل التصميم، البنية الهيكلية، وأدوات العمل الموجودة في `resources/views/lab/show.blade.php`.
-  * شريط علوي موحد متكامل يحتوي على أزرار الإجراءات: `[ 🖨️ طباعة التقرير ]`، `[ 💬 إرسال النتيجة عبر واتساب ]`، `[ 💾 حفظ مؤقت (مسودة) ]`، `[ 🚀 اعتماد نهائي وإرسال للطبيب ]`، `[ ➕ إضافة تحاليل ]`، و `[ ⬅️ القائمة ]`.
-  * بطاقة بيانات المريض والطلب السداسية بالأيقونات الدائرية الملونة: اسم المريض، رقم الهاتف مع زر واتساب، العمر/الجنس، فصيلة الدم، الطبيب وقسم الطوارئ، وحالة السداد المالي.
-  * قسم إلحاق التحاليل الذكي القابل للطي `#appendTestsSection`: عارض باقات التحاليل (Packages)، مجموعات المفضلات، المفضلات الفردية، البحث السريع مع الفلترة العربية، وقائمة الفحوصات المقسمة حسب التصنيف الرئيسي.
-  * جدول النتائج السريرية الموحد `#resultsTable` بكافة أعمدته: الرقم، اسم الفحص (مع دعم الفحوصات المركبة والشجرية `subTests`، وفحوصات مرفقات الأجهزة)، النتيجة، الوحدة، المدى المرجعي، مؤشر الحالة الحي (Flag: طبيعي، مرتفع، منخفض)، وحقل مرفق تقرير الجهاز بنمط الكبسولة الأنيقة `pill-upload-wrapper`.
-  * شريط ملخص تقييم النتائج اللحظي: عداد النتائج الطبيعية، المرتفعة، المنخفضة، وغير المدخلة.
-  * محرك JavaScript الموحد: تقييم النتائج الفوري بالألوان، معادلة فريدوالد لباقة الدهون (Friedewald: VLDL & LDL)، وتنبيه الدهون الثلاثية $\ge 400\text{ mg/dL}$.
-- **التحصين ومعالجة السيرفر ([app/Http/Controllers/StaffRequestController.php](file:///C:/get/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
-  * تطوير دالة `completeEmergencyLab` لدعم حفظ نمط `test_results` الموحد ونمط `results` الكلاسيكي معاً.
-  * معالجة مرفقات الفحوصات الفردية `test_attachments` وإزالتها وحفظ المرفق العام.
-  * إضافة دالة `autoCalculateLipidOnTestResults` لحساب معادلات باقة الدهون آلياً على السيرفر.
-- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedEmergencyLabStationAndReportTest.php](file:///C:/get/hospital-system/tests/Feature/UnifiedEmergencyLabStationAndReportTest.php))**:
-  * 6 اختبارات ميزة تغطي أزرار الطوارئ في قائمة المختبر، تحميل الواجهة السريرية المطابقة بالكامل، حفظ واعتماد النتائج بالنمطين، طباعة التقرير الطبي، وإلحاق التحاليل بنجاح تام (`6 passed, 38 assertions`).
-
-## Session log (2026-10-28 — المرحلة 119: توحيد المحطة السريرية الجراحية للمقيم والتمريض، ومصفوفة صلاحيات التبويبات بالكامل Unified Clinical Surgery Station & Dynamic Role-Based Tab Permissions Matrix)
-
-### Done
-- **قاعدة البيانات وموديل مصفوفة صلاحيات التبويبات السريرية ([database/migrations/2026_10_28_091831_create_surgery_tab_permissions_table.php](file:///C:/get/hospital-system/database/migrations/2026_10_28_091831_create_surgery_tab_permissions_table.php))**:
-  * إنشاء جدول مخصص `surgery_tab_permissions` (`role_name`, `tab_key`, `access_level: hidden, read, write`).
-  * بناء الموديل [app/Models/SurgeryTabPermission.php](file:///C:/get/hospital-system/app/Models/SurgeryTabPermission.php) متضمناً ثوابت التبويبات الـ 8، مصفوفة الضبط الطبي الافتراضي، ودوال احتساب الصلاحيات التراكمية للمستخدم (`getUserTabPermissions`).
-- **لوحة تحكم الإدارة لمصفوفة الصلاحيات ([app/Http/Controllers/SurgeryTabPermissionController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryTabPermissionController.php) & [resources/views/surgeries/settings/tabs.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/settings/tabs.blade.php))**:
-  * واجهة مصفوفية مركزية تعرض الأدوار (طبيب مقيم، كادر تمريض، طبيب جراح، منسق عمليات، كادر عمليات، مدير نظام) أمام التبويبات الثمانية مع قوائم منسدلة فورية ملونة (`🚫 مخفي`, `👁️ قراءة فقط`, `✍️ قراءة وإدخال`).
-  * إمكانية حفظ التعديلات الجماعية، واستعادة الضبط الطبي الافتراضي بنقرة زر واحدة، وتوثيق النشاط الإداري في `UserActivityLogger`.
-- **المحطة السريرية الجراحية الموحدة الذكية ([app/Http/Controllers/ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php) & [resources/views/surgery-stations/clinical/show.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
-  * واجهة موحدة ونقية تستبدل الواجهات السابقة وتتشكل وتتكيف لحظياً حسب صلاحيات هوية المستخدم المسجل:
-    1. **السيرة المرضية (History)**: الشكوى، التاريخ المرضي والجراحي والدوائي، والحساسية.
-    2. **العلامات الحيوية والفحص (Vitals & Physical Exam)**: بطاقات الضغط والحرارة والنبض والتنفس والأكسجين والسكر والوعي (GCS/CRT)، مع منحنيات Chart.js البيانية وجدول السجل التاريخي.
-    3. **الفحوصات والمختبر والأشعة (Lab & Radiology Tests)**: عرض نتائج التحاليل والتقارير الإشعاعية.
-    4. **الخطة الطبية وتوصيات الجراحة (Medical Plan)**: خطة ما قبل الجراحة، توصيات ما بعد العملية، ومراجعة الأجهزة.
-    5. **الأدوية وجدول الإعطاء (Treatments)**: وصف الأدوية، وتسجيل إعطاء الجرعات للممرض بنقرة واحدة، وسجل الإعطاء.
-    6. **سجل المتابعة الدوري (Follow Up Sheet)**: جولات المرور الصباحية والمسائية وتدوين ملاحظات الأطباء والتمريض.
-    7. **رصد السوائل (Intake & Output)**: ميزان السوائل الوريدية والفموية والدم في مقابل الإدرار والنزح، واحتساب الصافي آلياً.
-    8. **الرعاية وملاحظات التمريض (Nursing Care & Discharge)**: ملاحظات التمريض، وتعيين الممرض، وتعليمات التخريج.
-  * تحويل الروابط القديمة (`resident-station.show` و `nursing-station.show`) بسلاسة وشفافية 100% للمحطة الموحدة لضمان التوافق التام بدون كسر أي زر قديم.
-- **حزمة الاختبارات الآلية الشاملة ([tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///C:/get/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php))**:
-  * بناء 8 اختبارات ميزة تغطي عرض وتعديل المصفوفة، استعادة الافتراضي، تشكل التبويبات حسب الصلاحيات، تسجيل العلامات الحيوية، إضافة وإعطاء الأدوية، تسجيل المتابعة، والتحويل الشفاف للروابط القديمة بنجاح تام (`8 passed, 37 assertions`).
-
-## Session log (2026-10-28 — المرحلة 118: إعادة هيكلة جدول وقائمة انتظار العمليات الجراحية، تبويبات أيام الأسبوع، وتخصيص الصالات والأوقات يدوياً مع إضافة صالات جديدة فورياً Operation Theaters & Realtime Manual Schedule Customization)
-
-### Done
-- **قاعدة البيانات ونموذج صالات العمليات الجراحية المخصص ([database/migrations/2026_10_28_083000_create_operation_theaters_table_and_add_to_surgeries.php](file:///C:/get/hospital-system/database/migrations/2026_10_28_083000_create_operation_theaters_table_and_add_to_surgeries.php))**:
-  * إنشاء جدول مخصص لصالات العمليات الجراحية `operation_theaters` (`id`, `name`, `code`, `is_active`, `timestamps`) لفصل صالات العمليات الجراحية عن غرف الرقود وأسرة الإقامة.
-  * إضافة حقل `operation_theater_id` إلى جدول `surgeries` للربط الرسمي والمباشر.
-  * إنشاء الموديل [app/Models/OperationTheater.php](file:///C:/get/hospital-system/app/Models/OperationTheater.php) وتحديث [app/Models/Surgery.php](file:///C:/get/hospital-system/app/Models/Surgery.php) بالعلاقة `operationTheater()`.
-- **الكنترولر والمسارات البرمجية للتخصيص اللحظي ([app/Http/Controllers/SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php))**:
-  * إضافة مسار ودالة `quickStoreTheater` لإنشاء صالة عمليات جديدة فورياً عبر AJAX وإضافتها لقائمة الصالات المعتمدة.
-  * إضافة مسار ودالة `quickUpdateSchedule` لتحديث صالة العملية ووقتها اليدوي المخصص فورياً لأي مريض عبر AJAX وبث التحديثات.
-  * تطوير دالة `waiting()` لجلب عمليات اليوم المختار وتبويبات أيام الأسبوع وقائمة الصالات النشطة.
-- **إعادة تصميم واجهة قائمة الانتظار والجدول اليومي ([resources/views/surgeries/waiting.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/waiting.blade.php))**:
-  * تبويبات أيام الأسبوع العلوية (السبت إلى الجمعة) للتنقل السلس مع عداد العمليات وتمييز اليوم الحالي.
-  * جدول سريري نقي وواضح لعمليات اليوم المختار بالأعمدة المتفق عليها:
-    - **المريض**: الاسم، رقم الملف، والعمر/الجنس.
-    - **العملية الجراحية**: نوع العملية وشارة العمليات الإضافية.
-    - **الطبيب الجراح**: اسم الطبيب المسؤول.
-    - **الصالة المخصصة (Customizable)**: عرض اسم الصالة الفعلي مع أيقونة تعديل سريعة بنقرة واحدة.
-    - **الوقت (Customizable)**: عرض الوقت اليدوي المخصص (مع مؤقت حي بالثواني للعملية الجارية) وإمكانية تعديله فورياً.
-    - **حالة المسار**: أوسمة واضحة (🔵 مجدولة، 🟡 بالانتظار، 🟢 داخل الصالة جارية، 🟣 منتهية/خرج).
-    - **الإجراءات السريعة**: أزرار النقل المباشر (`[دخول]`، `[تحويل وبدء]`، `[إنهاء]`) وملف العملية.
-  * نافذة مودال منبثقة تفاعلية لتعديل الصالة والوقت يدوياً مع إمكانية إضافة اسم صالة جديدة من نفس النافذة فورياً بدون مغادرة الصفحة.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SurgeryWaitingListFlightBoardTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryWaitingListFlightBoardTest.php))**:
-  * بناء 8 اختبارات ميزة تغطي الصلاحيات، عرض القائمة وأيام الأسبوع، حالات المسار، الدخول والبدء والإنهاء، إضافة الصالات الجديدة عبر AJAX، وتحديث الموعد والصالة بنجاح تام (`8 passed, 28 assertions`).
-
-## Session log (2026-10-27 — المرحلة 117: الحساب الآلي الذكي لمعادلات باقة الدهون Lipid Profile - Friedewald Formula: LDL & VLDL في واجهة المختبر والسيرفر مع التنبيه السريري والتحصين الشامل)
-
-### Done
-- **تجهيز باقة الدهون وفحص VLDL في قاعدة البيانات**:
-  * إنشاء وترحيل `2026_10_27_112000_seed_lipid_profile_composite_test_and_vldl.php`.
-  * إضافة فحص `Very Low Density Lipoprotein` (VLDL) بمدى مرجعي طبيعي (5 - 30 mg/dL).
-  * إنشاء فحص باقة الدهون الشاملة `Lipid Profile` كفحص مركب (`sub_tests`) بالباراميترات الخمسة المعتمدة: Total Cholesterol, Triglyceride, High Density Lipoprotein, Low Density Lipoprotein (Calculated), Very Low Density Lipoprotein (Calculated).
-- **محرك الحساب الآلي اللحظي في واجهة المختبر ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php))**:
-  * مطابقة مرنة للأسماء الطبية للدهون تدعم العربية والإنجليزية والرموز واختصارات TG, TC, HDL, LDL, VLDL.
-  * حساب فوري لـ VLDL بمجرد إدخال قيمة الدهون الثلاثية ($VLDL = TG / 5$) وتحديث وسام `[ ⚡ محسوب: TG / 5 ]`.
-  * حساب فوري لـ LDL بمجرد توفر الكوليسترول الكلي والـ HDL والدهون الثلاثية طبقاً لمعادلة فريدوالد ($LDL = TC - HDL - \frac{TG}{5}$).
-  * إضافة بانيل تنبيه سريري باللون الكهرماني يظهر فورياً أعلى الصف عند تجاوز الدهون الثلاثية 400 mg/dL ($TG \ge 400$) بأن معادلة فريدوالد غير دقيقة علمياً ويُنصح بالقياس المخبري المباشر (Direct LDL).
-  * دعم التعديل اليدوي للفني وإظهار شارة `[ ✍️ مدخل يدوياً ]` عند رغبته في إدخال قيمة يدوية مقاسة مباشرة دون إجبار.
-- **التحصين ومعالجة السيرفر ([app/Http/Controllers/LabStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabStaffController.php))**:
-  * إضافة دالة `autoCalculateLipidResults` لضمان احتساب وتخزين نتائج VLDL و LDL في قاعدة البيانات والـ JSON عند الحفظ حتى في حال تم إرسالها فارغة أو تم حفظ الطلب كمسودة.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LipidProfileAutoCalculationTest.php](file:///C:/get/hospital-system/tests/Feature/LipidProfileAutoCalculationTest.php))**:
-  * بناء 4 اختبارات ميزة تغطي الحساب الآلي الصحيح لمعادلتي VLDL و LDL، عدم الحساب القسري وظهور التنبيه عند تجاوز الدهون الثلاثية 400، الحساب في الفحوصات الفردية والمركبة، واحترام الإدخال اليدوي بنجاح تام (`4 passed, 25 assertions`).
-
-## Session log (2026-10-27 — المرحلة 116: منظومة إبطال وإلغاء الدفع وإعادة فتح الوصولات للتصحيح والاسترداد مع واجهة تدقيق رقابية مستقلة وصلاحية مشددة Receipt Void & Payment Reversal System, Dedicated Audit Page, Granular Permissions & Full Cascade Re-billing Workflow)
-
-### Done
-- **بنية الصلاحيات والتحصين الأمني (Spatie Permissions & Gating)**:
-  * إضافة صلاحية مستقلة ومحصورة في `RolesAndPermissionsSeeder`: `void payment receipt`.
-  * ربط الصلاحية حصراً بالأدوار الرقابية والمسؤولة (`admin` و `accountant`) مع إمكانية منحها بالاسم للمشرف الإداري أو الاستعلامات، وحجبها عن الكاشير العادي لمنع تضارب المصالح.
-  * حماية مسارات الإبطال وعرض الاستمارة برمجياً عبر `auth()->user()->can('void payment receipt')` في `PaymentVoidController` وميدلوير الصلاحيات.
-- **قاعدة البيانات وسجل التدقيق الرقابي (Database Schema & Audit Trail)**:
-  * إضافة حقول الرقابة إلى جدول `payments`: `voided_at`, `voided_by`, `void_type` (`rebill`, `refund`), `void_reason`, `original_receipt_number`.
-  * إنشاء جدول مخصص لتدقيق الإلغاءات `payment_void_logs` لتوثيق تاريخ وحركة كل وصل ملغى والمستخدم والمبالغ ونوع الإجراء وسبب الإبطال بالثانية.
-  * تحديث موديل `Payment` بدوال `voidedBy()`, `voidLogs()`, و `isVoided()`.
-- **الكنترولر ومنطق الأعمال الصارم (Strict Controller & Form Request)**:
-  * إنشاء `app/Http/Requests/VoidPaymentRequest.php` للتحقق من الصلاحيات وسلامة البيانات والسبب الإلزامي (الحد الأدنى 5 أحرف).
-  * إنشاء `app/Http/Controllers/PaymentVoidController.php` مع دالتين رئيسيتين:
-    1. `showVoidForm(Payment $payment)`: عرض واجهة الإبطال المخصصة مع بطاقات ملخص المريض والوصل والمبالغ.
-    2. `void(VoidPaymentRequest $request, Payment $payment)`: معالجة الإبطال داخل `DB::transaction` متكاملة، ودعم خياري:
-       - **إعادة فتح القيد للتسديد والتصحيح (`rebill`)**: تصفير حالة الدفع وتفريغ رقم الوصل وتاريخ القبض، وإعادة القيد لطابور الكاشير فوراً، مع إعادة السجلات المرتبطة (طوارئ، مواعيد، طلبات مختبر وأشعة) إلى حالة الانتظار غير المسدد `pending`.
-       - **إبطال نهائي واسترداد للمريض (`refund`)**: تثبيت حالة الوصل كمسترد، وإلغاء الطلب أو الموعد المرتبط نهائياً.
-    3. تسجيل حركة النشاط الإداري والرقابي الحساس في `UserActivityLogger`.
-- **واجهات المستخدم الفاخرة وتجربة الاستخدام (Dedicated UI & Visual Excellence)**:
-  * معالجة مشكلة قص المودل وظهوره أسفل الشاشة، بالانتقال إلى صفحة مستقلة متكاملة وواسعة `resources/views/cashier/payments/void.blade.php`:
-    - شريط علوي بلون الرقابة الفاخر (Crimson Gradient) يوضح أبعاد العملية.
-    - بطاقات إحصائية ثلاثية علوية (بيانات الوصل الأصلي، بيانات المريض وتغطيته، والمبلغ المقبوض نقداً وحصة الضمان).
-    - بطاقتان كبسوليتان تفاعليتان للاختيار بين "إعادة فتح القيد للتسديد والتصحيح" و "إبطال نهائي واسترداد نقدي للمريض".
-    - أزرار أسباب سريعة مسبقة التجهيز (خطأ بفئة الضمان، تكرار الفحص، رغبة المريض، تصحيح إداري) لتعبئة حقل السبب بنقرة واحدة.
-    - تنبيه أمني واضح للمستخدم بمسؤولية التدقيق والرقابة المالية.
-  * في شاشة الوصل (`receipt.blade.php`): إظهار زر `[ ⚠️ إبطال الوصل / إعادة فتح للتصحيح ]` للمستخدم المخول فقط، وتلوين الوصل الملغى بشارة ملفتة `[ 🚫 وصل ملغى ومبطل ]`.
-- **حزمة الاختبارات الآلية الشاملة (Automated Feature Tests)**:
-  * إنشاء `tests/Feature/PaymentVoidAndReversalTest.php` بـ 5 اختبارات ميزة تغطي كافة السيناريوهات بنجاح تام (`5 passed, 29 assertions`).
-
-## Session log (2026-10-26 — المرحلة 115: مطابقة وتوحيد واجهة دفع الطوارئ 100% مع واجهة الكاشير الرئيسية، تحصين نسب فئات الضمان، وإرجاع وصولات المريضة فاطمة Emergency Cashier Form 100% Parity with Request Payment, Strict Category Copay Lockdown & Unpaid Receipt Reversal)
-
-### Done
-- **إرجاع وتصحيح وصولات المريضة فاطمة صباح (الفئة H)**:
-  * إرجاع قيد ودفع خدمات الطوارئ رقم #1191 إلى "غير مسدد" ومحمي بنسبة 0% الرسمية للفئة H بمبلغ 0 د.ع للمريض وتغطية 100% للضمان (75,000 د.ع).
-  * إرجاع وتصحيح وصل التحاليل رقم #1187 إلى "غير مسدد" مع إعادة احتسابه وفق نسبة الـ 25% الرسمية المعتمدة للفئة H (حصة المريض: 7,750 د.ع، وحصة الضمان: 23,250 د.ع بدلاً من حساب الـ 15% الخاطئ).
-- **إعادة تصميم وتوحيد واجهة دفع الطوارئ بالكامل ([resources/views/cashier/emergency-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
-  * مطابقة الواجهة بنسبة 100% مع واجهة `request-payment/567` العصرية الفاخرة:
-    - رأس أزرق ملكي مع بطاقتين علويتين لبيانات الحالة وبيانات المريض ورقم الهوية.
-    - بطاقات الإحصاء المالي الثلاثية المباشرة (إجمالي السعر المعتمد، حصة هيئة الضمان، والصافي المطلوب نقداً).
-    - شريط فئة الضمان الصحي المعتمد مع شارة `[ الفئة H ]` ونسبة الاستقطاع الرسمية للطوارئ (0%).
-    - جدول تفصيلي متكامل للبنود والخدمات يوضح السعر المعتمد وحصة المريض وحصة الضمان لكل بند.
-    - قفل خانة المبلغ المحصل `readonly` مع وسام `[ 🔒 محسوب آلياً ومطابق للوصل ]` لمنع الإدخال اليدوي.
-    - التوجيه التلقائي المباشر للوصل فور تأكيد الدفع لطباعة الإيصال الإلكتروني والحراري.
-- **التحصين البرمجي الصارم في الكنترولر ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php) & [app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php))**:
-  * إلزام دالة `processEmergencyPayment` بجلب نسبة فئة المريض تلقائياً عبر `getCopayPercentageFor('emergency')`.
-  * تعديل دالة `upsertUnifiedEmergencyPayment` لإبقاء الفواتير المغطاة بالكامل 100% بالضمان في حالة انتظار لتأكيدها وإصدار وصل رسمي لها عبر الكاشير.
-  * معالجة تحويل الدفعات المسددة مسبقاً تلقائياً إلى صفحة الوصل الرسمي بدلاً من رسائل التحويل التحذيرية.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyCashierCopayLockTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyCashierCopayLockTest.php))**:
-  * بناء اختبار ميزة متكامل واجتيازه بنجاح تام مع اجتياز كامل حزمة اختبارات الكاشير الـ 21 بنجاح (`21 passed, 165 assertions`).
-
-## Session log (2026-10-26 — المرحلة 114: عداد تكرار الخدمات التمريضية والطبية بالطوارئ وتحديث الحسابات والوصولات آلياً Emergency Nursing Services Dynamic Stepper Counter, Realtime Multiplied Pricing & Full Receipt Parity)
-
-### Done
-- **قاعدة البيانات والترحيل السحابي والمحلي ([database/migrations/2026_10_26_090000_add_quantity_to_emergency_emergency_service_table.php](file:///C:/get/hospital-system/database/migrations/2026_10_26_090000_add_quantity_to_emergency_emergency_service_table.php))**:
-  * إضافة حقل `quantity` الافتراضي 1 بجدول الوسيط `emergency_emergency_service` لتسجيل تكرار أي خدمة تمريضية أو طبية لنفس المريض دون الإخلال بالقيد الفريد.
-  * تطبيق الترحيل بنجاح على قاعدة البيانات المحلية وتطبيق التعديل الهيكلي DDL على قاعدة بيانات هوستنجر السحابية بدقة 100%.
-- **تصميم العداد التفاعلي (Dynamic Stepper Counter) ([resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php))**:
-  * تحويل كل خدمة تمريضية إلى صف تفاعلي أنيق يظهر فيه عداد كبسولي `[-] [ 1 ] [+]` فور تحديد الخدمة.
-  * القيمة الافتراضية تبدأ من 1 (بحد أدنى 1 وحد أقصى 99).
-  * تحديث فوري لشارة السعر الإجمالي للخدمة (`السعر × العدد د.ع`) عند النقر على `+` أو `-` أو الكتابة الرقمية المباشرة في الحقل.
-- **تحديث محرك الحسابات المالية بالطوارئ والكاشير ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php), [app/Models/Emergency.php](file:///C:/get/hospital-system/app/Models/Emergency.php) & [app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
-  * قراءة وتخزين مصفوفة `service_quantities` في جدول الوسيط أثناء الحفظ والتحديث.
-  * ضرب أسعار الخدمات في الكمية في دوال احتساب الرصيد غير المسدد `getUnpaidAmount` والحساب الموحد `upsertUnifiedEmergencyPayment` وحسابات الكاشير.
-- **مطابقة الوصولات والتقارير الطبية الرسمية ([resources/views/cashier/receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php) & [resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php))**:
-  * استرجاع حقل `quantity` وعرض مضاعف الخدمة `(×N)` في مسميات البنود في الوصل الإلكتروني والحراري والتقرير الطبي للطوارئ واحتساب الإجمالي بدقة.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyServiceQuantityStepperTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyServiceQuantityStepperTest.php))**:
-  * بناء اختبارات ميزة تغطي إظهار العداد، حفظ الكميات، وحساب المضاعفات المالية، واجتياز كافة الاختبارات بنجاح (`2 passed, 13 assertions`).
-
-## Session log (2026-10-25 — المرحلة 113: تحصين نسب التحمل المالية، إلغاء التعديل اليدوي للنسب والمبالغ، ومطابقة تسعير الوصل الإلكتروني والحراري للضمان الصحي Strict Cashier Copay Lockdown, Removal of Manual Copay & Amount Overrides, 100% Web & Thermal Receipt Parity & Hostinger Data Fix)
-
-### Done
-- **تشخيص وحل تباين الوصل الإلكتروني والحراري ([resources/views/cashier/receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php))**:
-  * معالجة مشكلة قراءة السعر الخاص بدلاً من سعر الضمان في جدول البنود للوصل الإلكتروني بمطابقة الدالة `calculateInsurancePricing` لكل من المختبر والأشعة.
-  * تصحيح القيد المالي رقم #1062 للمريضة شكرية أحمد على قاعدة بيانات هوستنجر وقاعدة البيانات المحلية، بإعادة نسبة التحمل إلى 25% الرسمية المعتمدة للفئة H وتعديل المبلغ إلى 18,500 د.ع وتثبيت حصة الضمان 55,500 د.ع بدقة 100%.
-- **إلغاء التعديل اليدوي لنسبة التحمل نهائياً عبر كافة واجهات الكاشير ([resources/views/cashier/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/payment-form.blade.php), [resources/views/cashier/request-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/request-payment-form.blade.php), [resources/views/cashier/surgeries/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
-  * إزالة زر فتح وتعديل الضمان `[ 🔒 تثبيت آلي ] / [ 🔓 تعديل استثنائي مفتوح ]` ومجموعة حقول الإدخال اليدوية للنسبة (`#manual_copay_input_group`) وأزرار النسب الخماسية السريعة للعمليات.
-  * قفل خانة النسبة لتكون حقل عرض محمي وشارة تأكيد رسمية فقط مع تمرير النسبة تلقائياً عبر حقل مخفي وفق معادلة فئة المريض الرسمية `getCopayPercentageFor()`.
-- **قفل خانة المبلغ المطلوب قبضه (`#amount_input`)**:
-  * جعل حقل المبلغ `readonly` مع خلفية مضاءة ووسم حماية مشفر `[ 🔒 محسوب آلياً ومطابق للوصل ]` لمنع الكاشير من كتابة مبالغ يدوية مغايرة للحسبة الآلية الدقيقة.
-- **التحصين البرمجي الصارم في الكنترولر ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
-  * إلزام دالة `processPayment` و `processRequestPayment` و `processSurgeryPayment` بفرض نسبة التحمل الرسمية لفئة المريض تلقائياً وتثبيت `$patientPaidAmount` مساوياً لحصة المريض المحسوبة نظامياً دون الاعتماد على مدخلات الفورم المعدلة يدوياً.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/CashierPrintReceiptItemPriceTest.php](file:///C:/get/hospital-system/tests/Feature/CashierPrintReceiptItemPriceTest.php))**:
-  * إضافة اختبار ميزة يضمن دقة تسعير بنود الضمان في الوصل الإلكتروني والحراري، واجتياز كامل حزمة اختبارات الكاشير بـ 20 اختباراً ناجحاً (`20 passed, 154 assertions`).
-
-## Session log (2026-10-24 — المرحلة 112: تفكيك وقرارات طلبات الفحوصات لدى الكاشير بتصميم الكبسولات العصرية Segmented Pills وانعكاسها السريري وتبويب الفحوصات المؤجلة بلوحة الكاشير Cashier Item-Level Pay/Postpone/Cancel Controls, Modern iOS-Style Segmented Pills, Clinical Gate Release, Doctor Alerts & Dedicated Postponed Tab in Cashier Hub)
-
-### Done
-- **تصميم الكبسولات العصرية السلسة (Modern Segmented Pills) ([resources/views/cashier/request-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
-  * استبدال الأزرار الكلاسيكية المزدحمة بشريط كبسولي ناعم ومضغوط (iOS/Tailwind Segmented Control) لكل فحص بروابط بصرية فائقة الأناقة:
-    - `[ ✓ تسديد ]` بتدرج أخضر زمردي وظل خفيف ناعم.
-    - `[ ⏱ تأجيل ]` بتدرج كهرماني دافئ عند الرغبة في تأجيل الفحص.
-    - `[ ✕ إلغاء ]` بتدرج وردي/أحمر لإلغاء الفحص بطلب المريض.
-  * قائمة أسباب مدمجة (Pill Dropdown & Input) تظهر بسلاسة عند اختيار الإلغاء أو التأجيل لتوثيق السبب بدقة.
-- **تفكيك طلبات الفحوصات وحساب الصندوق المالي ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
-  * فصل الفحوصات المؤجلة في طلب طبي مستقل برقم جديد وحالة `status = 'postponed'`.
-  * فصل الفحوصات الملغاة في طلب طبي مستقل برقم جديد وحالة `status = 'cancelled'` مع توثيق السبب المالي/السريري.
-  * احتساب وتحصيل رسوم الفحوصات المسددة فقط ضمن الإيصال المالي الرسمي، أو استكمال العملية بمبلغ 0 في حال ألغى/أجل المريض كل الفحوصات.
-- **استحداث تبويب الفحوصات المؤجلة بلوحة الكاشير ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
-  * عزل الطلبات المؤجلة عن قائمة العمل اليومية المعتادة بتضمين استعلام مخصص في `CashierController@index`.
-  * إضافة تبويب مستقل في شريط التبويبات الرئيسي: `[ ⏱ الفحوصات المؤجلة (N) ]` مع شارة عداد باللون الكهرماني.
-  * جدول تفصيلي متكامل يعرض: رقم الطلب، القسم التشخيصي، المريض، الفحوصات المؤجلة، سبب التأجيل، الطبيب، المبلغ، وتاريخ التأجيل.
-  * زر إجراء مباشر: `[ 💳 تسديد الآن ]` يفتح استمارة التسديد فوراً بمجرد عودة المريض لاستئناف الفحص دون الحاجة لطلب طبي جديد.
-  * بانيل تنبيه كهرماني علوي بارز يظهر للكاشير بوجود طلبات مؤجلة مع زر انتقال فوري للتبويب.
-- **تحرير القفل السريري بمحطة الطبيب وتنبيهات الكاشير ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php) & [resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * استبعاد الفحوصات المؤجلة والملغاة (`whereNotIn('status', ['completed', 'cancelled', 'postponed'])`) من شرط القفل السريري الإلزامي.
-  * تمكين الطبيب من إنهاء الزيارة فوراً ودون احتجاز متى ما سدد المريض أو ألغى/أجل بقية الفحوصات.
-  * إظهار تنبيهات سريرية بارزة أعلى تبويب الفحوصات توضح الفحوصات التي ألغاها أو أجلها المريض مع أسبابها، مع فلتر سريع `[ ⛔ ملغاة ]`.
-- **عزل الأقسام التشخيصية وطابور العيادة ([app/Http/Controllers/RadiologyStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/RadiologyStaffController.php) & [app/Http/Controllers/DoctorQueueController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorQueueController.php))**:
-  * استبعاد الفحوصات الملغاة والمؤجلة تلقائياً من قوائم العمل النشطة لمختبر التحاليل وأقسام الأشعة.
-  * منع إدراج المريض في قائمة "بانتظار الفحوصات" في شاشة استدعاء الطبيب إذا كانت الفحوصات ملغاة أو مؤجلة.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/CashierItemActionCancellationAndPostponeTest.php](file:///C:/get/hospital-system/tests/Feature/CashierItemActionCancellationAndPostponeTest.php))**:
-  * بناء اختبارات متكاملة تغطي تسديد فحص وإلغاء وتأجيل آخر مع الأسباب وتفكيك السجلات وإنهاء الزيارة، واختبار إلغاء كافة الفحوصات، واختبار ظهور الفحوصات المؤجلة في التبويب المخصص بلوحة الكاشير بنجاح تام (`3 passed, 38 assertions`).
-
-## Session log (2026-10-23 — المرحلة 111: إصلاح استعلام التحقق من الفحوصات المعلقة عند إنهاء الزيارة، وتحسين استجابة AJAX، وتفعيل الحظر الصارم للحجز المكرر في واجهة الاستعلامات Doctor Visit Completion SQL Fix, Clean AJAX Error Handling & Inquiry Hard Block UI)
-
-### Done
-- **إصلاح استعلام SQL لفحص الفحوصات المعلقة ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * معالجة خطأ `SQLSTATE[42S22]: Column not found: 1054 Unknown column 'patient_id' in 'where clause'` الذي تسبب بـ 500 Internal Server Error عند رغبة الطبيب بإنهاء الزيارة المكتملة فحوصاتها.
-  * تصحيح الاستعلام بالاعتماد على معرّفات زيارات اليوم للمريض والطبيب (`whereIn('visit_id', $sameDayVisitIds)`).
-- **تحسين إظهار رسائل AJAX عند إنهاء الزيارة ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * قراءة وعرض رسالة الخطأ السريرية الدقيقة الصادرة من السيرفر (`data.message`) مباشرة بدلاً من الرسالة الافتراضية "حدث خطأ أثناء إنهاء الزيارة".
-- **الحظر الصارم لتكرار الحجز في واجهة الاستعلامات ([resources/views/inquiry/create.blade.php](file:///C:/get/hospital-system/resources/views/inquiry/create.blade.php))**:
-  * تحويل التنبيه البرتقالي إلى بانيل أحمر مانع (`⛔ غير مسموح بتكرار الحجز لنفس اليوم نهائياً`).
-  * تعطيل زر الإرسال والحفظ تلقائياً (`Disabled`) بنص `[ ⛔ محظور: مسجل اليوم بالفعل لدى الطبيب ]` ومنع الإرسال فورياً في حال كان المريض مسجلاً اليوم لدى الطبيب.
-
-## Session log (2026-10-23 — المرحلة 110: الحظر الصارم للحجز المكرر لنفس اليوم، والقفل السريري الإلزامي لإنهاء الزيارة بانتظار الفحوصات Strict Same-Day Duplicate Booking Prevention, Hard Validation Block & Mandatory Visit Completion Clinical Gate Pending Test Results)
-
-### Done
-- **الحظر الصارم لتكرار الحجز لنفس اليوم نهائياً ([app/Http/Controllers/AppointmentController.php](file:///C:/get/hospital-system/app/Http/Controllers/AppointmentController.php) & [app/Http/Controllers/InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php))**:
-  * منع تسجيل أو قطع أي حجز لنفس المريض عند نفس الطبيب في نفس اليوم نهائياً (حتى لو برسم 0 د.ع أو تأكيد الاستعلامات).
-  * إرجاع رسالة خطأ وإرشاد واضحة: *"⚠️ غير مسموح بتكرار الحجز لنفس اليوم نهائياً! المريض مسجل اليوم بالفعل لدى الطبيب. لا داعي لقطع حجز جديد، حيث يدخل المريض للعيادة مباشرة لمتابعة الفحوصات أو المراجعة"*.
-  * ضمان عدم توليد أي قيود أو وصولات إضافية بصندوق الكاشير أو سجلات الحركات المالية.
-- **القفل السريري الإلزامي لإنهاء الزيارة في محطة الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php) & [resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * **التحقق البرمجي الصارم (Backend Gate)**: في دالة `update`، يُمنع تحويل الزيارة إلى `completed` في حال وجود أي فحوصات مخبرية أو شعاعية معلقة لم تكتمل نتائجها (`whereNotIn('status', ['completed', 'cancelled'])`).
-  * **التحكم بالواجهة (Frontend Lock)**: استبدال زر "إنهاء الزيارة" بزر مقفل ومعطل (`Disabled`) يحمل أيقونة القفل مع نافذة تنبيهية إرشادية توضح عدد الفحوصات المعلقة، وتوجه الطبيب لاستخدام زر `[ ⏳ تعليق بانتظار الفحوصات ]`.
-  * **شريط تحذيري وإرشادي علوي**: عرض بانيل تنبيه كهرماني بارز أعلى صفحة الزيارة يوضح وجود فحوصات معلقة مع زر سريع `[ تعليق واستدعاء التالي ]` للرجوع لمحطة العيادة ومتابعة باقي المراجعين ريثما تصدر النتائج.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SameDayRecheckBookingTest.php](file:///C:/get/hospital-system/tests/Feature/SameDayRecheckBookingTest.php))**:
-  * تحديث وتوسيع الاختبارات للتأكد من حظر حجز نفس اليوم بالكامل، ومنع إنهاء الزيارة عند وجود فحوصات معلقة، والسماح بإنهائها فقط عند اكتمال كافة الفحوصات بنجاح تام (`3 passed, 10 assertions`).
-
-## Session log (2026-10-23 — المرحلة 109: حماية كشفية نفس اليوم من التكرار، وأتمتة مراجعة النتائج المجانية، ودمج فحوصات اليوم في محطة الطبيب، وتنظيف قيود هوستنجر المكررة Same-Day Duplicate Consultation Prevention, Automatic Free Results Recheck, Workstation Requests Aggregation & Hostinger Duplicate Cleanup)
-
-### Done
-- **أتمتة مراجعة النتائج ومنع الحجز المكرر لنفس اليوم ([app/Http/Controllers/InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php) & [app/Http/Controllers/AppointmentController.php](file:///C:/get/hospital-system/app/Http/Controllers/AppointmentController.php))**:
-  * فحص تلقائي لحظي: إذا دخل مريض ولديه كشفية سابقة في نفس اليوم لدى نفس الطبيب، يتم تحويل الحجز تلقائياً إلى "مراجعة نتائج مجانية" برسم `consultation_fee = 0` و `is_free_recheck = true` وربطه بالزيارة الأصلية دون استيفاء أي مبالغ إضافية من المريض.
-  * منع ازدواجية قيود الإيراد والوصولات لدى الكاشير وحماية الصندوق.
-- **دمج فحوصات وزيارات نفس اليوم في محطة الطبيب ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * تجميع ودمج كافة طلبات وفحوصات المريض الطبية لنفس تاريخ اليوم تلقائياً، بحيث تظهر كافة التحاليل والأشعة أمام الطبيب في لوحة العمل حتى لو كان هناك أكثر من زيارة.
-  * رفع حد الذاكرة `ini_set('memory_limit', '512M')` لحل استنفاد الذاكرة وخطأ 500 نهائياً عند فتح الزيارات التي تحتوي على آلاف الأدوية ورموز ICD-10.
-- **تحديث واجهة الطبيب بزر تعليق الفحوصات وتنبيه الإنهاء المبكر ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * إضافة زر صريح: `[ ⏳ تعليق بانتظار الفحوصات ]` يسمح للطبيب بالرجوع للعيادة واستدعاء المريض التالي مع إبقاء الزيارة مفتوحة ريثما تصدر النتائج.
-  * تنبيه سريري ذكي عند النقر على "إنهاء الزيارة" بوجود فحوصات مخبرية أو شعاعية معلقة لتنبيه الطبيب بعدم إقفال الزيارة مبكراً.
-- **تنظيف السجلات المكررة على قاعدة بيانات هوستنجر والمحلي**:
-  * معالجة الحالات الـ 4 المكررة ليوم 2026-10-22 (سلمى راضي، والمراجعين الثلاثة الآخرين) بتحويل الزيارات المفرغة إلى `cancelled` وتصفير الحجوزات المكررة كمراجعات مجانية ونقل الوصفات الطبية للزيارات الأصلية، ليصبح عدد المراجعين الفعليين مطابقاً للواقع المالي السليم.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/SameDayRecheckBookingTest.php](file:///C:/get/hospital-system/tests/Feature/SameDayRecheckBookingTest.php))**:
-  * إضافة اختبارات متكاملة تؤكد تحويل حجز نفس اليوم لمراجعة مجانية برسم 0 د.ع، ودمج كافة فحوصات نفس اليوم داخل محطة الطبيب بنجاح كامل (`2 passed, 10 assertions`).
-
-## Session log (2026-10-23 — المرحلة 108: توحيد وهيكلة محطة الأشعة والتصوير الطبي وفق نمط المختبر حسب الأقسام، وبناء شريط الفلترة الموحد للتاريخ، وتصحيح التبويب الافتراضي وتزامن الفلاتر Radiology Hub Department Architecture Harmonization with Lab, Unified Date Toolbar, Instant Consultation Results Sync & Zero Tab-Switching Glitch)
-
-### Done
-- **توحيد التبويب الافتراضي وحل مشكلة اختفاء نتائج الاستشارية عند اختيار التاريخ**:
-  * تشخيص ومعالجة عدم تطابق المسمى البرمجي القديم (`waiting`) مع معرّف التبويب المعتمد (`station` / `station-pane`)، حيث كان يتسبب في عدم وجود كلاس التفعيل `show active` عند إعادة تحميل الصفحة بعد اختيار أي تاريخ، ما يؤدي لاختفاء جدول النتائج كلياً حتى يتنقل المستخدم بين التبويبات ويعود إليه.
-  * توحيد التبويب الافتراضي في الكنترولر والواجهة إلى `$activeTab = 'station'` وضمان بقاء تبويب الاستشارية وبانيل العرض نشطاً بـ `show active` فورياً.
-  * تحديث جدول الاستشارية ليعرض كافة طلبات العيادات المحولة (`$consultationRequests`) مرتبة بالأولوية السريرية (قيد النداء ⬅️ بالانتظار ⬅️ قيد الفحص ⬅️ المكتملة) بحيث تظهر الفحوصات في التواريخ السابقة مع أزرار الطباعة والمعاينة دون إخفائها خلف قائمة الانتظار فقط.
-  * حصر المزامنة اللحظية لطابور الاستدعاء (`syncRadiologyQueue`) لتعمل حصراً عند اختيار تاريخ "اليوم"، ومنع مسح نتائج التواريخ السابقة من الشاشة.
-- **تزامن حقول الفلترة التلقائي مع التبويبات والبطاقات العلوية**:
-  * ربط مستمعات التبويبات في الجافاسكربت لتحديث حقلي النموذج المخفيين (`radiology-active-tab-input` و `radiology-source-input`) لحظياً عند التنقل، لضمان بقاء المستخدم في نفس التبويب عند اختيار أي تاريخ.
-  * مزامنة تظليل وتمييز بطاقات الأقسام العلوية الأربعة (`#radiology-department-cards`) فورياً مع التبويب النشط.
-- **إعادة هيكلة محطة الأشعة وفق نمط المختبر (Department Breakdown)**:
-  * شريط بطاقات أقسام علوي رباعي: (طلبات العيادات الاستشارية، طلبات الأشعة المباشرة، أشعة وفحوصات قسم الطوارئ، كافة طلبات القسم).
-  * شريط فلترة وبحث موحد وشامل للتاريخ (اليوم، أمس، الأسبوع، الشهر، كافة التواريخ، وتقويم مخصص) بدلاً من الفلاتر المتكررة داخل التبويبات.
-  * تبويب مستقل لطلبات الأشعة المباشرة والاستقبال (`#direct-pane`) مع دعم زر الإلغاء الفوري.
-- **حزمة الاختبارات الآلية الحصينة**:
-  * إضافة اختبارات متقدمة تؤكد بقاء تبويب الاستشارية نشطاً بـ `show active` وظهور الفحوصات فورياً عند فلترة التاريخ بدون تنقل في [RadiologyPriorPendingRequestsTabTest](file:///C:/get/hospital-system/tests/Feature/RadiologyPriorPendingRequestsTabTest.php) بـ 5 اختبارات ناجحة (`5 passed, 36 assertions`).
-  * اجتياز كامل حزمة اختبارات قسم الأشعة والتصوير الطبي بـ 41 اختباراً ناجحاً (`41 passed, 217 assertions`).
-
-## Session log (2026-10-22 — المرحلة 107: تعريب وتوحيد مسميات الأدوار والصلاحيات بالكامل، وإعادة تصميم لوحة الأدوار التنفيذية، وإضافة صلاحية التحكم بمطالبات الضمان الصحي Complete Roles & Permissions Arabic Localization, Executive Roles Hub Redesign, Unified Role Labels Engine, Zero Untranslated Permissions & Insurance Claims Access Control)
-
-### Done
-- **إدراج واجهة مطالبات وسجلات الضمان الصحي في نظام الأدوار والصلاحيات**:
-  * استحداث صلاحية مستقلة ومخصصة باسم `view insurance claims` (عرض ومتابعة كشوفات وسجلات مطالبات الضمان وتصديرها).
-  * إضافة مايجريشن مخصص `database/migrations/2026_10_22_150000_add_view_insurance_claims_permission.php` وتثبيتها في قاعدة البيانات ومنحها لأدوار الإدارة والمحاسب.
-  * حماية مسارات وواجهة `HealthInsuranceClaimController` بميدلوير يمنع الدخول (403 Forbidden) إلا لمن يملك صلاحية `view insurance claims` أو `manage health insurance` أو إدارة المستشفى.
-  * إتاحة التحكم بها وتفعيلها/تعطيلها بسهولة عبر بطاقة "الحسابات العامة والمالية" في شاشة إدارة وتعديل الأدوار `/roles/{role}/edit`.
-- **تعريب وتوحيد منظومة مسميات الأدوار بالكامل (Unified Role Labels Engine)**:
-  * تطوير دالة مركزية موحدة `RoleManagementController::getRoleLabel($roleName)` تشكل المصدر المعتمد لترجمة وتخصيص أي دور (المسمى العربي، الوصف، الأيقونة، ولون الشارة).
-  * تغطية كافة الأدوار الـ 26 المسجلة في النظام بما فيها الأدوار التي كانت تظهر باللغة الإنجليزية:
-    * `accountant` ⬅️ **المحاسب المالي** (أيقونة الحاسبة واللون الأزرق).
-    * `admin-hsop` / `hospital_admin` ⬅️ **مدير المستشفى**.
-    * `thaman` ⬅️ **هيئة الضمان الصحي**.
-    * `gh&est` ⬅️ **كادر الجراحة والاستشارية**.
-    * `staff` ⬅️ **كادر إداري عام**.
-  * تصنيف الأدوار إلى 6 قطاعات وظيفية ذكية عبر `getRoleCategory()`:
-    * `الطبية والجراحية`، `المالية والكاشير`، `التشخيصية`، `الاستقبال والطوارئ`، `الصيدلية والمستودع`، `الإدارة والأنظمة`.
-  * تعميم الدالة الموحدة على شاشات: قائمة الأدوار (`roles.index`)، شاشة تعديل الصلاحيات (`roles.edit`)، إضافة دور (`roles.create`)، وإدارة المستخدمين (`users.index`, `users.create`, `users.edit`).
-- **إعادة تصميم وهيكلة لوحة إدارة الأدوار (`resources/views/roles/index.blade.php`)**:
-  * شريط كروت مؤشرات تنفيذية علوي (إجمالي الأدوار، الكادر المعين، إجمالي الصلاحيات، الأدوار الشاغرة).
-  * شريط تبويبات وفلاتر سريعة للقطاعات الوظيفية (Category Filter Pills) لتصفية الأدوار بنقرة زر واحدة.
-  * بحث لحظي ذكي (Live Search) بالاسم العربي أو الإنجليزي أو الوصف.
-  * مبدل عرض مزدوج (Dual View Mode): عرض البطاقات الحديثة (Cards Grid) مع شريط نسبة تغطية الصلاحيات ووسوم الأقسام البارزة، وعرض الجدول المضغوط (Compact Table).
-  * نافذة تفاعلية منبثقة سريعة (Role Users Modal) عبر AJAX لمعاينة جميع الموظفين المعينين لأي دور بضغطة زر دون مغادرة الصفحة.
-- **تعريب 100% من صلاحيات النظام (Zero Untranslated Permissions)**:
-  * تدقيق كامل الـ 145 صلاحية في قاعدة البيانات وسد النواقص لضمان عدم ظهور أي كود برمجي إنجليزي في الواجهات (إضافة `inquiry.create.radiology` والصلاحيات التراثية المخفية).
-  * تعريب الأقسام الرئيسية في شاشة الصلاحيات (`permissions.index`) وفق بطاقات النظام العشرة.
-- **حزمة الاختبارات الآلية الحصينة**:
-  * اجتياز اختبارات صلاحيات الضمان الصحي في [HealthInsuranceClaimsReportTest](file:///C:/get/hospital-system/tests/Feature/HealthInsuranceClaimsReportTest.php) بـ 8 اختبارات ناجحة (`8 passed, 26 assertions`).
-  * اجتياز كامل اختبارات مصفوفة الأدوار والصلاحيات في [RolePermissionsMatrixTest](file:///C:/get/hospital-system/tests/Feature/RolePermissionsMatrixTest.php) بـ 11 اختباراً ناجحاً (`11 passed, 182 assertions`).
-
-## Session log (2026-10-22 — المرحلة 106: منظومة إلغاء طلبات فحوصات الطوارئ ودورة الاسترجاع المالي لدى الكاشير وإصدار السندات السالبة ومعالجة حالة المريضة نسيمه عطب سلمان Emergency Request Cancellation, Doctor Action, Cashier Refund Processing, Negative Voucher Invoicing & Patient #47 Refund Execution)
-
-### Done
-- **معالجة وتصحيح حالة المريضة نسيمه عطب سلمان (طوارئ #47 - Patient ID 8600)**:
-  * تدقيق كافة الخدمات المسجلة للمريضة وتحديد الفحصين غير المنجزين المطلوبين بالخطأ.
-  * إلغاء فحص رنين الكاحل (`Ankle - Joint MRI` بقيمة 200,000 د.ع) وفحص الأشعة السينية مقطعين (`Two-Section Standard X-Ray` بقيمة 40,000 د.ع).
-  * إصدار سندي استرجاع مالي رسمي لدى الكاشير بمجموع **240,000 د.ع**:
-    - وصل استرجاع **`REC-20261022-0020`** بمبلغ `-200,000 د.ع`.
-    - وصل استرجاع **`REC-20261022-0021`** بمبلغ `-40,000 د.ع`.
-  * تحويل حالة الطلبين إلى `status = 'cancelled'` و `payment_status = 'refunded'` وانتقالهما تلقائياً لأرشيف الطلبات الملغاة.
-- **توسيع محطة عمل الطوارئ بإمكانية إلغاء الفحوصات ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php) & [resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php))**:
-  * زر إلغاء فوري للطبيب على بطاقات الفحوصات غير المكتملة في لوحة السجل الطبي والفحوصات مع تسجيل سبب الإلغاء.
-  * في حال كان الطلب مسدداً، يحول إلى `cancelled` ويوجّه فوراً إلى قائمة مستحقات الاسترجاع لدى الكاشير.
-- **تطوير واجهة ونظام الكاشير لدعم استرجاعات الطوارئ ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
-  * إدراج طلبات الأشعة والمختبر الملغاة في طوارئ المستشفى تلقائياً ضمن قائمة مستحقات الاسترجاع (Refunds) مع عداد إشعارات بارز.
-  * نافذة تأكيد وصرف الاسترجاع المالي الفوري وتحديد وسيلة الإرجاع (نقد/شبكة).
-  * إصدار سند استرجاع سالب رسمي (`Payment` بسالب ورقم إيصال رسمي `REC-...`)، وتحديث حالة دفع الطلب إلى `refunded`.
-- **إظهار فحوصات الطوارئ في صفحة طباعة الوصل ([resources/views/cashier/receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php))**:
-  * دعم عرض بنود وتفاصيل تحاليل وأشعة الطوارئ في جدول تفاصيل الوصل المالي بعد أن كانت محصورة بكشفية الطوارئ فقط.
-- **تطوير الموديلات وقاعدة البيانات**:
-  * إضافة مايجريشن مخصص `database/migrations/2026_10_22_140000_add_refunded_to_emergency_requests_payment_status.php` لدعم حالة الدفع `refunded` في جداول أشعة ومختبر الطوارئ متوافقاً مع كل من MySQL و SQLite.
-  * إضافة علاقة `payment()` وحقل `payment_status` إلى `EmergencyRadiologyRequest` و `EmergencyLabRequest`.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/EmergencyRequestCancellationAndRefundTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyRequestCancellationAndRefundTest.php))**:
-  * اجتياز كامل لجميع اختبارات الميزة الـ 3 (`3 passed, 13 assertions`) مع اجتياز كامل لاختبارات الطوارئ السابقة (14 passed).
-
-## Session log (2026-10-22 — المرحلة 105: توحيد هيكلية محطة عمل الطوارئ مع محطة الاستشارية: تخصيص تبويب طلبات الفحوصات لإنشاء الطلبات الجديدة ونقل كافة بطاقات الطلبات ونتائج المختبر والأشعة إلى السجل الطبي الدائم والفحوصات Emergency Workstation Harmonization with Outpatient Clinic: Dedicated Ordering Forms Tab & Consolidation of Investigation Cards, Steppers & Results into Permanent Medical Record)
-
-### Done
-- **تخصيص تبويب طلبات الفحوصات (Tab 3: `#tab-requests`) للطلبات الجديدة ([resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php))**:
-  * إزالة بطاقات الطلبات والنتائج السابقة التي كانت تملأ تبويب الطلبات وتخفي نماذج الإدخال خلف كتل متراكمة من الوصولات القديمة.
-  * فتح وعرض نماذج طلب المختبر والأشعة بشكل دائم ومباشر دون إخفائها خلف أزرار Collapse منسدلة، مع دعم الفلاتر السريعة (الكل، مشمول بالضمان، كاش فقط)، والبحث اللحظي التفاعلي، وعداد العناصر المحددة.
-  * إضافة شريط إرشادي رسمي ينبه الطبيب إلى أن متابعة مسار الطلبات، مراحل سداد الكاشير، وصدور النتائج والتقارير الطبية الرسمية معروضة ومحدثة لحظياً في لوحة "السجل الطبي والفحوصات" على يسار الشاشة مع زر انتقال سريع.
-- **تطوير وترقية لوحة السجل الطبي الدائم والفحوصات (`#side-cur-pane`)**:
-  * نقل وإعادة هيكلة كافة بطاقات طلبات المختبر والأشعة لتظهر في مكانها المعتمد تحت تبويب "طلبات الحالة" بالسجل الطبي الأيسر (مطابق تماماً لمحطة الطبيب الاستشارية).
-  * إضافة شريط تصفية تفاعلي سريع (Sub-Filter Pills: الكل، المختبر، الأشعة، العلاجات) عبر دالة `filterCurEmergencyRequests`.
-  * تزويد كل بطاقة فحص بشريط التقدم ومراحل المسار التفاعلي ذي الخطوات الأربع (Status Progress Stepper: طلب الطبيب ⬅️ الكاشير ⬅️ المختبر/قسم الأشعة ⬅️ النتيجة/التقرير).
-  * إبراز حالة السداد (مسدد بشارة خضراء / عند الكاشير بشارة تنبيه صفراء)، وأولوية الفحص، وزر الطباعة الرسمية للنتائج المعتمدة.
-  * جدول سريري مصغر لعناصر الفحص يوضح القيم والوحدات والمعدلات الطبيعية مع تمييز النتائج غير الطبيعية باللون الأحمر، مع إتاحة زر الحذف الفوري للعناصر غير المسددة للطبيب (`emergencyRemoveRequestItem`).
-  * عرض تفاصيل تقارير الأشعة والمشاهدات والانطباع التشخيصي، مع أزرار معاينة وتحميل صور الأشعة المرفقة.
-  * تضمين أرشيف الطلبات الملغاة داخل أكورديون منظم أسفل القائمة.
-- **التحقق والاختبارات الآلية الحصينة**:
-  * اجتياز كامل حزمة اختبارات الطوارئ ومحطة العمل (`41 passed, 218 assertions`) واجتياز اختبارات تعديل وحذف الفحوصات وشريط المراحل (`7 passed, 38 assertions`) دون أي تعارض أو كسر في الوظائف.
-
-## Session log (2026-10-22 — المرحلة 104: تحويل كشف مطالبات الضمان الصحي إلى العرض التجميعي حسب المرضى تباعاً مع مجاميع الاستحقاق وتصحيح استعلام البحث Health Insurance Claims Patient-Grouped Sequential View, Service Rows, Subtotals, View Mode Toggle & Search Fix)
-
-### Done
-- **العرض التجميعي الذكي حسب المريض تباعاً ([resources/views/insurance/claims/index.blade.php](file:///C:/get/hospital-system/resources/views/insurance/claims/index.blade.php))**:
-  * تحويل الواجهة الرئيسية لتظهر كل مريض على حدة في ترويسة رئيسية مميزة (الاسم، فئة الضمان بشارتها الملونة، رقم بطاقة الضمان، الهاتف، رقم الملف، وإجمالي عدد خدماته).
-  * عرض كافة خدمات وفحوصات هذا المريض الطبية مسردة تباعاً بسطور تفصيلية (رقم الوصل، وقته، القسم، الطبيب المعالج، تفاصيل الفحص الطبي الدقيق، السعر الكلي، نقد المريض، ومطالبة الضمان ونسبة التغطية مع زر الطباعة).
-  * سطر ملخص ومجاميع خاص بكل مريض (Subtotal) يحسب إجمالي القيمة الاستحقاقية لخدماته، إجمالي تحمله نقداً، وإجمالي مطالبة الضمان للمستشفى.
-  * بعد انتهاء خدمات ومجاميع المريض، يبدأ المريض التالي مباشرة بنفس الترتيب السلس والواضح.
-  * توفير مبدل عرض مرن (View Mode Switcher): `[ حسب المريض (مجمّع) ]` و `[ حسب الوصل (تفصيلي) ]` للتبديل الفوري بنقرة زر واحدة.
-- **تطوير الكنترولر والاستعلامات ([app/Http/Controllers/HealthInsuranceClaimController.php](file:///C:/get/hospital-system/app/Http/Controllers/HealthInsuranceClaimController.php))**:
-  * استعلام تجميعي فائق الكفاءة والسرعة يجمع مطالبات كل مريض مع ترقيم صفحات المرضى (`paginate(15)`) وتحميل العلاقات مسبقاً لمنع أي استعلامات متكررة (N+1).
-  * حصر ومعالجة الدفعات التي قد لا ترتبط بملف مريض محدد في قسم مستقل لضمان عدم ضياع أي دينار.
-  * تصحيح استعلام البحث النصي (`search`): البحث عن اسم المريض ورقم هاتفه عبر علاقة `user` الصحيحة في قاعدة البيانات وحل استثناء `1054 Unknown column 'name'`.
-- **ترقية تصدير ملفات Excel ([app/Exports/HealthInsuranceClaimsExport.php](file:///C:/get/hospital-system/app/Exports/HealthInsuranceClaimsExport.php))**:
-  * دعم تصدير ملف الإكسيل بنمطين متوافقين مع العرض النشط: تصدير شيت ملخص المرضى واستحقاقاتهم التراكمية، أو تصدير كشف الوصولات الفردية بكامل أعمدته الـ 16.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/HealthInsuranceClaimsReportTest.php](file:///C:/get/hospital-system/tests/Feature/HealthInsuranceClaimsReportTest.php))**:
-  * توسيع الاختبارات إلى 6 اختبارات آلية ميزة تؤكد ظهور المرضى وخدماتهم المجمعة ومجاميع الاستحقاق، وعمل البحث بالاسم العربي للمريض بنجاح مع اجتياز كامل (`6 passed, 24 assertions`).
-
-## Session log (2026-10-22 — المرحلة 103: تدشين واجهة وسجلات مطالبات الضمان الصحي الشاملة: فئات المرضى، تفاصيل الخدمات، أسعارها، حصص المرضى والضمان، اسم الطبيب، وتصدير Excel Health Insurance Claims Interface, Patient Categories, Service Details, Pricing, Doctor Names & Excel Export)
-
-### Done
-- **بناء واجهة كشوفات ومطالبات الضمان الصحي المخصصة ([resources/views/insurance/claims/index.blade.php](file:///C:/get/hospital-system/resources/views/insurance/claims/index.blade.php))**:
-  * واجهة تنفيذية متكاملة تتيح تتبع ومراجعة كافة الخدمات المقدمة للمرضى المشمولين بالضمان الصحي الوطني وقوى الأمن والتعاقدات.
-  * عرض اسم المريض، فئة الضمان (`الفئة A`, `الفئة H`, `الفئة D`...) مع شارات ملونة لكل فئة، رقم باج/بطاقة الضمان، نوع الخدمة/القسم، اسم الطبيب المعالج/الاستشاري، تفاصيل الفحوصات الطبية الدقيقة، السعر الكلي، المبلغ المدفوع نقداً، ومطالبة الضمان، مع نسبة التغطية.
-  * شريط كروت مؤشرات تنفيذية خماسي (إجمالي مطالبات الضمان، تحمل المرضى نقداً، إجمالي القيمة الاستحقاقية، عدد الخدمات المسددة، والمرضى المستفيدين).
-  * شريط تصفية سريع حسب فئات الضمان يوضح إحصائيات كل فئة ومطالباتها مع الفلترة بنقرة زر واحدة.
-  * فلاتر متقدمة تشمل: الفترات الزمنية السريعة (اليوم، أمس، هذا الأسبوع، هذا الشهر، الشهر السابق، هذا العام، كل الأوقات)، نطاق التاريخ المخصص، فئة الضمان، القسم، الطبيب، والبحث السريع.
-- **الكنترولر ومنطق احتساب الاستحقاقات ([app/Http/Controllers/HealthInsuranceClaimController.php](file:///C:/get/hospital-system/app/Http/Controllers/HealthInsuranceClaimController.php))**:
-  * استعلام دقيق يغطي كافة الدفعات المسددة التي تشمل حصة ضمان أو تصنيف تأميني مع معالجة حصرية لأسماء الجداول (`payments.`) لمنع أي تضارب بين الحقول.
-  * احتساب المؤشرات اللحظية والإحصائيات التجميعية استحقاقياً وتوزيع الفئات، مع ترقيم الصفحات (`paginate(25)`).
-- **تصدير إكسيل رسمي ومطابق لمعايير هيئات الضمان ([app/Exports/HealthInsuranceClaimsExport.php](file:///C:/get/hospital-system/app/Exports/HealthInsuranceClaimsExport.php))**:
-  * توليد شيت إكسيل منسق ومبوب بـ 16 عموداً شاملاً كافة بيانات المطالبة، المريض، فئته، طبيبه، وتفاصيل الخدمة ومبالغها.
-- **توسيع نموذج المدفوعات والوصول الموحد ([app/Models/Payment.php](file:///C:/get/hospital-system/app/Models/Payment.php))**:
-  * إضافة دوال الوصول: `attending_doctor_name` (استخراج اسم الطبيب النظيف من الكشفية أو الزيارة أو الطوارئ أو الجراحة)، `service_details_text` (تجميع كافة الفحوصات والخدمات المقدمة في الإيصال)، و `insurance_type_label`.
-- **ربط المسارات والقائمة الجانبية الموحدة ([routes/web.php](file:///C:/get/hospital-system/routes/web.php) & [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
-  * إضافة مسارات `Route::prefix('insurance-claims')` للواجهة والتصدير.
-  * إضافة رابط `مطالبات وسجلات الضمان` ضمن قسم الحسابات العامة والمالية بالقائمة الجانبية.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/HealthInsuranceClaimsReportTest.php](file:///C:/get/hospital-system/tests/Feature/HealthInsuranceClaimsReportTest.php))**:
-  * بناء 4 اختبارات ميزة متكاملة تؤكد الحماية، صحة عرض البيانات وأسماء الأطباء وفئات الضمان، فلترة الفئات، وتصدير ملف Excel مع اجتياز كامل (`4 passed, 15 assertions`).
-
-## Session log (2026-10-22 — المرحلة 102: التدقيق المالي الشامل لخزينة المستشفى، الشريط التنفيذي ذو الـ 6 كروت، مطالبات الضمان ومستحقات الأطباء المعلقة، وتفكيك وسائط الأشعة والتصوير Hospital Treasury Financial Audit, 6 Executive Cards Strip, Insurance Claims Receivable, Doctor Liabilities & Radiology Modalities Decomposition)
-
-### Done
-- **شريط الكروت التنفيذي السداسي الشامل المتجاوب (6 Executive Cards Strip) ([resources/views/treasury/index.blade.php](file:///C:/get/hospital-system/resources/views/treasury/index.blade.php))**:
-  * كشف أسباب اللبس الرقمي الذي لاحظه المستخدم: كارت الرصيد التراكمي (كل الوقت) مقابل كروت الفترة الزمنية المحددة، وعزل نقد الدرج عن مطالبات الضمان والمستحقات المعلقة.
-  * توسيع الشريط العلوي من 5 إلى 6 كروت متوازنة ومتجاوبة بنظام 6 أعمدة متساوية على الشاشات الكبيرة (`col-xl-2`):
-    1. `الرصيد الفعلي بالخزينة`: مع وسم بارز يوضح أنه تراكمي شامل لكل الفترات وتفصيل الوارد والصادر التراكمي.
-    2. `إجمالي المقبوض نقداً (الفترة)`: نقد صندوق الخزينة والكاشير الفعلي المحصل.
-    3. `مطالبات الضمان الصحي (الفترة)` (كارت تنفيذي جديد): يعرض قيمة الذمم المدينة المؤجلة قيد التحصيل من هيئات وشركات الضمان الصحي مع عدد المطالبات، مما أظهر أكثر من 14.6 مليون دينار كانت غائبة عن مؤشرات الخزينة.
-    4. `المبالغ المسترجعة للمرضى`: تتبع دقيق لكافة حركات الاسترجاع الناتجة عن إلغاء كشفيات أو خدمات.
-    5. `المصروفات المنفذة`: نفقات التشغيل والمشتريات المنفذة، مع سطر فرعي بارز يرصد التزامات مستحقات الأطباء المعلقة غير المنصرفة (`DoctorDue::where('status', 'pending')`).
-    6. `صافي سيولة الفترة`: الفائض النقدي الفعلي لحركة الفترة (الوارد النقدي - المنصرف).
-- **تفكيك وسائط قسم الأشعة والتصوير إلى خدمات تخصصية مستقلة ([app/Http/Controllers/HospitalTreasuryController.php](file:///C:/get/hospital-system/app/Http/Controllers/HospitalTreasuryController.php) & [resources/views/treasury/index.blade.php](file:///C:/get/hospital-system/resources/views/treasury/index.blade.php))**:
-  * تفكيك بند الأشعة الموحد القديم وإفراد كل وسيطة تشخيصية ببطاقة وإحصائية ولون بياني مخصص:
-    * السونار (Ultrasound)
-    * الأشعة السينية (X-Ray)
-    * الرنين المغناطيسي (MRI)
-    * المفراس الحلزوني (CT Scan)
-    * إيكو القلب (Echo)
-  * تنظيم قائمة تصفية البنود والتصنيفات في شريط الفلاتر إلى مجموعتين واضحتين: `[الأقسام والخدمات الطبية]` و `[المصروفات والمسترجعات]`، مع دعم التصفية المباشرة بالسندات المرتبطة بنوع وسيطة الفحص.
-- **تطوير جدول إيرادات ومصروفات الأقسام (التبويب 2) وحل عجز الاستشارية الظاهري**:
-  * إضافة أعمدة صريحة تفصل: `[المقبوض نقداً (Cash)]` و `[مطالبات الضمان (Insurance)]` و `[إجمالي الاستحقاق (Accrual Gross)]` بجانب `[حصص الأطباء / التكاليف]` و `[صافي المستشفى (Net)]`.
-  * حل مشكلة العجز الظاهري لعيادات الاستشارية (حيث كان يظهر المقبوض نقداً أقل من حصص الأطباء لأن المريض يدفع 2,500 د.ع كاش والباقي 22,500 د.ع مطالبة ضمان صحي)؛ ليصبح الدخل الاستحقاقي الإجمالي يغطي حصص الأطباء ويظهر صافي أرباح المستشفى الحقيقية بدقة تامة.
-- **تحديث كروت ذكاء الأعمال للأطباء (التبويب 4 - Doctor BI)**:
-  * تعديل الكارت الثاني ليعرض `إجمالي الدخل الاستحقاقي للأطباء` كرقم رئيسي، مع أسطر فرعية شفافة توضح صافي المستشفى وحصص الأطباء ونقد الدرج ومطالبات الضمان.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/TreasuryExecutiveCardsAndRadiologyModalitiesTest.php](file:///C:/get/hospital-system/tests/Feature/TreasuryExecutiveCardsAndRadiologyModalitiesTest.php))**:
-  * بناء اختبارات ميزة تؤكد ظهور الكروت الـ 6 بمطالبات الضمان والمستحقات المعلقة، وظهور وسائط الأشعة المفككة، مع اجتياز كامل حزمة اختبارات الخزينة (`11 passed, 55 assertions`).
-
-## Session log (2026-10-21 — المرحلة 101: نقل مسار تحميل مرفقات المختبر للمسارات العامة المحمية برمز التوكن لمنع مطالبة المريض بتسجيل الدخول Lab Attachment Route Token-Protected Public Access Fix)
-
-### Done
-- **نقل مسار تحميل المرفقات للمسارات العامة المحمية ([routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
-  * نقل المسار `Route::get('/lab/requests/{request}/attachment')` خارج مجموعة ميدلوير تسجيل الدخول `Route::middleware(['auth'])` ووضعه مباشرة بجانب مسار التقرير العام `lab.public-report`.
-  * حل مشكلة مطالبة المريض بتسجيل الدخول أو إعادة توجيهه لصفحة `/login` عند النقر على زر تحميل تقرير الجهاز (PDF).
-  * حماية المسار بكنترولر المختبر [app/Http/Controllers/LabStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabStaffController.php) عبر الرمز المشفر (`?token=...`) بحيث يفتح للمريض بنقرة واحدة، ويُحظر أي وصول غير مصرح به بدون التوكن الصحيح برمز `403 Forbidden`.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///C:/get/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
-  * بناء وتأكيد اختباري ميزة لتنزيل المريض للمرفق بدون تسجيل دخول وحظر الدخول بدون رمز، مع اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`68 passed, 329 assertions`).
-
-## Session log (2026-10-21 — المرحلة 100: توحيد إطار تقرير المختبر الكحلي الشامل وإلغاء الخطوط المطلقة ودمج أزرار تحميل مرفقات الأجهزة بالشريط العائم Lab Report Unified Full Container Border & Toolbar Attachment Downloads)
-
-### Done
-- **تصحيح هيدر تقرير المختبر وتوحيد الإطار الخارجي الكامل ([resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php))**:
-  * إعادة تفعيل تنسيق `display: flex !important; direction: rtl !important; justify-content: space-between !important; align-items: center !important;` للهيدر الرئيسي `.report-header` وهيدر صفحة الإدرار `.page2-header` في وضع التقرير العام (`body.is-public-report`).
-  * إلغاء الخطوط العائمة المشوهة القديمة (`.decorative-border` المطلقة التي كانت تقطع منتصف الهيدر في الـ PDF) واستبدالها بإطار رسمي موحد ومستمر يحيط بكامل الصفحة: `.report-page { border: 1.5px solid #005a9c; border-radius: 4px; padding: 6mm 10mm; }` للشاشة وللطباعة الورقية، مع إخفائه التلقائي عند الطباعة على ورق المستشفى المروس (`letterhead-mode`).
-  * ضبط التباعد العلوي للتقرير العام `body.is-public-report { padding-top: 65px !important; }` مع تصفيره عند الطباعة الورقية (`padding: 0 !important;`).
-- **دمج أزرار تحميل مرفقات الأجهزة الطبية مباشرة في الشريط العائم**:
-  * إضافة أزرار أنيقة ومميزة داخل شريط الإجراءات العلوي العائم (`.print-toolbar`) للمريض والكادر الطبي لتحميل تقارير الأجهزة الأصلية (مثل CBC و ABG بصيغة PDF) بنقرة زر واحدة.
-  * تختفي هذه الأزرار تلقائياً عند حفظ الـ PDF أو الطباعة الورقية بفضل خاصية `@media print { .print-toolbar { display: none !important; } }`، فيبقى التقرير الطبي المطبوع رسمياً وفخماً.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///C:/get/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
-  * إضافة وتأكيد اختبارات الميزة لظهور أزرار تحميل المرفقات في شريط الأدوات واختفاء عناصر الإطار المشوهة القديمة مع اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`66 passed, 327 assertions`).
-
-## Session log (2026-10-21 — المرحلة 99: عزل صفحات تقرير المختبر وتثبيت الفوتر لكل صفحة، إلغاء السطر التقديري لتقارير الأجهزة وحفظ النتائج السابقة وهيدر الفحوصات Lab Report Isolated Page Containers, Dedicated Footers, Removal of Placeholder Device Rows, and 100% Previous Results & Header Fidelity)
-
-### Done
-- **عزل الصفحات الطباعية بحاويات مستقلة ([resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php))**:
-  * استبدال جدول `report-print-container` بحاويات صفحات مستقلة كلياً `.report-page.page-1` و `.report-page.page-2.gue-page-break` بنظام CSS Flexbox مع تثبيت الفوتر أسفل كل صفحة على حدة عبر `.report-bottom-block`.
-  * حل مشكلة الصفحة الأولى بدون فوتر نهائياً؛ تظهر بيانات الطباعة والتاريخ وعنوان المستشفى أسفل الصفحة 1 وأسفل الصفحة 2 بدقة متناهية.
-  * ضبط ارتفاع حاوية الطباعة إلى `min-height: 270mm !important;` مع `page-break-after: always !important;` للصفحة الأولى و `page-break-after: auto !important;` لآخر صفحة لمنع توليد أي صفحة ثالثة بيضاء أو تجاوزات نهائياً.
-- **إلغاء السطر التقديري لمرفقات الأجهزة في جدول التحاليل**:
-  * حذف إدراج أسطر تقديرية للفحوصات المرفقة كـ CBC داخل جدول الكيمياء الحيوية (إلغاء سطر `📎 تقرير الجهاز مرفق` و `Automated Hematology Analyzer / Clinical Device`) بناءً على توجيهات الطبيب، والاعتماد الكامل على بطاقة وأزرار تحميل تقارير الأجهزة الأصلية (PDF) في شريط المرفقات ورسائل الواتساب.
-- **ترويسة مدمجة وخفيفة لصفحة فحص الإدرار العام (G.U.E)**:
-  * تزويد الصفحة الثانية بترويسة مستشفى مصغرة وشريط مختصر لمعلومات المريض (الاسم، العمر، الجنس، رقم العينة، والتاريخ) مع جدول النتائج الـ 19 المضغوط المكون من 4 أعمدة، بحيث تتسع كافة الفحوصات وتوقيع وخاتم المختبر والفوتر المعتمد بأريحية تامة دون أي تزاحم.
-- **الحفاظ بنسبة 100% على النتائج السابقة وهيدر كل تحليل**:
-  * الحفاظ الكامل على دالة استرجاع السجلات التاريخية للمريض `$findPrevResults` وعرض مربع النتائج السابقة الرأسي والرقائق الملونة وتواريخ الفحوصات السابقة أسفل القيمة الحالية لكل تحليل.
-  * الحفاظ على بانر العنوان المستقل لكل فحص (`category-header-row`) لمنع أي تداخل بين التحاليل.
-- **حزمة الاختبارات الآلية الحصينة ([tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php](file:///C:/get/hospital-system/tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php))**:
-  * اجتياز كامل لجميع اختبارات المختبر وحزمة النظام (`65 passed, 324 assertions`).
-
-## Session log (2026-10-21 — المرحلة 98: حل تضارب الباراميترات الفرعية للمختبر وعزل فحص الإدرار العام (G.U.E) في صفحة طباعية مستقلة ومطابقة كافة الفحوصات والمرفقات 100% Lab Subtest Collision Fix, Dedicated GUE Page Break, Clinical Grouping & 100% Ordered Tests Coverage)
-
-### Done
-- **معالجة تضارب مفاتيح إدخال الباراميترات الفرعية ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php) & [resources/views/staff/requests/show-lab.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/show-lab.blade.php))**:
-  * تحويل مفاتيح الإدخال للباراميترات الفرعية من اسم الفحص المشترك إلى مفتاح فريد ومميز بمعرف الباراميتر: `test_results[sub_{{ $subTest->id }}][value]`.
-  * حل مشكلة مسح الفحوصات التي تشترك في نفس أسماء المعايير الفرعية (مثل اشتراك FSH و LH في معيار `Men` و `Follicular Phase` الخ) نهائياً ومنع استبدال القيم أثناء الإرسال (`$_POST`).
-  * ترقية استرجاع القيم المحفوظة في الشاشة عبر الفهرسة المتعددة (`$dbResultsBySubId` و `$dbResultsByParentAndName`) لضمان ظهور القيم المحفوظة لجميع التحاليل بدقة متناهية.
-- **إفراد فحص الإدرار العام (General Urine Examination - G.U.E) في صفحة طباعية مستقلة ([resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php))**:
-  * عزل فحص الإدرار العام (19 فحصاً فرعياً) عن الفحوصات العامة (الهرمونات، الدم، الكيمياء) وتطبيق فاصل صفحات طباعي تلقائي: `.gue-page-break` (`page-break-before: always; break-before: page;`).
-  * إذا كان الطلب يحتوي على G.U.E فقط دون تحاليل أخرى، يُطبع في صفحة واحدة مباشرة دون إحداث صفحة بيضاء سابقة.
-  * عرض نتائج فحص الإدرار الـ 19 مباشرة وبشكل سلس في جدول الصفحة المخصصة بدون أي تقسيمات فرعية متكلفة مع ترويسة أعمدة واضحة `[ Test Description | Result | Status ]`.
-  * تزويد كل من صفحة الفحوصات العامة وصفحة فحص الإدرار المستقلة بختم وتوقيع معتمد ومستقل بأعلى معايير الجودة الطبية.
-- **عزل وفصل فحوصات الهرمونات والتحاليل الفردية ومنع التصنيف العالق (Category Bleed Fix)**:
-  * التحقق من الفئات المرجعية الديموغرافية (مثل Men, Follicular Phase) وعرض الاسم الطبي الحقيقي للفحص (`Follicular-stimulating hormone` و `Luteinizing hormone`) في عمود Test Description، وإلحاق اسم الفئة بالمعدل الطبيعي: `1.7 - 8.6 (Men)`.
-  * تصفية وإلغاء التصنيف العالق فوراً (`$currentGroup = null`) بحيث تظهر التحاليل المستقلة التالية (`Prolactin`, `Thyroid stimulating hormone`, `25-OH Vitamin`) في سطور وبطاقات مستقلة تماماً ومفصولة بخطوط واضحة دون أي دمج خاطئ.
-- **مطابقة الفحوصات المطلوبة بنسبة 100% وإظهار مرفقات الأجهزة (CBC) والفحوصات المعلقة**:
-  * رصد ومطابقة كافة الفحوصات المطلوبة من قبل الطبيب في التقرير المطبوع.
-  * الفحوصات المرفقة كتقارير أجهزة (مثل Complete blood count & Differential) يظهر لها سطر رسمي بارز ومميز في جدول النتائج المطبوعة: `Complete blood count & Differential` | `📎 تقرير الجهاز مرفق (Attached Device Report)` | شارة `Attached`.
-  * الفحوصات التي لم تُدخل نتائجها بعد تظهر بشارة `Pending (قيد الإنجاز)` ولا تختفي أو تسقط من التقرير.
-- **تحديث وإكمال نتائج الطلب رقم 285 للمريض جاسم حامد عباس**:
-  * حفظ وتثبيت قيمة فحص FSH للرجال (`3.5 mIU/mL`) بجانب فحص LH (`2.72 mIU/mL`) بنجاح، وظهور كافة الفحوصات الـ 8 للمريض كاملة في شاشة المختبر والتقرير المطبوع.
-- **الاختبارات الآلية الحصينة ([tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php](file:///C:/get/hospital-system/tests/Feature/LabGeneralUrinePageBreakAndCollisionFixTest.php))**:
-  * بناء واجتياز اختبارات ميزة متكاملة تؤكد منع التضارب بين FSH و LH، وتؤكد عزل G.U.E بفاصل الصفحة وظهور تقرير CBC المرفق وكافة الفحوصات بنجاح (`2 passed, 17 assertions`)، مع اجتياز كامل حزمة فحوصات المختبر (`65 passed, 324 assertions`).
-
-## Session log (2026-10-21 — المرحلة 97: مطابقة آلية طلبات طبيب الطوارئ مع الاستشارية: الدمج التلقائي، الحذف الفردي، شريط التقدم السريري، وأرشيف الطلبات الملغاة Emergency Doctor Request Auto-Merge, Item-Level Removal, Clinical Stepper & Cancelled Archive)
-
-### Done
-- **الدمج التلقائي لطلبات المختبر والأشعة للطوارئ ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php))**:
-  * عند قيام طبيب الطوارئ بطلب تحاليل مختبرية جديدة لحالة طوارئ لديها طلب معلق غير مسدد (`payment_id === null` و `status === 'pending'`)، يتم دمج الفحوصات الجديدة تلقائياً في نفس الطلب عبر `syncWithoutDetaching` بدلاً من تشتيت الكاشير بطلبات متعددة.
-  * نفس الدمج التلقائي الذكي يطبق على طلبات الأشعة والسونار غير المسددة.
-  * تحديث وحساب المبالغ المستحقة للكاشير تلقائياً بعد كل دمج عبر `upsertUnifiedEmergencyPayment`.
-- **تمكين طبيب الطوارئ من حذف وتعديل الفحوصات الفردية ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php) & [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
-  * إضافة مسار ودالة الحذف الفردي `DELETE /emergency/{emergency}/remove-request-item`.
-  * قفل وحظر الحذف التام إذا كان الطلب مسدداً لدى الكاشير (`payment_id !== null` أو حالة الطلب مسدد) لحماية الصندوق والحسابات برمز `422 Unprocessable Entity`.
-  * فك ارتباط الفحص المطلوب فقط من جدول الربط الوسيط (`detach`).
-  * في حال حذف الفحص الأخير المتبقي في الطلب، يتم تحويل حالة الطلب تلقائياً إلى ملغي (`cancelled`) وتوثيق سبب الإلغاء، مع تحديث استحقاق الكاشير.
-- **ترقية شاشة الطوارئ بواجهة الاستشارية الحديثة ([resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php))**:
-  * **شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper)**: شريط مصغر بأعلى كل بطاقة يوضح مراحل الإنجاز: `[ 1. طلب الطبيب ⬅️ 2. عند الكاشير / سُدّد ⬅️ 3. قيد الفحص بالمختبر/الأشعة ⬅️ 4. النتيجة جاهزة ]` مع شارات وألوان تفاعلية.
-  * **الجدول السريري المصغر (Clinical Mini-Table)**: استبدال طريقة العرض القديمة بجدول سطر منظم وأنيق يعرض: رقم التسلسل، اسم الفحص، شارة الحالة الحية، وزر الحذف `[ × ]` التفاعلي للأطباء قبل السداد عبر AJAX سلس دون إعادة تحميل الصفحة.
-  * **أرشيف الطلبات الملغاة**: عزل وإخفاء الطلبات الملغاة من القائمة النشطة ووضعها داخل أكورديون مطوي أنيق: `[ 📁 أرشيف طلبات المختبر/الأشعة الملغاة (مخفية) ]`.
-  * تصفية اللوحة الجانبية لمريض الطوارئ (`side-cur-pane`) لإخفاء الطلبات الملغاة من قائمة الإجراءات النشطة.
-- **الاختبارات الآلية الحصينة ([tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyRequestItemModificationAndAutoMergeTest.php))**:
-  * بناء واجتياز 7 اختبارات ميزة متكاملة تغطي الدمج التلقائي للمختبر والأشعة، الحذف الفردي، تحول الطلب لملغي عند إفراغه، حظر الحذف بعد السداد، وظهور الـ Stepper والجدول المصغر وأرشيف الملغاة (`7 passed, 38 assertions`)، مع اجتياز كامل حزمة الطوارئ بنجاح (`40 passed, 209 assertions`).
-
-## Session log (2026-10-21 — المرحلة 96: ربط شاشة المختبر بإعدادات أنماط الإدخال وإلغاء أزرار المرفقات للفحوصات الرقمية المفردة وتمكين المريض من تحميل مرفقات الأجهزة عبر الواتساب Lab Result Entry Types Integration, Selective Attachment Buttons & Patient WhatsApp Attachment Downloads)
-
-### Done
-- **الالتزام بأنماط إدخال النتائج المعتمدة في شاشة الإعدادات ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php))**:
-  * حذف كلمة `(اختياري)` من ترويسة الجدول لتصبح `تقرير الجهاز / المرفق`، وإلغاء كلمة `(اختياري)` من أزرار الرفع.
-  * إلغاء ظهور زر `إرفاق تقرير` للفحوصات المحددة كـ `single_value` (قيمة مباشرة مفردة) أو `sub_tests` (قيم فرعية) وإظهار شرطة `—` بدلاً منها لمنع تشويه الجدول.
-  * قصر إظهار زر رفع المرفق حصراً على الفحوصات المحددة في الإعدادات كـ `attachment_only` (مرفق تقرير جهاز) أو `flexible` (مرن) أو الفحوصات التي رُفع لها مرفق مسبقاً.
-- **تمكين المريض من استعراض وتحميل مرفقات الأجهزة عبر الواتساب والتقرير الطبي ([resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php) & [app/Http/Controllers/LabStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabStaffController.php))**:
-  * إضافة بطاقة أنيقة في التقرير الطبي المعتمد تظهر فيها أزرار تحميل وعرض تقارير الأجهزة والملفات المرفقة (العامة والخاصة بكل فحص).
-  * تمكين المريض من فتح وتحميل المرفقات بصورة آمنة ومباشرة عبر التوكن المشفر `?token=...` دون الحاجة لتسجيل دخول، وتخطي حظر 403.
-  * تضمين تنبيه ذكي في نص رسالة الواتساب ينبه المريض بوجود تقارير أجهزة مرفقة يمكنه استعراضها وتحميلها بنقرة زر واحدة ([app/Models/Request.php](file:///C:/get/hospital-system/app/Models/Request.php)).
-- **الاختبارات الآلية الحصينة**:
-  * اجتياز كامل لجميع اختبارات حزمة المختبر والواتساب وأنماط الإدخال (`16 passed, 72 assertions`).
-
-## Session log (2026-10-21 — المرحلة 93: فصل حفظ مسودة نتائج المختبر عن الاعتماد النهائي والإرسال للطبيب Lab Draft Saving vs Final Doctor Transmission)
-
-### Done
-- **فصل الحفظ كمسودة عن الاعتماد النهائي ([app/Http/Controllers/LabStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabStaffController.php))**:
-  * عند اختيار `action === 'draft'` أو `status === 'in_progress'`: حفظ النتائج الرقمية والمدخلات ومرفقات الأجهزة والملاحظات كمسودة في قاعدة البيانات وجدول `lab_results`.
-  * تثبيت حالة الطلب على `in_progress` (قيد الفحص بالمختبر) لضمان عدم وصول إشعار للطبيب أو تقدم مسار الطلب لديه قبل اكتمال التحاليل.
-  * توثيق النشاط المكتبي كمسودة `save_lab_draft` وإبقاء فني المختبر في نفس الشاشة مع رسالة نجاح خضراء لتسهيل إكمال باقي الفحوصات لاحقاً.
-  * عند اختيار `action === 'complete'`: اعتماد النتائج نهائياً، تحويل حالة الطلب إلى `completed`، إرسال إشعار التيليجرام، وتوثيق النشاط `save_lab_results`، والتحويل إلى القائمة الرئيسية للمختبر.
-- **شريط الإجراءات المزدوج وشارات الحالة في واجهة المختبر ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php))**:
-  * إضافة زرين مميزين في الترويسة العلوية وفي شريط أسفل النتائج:
-    1. `[ 💾 حفظ مؤقت (مسودة) ]`: بلون تحذيري دافئ ومميز.
-    2. `[ 🚀 اعتماد نهائي وإرسال للطبيب ]`: بلون أخضر رسمي.
-  * شارة ذكية أعلى الصفحة `[ ✏️ مسودة قيد الفحص ]` توضح لفني المختبر حالة الطلب الحالية بوضوح، وبطاقة تنبيه سفلية تبين وضع الطلب.
-  * ضبط دالة JavaScript `submitLabForm` لتحديد نوع الإجراء والحالة بدقة وسلاسة.
-- **حماية واجهة الطبيب والبيانات (Zero Doctor Disruption & Zero Data Loss)**:
-  * الإبقاء الكامل على واجهة كشف الطبيب دون أي تغيير؛ تظل تعرض مرحلة `[ 🔬 تنفيذ الفحص بالمختبر ]` طالما أن الطلب مسودة، ولا تنتقل إلى `[ ✅ النتيجة جاهزة ]` إلا بعد الاعتماد النهائي.
-- **الاختبارات الآلية الحصينة ([tests/Feature/LabDraftResultSaveTest.php](file:///C:/get/hospital-system/tests/Feature/LabDraftResultSaveTest.php))**:
-  * اجتياز كامل لـ 3 اختبارات ميزة تغطي حفظ المسودة، والاعتماد النهائي، ووجود الأزرار الثنائية (`3 passed, 20 assertions`).
-
-## Session log (2026-10-21 — المرحلة 95: حظر الفحوصات المعطلة ومنع تكرار التحاليل في واجهة المختبر والكاشير ومطابقة طلبات الطبيب 1-to-1 دون المساس بسجلات قاعدة البيانات Lab & Cashier Active-Only Filtering, Name Deduplication & 1-to-1 Doctor Order Fidelity)
-
-### Done
-- **مطابقة طلبات الطبيب 1-to-1 وحظر ربط الفحوصات المعطلة ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * عرض التحاليل المفعلة فقط والفريدة بالاسم للطبيب في شاشة الكشف الطبي.
-  * عند حفظ طلب الطبيب: الاستعلام حصراً عن الفحوصات المفعلة (`where('is_active', true)`) وأخذ أول معرف مفعل لكل اسم فحص، مما يمنع نهائياً سحب أو تخزين معرفات الفحوصات المعطلة أو المكررة في `details['lab_test_ids']`.
-  * في دالة حذف الفحص الفردي `removeRequestItem`: مطابقة وحذف كافة المعرفات المرتبطة باسم الفحص لضمان خلو الطلب من المعرفات المعلقة.
-- **تصفية واجهة محطة المختبر وإلغاء التكرار الصارم ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php))**:
-  * في دالة `buildSelectedLabTests`: استبعاد أي فحص معطل (`!$labTest->is_active`) من الظهور أمام فني المختبر حتى في الطلبات القديمة المسجلة مسبقاً.
-  * إلغاء التكرار الصارم الموحد بالاسم الصافي مع توحيد الأحرف والمسافات (`Normalized Case-Insensitive Unique Name`).
-  * ترتيب التحاليل تنازلياً حسب التفعيل (`orderByRaw('is_active DESC')`) لربط المراجع والقيم الفرعية بالفحص المفعل دائماً.
-- **حماية حسابات الكاشير وطباعة الوصل الحراري 80mm ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php) & [resources/views/cashier/receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
-  * استبعاد الفحوصات المعطلة من الاحتساب المالي ومنع تكرار نفس الفحص عبر مصفوفة التتبع `$seenLabTestNames`.
-  * في طباعة الوصل الحراري 80mm: عدم طباعة أي فحص معطل، وتصفية الأسطر بالاسم الصافي لمنع تكرار الفحص في الوصل.
-  * في نموذج الطلب [app/Models/Request.php](file:///C:/get/hospital-system/app/Models/Request.php): جمع أسعار الفحوصات المفعلة واستبعاد التكرارات.
-- **حماية البيانات التاريخية (Zero Data Deletion)**:
-  * الإبقاء الكامل على جميع سجلات جدول `lab_tests` دون حذف أي سطر لحماية التاريخ الطبي والمحاسبي.
-- **الاختبارات الآلية الحصينة ([tests/Feature/LabAndCashierDeduplicationAndActiveOnlyTest.php](file:///C:/get/hospital-system/tests/Feature/LabAndCashierDeduplicationAndActiveOnlyTest.php))**:
-  * اجتياز كامل لـ 3 اختبارات ميزة تغطي دورة الفحص كاملة (`3 passed, 13 assertions`).
-
-## Session log (2026-10-21 — المرحلة 94: تصحيح أسعار الخدمات الفردية في الوصل الحراري 80mm وإلغاء تكرار المجموع الكلي وعرض المبلغ المطلوب من المريض فقط Cashier 80mm Thermal Receipt Line-Item Patient Fee Fix & Grand Total Duplication Removal)
-
-### Done
-- **معالجة تكرار المجموع الإجمالي أمام كل خدمة ([resources/views/cashier/receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
-  * إلغاء الشرط القديم `empty($payment->patient_share) ? $item['price'] : $payment->amount` الذي كان يتسبب في تكرار المجموع الإجمالي في كل أسطر الجدول لمرضى الضمان الصحي.
-  * ضبط عمود المبلغ ليعرض السعر الفعلي لكل خدمة المطلوب من المريض فقط `$item['price']`.
-- **حساب حصة المريض الدقيقة لكافة الخدمات الفردية في الوصل**:
-  * تحاليل المختبر وفحوصات الأشعة: استدعاء `calculateInsurancePricing` وسحب `patient_share` بدلاً من السعر المعتمد الكامل.
-  * باقات المختبر واستشارات الطوارئ وخدمات الطوارئ: تطبيق نسبة التحمل بدقة متناهية (`copay_percentage`).
-  * مطابقة رياضية بنسبة 100% بين مجموع أسطر الخدمات وسطر "المبلغ المدفوع" في قاع الوصل.
-- **الاختبارات الآلية الحصينة ([tests/Feature/CashierPrintReceiptItemPriceTest.php](file:///C:/get/hospital-system/tests/Feature/CashierPrintReceiptItemPriceTest.php))**:
-  * إنشاء واجتياز اختبار ميزة متكامل يتحقق من ظهور الأجور الفردية المطلوبة من المريض حصراً أمام كل فحص وعدم تكرار المجموع الإجمالي في أسطر الجدول (`1 passed, 7 assertions`).
-
-## Session log (2026-10-21 — المرحلة 92: تمكين الطبيب من حذف الفحوصات الفردية وإخفاء الطلبات الملغاة وإلغاء عرض الأسعار لمنع التشتيت Doctor Item-Level Request Modification, Clean Clean UI & Cancelled Requests Archive)
-
-### Done
-- **تمكين الطبيب من حذف وتعديل الفحوصات الفردية من الطلبات غير المسددة ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * إضافة دالة `removeRequestItem` ومسار `DELETE /doctor/requests/{request}/remove-item`.
-  * حظر وإقفال الحذف إذا كان الطلب مسدداً `payment_status === 'paid'` لحماية الحسابات.
-  * دعم حذف تحاليل المختبر وفحوصات الأشعة والخدمات التمريضية كلاً على حدة مع تحديث `details` وإعادة احتساب المبالغ تلقائياً.
-  * في حال حذف الفحص الأخير المتبقي في الطلب، يتم تحويل حالة الطلب تلقائياً إلى ملغي `cancelled` وتوثيق سبب الإلغاء.
-- **إخفاء الطلبات الملغاة وترقية بطاقات طلبات الطبيب وإلغاء الأسعار ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * عزل وتصفية الطلبات النشطة فقط في القائمة الأساسية لتجنب تشتيت الطبيب.
-  * تجميع كافة الطلبات الملغاة في أسفل التبويب داخل قسم مطوي أنيق `[ 📁 أرشيف الطلبات الملغاة (مخفية) ]`.
-  * **شريط مسار ومراحل الفحص التفاعلي (Status Progress Stepper)**: شريط مصغر بأعلى كل بطاقة يوضح مراحل الإنجاز الأربعة: `[ طلب الطبيب ⬅️ سداد الكاشير ⬅️ تنفيذ الفحص بالمختبر/الأشعة ⬅️ النتيجة جاهزة ]` مع ألوان وأيقونات حية.
-  * **الجدول السريري المصغر (Clinical Mini-Table)**: استبدال الشارات بجدول سطر منظم يعرض: رقم التسلسل، اسم الفحص، العضو المستهدف (للأشعة)، شارة الحالة، وزر الحذف `[×]` التفاعلي مع حذف AJAX السلس.
-  * تمييز لوني واضح لحالة الدفع: شارة صفراء وإطار أصفر للطلبات غير المسددة، شارة خضراء للمدفوعة.
-  * إلغاء عرض الأسعار في بطاقات الطلبات داخل عيادة الطبيب لمنع التشتيت وحصر الحسابات والخصومات بنظام الكاشير.
-- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorRemoveRequestItemTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorRemoveRequestItemTest.php))**:
-  * اجتياز كامل لـ 5 اختبارات ميزة تغطي حذف تحليل، إلغاء الطلب عند خلوه، حذف فحص أشعة، حظر الحذف بعد السداد، وإخفاء الملغاة (`5 passed, 23 assertions`).
-
-## Session log (2026-10-21 — المرحلة 91: توحيد سداد ووصول وتجميع طلبات الزيارة الطبية في الكاشير والدمج التلقائي وإلغاء التكرار Doctor & Cashier Unified Visit Checkout, Single Receipt & Consolidated Index Table)
-
-### Done
-- **الدمج التلقائي لطلبات الطبيب غير المسددة ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * دمج تلقائي فور حفظ الطبيب لأي فحوصات مخبرية جديدة في نفس الطلب غير المسدد `payment_status === 'pending'`.
-  * دمج تلقائي فور حفظ الطبيب لأي فحوصات شعاعية جديدة في نفس طلب الأشعة غير المسدد لمنع تكرار وتعدد الطلبات المعلقة في النظام.
-- **تعديل كادر المختبر والأشعة للفحوصات قبل السداد وتثبيتها بعده ([app/Http/Controllers/StaffRequestController.php](file:///C:/get/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
-  * إضافة إمكانية إضافة وحذف تحاليل للمختبر (`appendLabTests`, `removeLabTest`).
-  * إضافة إمكانية إضافة وحذف فحوصات للأشعة (`appendRadiologyTypes`, `removeRadiologyType`).
-  * حظر وإقفال التعديل فور السداد `payment_status === 'paid'` لحماية الحسابات.
-- **سداد موحد شامل لكافة خدمات الزيارة في الكاشير ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
-  * في نافذة سداد الطلبات (`showRequestPaymentForm`): سحب كافة طلبات الزيارة المعلقة (مختبر + أشعة) تلقائياً في فاتورة واحدة شاملة.
-  * في معالجة الدفع (`processRequestPayment`): دفع جميع الطلبات في حركة مالية واحدة وسجل دفع واحد `Payment` وتحديث كافة الطلبات إلى `paid` مع ربطها بنفس `payment_id`.
-- **وصل حراري 80mm واحد شامل للمريض بدون أي تكرار ([resources/views/cashier/receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
-  * طباعة وصل حراري موحد يحمل رقم تسلسلي واحد `REC-...` ويشمل تحاليل المختبر وفحوصات الأشعة معاً.
-  * تطبيق فلترة وإلغاء التكرار الصارم (`Deduplication`) لضمان عدم تكرار اسم أي فحص مهما كانت السجلات القديمة.
-- **تجميع الطلبات المعلقة في جدول الكاشير ([resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
-  * دمج أسطر الطلبات المعلقة لنفس الزيارة في سطر واحد موحد يحمل شارات الأقسام المشتركة `[🔬 تحاليل] [🩻 أشعة] [طلب موحد]`.
-  * استبدال الأزرار المتعددة بزر واحد: `تسديد شامل` يمنع تكرار ظهور نفس المريض بمبالغ متطابقة.
-- **الاختبارات الآلية الحصينة**:
-  * `tests/Feature/DoctorLabRequestAutoMergeAndLabEditTest.php` (5 passed)
-  * `tests/Feature/DoctorRadiologyRequestAutoMergeAndStaffEditTest.php` (5 passed)
-  * `tests/Feature/UnifiedVisitCheckoutCashierTest.php` (2 passed)
-  * اجتياز كامل للحزمة (`12 passed, 78 assertions`).
-
-## Session log (2026-10-20 — المرحلة 89: حل مشكلة التحديث السريع لصفحة الكاشير وضبط التوقيت الافتراضي على 30 ثانية مع أداة تحكم مرنة وزر تحديث يدوي فوري Cashier Live Refresh Rate Optimization, Configurable Interval Selector & Manual Sync)
-
-### Done
-- **معالجة التحديث السريع لمحطة الكاشير ([resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
-  * إلغاء التحديث التلقائي القديم المفرط الذي كان يعمل كل 5 ثوانٍ (`setInterval 5000`) ويتسبب في ارتباك الكاشير ومسح حقول الإدخال والبحث.
-  * ضبط التوقيت الافتراضي الموصى به على **30 ثانية** مع جدولة ذكية عبر `setTimeout` لضمان عدم تداخل الطلبات المتتابعة.
-- **إضافة أداة التحكم بوقت التحديث وزر التحديث اليدوي الفوري**:
-  * إضافة قائمة منسدلة أنيقة في ترويسة الكاشير بجوار مؤشر المباشر تتيح للكاشير اختيار:
-    - `15 ثانية`
-    - `30 ثانية` (افتراضي)
-    - `دقيقة واحدة` (60 ثانية)
-    - `دقيقتين` (120 ثانية)
-    - `إيقاف التلقائي` (تحديث يدوي فقط)
-  * حفظ وتثبيت خيار المستخدم في المتصفح `localStorage.getItem('cashier_refresh_interval')` ليستمر عبر الجلسات والصفحات.
-  * زر أيقوني دائري لتحديث البيانات فورياً بنقرة زر 🔄 مع تأثير دوران تفاعلي (`fa-spin`) أثناء جلب البيانات.
-  * تحديث شارة "مباشر" تلقائياً لتعرض الوقت المختار (مثل: `مباشر (30 ث)`) أو التحول إلى شارة رمادية `متوقف (يدوي)` عند إيقاف التحديث التلقائي.
-- **الحماية الذكية من مقاطعة الكاشير أثناء الإدخال (Smart Non-Intrusive Polling)**:
-  * إيقاف وتأجيل التحديث التلقائي فوراً في الحالات التالية:
-    1. عند وجود أي نافذة منبثقة مفتوحة (`.modal.show`).
-    2. عند تركيز أو كتابة الكاشير في حقول البحث أو إدخال التاريخ أو النماذج (`input:focus, textarea:focus, select:focus`) لمنع ضياع ما يكتبه.
-    3. عند تصغير أو إخفاء تبويب المتصفح (`document.hidden`) لتقليل الحمل على السيرفر، مع استئناف فوري وسلس بمجرد العودة للتبويب (`visibilitychange`).
-- **الاختبارات الآلية الحصينة ([tests/Feature/CashierRefreshIntervalControlTest.php](file:///C:/get/hospital-system/tests/Feature/CashierRefreshIntervalControlTest.php))**:
-  * إنشاء واجتياز اختبار ميزة يتحقق من وجود أدوات التحكم بالتحديث وزر المزامنة ومطابقة الفترات الزمنية بنجاح كامل (`1 passed, 7 assertions`).
-
-## Session log (2026-10-20 — المرحلة 88: اعتماد ومزامنة خدمات الطوارئ الرسمية 96 خدمة وتصحيح الأسعار كاش وضمان واستبعاد الخدمات المكررة والقديمة من واقع ملف الإكسل المعتمد Approved Emergency Services Excel Full Sync & Pricing Reconciliation)
-
-### Done
-- **المزامنة الشاملة لجدول خدمات الطوارئ (`emergency_services`)**:
-  * قراءة واعتماد ملف الإكسل المعتمد `emergncy final.xlsx` الذي يحتوي على 96 خدمة طوارئ منقحة.
-  * إنشاء ملف بيانات رسمي ثابت [database/seeders/approved_emergency_services_data.php](file:///C:/get/hospital-system/database/seeders/approved_emergency_services_data.php).
-  * إنشاء مايجريشن آلي قابل للنشر المباشر [database/migrations/2026_10_20_110000_sync_emergency_services_from_approved_excel.php](file:///C:/get/hospital-system/database/migrations/2026_10_20_110000_sync_emergency_services_from_approved_excel.php) وتنفيذه بنجاح.
-- **تصحيح الأسعار وحالات الضمان والكاش**:
-  * تصحيح الخدمات التي كانت مسجلة بـ 0 د.ع في الداتابيز (مثل: إدخال أنبوب صدر Chest tube بـ 500,000 كاش وضمان، أجور التجبيس للأطراف السفلى بـ 50,000 كاش و 40,000 ضمان، خدمات نقل الإسعاف الداخلي 25,000 والخارجي 50,000، وإعطاء الدم تحت إشراف طبيب مع المطابقة بـ 75,000).
-  * تحديث أسعار الكاش وأسعار الضمان الصحي وحالات التغطية لـ 20 خدمة مختلفة.
-- **إدراج الخدمات المعتمدة الجديدة**:
-  * إضافة خدمة `#114`: `أجور التجبير مع كافة المستلزمات بنوعيه (fiberglass or plaster of paris) نصفي او كامل - الاطراف العليا` (كاش: 50,000 د.ع، ضمان: 30,000 د.ع، مشمول بالضمان).
-  * ضبط خدمة `#66`: `زرق إبرة خارجي` بسعر 25,000 د.ع.
-- **التعطيل الآمن للخدمات القديمة والمكررة (15 خدمة)**:
-  * إيقاف تفعيل (`is_active = 0`, `is_hi_active = 0`) للخدمات الـ 15 غير الموجودة بملف الإكسل المعتمد (مثل تكرارات صوندة المعدة، وتكرارات الغرز القديمة)، لمنع ظهورها في شاشات الاستقبال ومحطة كشف الطوارئ مع حماية السجلات التاريخية.
-- **تحديث السيدر الرسمي والاختبارات الآلية الحصينة**:
-  * تحديث [database/seeders/EmergencyServicesSeeder.php](file:///C:/get/hospital-system/database/seeders/EmergencyServicesSeeder.php).
-  * إنشاء واجتياز اختبار الميزة [tests/Feature/EmergencyServicesApprovedSyncTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyServicesApprovedSyncTest.php) واجتياز حزمة الطوارئ كاملة (`33 passed, 171 assertions`).
-
-## Session log (2026-10-19 — المرحلة 87: إصلاح باقاتي السريعة للمختبر وتفعيل الفلترة اللحظية الذكية وإلغاء التحديد بالنقر المزدوج Doctor Consultation Quick Lab Packages Fix, Instant Filter & Toggle Deselection)
-
-### Done
-- **إصلاح أزرار الباقات السريعة وعداد الفحوصات ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php) & [app/Models/UserLabTestGroup.php](file:///C:/get/hospital-system/app/Models/UserLabTestGroup.php))**:
-  * حل مشكلة عدم استجابة باقات المختبر السريعة للطبيب: استبدال استدعاء `$pkg->tests` الذي كان يرجع `null` بالخاصية الصحيحة `$pkg->labTests->pluck('id')` و `$pkg->labTests->pluck('name')`.
-  * إضافة دالة الـ Accessor المتوافقة `getTestsAttribute()` في نموذج `UserLabTestGroup` لضمان عدم حدوث أي خطأ عند استدعاء `$group->tests`.
-  * تصحيح شارة عداد الفحوصات في الباقة لتعرض العدد الفعلي لفحوصات الباقة `{{ $pkg->labTests->count() }}`.
-- **الفلترة اللحظية الذكية وعرض فحوصات الباقة فقط**:
-  * عند النقر على الباقة لأول مرة، يتم اختيار كافة فحوصاتها وتصفية شبكة التحاليل فورياً لعرض فحوصات الباقة فقط، لتمكين الطبيب من مراجعتها وتعديلها بسهولة دون التشتت في شبكة الـ 600+ فحص.
-  * إظهار شريط إشعار تفاعلي أنيق أعلى الشبكة (`#docLabActiveFilterNotice`) يوضح اسم الباقة النشطة وعدد الفحوصات وزر `[ إلغاء الفلترة وعرض كافة الفحوصات ]`.
-  * إضافة تبويب سريع في شريط الفئات: **[ 🎯 المختارة فقط ]** (`SELECTED_ONLY`) لعرض كافة الفحوصات المحددة حالياً في أي وقت.
-- **إلغاء التحديد وإلغاء الفلترة عند النقر مجدداً على الباقة (Toggle Deselection & Reset)**:
-  * عند النقر مرة ثانية على زر نفس الباقة المفعلة أو إذا كانت كافة فحوصاتها محددة بالفعل، يتم تلقائياً إلغاء تحديد كافة فحوصات هذه الباقة (`cb.checked = false`)، وإلغاء فلترة الباقة لتعود الشبكة لعرض كافة الفحوصات، وتحديث شريط الفحوصات المختارة فورياً.
-- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorLabQuickPackagesTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorLabQuickPackagesTest.php))**:
-  * إنشاء واجتياز اختبار الميزة بنجاح كامل (`2 passed, 9 assertions`).
-
-## Session log (2026-10-19 — المرحلة 86: ترقية موضع التشخيص الطبي ICD-10 لكارت عريض بارز وفصل حقل التوصيات وإلغاء التعبئة التلقائية Doctor Consultation ICD-10 Full-Width Prominence & Clean Clinical Notes)
-
-### Done
-- **فصل التوصيات وإلغاء التعبئة التلقائية ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * إلغاء نسخ اسم التشخيص تلقائياً إلى خانة تفاصيل وتوصيات التشخيص (`diagnosis[description]`) عند اختيار عنصر من القائمة، ليظل الحقل نظيفاً تماماً ومفرغاً لتعليمات وتوصيات الطبيب للمريض.
-- **ترقية موضع ومظهر التشخيص الطبي ICD-10 المعتمد (Full-Width Hero Section)**:
-  * نقل قسم التشخيص الطبي من العمود النصفي الضيق إلى كارت عريض بارز (`col-12`) أسفل العلامات الحيوية مباشرة.
-  * حقل بحث واسع (`input-group-lg`) مع أيقونة بحث متفاعلة وزر مسح سريع ومؤشر تحميل.
-  * ترقية القائمة المنسدلة المقترحة لتفتح بعرض كامل 100% مع طبقة عليا فائقة (`z-index: 99999 !important`) وإطار كحلي واضح (`2px solid #005a9c`) وظلال مرتفعة ومنع أي قص (`overflow: visible !important`).
-  * بطاقة تأكيد التشخيص المختار النشطة في سطر عريض وواضح وزر سريع لتغيير التشخيص.
-- **الصف الثنائي المتوازن للملاحظات السريرية**:
-  * توزيع الفحص السريري (Physical Examination) في الجانب الأيمن، وتفاصيل وتوصيات التشخيص في الجانب الأيسر بارتفاع متناسق ومريح.
-- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorIcd10SearchTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorIcd10SearchTest.php))**:
-  * إضافة اختبار التحقق من إمكانية حفظ التشخيص بحقل توصيات فارغ (`doctor_can_save_diagnosis_with_empty_description`).
-  * اجتياز كامل لكافة الاختبارات (`7 passed, 28 assertions`).
-
-## Session log (2026-10-19 — المرحلة 85: محرك البحث الذكي لتشخيصات ICD-10 بالأعمدة الثلاثة وترقية تبويب الفحص والتشخيص المنظم في الاستشارية Doctor Outpatient ICD-10 Live 3-Column Search & Balanced Tab Layout)
-
-### Done
-- **محرك البحث اللحظي لتشخيصات ICD-10 بالأعمدة الثلاثة ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * إضافة دالة `searchIcd10(HttpRequest $request)` تبحث في أعمدة `code` و `description_ar` و `description` مع ترتيب ذكي يبدأ بالمطابقة الدقيقة ثم بدايات النصوص، مع تحديد حد أقصى للنتائج لمنع أي بطء.
-  * تسجيل المسار السريع `GET /doctor/icd10/search` في [routes/web.php](file:///C:/get/hospital-system/routes/web.php).
-  * لا يتم عرض أو إرجاع أي نتائج إذا كان حقل البحث فارغاً (تطبيقاً لشرط "لا يعرض إلا عند بدء الكتابة").
-- **ترقية وتنظيم تبويب الفحص والتشخيص ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * **شريط العلامات الحيوية الرقمية (Digital Vitals Strip)**:
-    - بطاقات مصغرة متناسقة لكافة المؤشرات الحيوية (الضغط الانقباضي والانبساطي، النبض، الحرارة، التنفس، الأكسجين، الوزن، الطول).
-    - **حاسبة مؤشر كتلة الجسم الحية (Live BMI Calculator)**: حساب آلي فوري لمؤشر كتلة الجسم فور إدخال الوزن والطول وإظهار شارة ملونة ذكية (طبيعي / نقص وزن / وزن زائد / سمنة).
-  * **الصف الثنائي المتوازن (Two Balanced Columns Layout)**:
-    - **الجانب الأيمن**: كارت الشكوى السريرية والفحص الطبي (Physical Examination) بمساحة كتابة مريحة وواضحة.
-    - **الجانب الأيسر**: كارت التشخيص الطبي المعتمد (ICD-10):
-      * حقل البحث الذكي مع شارات اللغات وزر مسح سريع ومؤشر تحميل.
-      * قائمة منسدلة أنيقة (`icd10-autocomplete-dropdown`) تظهر شارة الرمز الطبي، الاسم بالعربي، الاسم بالإنكليزي، وتصنيف المرض.
-      * **بطاقة تأكيد التشخيص المختار النشطة (`selected_diagnosis_card`)**: تظهر فور اختيار التشخيص متضمنة الرمز والاسم وزر إلغاء واختيار تشخيص آخر.
-      * خيار التشخيص المخصص اليدوي (`other`).
-      * مربع ملاحظات وتفاصيل التشخيص الإضافية.
-  * **تسهيل التحقق والحفظ المرن**:
-    - جعل `diagnosis.description` اختيارياً (`nullable`) مع ملئه تلقائياً باسم التشخيص عند عدم كتابة ملاحظات إضافية، لمنع فشل الـ Validation وتسهيل عمل الطبيب.
-- **عرض التشخيص في استعراض الزيارة للقراءة فقط ([resources/views/doctors/visits/show-readonly.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show-readonly.blade.php))**:
-  * إظهار كود التشخيص بشارة ملونة واسم التشخيص العربي والإنجليزي والملاحظات بتنسيق سريري واضح.
-- **الاختبارات الآلية الحصينة ([tests/Feature/DoctorIcd10SearchTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorIcd10SearchTest.php))**:
-  * اجتياز كامل لـ 6 اختبارات ميزة تغطي البحث بالرمز، العربي، الإنكليزي، الحقل الفارغ، حفظ التشخيص، ورسم المكونات الجديدة (`6 passed, 24 assertions`).
-
-## Session log (2026-10-19 — المرحلة 84: السجل التراكمي لآخر 3 نتائج سابقة لكل فحص مخبري عمودياً أسفل النتيجة الحالية Lab Print Cumulative Previous Results & Delta Check History)
-
-### Done
-- **تطوير نموذج الطلبات الطبية ([app/Models/Request.php](file:///C:/get/hospital-system/app/Models/Request.php))**:
-  * إضافة علاقة `labResults()` تربط الطلب بنتائجه المخبرية في جدول `lab_results`.
-  * إضافة دالة `getPreviousLabResultsMap()` لاستخراج آخر 3 نتائج معتمدة سابقة لنفس المريض (`patient_id`) لكل تحليل مخبري قبل الطلب الحالي، مرتبة تنازلياً حسب تاريخ وتوقيت الفحص، مع دعم الاستخراج المزدوج من جدول `lab_results` الفعلي وحقل `requests.result` القديم، ومنع التكرارات لنفس الطلب.
-- **عرض النتائج السابقة عمودياً أسفل النتيجة الحالية في جدول الفحوصات ([resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php))**:
-  * الإبقاء على الهيكلية الثلاثية الكلاسيكية المعتمدة للجدول (اسم الفحص | النتيجة ووحدة القياس Conventional Units | الحالة Status) المتطابقة مع تقارير المستشفيات المرجعية.
-  * في خانة النتيجة (`test-value-cell`):
-    - تظهر النتيجة الحالية في السطر الأول بخط عريض مع وحدة القياس.
-    - أسفل النتيجة الحالية مباشرة تظهر النتائج السابقة **مرتبة عمودياً (`.prev-vertical-box`)** يفصلها خط منقط ناعم:
-      * كل سطر سابق يحتوي على القيمة مع لون دال على الحالة (أحمر للمرتفع، أصفر للمنخفض، أزرق للطبيعي) متبوعة بتاريخ الفحص المختصر `(d/m/y)`.
-    - في حال كان هذا أول فحص للمريض ولا توجد نتائج سابقة، لا يشغل أي مساحة رأسية إضافية ويبقى السطر على مقاسه القياسي.
-  * محاذاة عناصر السطر إلى الأعلى (`align-items: flex-start`) لضمان محاذاة اسم التحليل والمدى الطبيعي وشارة الحالة بدقة تامة.
-- **الاختبارات الآلية الحصينة**:
-  * ترقية اختبار الميزة [tests/Feature/LabPrintGenderAndHeaderTest.php](file:///C:/get/hospital-system/tests/Feature/LabPrintGenderAndHeaderTest.php):
-    - فحص ظهور الصندوق العمودي للنتائج السابقة `prev-vertical-box` وقيم الفحوصات وتواريخها لمريضة لديها زيارات سابقة لنفس الفحص (`test_lab_print_displays_previous_results_for_same_patient`).
-    - فحص عدم ظهور الصندوق العمودي نهائياً عند عدم وجود نتائج سابقة للمريض (`test_lab_print_does_not_show_vertical_box_when_no_previous_results`).
-  * اجتياز كامل للاختبارات (`5 passed, 29 assertions`) واجتياز حزمة المختبر كاملة (`46 passed, 207 assertions`).
-
-## Session log (2026-10-19 — المرحلة 83: تصحيح قراءة وتحديد جنس المريض وترقية ترويسة تقرير المختبر لتطابق الطوارئ والأشعة Lab Print Patient Gender Resolution Fix & Unified Emergency/Radiology Header Style)
-
-### Done
-- **تصحيح تحديد وقراءة جنس المريض في تقرير المختبر وكافة شاشات النظام**:
-  * إضافة دالتي الوصول (`Accessor`) في نموذج المريض [app/Models/Patient.php](file:///C:/get/hospital-system/app/Models/Patient.php):
-    - `getGenderAttribute()`: قراءة الجنس تلقائياً من جدول المستخدمين المرتبط `user->gender` بدلاً من إرجاع `null` بسبب عدم وجود عمود `gender` في جدول `patients`.
-    - `getGenderDisplayAttribute()`: إرجاع التسمية العربية المعربة الموحدة (`ذكر` / `أنثى` / `غير محدد`).
-  * تصحيح دالة استخراج الجنس في قالب طباعة المختبر [resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php):
-    - فحص الجنس من ملف المريض واليوزر مباشرة ودعم كافة صيغ الإناث (`female`, `أنثى`, `f`, `انثى`) لطباعة `Female`.
-    - معالجة الحالة التي جعلت المريضة هيفاء مدلول لفته (طلب #191) تظهر كـ `Male` لعدم العثور على حقل الجنس في نموذج المريض والرجوع للوضع الافتراضي الخاطئ.
-- **ترقية وتوحيد ترويسة تقرير المختبر المعتمد لتطابق تصميم الطوارئ والأشعة**:
-  * إعادة بناء وترقية ترويسة تقرير المختبر [resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php) لتصبح ثلاثية الأعمدة متطابقة تماماً مع استمارة الطوارئ والأشعة:
-    - الجانب الأيمن: ترويسة مستشفى الكفاءات الأهلي وقسم المختبر والتحاليل الطبية بالعربي.
-    - المنتصف: شعار المستشفى الملكي الأصلي (`images/1.jpg`) مشفر ومضمن بتقنية Base64 لمنع أي مشاكل بالمسارات أو شهادات الأمان وسيرفرات الطباعة.
-    - الجانب الأيسر: اسم المستشفى والقسم باللغة الإنكليزية (`Al-Kafa'at Private Hospital - Clinical Laboratory Dept.`).
-    - شريط العنوان الكحلي المتدرج الملكي (Document Title Banner) متضمناً كود التقرير والطلب `LAB-#{id}`.
-    - توحيد لون إطار الصفحة (Border) إلى الأزرق الملكي المتناسق `#005a9c` مع زوايا إشعاعية خفيفة.
-- **الاختبارات الآلية**:
-  * بناء وتشغيل اختبار الميزة [tests/Feature/LabPrintGenderAndHeaderTest.php](file:///C:/get/hospital-system/tests/Feature/LabPrintGenderAndHeaderTest.php) واجتيازه بنجاح (`3 passed, 17 assertions`) واجتياز حزمة المختبر كاملة (`44 passed, 195 assertions`).
-
-## Session log (2026-10-19 — المرحلة 82: إصلاح ظهور المشاهدات والنتائج وترقية تقرير الأشعة والسونار المعتمد لتصميم الطوارئ مع مربع توقيع فارغ للاختبار Radiology & Ultrasound Findings Display Fix & Emergency-Style Report Upgrade)
-
-### Done
-- **إصلاح مشكلة عدم ظهور المشاهدات والنتائج الإشعاعية في التقرير المطبوع**:
-  * إضافة كاستينغ `'result' => 'array'` في نموذج الطلبات الطبية [app/Models/Request.php](file:///C:/get/hospital-system/app/Models/Request.php) لمنع تحويل المصفوفات تلقائياً ومطابقة بيانات التقرير الطبي.
-  * تعديل دالتي `show` و `print` في [app/Http/Controllers/RadiologyStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/RadiologyStaffController.php) لتوحيد وقراءة حقول المشاهدات (`findings`)، الانطباع التشخيصي (`impression`)، التوصيات الطبية (`recommendations`)، والصور المرفقة من السجل الفعلي وحمايتها من التجاهل أو إرجاع قيم فارغة.
-  * إتاحة زر "طباعة / معاينة التقرير" دائماً في شاشة محطة السونار والأشعة [resources/views/radiology-staff/show.blade.php](file:///C:/get/hospital-system/resources/views/radiology-staff/show.blade.php) لتمكين المعاينة الفورية قبل وبعد الاعتماد.
-- **ترقية تصميم استمارة التقرير الطبي للأشعة والسونار المعتمد لتطابق تقرير الطوارئ**:
-  * إعادة بناء وتصميم قالب التقرير الطبي [resources/views/radiology/print.blade.php](file:///C:/get/hospital-system/resources/views/radiology/print.blade.php) وفق مقاس A4 الدقيق مع خط Cairo العربي الطبي، الترويسة المزدوجة بشعار المستشفى، إطار البوردر الملكي الداخلي، وشريط التحكم العلوي المتجاوب (طباعة، حفظ PDF، رجوع).
-  * بطاقة بيانات المريض والطلب الشاملة (الاسم، العمر، الجنس، الهاتف، رقم الإضبارة، شارة التغطية كاش/ضمان، الطبيب المحول، العيادة، التاريخ، ورقم الـ RAD).
-  * بطاقة فحص السونار/الأشعة المطلوبة وصندوق المشاهدات والتقرير السريري المفصل.
-  * مربعات التمييز التشخيصي للانطباع الطبي والتوصيات السريرية والصور المرفقة إن وجدت.
-  * قسم الاعتماد والتوقيع الرسمي متضمناً:
-    - **مربع توقيع فارغ (Empty Signature Line & Stamp Area)** مخصص للاختبار اليدوي والتدقيق كما طلب المستخدم.
-    - خاتم مستشفى الكفاءات الأهلي وقسم الأشعة المعتمد.
-    - الرمز الإلكتروني المعتمد (QR Code) الذكي المباشر للتحقق.
-- **الاختبارات الآلية**:
-  * إنشاء واجتياز اختبار الميزة [tests/Feature/RadiologyPrintReportTest.php](file:///C:/get/hospital-system/tests/Feature/RadiologyPrintReportTest.php) بنجاح واجتياز حزمة الأشعة كاملة (`24 passed, 115 assertions`).
-
-## Session log (2026-10-19 — المرحلة 81: منظومة التحكم اللحظي والذكي بتشغيل وإطفاء الفحوصات المختبرية ومطابقة الضمان الصحي Lab Tests Instant Activation & Smart Insurance Bulk Controls)
-
-### Done
-- **التحكم المفرد اللحظي (Single Quick Toggle AJAX)**:
-  * مفتاحان تفاعليان بأسلوب iOS Switch لكل فحص مختبري في شاشة الكتالوج [resources/views/lab-tests/index.blade.php](file:///C:/get/hospital-system/resources/views/lab-tests/index.blade.php):
-    1. **الحالة العامة (`is_active`)**: تفعيل/تعطيل فوري عبر AJAX. عند إطفاء الفحص يختفي فورياً وكلياً من عيادات الأطباء في الاستشارية، الاستعلامات، الطوارئ، العمليات، وقوائم البحث والباقات.
-    2. **الضمان الصحي (`is_hi_active`)**: تفعيل/تعطيل الفحص ضمن مظلة الضمان الصحي فورياً عبر AJAX مع شارات تمييز الفحوصات المسعرة بالضمان عن غير المسعرة.
-  * تحديث لحظي للشارات البصرية وحالة الصف بدون الحاجة لإعادة تحميل الصفحة نهائياً مع إشعار توست خفيف.
-- **التحكم الكلي الذكي والجماعي (Smart Bulk Actions & Floating Bar)**:
-  * زر ذكي بنقرة واحدة: `[ ⚡ إطفاء كافة الفحوصات خارج الضمان ]` يتيح إطفاء جميع الفحوصات غير المشمولة بتسعير الضمان (440 فحصاً مسعرة بصفر أو null) عاماً أو عن الضمان فقط عبر نافذة تأكيد منبثقة تفاعلية.
-  * زر ذكي بنقرة واحدة: `[ 🛡️ تفعيل كافة المسعرة بالضمان ]` لإعادة تفعيل وتشغيل جميع الفحوصات المعتمدة والمسعرة بالضمان في المحطات دفعة واحدة.
-  * مربعات اختيار جماعية (`Checkboxes`) مع شريط عائم سفلي ذكي يظهر عند تحديد فحص أو أكثر للتحكم الجماعي (تفعيل عام، تعطيل عام، تفعيل للضمان، إيقاف عن الضمان).
-- **الواجهة والإحصائيات والفلاتر المتقدمة**:
-  * 4 بطاقات إحصائيات سريعة أعلى الصفحة (إجمالي الفحوصات، الفحوصات النشطة عاماً، المعطلة، والمشمولة بالضمان).
-  * فلترة جديدة دقيقة للفحوصات: (مشمولة بالضمان فقط / خارج الضمان فقط / الكل) مع تحديد عدد النتائج بالصفحة (25 إلى 500).
-- **تطوير المتحكم والمسارات**:
-  * دوال `quickToggle`, `bulkToggleStatus`, `bulkDisableNonInsurance` في [app/Http/Controllers/LabTestController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabTestController.php).
-  * تسجيل المسارات في [routes/web.php](file:///C:/get/hospital-system/routes/web.php) تحت بادئة `lab-tests`.
-- **الاختبارات الآلية الحصينة**:
-  * بناء وتشغيل [tests/Feature/LabTestActivationAndBulkControlTest.php](file:///C:/get/hospital-system/tests/Feature/LabTestActivationAndBulkControlTest.php) بنجاح كامل (`5 passed, 20 assertions`) واجتياز حزمة المختبر كاملة (`41 passed, 179 assertions`).
-
-## Session log (2026-10-18 — المرحلة 80: مشاركة نتائج التحاليل المخبرية عبر واتساب وبوابة التقرير الطبي المعتمد الآمنة Lab WhatsApp Result Sharing & Secure Public Report Portal)
-
-### Done
-- **تطوير نموذج الطلبات الطبية ([app/Models/Request.php](file:///C:/get/hospital-system/app/Models/Request.php))**:
-  * دالة `getPatientPhone()` لمعالجة وتوحيد أرقام الهواتف العراقية للنمط الدولي (`964...`) تلقائياً.
-  * دالة `getPublicReportToken()` لتوليد رمز توقيع رقمي HMAC sha256 محكم ومشفر لحماية تقرير المريض من التخمين والتلاعب.
-  * دالة `getPublicReportUrl()` لإنشاء رابط استعراض التقرير العام الآمن.
-  * دالة `getWhatsAppShareUrl()` لتوليد رابط `https://wa.me/{phone}?text=...` محمل برسالة رسمية تحتوي على اسم المستشفى، نوع التحليل، ورابط مباشر لاستعراض التقرير المعتمد.
-- **متحكم وبوابة التقرير الطبي العام الآمن ([app/Http/Controllers/LabPublicReportController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabPublicReportController.php))**:
-  * مسار مستقل عام `/lab/results/view/{request}` يتيح للمريض فتح التقرير الطبي المعتمد فوراً من الهاتف عبر الرابط المشفر دون الحاجة لتسجيل دخول أو حساب بالمستشفى.
-  * حماية صارمة لمنع الوصول غير المصرح به عند عدم تطابق رمز التحقق الرقمي HMAC.
-- **ترقية صفحة التقرير الطبي ([resources/views/staff/requests/print.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/print.blade.php))**:
-  * إضافة تنسيقات متجاوبة للهواتف الذكية (`@media screen and (max-width: 768px)`).
-  * شريط علوي أنيق للمريض يحتوي على زر مباشر `[ 📥 تحميل / حفظ كـ PDF ]` يستدعي حفظ الـ PDF تلقائياً عند النقر.
-  * زر في شريط الموظف `[ 💬 إرسال واتساب للمريض ]` لفتح محادثة واتساب بنقرة واحدة من صفحة الطباعة.
-- **إضافة أزرار واتساب التفاعلية في شاشات المختبر**:
-  * جدول طلبات المختبر ([resources/views/lab/index.blade.php](file:///C:/get/hospital-system/resources/views/lab/index.blade.php)): إضافة زر واتساب أخضر أنيق في عمود "الإجراءات" للفحوصات المكتملة.
-- **منظومة التحكم بالأدوار والصلاحيات (Role-Based WhatsApp Access Control)**:
-  * إنشاء قسم وبطاقة تشغيلية مستقلة في شاشة الأدوار والصلاحيات: **`خدمات ومراسلات الواتساب (WhatsApp)`** بأيقونة الواتساب الخضراء وتصنيف خاص `whatsapp`.
-  * إضافة صلاحية مخصصة `send lab whatsapp` (إرسال ومشاركة نتائج التحاليل للمرضى عبر واتساب) ضمن هذا القسم المنفصل في [app/Http/Controllers/RoleManagementController.php](file:///C:/get/hospital-system/app/Http/Controllers/RoleManagementController.php) و [database/seeders/RolesAndPermissionsSeeder.php](file:///C:/get/hospital-system/database/seeders/RolesAndPermissionsSeeder.php).
-  * إنشاء وتشغيل مايجريشن [database/migrations/2026_10_18_230000_add_send_lab_whatsapp_permission.php](file:///C:/get/hospital-system/database/migrations/2026_10_18_230000_add_send_lab_whatsapp_permission.php) وتعيينها لأدوار `admin` و `lab_staff`.
-  * حماية جميع أزرار وروابط الواتساب في الواجهات بـ `@can('send lab whatsapp')`: تظهر الصلاحية في شاشة تعديل الأدوار `/roles/{role}/edit` كخيار تفعيل/إطفاء ضمن بطاقة الواتساب المستقلة، وعند إلغاء تحديدها يختفي زر الواتساب فوراً من كافة شاشات المختبر لهذا الدور.
-- **الاختبارات الآلية الحصينة ([tests/Feature/LabWhatsAppShareAndPublicReportTest.php](file:///C:/get/hospital-system/tests/Feature/LabWhatsAppShareAndPublicReportTest.php))**:
-  * اجتياز كامل لـ 7 اختبارات ميزة تغطي تهيئة الرقم الدولي، توليد رابط الواتساب، الدخول الآمن للتقرير بالرمز، منع الدخول بدون رمز، وظهور الأزرار عند منح الصلاحية واختفائها تماماً عند سحب الصلاحية (`7 passed, 25 assertions`) واجتياز حزمة المختبر الكاملة (`36 passed, 159 assertions`).
-- **خطة التوسع المستقبلية لمنظومة الواتساب (WhatsApp Expansion Roadmap)**:
-  * توثيق مفاتيح التحكم السبعة في الذاكرة المركزية `hospital-memory.md` لتفعيلها تباعاً حسب أقسام المستشفى: (المختبر ✅ منجز، السونار، الرنين، المفراس، الإيكو، الأشعة السينية، والوصفات الطبية) ضمن بطاقة "خدمات ومراسلات الواتساب" الموحدة في شاشة الصلاحيات.
-
-## Session log (2026-10-18 — المرحلة 79: إكمال نواقص بيانات المرضى السريع وقفل حجز الضمان الصحي عند وجود نواقص بملف المريض وترقية واجهة الاختيار للبطاقات التفاعلية Patient Incomplete Profile Completion, Insurance Booking Lock & Interactive Option Cards)
-
-### Done
-- **إظهار رقم هاتف المريض في كارت شاشة المختبر ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php))**:
-  * إضافة رقم هاتف المريض إلى بطاقة "بيانات المريض والطلب" مع أيقونة اتصال ورابط مباشر `tel:`.
-  * بناء اختبار ميزة: [tests/Feature/LabShowPatientPhoneTest.php](file:///C:/get/hospital-system/tests/Feature/LabShowPatientPhoneTest.php) (`1 passed, 4 assertions`).
-- **إضافة حقل تاريخ الميلاد وإظهار العمر التلقائي في صف الإكمال السريع ([resources/views/patients/index.blade.php](file:///C:/get/hospital-system/resources/views/patients/index.blade.php) و [app/Http/Controllers/PatientController.php](file:///C:/get/hospital-system/app/Http/Controllers/PatientController.php))**:
-  * إضافة حقل `date_of_birth` في دراور الإكمال السريع السلس (`btn-quick-complete`) مع 6 أعمدة متناسقة (`col-xl-2`).
-  * استقبال تاريخ الميلاد في `quickUpdate` وتحديث `users.date_of_birth` واحتساب العمر التلقائي وإعادته في استجابة الـ AJAX.
-  * تحديث شارة العمر في سطر جدول المريض لحظياً دون إعادة تحميل الصفحة، وحل مشكلة 7,919 مريض مسجلين بدون مواليد بسبب التسجيل السريع القديم.
-  * اجتياز كامل للاختبارات: [tests/Feature/PatientCompletionAndQuickUpdateTest.php](file:///C:/get/hospital-system/tests/Feature/PatientCompletionAndQuickUpdateTest.php) (`4 passed, 18 assertions`).
-- **منظومة قفل الحجز تحت مظلة الضمان الصحي عند وجود أي نقص سريري أو إداري**:
-  * بناء دالتي `getMissingInsuranceFields()` و `isInsuranceDataComplete()` في نموذج [app/Models/Patient.php](file:///C:/get/hospital-system/app/Models/Patient.php) للتحقق من الحقول الـ 5 الإلزامية: (رقم بطاقة/دفتر الضمان، البطاقة الموحدة/الرقم الوطني، رقم الهاتف، الجنس، تاريخ الميلاد).
-  * حماية صارمة في الواجهة الخلفية [app/Http/Controllers/InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php) لمنع تمرير أي حجز ضمان مع نواقص وإرجاع تنبيه إداري يوضح الحقول المفقودة بدقة.
-  * ترقية واجهة اختيار التغطية في [resources/views/inquiry/create.blade.php](file:///C:/get/hospital-system/resources/views/inquiry/create.blade.php) إلى **بطاقتين تفاعليتين لمسيتين (Selectable Visual Cards)** بدلاً من نقاط الراديو أو مربعات الاختيار التقليدية:
-    - **بطاقة الضمان 🛡️**: تظهر بالأخضر عند التفعيل، وتقفل تلقائياً باللون الأحمر مع شارة `🔒 مقفل (نواقص بملف الضمان)` عند وجود نقص.
-    - **بطاقة الحجز النقدي (كاش) 💵**: تفعل تلقائياً كخيار بديل مباشر للمتابعة الفورية للمريض.
-    - إضافة دالة الجافاسكربت `selectInsuranceMode()` للتبديل اللحظي عند النقر على أي جزء من البطاقة.
-  * تصميم صندوق تنبيه تحذيري بارز ومكتوب بعبارات واضحة جداً يوضح للموظف الحقول المفقودة كشارات حمراء وخطي العمل المتاحين أمامه فوراً.
-  * منظومة التنبيه الرقمي العاجل لشعبة الضمان والتسجيل:
-    - إضافة زر تفاعلي `[ ⚡ إرسال تنبيه عاجل لمكتب الضمان والتسجيل ]` داخل صندوق التحذير في [resources/views/inquiry/create.blade.php](file:///C:/get/hospital-system/resources/views/inquiry/create.blade.php).
-    - مسار ومتحكم `InquiryController@notifyInsuranceIncomplete` ينشئ إشعاراً فورياً [app/Notifications/InsuranceIncompleteAlertNotification.php](file:///C:/get/hospital-system/app/Notifications/InsuranceIncompleteAlertNotification.php) في قاعدة البيانات وبث Pusher/Echo لموظفي الضمان والتسجيل والمدراء (`thaman`, `receptionist`, `admin`).
-    - الإشعار يحتوي على اسم المريض، النواقص الدقيقة، واسم موظف الاستعلامات المرسل، وبيانات المريض لفتح الدراور مباشرة.
-    - بانر تنبيه تفاعلي فوري أعلى جدول المرضى (`#insuranceAlertsContainer`) يظهر لموظف الضمان فوراً بدون الحاجة لرفرش الشاشة نهائياً:
-      * دعم مزدوج: بث لحظي عبر Pusher/Echo + استطلاع فوري خفيف عبر AJAX Polling كل 4 ثوانٍ (`patients.insurance-alerts-poll`).
-      * نغمة صوتية تنبيهية فورية (Web Audio API) وحركة انسيابية عند وصول المريض.
-      * زر `[ ⚡ إكمال النواقص فوراً ]` يفتح دراور إكمال المريض مباشرة (ويدرج المريض بأعلى الجدول حتى لو كان بصفحة أخرى أو مسجلاً حديثاً).
-      * تعليم الإشعار كمقروء تلقائياً وإخفاء الكرت عند الحفظ.
-  * توجيه يوزر الضمان (`thaman`) مباشرة إلى شاشة المرضى وإخفاء لوحة التحكم الرئيسية:
-    - تعديل `LoginController@redirectTo`: توجيه مستخدمي دور `thaman` تلقائياً بعد تسجيل الدخول مباشرة إلى `/patients`.
-    - تعديل `DashboardController@index`: إعادة توجيه أي محاولة دخول لـ `/dashboard` من قبل يوزر الضمان فوراً إلى `patients.index`.
-    - تعديل المسار الجذري `/`: تحويل يوزر الضمان المسجل دخوله إلى `patients.index`.
-    - تعديل الشريط الجانبي `layouts/app.blade.php`: إخفاء زر "الرئيسية" تماماً ليوزر الضمان واستبداله برابط "سجل وملفات المرضى" المباشر.
-  * حماية JavaScript في حدث تقديم الاستمارة `submit` وعند تأكيد الحجز الإضافي لمنع أي محاولة تجاوز.
-  * بناء وتشغيل الاختبارات الآلية: [tests/Feature/InquiryInsuranceDataIncompleteTest.php](file:///C:/get/hospital-system/tests/Feature/InquiryInsuranceDataIncompleteTest.php) (`5 passed, 26 assertions`) واختبار توجيه يوزر الضمان والتنبيهات الفورية [tests/Feature/ThamanLoginRedirectTest.php](file:///C:/get/hospital-system/tests/Feature/ThamanLoginRedirectTest.php) (`7 passed, 19 assertions`).
-
-## Session log (2026-10-18 — المرحلة 78: استيراد وتحديث كتالوج المختبر الشامل لـ 865 فحصاً وفك قيد تفرد الكود الطبي ومطابقة هوستنجر السحابية Lab Catalog Full 865 Import, Code Unique Constraint Removal & Hostinger Sync)
-
-### Done
-- **النسخ الاحتياطي الحصين**:
-  * أخذ نسخة احتياطية كاملة لجدول `lab_tests` و `lab_test_sub_tests` للوكل في `storage/app/backups/lab_tests_backup_2026_10_18_190644.sql`.
-  * أخذ نسخة احتياطية كاملة لهوستنجر السحابية في `storage/app/backups/hostinger_lab_tests_backup_2026_10_18_191208.sql`.
-- **إلغاء قيد تفرد الكود الطبي واستيعاب الفحوصات المكررة سريرياً**:
-  * بناء وتشغيل مايجريشن [database/migrations/2026_10_18_192000_drop_unique_code_from_lab_tests_table.php](file:///C:/get/hospital-system/database/migrations/2026_10_18_192000_drop_unique_code_from_lab_tests_table.php) لإزالة `lab_tests_code_unique` وتحويله إلى `lab_tests_code_index`.
-  * تطبيق نفس الفهرس على قاعدة بيانات هوستنجر بنجاح.
-- **تطوير محرك الاستيراد والتزامن الشامل ([app/Imports/LabTestsImport.php](file:///C:/get/hospital-system/app/Imports/LabTestsImport.php))**:
-  * دعم إدراج الفحوصات الجديدة تلقائياً (`$createdCount`) عند عدم وجودها في الجدول.
-  * دعم كشف وتعيين القسم الرئيسي `main_category` والتصنيف الفرعي `subcategory`.
-  * تحصين السجلات والطلبات السابقة من الحذف.
-- **مزامنة واستيراد الـ 865 فحصاً كاملاً**:
-  * استيراد الـ 865 فحصاً وتحديث الأسعار ومسميات الفحوصات وإدراج الـ 234 فحصاً الجديد على قاعدة البيانات المحلية (`hospital_pho`).
-  * استيراد وتحديث نفس الـ 865 فحصاً على قاعدة بيانات هوستنجر السحابية (`u175868711_her2020`).
-  * تطابق تام لعدد الفحوصات: **865 فحصاً محلياً = 865 فحصاً سحابياً**.
-- **الاختبارات الآلية**:
-  * اجتياز كامل لحزمة اختبارات أسعار وتعديل التحاليل (`7 passed, 28 assertions`).
-
-## Session log (2026-10-18 — المرحلة 77: تصحيح وتوحيد مسار زر العودة للكاشير في صفحة الوصل واستمارة دفع الطلبات الطبية Cashier Receipt & Request Payment Return Link Correction)
-
-### Done
-- **تصحيح مسار زر العودة للكاشير في صفحة إيصال القبض ([resources/views/cashier/receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php))**:
-  * إزالة الشرط القديم المقيد لدور `consultation_receptionist` الذي كان يعيد الموظف إلى واجهة توفر الأطباء (`consultant-availability.index`).
-  * ربط زر "العودة للكاشير" مباشرة بمسار الكاشير `route('cashier.index')` لضمان استمرارية عمل الموظف داخل واجهة الكاشير ومتابعة تسديد المرضى.
-- **تحديث أزرار العودة في استمارة دفع الطلبات الطبية ([resources/views/cashier/request-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/request-payment-form.blade.php))**:
-  * توحيد روابط أزرار الرجوع العلوية والسفلية لتوجه إلى `route('cashier.index')` بدلاً من الخروج إلى شاشة توفر الأطباء.
-- **الاختبارات الآلية الحصينة ([tests/Feature/CashierReceiptReturnLinkTest.php](file:///C:/get/hospital-system/tests/Feature/CashierReceiptReturnLinkTest.php))**:
-  * بناء اختبار ميزة للتأكد من ظهور رابط `cashier.index` لموظف استعلامات الاستشارية وعدم ظهور رابط `consultant-availability.index`: `1 passed (4 assertions)`.
-  * نجاح كامل لحزمة اختبارات الصلاحيات والكاشير: `11 passed (179 assertions)`.
-
-## Session log (2026-10-18 — المرحلة 76: إصلاح نمط إدخال نتائج التحاليل المخبرية، وحل مشكلة تحول الفحوصات المركبة إلى قيم مفردة، وتكامل واجهة تعديل التحليل مع نمط الإدخال Lab Subtests Result Entry Fix & Edit Form Integration)
-
-### Done
-- **حل مشكلة تحول الفحوصات المركبة (Sub-Tests) إلى قيم مفردة في المختبر ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php) و [resources/views/staff/requests/show-lab.blade.php](file:///C:/get/hospital-system/resources/views/staff/requests/show-lab.blade.php))**:
-  * ترقية استعلام وخريطة `$labTestMap` للبحث عن الفحوصات بالاسم الإنجليزي الكامل، وبالكود المختصر، وبالاختصارات الشائعة (مثل `CBC` ➔ `CBC_3DIFF`).
-  * القضاء التام على مشكلة سقوط الفحص إلى خانة إدخال مفردة (`name="test_results[CODE][value]"`) إذا طُلب بالكود أو المختصر.
-  * حماية دوال Blade المساعدة (`getTestIcon`, `getTestUnit`, `normalizeTestIds`, `normalizeTestsField`, `buildSelectedLabTests`) بـ `if (!function_exists(...))` لمنع أخطاء إعادة التصريح (Fatal Error: Cannot redeclare) عند استدعاء العرض أكثر من مرة.
-- **إصلاح مسارات AJAX في شاشة الإعدادات العامة ([resources/views/lab-tests/entry_settings.blade.php](file:///C:/get/hospital-system/resources/views/lab-tests/entry_settings.blade.php))**:
-  * تحويل مسارات التحديث الفردي والجماعي إلى روابط نسبية `route('lab-tests.entry-settings.update', [], false)` لتفادي تضارب المنفذ (Port 8000 vs 80) وسياسات CORS، وضمان حفظ التغيير لحظياً على أي بيئة عمل.
-- **تكامل واجهة تعديل الفحص المختبري مع نمط الإدخال ([resources/views/lab-tests/edit.blade.php](file:///C:/get/hospital-system/resources/views/lab-tests/edit.blade.php) و [app/Http/Controllers/LabTestController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabTestController.php))**:
-  * إضافة قسم تفاعلي كامل لاختيار نمط الإدخال (قيمة مباشرة، قيم فرعية، مرفق جهاز، كلاهما مرن) مباشرة من شاشة تعديل التحليل `/lab-tests/{id}/edit`.
-  * إظهار عداد القيم الفرعية المسجلة حالياً مع زر وصول سريع لإدارة المعايير الفرعية `[ إدارة القيم الفرعية ]`.
-  * تحديث `LabTestController@update` و `@store` لاستقبال وحفظ حقل `result_entry_type`.
-- **مزامنة نمط التحاليل الـ 6 في قاعدتي البيانات**:
-  * تحويل نمط التحاليل الـ 6 (ABG, CBC_3DIFF, CBC_5DIFF, GSE, GUE, SEMEN) في الداتابيز المحلية (`mysql`) وهوستنجر (`remote_hostinger`) إلى `sub_tests`.
-- **الاختبارات الآلية**:
-  * بناء وتشغيل [tests/Feature/LabSubtestsResolutionAndEditTest.php](file:///C:/get/hospital-system/tests/Feature/LabSubtestsResolutionAndEditTest.php): `2 passed (6 assertions)`.
-  * اجتياز كامل حزمة اختبارات المختبر: `16 passed (60 assertions)`.
-
-## Session log (2026-10-18 — المرحلة 75: إعادة هندسة وتصميم استمارة تقرير الطوارئ الموحد ليكون في ورقة واحدة على وجهين مطابقة للتصميم القياسي Standard Duplex Two-Page Emergency Medical Report Form)
-
-### Done
-- **إعادة هندسة وتصميم التقرير الطبي للطوارئ ([resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php))**:
-  * تحويل التقرير إلى **استمارة رسمية موحدة على ورقة واحدة بوجهين (Duplex Front & Back)** مقاس A4 مطابق تماماً لنموذج مستشفى الكفاءات الأهلي.
-  * **الوجه الأول (Page 1 of 2)**:
-    - ترويسة المستشفى ثنائية اللغة وشعار المستشفى وشريط العنوان الكحلي الداكن مع كبسولة رقم التقرير وكبسولة شارة النسخة.
-    - جدول البيانات الشخصية والدخول (10 خانات موزعة على صفين: طريقة الوصول، رقم المراجعة، رقم ملف المريض، الجنس/العمر، التاريخ والوقت، الطبيب المناوب، الشكوى، التصنيف الفرزي Triage، الجهة المحولة، العنوان ورقم الهاتف).
-    - شريط العلامات الحيوية عند الاستقبال بـ 6 خلايا: (مستوى الوعي GCS، تشبع الأكسجين، الحرارة، التنفس، النبض، ضغط الدم).
-    - صندوق الشكوى الرئيسية، وصندوق تاريخ المرض الحالي (HPI).
-    - صندوق الفحوصات المختبرية والشعاعية، وصندوق العلاج ومحاليل الطوارئ.
-    - جدول التشخيص السريري والخدمات العلاجية وتوقيتها واسم الطبيب.
-    - ترقيم وتذييل الصفحة: `Page 1 of 2`.
-  * **الوجه الثاني (Page 2 of 2)**:
-    - تكرار الترويسة وشريط العنوان للرسمية والتوثيق القانوني عند تصوير أو فصل الوجه الخلفي.
-    - صندوق الملاحظات الطبية - العدلية (Medico-Legal Notes) ⚖️، وصندوق الملاحظات الإضافية 📄.
-    - كتلة التوثيق الثلاثية الأفقية: (صندوق توقيع الطبيب المفرغ بخلفية شفافة 100% مع التاريخ والاسم + الختم الدائري الرسمي لقسم الطوارئ + الرمز الإلكتروني QR Code المربوط بصفحة التحقق الرقمي العام).
-    - صندوق القرار الطبي النهائي عند الخروج وتوصيات المتابعة (التوصيات والمتابعة، الوجهة النهائية، الحالة عند الخروج ببادج كهرماني ملون).
-    - ترقيم وتذييل الصفحة: `Page 2 of 2`.
-  * ضبط خصائص الطباعة `@page { size: A4 portrait; margin: 0; }` ومعايرة ارتفاع الصفحة `296mm` مع `page-break-after: always` لسحب الطابعة للورقة تلقائياً على الوجهين بدون أي انزلاق لصفحة ثالثة.
-- **الاختبارات الآلية الحصينة**:
-  * [tests/Feature/EmergencyMedicalReportTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyMedicalReportTest.php): `3 passed (19 assertions)`.
-  * اجتياز كامل حزمة اختبارات الطوارئ: `31 passed (160 assertions)`.
-
-## Session log (2026-10-18 — المرحلة 74: منظومة استمارة تقرير الطوارئ الموحد - الخطوة الأولى: الحقول السريرية والعدلية وواجهات الإدخال Standard Emergency Medical Report Fields & Workstation Input Integration)
-
-### Done
-- **إضافة حقول استمارة تقرير الطوارئ الرسمي الموحد في قاعدة البيانات ([app/Models/Emergency.php](file:///C:/get/hospital-system/app/Models/Emergency.php) و [database/migrations/2026_10_18_090000_add_standard_report_fields_to_emergencies_table.php](file:///C:/get/hospital-system/database/migrations/2026_10_18_090000_add_standard_report_fields_to_emergencies_table.php))**:
-  * إضافة أعمدة: `arrival_mode` (طريقة الوصول: إسعاف المستشفى، وصول شخصي، سيارة خاصة، إسعاف خارجي)، `referred_from` (الجهة المحولة)، `gcs` (مستوى الوعي Glasgow Coma Scale مع القيمة الافتراضية `'15/15'`)، `hpi` (تاريخ المرض الحالي History of Present Illness)، `medico_legal_notes` (الملاحظات الطبية - العدلية ⚖️)، `discharge_destination` (الوجهة النهائية عند الخروج)، و `discharge_recommendations` (توصيات وخطة المتابعة).
-  * تحديث مصفوفة `$fillable` في نموذج `Emergency` لدعم الحقول الجديدة بالكامل.
-- **تحديث المتحكم ودورة البيانات ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php))**:
-  * في `store`: استقبال وتخزين طريقة الوصول `arrival_mode` والجهة المحولة `referred_from` ومستوى الوعي `gcs`.
-  * في `updateVitals`: استقبال وحفظ مستوى الوعي `gcs` وتحديثه لحظياً مع القراءات الحيوية.
-  * في `updateMedical`: استقبال وحفظ الشكوى الرئيسية `symptoms`، وتاريخ المرض الحالي `hpi`، والتشخيص الطبي `diagnosis`، والملاحظات الطبية العدلية `medico_legal_notes`، والملاحظات الإضافية `notes`.
-  * في `discharge`: اعتماد وتخزين الوجهة النهائية وتوصيات الخروج تلقائياً وفق نوع الخروج أو من الإدخال المباشر.
-- **تحديث واجهات الاستقبال ومحطة كشف وفحص الطوارئ**:
-  * [resources/views/emergency/create.blade.php](file:///C:/get/hospital-system/resources/views/emergency/create.blade.php): إضافة قائمة منسدلة أنيقة لطريقة الوصول مع أيقونات معبرة، وحقل الجهة المحولة.
-  * [resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php):
-    - إضافة حقل مستوى الوعي `GCS` في تبويب العلامات الحيوية مع زر ضبط `طبيعي (15/15)`.
-    - إضافة حقول الشكوى الرئيسية، تاريخ المرض الحالي (HPI)، التشخيص، الملاحظات الطبية العدلية ⚖️، والملاحظات الإضافية في تبويب التشخيص والخدمات.
-- **الاختبارات الآلية المكتملة**:
-  * بناء وتشغيل [tests/Feature/EmergencyStandardReportDataTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyStandardReportDataTest.php): `4 passed (15 assertions)`.
-  * اجتياز كامل حزمة اختبارات الطوارئ: `31 passed (160 assertions)`.
-
-## Session log (2026-10-17 — المرحلة 73: نظام إدارة نمط إدخال نتائج التحاليل المخبرية للمدير وحصر حالات الطوارئ المباشرة بالسعر النقدي 100% كاش Lab Test Result Entry Mode Management & Emergency Direct Cash Enforcement)
-
-### Done
-- **نظام إدارة نمط إدخال نتائج التحاليل المخبرية للمدير ([app/Http/Controllers/LabTestController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabTestController.php) و [app/Models/LabTest.php](file:///C:/get/hospital-system/app/Models/LabTest.php) و [resources/views/lab-tests/entry_settings.blade.php](file:///C:/get/hospital-system/resources/views/lab-tests/entry_settings.blade.php))**:
-  * إضافة عمود `result_entry_type` من نوع ENUM بقيم `['value', 'components', 'attachment', 'both']` في جدول `lab_tests` عبر مايجريشن `2026_10_17_174000_add_result_entry_type_to_lab_tests_table.php` مع القيمة الافتراضية `'value'`.
-  * إضافة توابع وثوابت نموذج التحليل المخبري: `ENTRY_VALUE`, `ENTRY_COMPONENTS`, `ENTRY_ATTACHMENT`, `ENTRY_BOTH` ودوال الفحص `allowsValue()`, `allowsComponents()`, `allowsAttachment()`.
-  * بناء شاشة إدارية حصرية للمدير `/lab-tests/entry-settings` بأربعة خيارات Checkbox تفاعلية لكل تحليل لحفظ التفضيلات لحظياً عبر AJAX بنقرة واحدة، ودعم التحديث الجماعي.
-  * تكييف واجهة محطة فحص المختبر `resources/views/lab/show.blade.php` ديناميكياً لإظهار حقول القيمة أو القيم الفرعية أو رفع المرفق أو الاثنين معاً بناءً على إعدادات المدير.
-  * بناء وتشغيل الاختبار الآلي: [tests/Feature/LabTestResultEntryTypeTest.php](file:///C:/get/hospital-system/tests/Feature/LabTestResultEntryTypeTest.php): `6 passed (28 assertions)`.
-- **حصر حالات وخدمات الطوارئ المباشرة بالسعر النقدي 100% وإلغاء توريث الضمان ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php) و [app/Models/Emergency.php](file:///C:/get/hospital-system/app/Models/Emergency.php) و [app/Http/Controllers/InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php) و [resources/views/cashier/emergency-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/emergency-payment-form.blade.php))**:
-  * إلغاء التوريث التلقائي والبديل الاحتياطي للضمان من حساب المريض العام (`patient->insurance_type === 'hi'`) في دوال احتساب فواتير الطوارئ ومستحقاتها (`upsertUnifiedEmergencyPayment`, `Emergency::getUnpaidAmount`, و `emergency-payment-form.blade.php`).
-  * حصر تغطية الضمان في الطوارئ فقط على الحالات المحجوزة صراحة عبر بوت الضمان أو المحالة بموافقة مسبقة.
-  * جعل الخيار الافتراضي في استقبال الطوارئ والاستعلامات هو الحجز النقدي (`apply_insurance = 0` / كاش عادي) حتى لو كان للمريض بطاقة ضمان مسجلة.
-  * تصحيح وتثبيت حالة الطوارئ #5 وسند الدفع #21 للمريض (منير سمير يوسف) لتصبح نقداً بنسبة 100% بمبلغ 115,000 د.ع بدون أي خصم للضمان (`insurance_share = 0`).
-  * اجتياز كامل للاختبارات الآلية: [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php): `6 passed (32 assertions)`.
-
-## Session log (2026-10-17 — المرحلة 72: إبراء الذمة المالية وقفل إجراءات الطوارئ وإلغاء الحالات مع استرجاع الكاشير والخزينة Emergency Financial Clearance Locks, Cancellation & Cashier Refund Integration)
-
-### Done
-- **إبراء الذمة المالية وقفل الإجراءات والتقرير الطبي ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php) و [resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php) و [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php))**:
-  * ربط حالة إبراء الذمة المالية `$unpaidAmount` بحساب المتبقي غير المسدد من خدمات وفحوصات الطوارئ.
-  * تعطيل زر التقرير الطبي الرسمي `[ 📄 التقرير الطبي للطوارئ ]` وإظهار أيقونة القفل مع تنبيه يوجه بضرورة تسديد الرسوم في الكاشير أولاً.
-  * تعطيل قائمة الإجراءات والتحويل والتخريج `[ إجراءات وتحويل وتخريج الحالة 🔒 ]` بالكامل (تحويل للعمليات، تحويل للرقود، تحويل للاستشارية، خروج متعافي، خروج على مسؤوليته) حتى يتم السداد بالكامل.
-  * وضع حماية برمجية Backend صارمة في دوال `medicalReport()`, `discharge()`, `transferToSurgery()`, `transferToAdmission()` تمنع أي تجاوز.
-- **إلغاء حالات الطوارئ النشطة مع الحصانة التشغيلية والسريرية ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php))**:
-  * بناء دالة `cancel(Request $request, Emergency $emergency)` ومسار `POST /emergency/{emergency}/cancel`.
-  * الحصانة التشغيلية: منع إلغاء الحالات المخرجة مسبقاً (`status = 'discharged'`).
-  * الحالات غير المسددة: تحويل الحالة إلى `cancelled` وحذف وصولات الدفع المعلقة غير المدفوعة وإلغاء مواعيد الاستشارات غير المكتملة.
-  * الحالات المسددة مسبقاً: تحويلها إلى `cancelled` ووسمها للاسترجاع وتوجيه الموظف والمريض إلى الكاشير لاستلام المبلغ.
-- **التكامل التلقائي مع الكاشير والخزينة المركزية ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php) و [resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
-  * إضافة مسار `POST /cashier/emergency-refund/{emergency}` باسم `cashier.emergency.refund.process`.
-  * إدراج حالات الطوارئ الملغاة في طابور `مستحقات الاسترجاع (Refund)` في الكاشير بشارة حمراء مميزة.
-  * احتساب صافي المبلغ المسترد بدقة وإنشاء قيد دفعة سالبة في `payments` ينعكس تلقائياً في الخزينة المركزية كحركة منصرفات (`outflow / refund`).
-  * حل مشكلة عدم عمل زر الصرف: التخلص من تضارب علامات التنصيص المزدوجة الناتجة عن `@json` داخل `onclick`، واستبدالها بنظام `data-*` attributes واستماع مفوض `$(document).on('click', '.btn-open-refund')` يعمل بحصانة تامة ضد التحديث الدوري.
-  * إضافة ترحيل قاعدة بيانات `2026_10_17_155500_add_refunded_to_emergencies_payment_status_enum.php` لإضافة `'refunded'` لحقل `payment_status` في جدول `emergencies`.
-  * طباعة سندات الاسترجاع الرسمية والحرارية.
-- **عزل صلاحيات وسجلات الطوارئ وإخفاء الحالات الملغاة ([app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php) و [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php))**:
-  * قصر صلاحية جدول الطوارئ على المدير وأطباء الطوارئ فقط مع حظر أي أدوار غير مصرح لها (`abort(403)`).
-  * حصر استعراض الحالات للأطباء على مرضاهم فقط (`doctor_id` أو `consultant_doctor_id`) مع احتساب الإحصائيات لمرضاهم ومنع الطبيب من فتح حالات الأطباء الآخرين.
-  * إخفاء الحالات الملغاة تماماً من تبويب "حالات اليوم" ومن تبويب "النشطة حالياً" وحصرها في "السجل الكامل" فقط كحالة ملغاة ومغلقة وغير قابلة للفتح نهائياً.
-- **الاختبارات الآلية (Automated Tests)**:
-  * بناء وتشغيل [tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyFinancialClearanceAndCancellationTest.php): `6 passed (32 assertions)`.
-
-## Session log (2026-10-17 — المرحلة 71: دورة استرجاع وصرف مبالغ الفحوصات الملغاة في الكاشير وإصدار السندات Cashier Refund Cycle for Cancelled Medical Requests & Treasury Outflows)
-
-### Done
-- **مسار واستعلامات استرجاع الفحوصات في الكاشير ([app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php) و [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
-  * إضافة مسار `POST /cashier/request-refund/{request}` باسم `cashier.request.refund.process` محمي بصلاحية `process medical requests payments`.
-  * إضافة استعلام `$pendingRefundRequests` في `CashierController::index()` لجلب كافة الطلبات الطبية الملغاة (`status = 'cancelled'`) التي لديها مدفوعات مسددة سابقة موجبة (`amount > 0`) ولم يتم استرجاعها بعد (`whereDoesntHave payments where amount < 0`).
-  * بناء دالة `processRequestRefund(HttpRequest $httpRequest, MedicalRequest $request)`:
-    - التحقق الصارم من حالة الطلب الملغي ووجود مدفوعات سابقة قابلة للاسترجاع.
-    - احتساب صافي المبلغ المستحق بدقة (`$netRefundable`).
-    - إنشاء سجل دفعة استرجاع سالبة (`Payment::create(['amount' => -$netRefundable, ...])`) برقم إيصال رسمي فريد (`REF-YYYYMMDD-XXXX`).
-    - التكامل التلقائي مع الخزينة عبر `PaymentObserver`: قيد حركة منصرفات (`voucher_type = 'outflow'`, `category = 'refund'`) فورياً في الخزينة المركزية، وتسجيل حركة تدقيق رسمية في `UserActivityLogger`.
-    - تحديث مصفوفة بيانات الطلب `$details` بحالة `refund_status => 'refunded'` وتسجيل المبلغ وتاريخ وموظف الصرف، ثم التوجيه لصفحة السند الرسمي مع زر الطباعة.
-- **واجهة الكاشير وطابور الاسترجاع والمودال ([resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php))**:
-  * إضافة شريط تنبيهي بارز في أعلى المعاملات عند وجود مبالغ مستحقة للاسترجاع (`$pendingRefundCount > 0`) ينبه موظف الكاشير بوجود مرضى ألغوا فحوصاتهم ويستحقون الصرف.
-  * إضافة تبويب مخصص في شريط التبويبات باسم `مستحقات الاسترجاع (Refund)` مع شارة عداد حمراء حية.
-  * عرض جدول تفصيلي للمسترجعات: رقم الطلب، القسم (مختبر / باقة / أشعة)، اسم المريض وهاتفه، رقم الوصل الأصلي المسدد، سبب وتاريخ الإلغاء واسم الموظف الملغي، وصافي المبلغ المستحق إرجاعه بالدينار العراقي.
-  * بناء نافذة منبثقة تفاعلية (Modal `#medicalRefundModal`) لتأكيد الصرف، واختيار طريقة الإرجاع (نقداً / بطاقة)، وإدخال أي ملاحظات إدارية.
-- **ترقية سندات القبض الحرارية والرسمية للاسترجاع ([resources/views/cashier/receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php) و [resources/views/cashier/receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
-  * دعم السند الرسمي: التحول التلقائي عند كون الدفعة سالبة إلى عنوان `سند استرجاع مالي رسمي (Refund Voucher)`، وشارة حالة `تم الاسترجاع والصرف للمريض`، وتلوين الإجمالي بالأحمر مع بيان تفاصيل الفحص الملغي والوصل الأصلي.
-  * دعم الوصل الحراري: إظهار شريط تحذيري بارز `⚠️ سند استرجاع مالي (REFUND)`، وتنسيق المبلغ المسترجع بدقة بدون إرباك الإشارات السالبة، مع توقيع المستلم وتوقيع أمين الصندوق.
-- **الاختبارات الآلية الحصينة ([tests/Feature/ExternalRequestCancellationTest.php](file:///C:/get/hospital-system/tests/Feature/ExternalRequestCancellationTest.php))**:
-  * إضافة اختبار `test_cashier_can_refund_cancelled_paid_medical_request` لاختبار دورة الاسترجاع المحاسبية بالكامل: `7 passed (44 assertions)`.
-
-## Session log (2026-10-17 — المرحلة 70: نظام إلغاء الطلبات الخارجية المباشرة للمختبر والأشعة مع الحصانة السريرية والمالية Direct External Medical Requests Cancellation with Clinical & Financial Guards)
-
-### Done
-- **تطوير محرك التحقق والتمييز المرجعي ([app/Models/Request.php](file:///C:/get/hospital-system/app/Models/Request.php))**:
-  * إضافة دالة والـ Accessor `isDirectExternal()` بموديل `Request` لتمييز الطلبات الخارجية المباشرة المحجوزة من الاستعلامات أو الصندوق عن طلبات العيادات الاستشارية.
-  * إضافة علاقة المدفوعات `payments()` للربط المباشر مع سجلات الكاشير.
-- **الحصانة السريرية والمالية في المتحكمات ([app/Http/Controllers/LabStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/LabStaffController.php) و [app/Http/Controllers/RadiologyStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
-  * إضافة دالة `cancel(HttpRequest $httpRequest, MedicalRequest $request)` في كلا المتحكمين.
-  * **الحصانة السريرية**: حظر إلغاء أي طلب صادر عن طبيب استشاري داخل العيادات من قبل موظفي المختبر أو الأشعة (`!$request->isDirectExternal()`)، مع توجيه صريح بأن الإلغاء يتم حصراً من شاشة الطبيب المعالج.
-  * **المرونة التشغيلية والتوافق المالي (Operational Refund Routing)**: تمكين موظفي المختبر والأشعة من إلغاء أي طلب خارجي مباشر تعذر إجراؤه حتى لو كان مسدداً مسبقاً في الكاشير (`paid`)، مع وسم الطلب بـ `cancelled_after_payment = true` و `refund_status = 'pending_refund'` وإشعار الموظف بتوجيه المريض إلى الكاشير لاسترداد المبلغ المسدد، وحفظ تفاصيل الإيصال والمبلغ في `$details`.
-  * **الحصانة التشغيلية**: منع إلغاء الطلبات المكتملة والمعتمدة مسبقاً (`$request->status === 'completed'`).
-  * **المعالجة الشاملة للإلغاء**: تحويل حالة الطلب إلى `cancelled`، توسيع `payment_status` ENUM ليشمل قيمة `cancelled`، تسجيل بيانات الإلغاء وسببه واسم الموظف والوقت في `$details`، وتحديث حالة زيارة الاستعلامات المباشرة إلى `cancelled` لإزالتها تلقائياً وفورياً من طابور الفحص والمناداة وقائمة الطلبات المعلقة في الكاشير، وتسجيل حركة تدقيق رسمية في `UserActivityLogger`.
-- **المسارات وحماية الصلاحيات ([routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
-  * تسجيل راوت `POST /lab/requests/{request}/cancel` باسم `lab.cancel` بميدلوير `can:view lab tests`.
-  * تسجيل راوت `POST /radiology-staff/requests/{request}/cancel` باسم `radiology-staff.cancel` بميدلوير `can:view radiology`.
-- **الواجهات والتفاعل الحي المودال**:
-  * [resources/views/lab/index.blade.php](file:///C:/get/hospital-system/resources/views/lab/index.blade.php): إظهار زر الإلغاء `[ 🚫 ]` ومودال تأكيد الإلغاء مع حقل سبب الإلغاء لكافة طلبات المختبر الخارجية المباشرة النشطة سواء كانت مدفوعة أو غير مدفوعة.
-  * [resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php): إضافة زر ومودال الإلغاء في شريط الإجراءات العلوي لشاشة الفحص.
-  * [resources/views/radiology-staff/index.blade.php](file:///C:/get/hospital-system/resources/views/radiology-staff/index.blade.php): إضافة زر الإلغاء في طابور الانتظار الأولي (سواء تم النداء أم لا، وسواء سدد المريض أم لا) وفي تبويب الأرشيف العام مع مودال التأكيد الشامل لكافة فئات التصوير (أشعة، سونار، رنين، مفراس، إيكو).
-  * [resources/views/radiology-staff/show.blade.php](file:///C:/get/hospital-system/resources/views/radiology-staff/show.blade.php): إضافة زر ومودال الإلغاء في شاشة كتابة التقرير وفحص الأشعة.
-- **الاختبارات الآلية الحصينة ([tests/Feature/ExternalRequestCancellationTest.php](file:///C:/get/hospital-system/tests/Feature/ExternalRequestCancellationTest.php))**:
-  * بناء 6 اختبارات شاملة تغطي: إلغاء طلبات المختبر والأشعة الخارجية غير المسددة، إلغاء الطلبات المسددة مع وسم استرجاع الكاشير، ومنع إلغاء طلبات الاستشارية: `6 passed (36 assertions)`.
-
-## Session log (2026-10-17 — المرحلة 69: حصر طلبات الاستعلامات المباشرة بالسعر النقدي 100% واعتماد تسعير وعرض باقات المختبر كبند موحد في الكاشير والسندات مع تحسين محطات العمل Direct Inquiry Cash Enforcement, Laboratory Packages Unified Pricing in Cashier & Receipts, and Workstation Search Enhancements)
-
-### Done
-- **حصر طلبات الاستعلامات المباشرة بالسعر النقدي 100% (Direct Inquiry Cash Enforcement)**:
-  * تطبيق السياسة الطبية والمالية: الطلبات الخارجية المباشرة من الاستعلامات (المختبر، الأشعة، السونار، الرنين، المفراس، الإيكو) غير مشمولة بالضمان الصحي وتحاسب نقداً بنسبة 100% كاش إذا لم تكن محالة ومقترنة بحجز طبيب استشاري داخل المستشفى.
-  * تحديث [InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php): تثبيت `insurance_type = 'none'` لكافة الطلبات الطبية المباشرة الصادرة من الاستعلامات.
-  * تحديث طابور الكاشير [resources/views/cashier/index.blade.php](file:///C:/get/hospital-system/resources/views/cashier/index.blade.php): تطبيق الفحص الحصين على تبويب "الكل" والتبويب المخصص لمنع حساب نسبة تحمل الضمان وإظهار السعر النقدي الكامل فوراً.
-  * تحديث نموذج الدفع [resources/views/cashier/request-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/request-payment-form.blade.php) و [app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php).
-- **اعتماد تسعير وعرض باقات المختبر كبند موحد (Laboratory Packages Unified Pricing & Display)**:
-  * حل مشكلة تجزئة الباقة ومضاعفة سعرها: عند اختيار باقة طبية (Package) في المختبر، تظهر الباقة في الكاشير وفي السندات كبند أساسي موحد `[ 📦 باقة: اسم الباقة (X تحاليل مشمولة) ]` بسعر الباقة المعتمد فقط.
-  * دعم التحاليل الإضافية الذاتي: في حال اختيار تحاليل خارج الباقة، تُفصل التحاليل الإضافية فقط وتُحسب بسعرها المنفرد مضافة لسعر الباقة.
-  * تحديث معالجة الدفع في `CashierController::processRequestPayment` وتحديث وصف الدفعة في سندات الخزينة.
-  * تحديث واجهات السندات الحرارية والرسمية [resources/views/cashier/receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php) و [resources/views/cashier/receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php).
-  * تحسين تفاعل الباقات في [resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php): تصفير أي تحديدات سابقة تلقائياً عند النقر على أي باقة لضمان دقة التحاليل المختارة.
-  * تصحيح حالة طلب المريض علي حسين الفت (طلب #6) بسعر باقة `celiac` المعتمد 50,000 د.ع، وطلب منير سمير يوسف (طلب #7) ليكون كاش 100%.
-- **تطوير محطة عمل الأشعة والمختبر**:
-  * بناء محرك البحث الحي الفوري (Autocomplete Dropdown) مع شارات الفحوصات المختارة وزر الإزالة وحساب الإجمالي المباشر.
-  * تحويل باقات المختبر إلى شريط أفقي مدمج لتوفير المساحة الرأسية وتسهيل العمل المخبري.
-
-## Session log (2026-10-16 — المرحلة 68: حل مشكلة عرض صورة التوقيع على هوستنجر بالتحويل التلقائي إلى Base64 Data URI وبث المسار المباشر وحصانة إنشاء الطبيب Doctor Signature Base64 Data URI, Stream Route & Safe Doctor Creation Guard)
-
-### Done
-- **تشخيص السبب الجذري على سيرفر هوستنجر**:
-  * نظام المستشفى يعمل داخل مسار فرعي على هوستنجر (`https://hinpa.icu/hearmz/`).
-  * عند استخدام دالة `asset($doctor->signature)` كان الرابط يطلب مسار الصورة الثابت من Apache، والذي يرجع خطأ `404 Not Found` نظراً لعدم توجيه طلبات الملفات الساكنة بالمسار الفرعي إلى مجلد `public/`، مما أدى لظهور أيقونة الصورة المكسورة مع النص البديل (`توقيع الطبيب`).
-- **المعالجة الجذرية والذكية عبر Base64 Data URI وبث الراوت المباشر**:
-  * **إضافة Accessor بموديل الطبيب ([app/Models/Doctor.php](file:///C:/get/hospital-system/app/Models/Doctor.php))**:
-    - `signature_data_uri`: قراءة ملف التوقيع مباشرة من القرص الصلب وتضمينه كـ `data:image/png;base64,...` مدمج ومباشر في كود HTML دون الحاجة لأي طلب شبكي خارجي (مثل شعار النظام المعتمد).
-    - `signature_url`: يرجع Data URI تلقائياً مع خيار العودة لمسار الراوت الديناميكي.
-  * **إضافة راوت وبث مباشر للتواقيع ([routes/web.php](file:///C:/get/hospital-system/routes/web.php) و [app/Http/Controllers/DoctorController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorController.php))**:
-    - مسار `GET /doctors/{doctor}/signature` ودالة `signature()` لخدمة التوقيع عبر PHP مباشرة بحماية وتجاوز أي قيود في إعدادات السيرفر.
-    - تحديث استجابة الـ AJAX في `uploadSignature()` لترجع الـ `signature_data_uri` فورياً للعرض اللحظي بعد الحفظ.
-  * **تحديث واجهات العرض والتقارير الطبية**:
-    - [resources/views/doctors/edit.blade.php](file:///C:/get/hospital-system/resources/views/doctors/edit.blade.php) و [resources/views/doctors/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/show.blade.php): اعتماد التوقيع المفرغ الفوري.
-    - [resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php) و [resources/views/emergency/verify-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/verify-report.blade.php): تضمين التوقيع كـ Base64 مباشر للطباعة الرسمية الثابتة.
-  * **تحصين إنشاء الطبيب وحماية الأعمدة**:
-    - عزل الأعمدة الملغاة (`qualification`, `license_number`) في `DoctorController::store` و `storeReferringDoctor` بفحص `Schema::hasColumn`.
-    - تطبيق `DB::transaction` لحماية إنشاء المستخدمين والأطباء من الحسابات اليتيمة.
-- **الاختبارات الآلية (Automated Tests)**:
-  * اجتياز كامل لـ [tests/Feature/DoctorSignatureTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorSignatureTest.php): `4 passed (21 assertions)`.
-  * اجتياز كامل لـ [tests/Feature/EmergencyMedicalReportTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyMedicalReportTest.php): `3 passed (19 assertions)`.
-
-## Session log (2026-10-16 — المرحلة 67: حذف وتطهير طلبات وحالات المختبر والأشعة والطوارئ وتصفير مبالغها في الخزينة على سيرفر هوستنجر مع حماية الكتالوجات والمرضى Hostinger Lab, Radiology & Emergency Operational & Financial Purge with Catalogs & Patients Preserved)
-
-### Done
-- **أخذ نسخة احتياطية فورية وشاملة ([storage/app/backups/hostinger_lab_rad_emerg_before_purge_2026_10_16_202735.sql](file:///C:/get/hospital-system/storage/app/backups/hostinger_lab_rad_emerg_before_purge_2026_10_16_202735.sql))**:
-  * حفظ ملف SQL متكامل بحجم 87 كيلوبايت يحتوي على أوامر `INSERT` لكافة سجلات الطلبات والدفعات وقيود الخزينة وحالات الطوارئ قبل مسحها.
-- **الحذف والتصفير المتزامن ضمن Transaction موحدة على هوستنجر**:
-  * **المختبر (`lab`)**: حذف 14 طلباً مخبرياً (`requests`)، حذف 20 دفعة مسددة في الكاشير بقيمة 571,250 د.ع (`payments`)، وحذف 22 قيد خزينة بقيمة 583,750 د.ع (`financial_transactions`).
-  * **الأشعة والسونار (`radiology`)**: حذف 31 طلب أشعة وسونار (`requests`)، حذف 19 سجلاً في جدول طابور الأشعة (`radiology_requests`)، وحذف نتيجتين مسجلتين (`radiology_results`).
-  * **الطوارئ (`emergency`)**: حذف 8 حالات طوارئ ومرضى طوارئ (`emergencies` و `emergency_patients`)، وحذف الخدمات المسجلة والعلامات الحيوية وطلبات المختبر والأشعة التابعة للطوارئ، وحذف 4 دفعات كاشير بقيمة 230,000 د.ع، وحذف قيدي خزينة للطوارئ بقيمة 115,000 د.ع.
-- **الحماية الكاملة للأصول والكتالوجات**:
-  * كتالوج تحاليل المختبر (150 فحصاً + 127 فحصاً فرعياً + 218 قيمة مرجعية) سليم تماماً.
-  * كتالوج الأشعة والسونار المعتمد الجديد (224 فحصاً باللغة الإنكليزية مع الأسعار) سليم تماماً.
-  * كتالوج خدمات الطوارئ المسعرة (110 خدمات) سليم تماماً.
-  * سجل المرضى العام (8,399 مريضاً) وحسابات الموظفين والأطباء سليمة ومحمية 100%.
-
-## Session log (2026-10-16 — المرحلة 66: حذف وتطهير كافة السجلات التشغيلية والمالية للدكتورة رولا محمد اسماعيل على سيرفر هوستنجر مع الحفاظ التام على حسابها وملفها الطبي Dr. Rola Mohammed Ismail Hostinger Operational & Financial Purge with Profile Preserved)
-
-### Done
-- **أخذ نسخة احتياطية فورية وشاملة ([storage/app/backups/hostinger_dr_rola_backup_before_delete_2026_10_16_201919.sql](file:///C:/get/hospital-system/storage/app/backups/hostinger_dr_rola_backup_before_delete_2026_10_16_201919.sql))**:
-  * حفظ ملف SQL متكامل يحتوي على أوامر `INSERT` دقيقة لكل صف تم تحديده قبل الحذف لضمان أمان البيانات وإمكانية الاسترجاع عند الطلب.
-- **الحذف التتابعي والآمن لكافة السجلات التشغيلية والمالية ضمن Transaction متماسكة**:
-  * **المواعيد والحجوزات (`appointments`)**: حذف 12 موعداً مرتبطاً بالطبيبة.
-  * **الزيارات الطبية (`visits`)**: حذف 7 زيارات طبية مسجلة للعيادة.
-  * **طلبات الفحوصات والتحاليل (`requests`)**: حذف 18 طلباً محولاً للمختبر والأشعة.
-  * **سجلات الفحوصات التابعة (`lab_results` و `radiology_requests`)**: حذف 10 سجلات تابعة لتلك الزيارات.
-  * **الوصفات الصيدلانية (`prescriptions` و `prescribed_medications`)**: حذف 6 سجلات أدوية ووصفات.
-  * **المستحقات والإيرادات المالية (`consultation_revenues` و `doctor_dues`)**: حذف 9 سجلات إيرادات كشفية و 6 سجلات مستحقات طبيب (`doctor_dues`).
-  * **المدفوعات وقيود الخزينة (`payments` و `financial_transactions`)**: حذف 9 دفعات مسجلة بكاشير الاستشارية و 9 قيود مالية مقترنة بالوصولات في سجل الخزينة.
-  * **تصفير رصيد الحساب المالي للطبيب (`doctor_financial_accounts`)**: تصفير الرصيد (`balance = 0.00`) وإجمالي الأرباح (`total_earned = 0.00`) مع إبقاء سجل الحساب لعدم كسر النظام.
-- **الحفاظ التام على حساب وملف الطبيب**:
-  * بقاء سجل الطبيب في جدول `doctors` (المعرّف: 242) وسجل المستخدم في جدول `users` (المعرّف: 510، الاسم: «رولا محمد اسماعيل»، البريد: `rola@hospital.com`) وإعدادات النسبة سليمة ومحمية 100%.
-
-## Session log (2026-10-16 — المرحلة 65: استبدال وتطهير جدول الأشعة بالكامل بملف الإكسل وحذف الخدمات القديمة مع حماية السجلات السابقة Radiology Catalog Complete Wipe & Replace with Excel Import)
-
-### Done
-- **أخذ نسخة احتياطية فورية وتلقائية لقاعدة البيانات ([storage/app/backups/radiology_types_before_excel_replace_2026_10_16_194814.sql](file:///C:/get/hospital-system/storage/app/backups/radiology_types_before_excel_replace_2026_10_16_194814.sql))**:
-  * حفظ نسخة SQL كاملة وتفصيلية لجدول `radiology_types` قبل التعديل لضمان الأمان والرجوع.
-- **تطوير محرك الاستيراد والتنظيف الذاتي ([app/Imports/RadiologyTypesImport.php](file:///C:/get/hospital-system/app/Imports/RadiologyTypesImport.php))**:
-  * دعم خيار `$replaceExisting`: يقوم تلقائياً بحذف أي خدمة غير موجودة في ملف الإكسل وغير مستخدمة في أي طلبات سابقة للمرضى (`deletedCount`).
-  * تحصين السجلات الطبية السابقة: في حال كانت الخدمة مرتبطة بطلب فحص سابق، يتم تعطيلها (`is_active = false`) لحماية تكامل البيانات.
-  * عزل وتفادي تعارض الأكواد الفريدة (Unique Code Swapping Guard): إضافة معالجة ذكية توافقية تمنع خطأ `1062 Duplicate entry` عند تبادل الأكواد بين الصفوف عبر بادئة مؤقتة تعمل بدقة على محركات `MySQL` و `SQLite`.
-  * المعايرة الدقيقة للتصنيفات (`normalizeCategory`): ربط الأقسام بمسمياتها القياسية في النظام (`أشعة`، `سونار`، `مفراس`، `الرنين`، `إيكو`).
-- **تحديث واجهة ونافذة استيراد الإكسل ومتحكم الأشعة ([resources/views/radiology/types/index.blade.php](file:///C:/get/hospital-system/resources/views/radiology/types/index.blade.php) و [app/Http/Controllers/RadiologyTypeController.php](file:///C:/get/hospital-system/app/Http/Controllers/RadiologyTypeController.php))**:
-  * إضافة مفتاح تبديل بارز `[ ✓ ] استبدال محتويات الجدول بالكامل بمحتويات ملف الإكسل (حذف الخدمات غير الموجودة في الإكسل)` مفعل افتراضياً.
-  * إظهار تفاصيل عدد الخدمات المحدثة والجديدة والمحذوفة في رسالة النجاح للمستخدم.
-- **تنفيذ الاستبدال الفعلي لملف `الاخير والمعتمد اشعة.xlsx`**:
-  * إزالة 80 خدمة قديمة بأسماء عربية كانت تزحم الصفحات الأولى.
-  * تحديث وتثبيت 224 فحصاً باللغة الإنكليزية مطابقة تماماً للملف المعتمد بأسعار الكاش والضمان الصحي.
-- **الاختبارات الآلية (Automated Tests)**:
-  * تحديث [tests/Feature/LabAndRadiologyImportTest.php](file:///C:/get/hospital-system/tests/Feature/LabAndRadiologyImportTest.php) وإضافة اختبار `test_radiology_types_import_with_replace_all_deletes_stale_records`: اجتياز كامل لـ `6 passed (26 assertions)`.
-  * اجتياز كامل اختبارات قسم الأشعة: `20 passed (89 assertions)`.
-
-## Session log (2026-10-16 — المرحلة 64: إدراج حقول توجيهات وملاحظات الطبيب للمختبر والأشعة في محطة الطبيب وربطها الكامل بمحطات المختبر والأشعة Doctor Clinical Notes Input in Consultation Station & Full Lab/Radiology Workstation Integration)
-
-### Done
-- **إضافة حقول الملاحظات والتوجيهات السريرية في محطة عمل الطبيب ([resources/views/doctors/visits/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/show.blade.php))**:
-  * **تبويب طلبات المختبر (`#labCollapse`)**: إضافة حقل نصي أنيق `[ 📝 ملاحظات وتوجيهات الطبيب للمختبر (اختياري) ]` يسمح للطبيب بكتابة شروط العينة (صيام 12 ساعة، فحص عاجل، متابعة بعد علاج، إلخ).
-  * **تبويب طلبات الأشعة والتصوير (`#radiologyCollapse`)**: إضافة حقل نصي أنيق `[ 📝 ملاحظات وتوجيهات الطبيب لقسم الأشعة (اختياري) ]` يتيح كتابة الشك السريري (مثل: شك بكسر في الساق اليمنى، تركيز السونار على الكلية اليمنى، مريض لا يقوى على الوقوف).
-- **استقبال وتخزين الملاحظات في تفاصيل الطلب ([app/Http/Controllers/DoctorVisitController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
-  * إضافة التحقق من صحة الحقل `doctor_notes` (نص اختياري بحد أقصى 1000 حرف) في دالة `storeRequest`.
-  * حفظ الملاحظات تلقائياً في مصفوفة تفاصيل الطلب `$details['doctor_notes']` لترتبط فورياً بالـ Accessor `doctor_notes` بموديل `Request`.
-- **عرض التوجيهات السريرية لموظف وفني المختبر ([resources/views/lab/show.blade.php](file:///C:/get/hospital-system/resources/views/lab/show.blade.php) و [resources/views/lab/index.blade.php](file:///C:/get/hospital-system/resources/views/lab/index.blade.php))**:
-  * إضافة بطاقة كهرمانية تنبيهية بارزة `[ 📝 ملاحظات وتوجيهات الطبيب المحول ]` أسفل بطاقة المريض في شاشة فحص وتحرير نتائج المختبر.
-  * إظهار وسام تنبيهي أنيق `[ 📝 توجيهات الطبيب ]` في جدول طابور المختبر العام تحت اسم الطبيب المحول.
-- **إظهار الوسام التنبيهي في جدول طابور الأشعة العام ([resources/views/radiology-staff/index.blade.php](file:///C:/get/hospital-system/resources/views/radiology-staff/index.blade.php))**:
-  * إبراز وسام الملاحظات تحت اسم الطبيب المحول في جدول طابور الأشعة ليراه الفني فوراً قبل فتح الفحص.
-- **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبارات المنظومة كاملة [tests/Feature/DoctorRequestClinicalNotesTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorRequestClinicalNotesTest.php): `2 passed (18 assertions)`.
-
-## Session log (2026-10-16 — المرحلة 63: عرض ملاحظات وتوجيهات الطبيب المحول لموظف الأشعة في شاشة الفحص وطابور العمل Doctor Clinical Notes Display in Radiology Staff Workstation & Queue)
-
-### Done
-- **إضافة معرّف ملاحظات الطبيب بموديل الطلبات الطبيـة ([app/Models/Request.php](file:///C:/get/hospital-system/app/Models/Request.php))**:
-  * إضافة Accessor رسمي `doctor_notes` بموديل `Request` لاستخراج وقراءة ملاحظات وتوجيهات الطبيب المحول تلقائياً من حقل `details['doctor_notes']` أو `details['notes']` أو `details['description']`.
-- **ربط الملاحظات ببيانات الطابور لموظف الأشعة ([app/Http/Controllers/RadiologyStaffController.php](file:///C:/get/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
-  * تضمين `doctor_notes` في استجابة الـ JSON لطابور موظف الأشعة `queueStatus`.
-- **عرض صندوق الملاحظات والتوجيهات في شاشة فحص الأشعة ([resources/views/radiology-staff/show.blade.php](file:///C:/get/hospital-system/resources/views/radiology-staff/show.blade.php))**:
-  * إضافة بطاقة تنبيهية كهرمانية أنيقة `[ 📝 ملاحظات وتوجيهات الطبيب المحول ]` أعلى محرر الفحص والتقرير يبرز نص الملاحظات بدقة أمام موظف وفني الأشعة.
-
-## Session log (2026-10-16 — المرحلة 62: منظومة رفع وتفريغ التواقيع اليدوية للأطباء تلقائياً والمعاينة الحية للشفافية وربط التواقيع بتقارير الطوارئ Doctor Signature Upload, Auto White Background Removal, Live Canvas Preview & Multi-Doctor Emergency Integration)
-
-### Done
-- **محرك معالجة وتفريغ التواقيع التلقائي ([app/Services/SignatureProcessingService.php](file:///C:/get/hospital-system/app/Services/SignatureProcessingService.php))**:
-  * **الخلفية والدافع**: توفير حل ذاتي وتلقائي بالكامل لربط تواقيع أطباء المستشفى (كطوارئ، استشاريين، جراحين) دون الحاجة لبرامج تصميم أو فوتوشوب أو طلب ملفات PNG جاهزة، وتمكين الإدارة من رفع صور ملتقطة بكاميرا الهاتف على ورقة بيضاء بأي صيغة (JPG / PNG / WEBP).
-  * **خوارزمية عزل الخلفية والقص التلقائي**:
-    - فحص البكسلات ومقارنة اللمعان (Luminance) عبر مكتبة PHP GD.
-    - تحويل بكسلات الورقة البيضاء والظلال إلى شفافية ألفا كاملة (`100% Alpha Channel`).
-    - تطبيق تنعيم تدريجي للحواف (Anti-Aliasing) لمنع تكسر وتسنن خطوط الحبر.
-    - تعزيز خط الحبر (أزرق أو أسود) ليكون داكناً وحاداً في الطباعة والتقارير.
-    - قص الهوامش الزائدة تلقائياً (Auto-Crop Bounding Box) لتركيز التوقيع بدون فراغات وحفظه بدقة في `public/images/signatures/doctor_{id}.png`.
-- **تطوير واجهة الطبيب ([resources/views/doctors/edit.blade.php](file:///C:/get/hospital-system/resources/views/doctors/edit.blade.php))**:
-  * إضافة بطاقة متقدمة **«التوقيع اليدوي الرسمي للطبيب»** مع علامة اعتماد التوقيع وإظهار التوقيع الحالي فوق خلفية شطرنج الشفافية (Checkerboard).
-  * محرك تفريغ لحظي في المتصفح عبر JavaScript Canvas: بمجرد اختيار صورة من الجهاز أو الموبايل، يتم إظهار التوقيع مفرغاً وشفافاً فوراً في صندوق المعاينة.
-  * شريط تحكم مرن في الحساسية (Sensitivity / Threshold Range Slider) لضبط عزل بياض وظلال الورقة في الصور المظلمة مع تحديث المعاينة الحية لحظياً.
-  * زر حفظ فوري عبر AJAX `[ ⚡ حفظ التوقيع فوراً الآن ]` ومسار `POST /doctors/{doctor}/upload-signature` لتحديث التوقيع دون الحاجة لإعادة حفظ كامل بيانات الطبيب.
-  * خيار إزالة التوقيع الحالي `[ ❌ حذف التوقيع الحالي ]`.
-- **إبراز التوقيع في بطاقة تفاصيل الطبيب ([resources/views/doctors/show.blade.php](file:///C:/get/hospital-system/resources/views/doctors/show.blade.php))**:
-  * إضافة بطاقة **«التوقيع اليدوي المعتمد»** في الشريط الجانبي تعرض التوقيع الشفاف مع وسام اعتماده وظهوره في التقارير الطبية.
-- **تكامل تقرير الطوارئ مع أطباء متعددين وتواقيعهم المعتمدة ([resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php))**:
-  * تحديث قالب التقرير ليرتبط باسم وتوقيع الطبيب المعالج للحالة ديناميكياً بدلاً من التسميات الثابتة.
-- **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبارات المنظومة كاملة [tests/Feature/DoctorSignatureTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorSignatureTest.php): `3 passed (13 assertions)`.
-  * اجتياز كامل اختبارات تقرير الطوارئ [tests/Feature/EmergencyMedicalReportTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyMedicalReportTest.php): `3 passed (18 assertions)`.
-
-## Session log (2026-10-16 — المرحلة 61: استدعاء المريض الاستثنائي للطبيب وثبات تسلسل الطابور ودعم طلبات الضمان المختلطة بالكاشير Out-of-Turn Calling, Queue Order Stability, Hostinger Old Catalogs & Mixed Insurance Requests)
-
-### Done
-- **استعادة القوائم القديمة للمختبر والأشعة بتاريخ 2026-10-11 على سيرفر هوستنجر (`remote_hostinger`)**:
-  * أخذ نسخة احتياطية لسيرفر هوستنجر قبل التعديل: `storage/app/backups/hostinger_catalogs_backup_before_old_restore_2026_10_16_114446.sql` (415 KB).
-  * استرجاع 150 فحص مختبر (`lab_tests`) و 305 خدمة أشعة وسونار (`radiology_types`) بدقة ومطابقتها.
-  * الحفاظ الكامل على بيانات المرضى الـ 8,380 والمستخدمين والزيارات والفواتير دون أي مساس.
-- **استدعاء المريض الاستثنائي/الحرج من جدول زيارات الطبيب (`/doctor/visits`) وثبات تسلسل الطابور**:
-  * **الخلفية والدافع**: رغبة الطبيب في تقديم واستدعاء مريض معين من الطابور (مثل مريض تسلسله #5 أو #10 بحالة طارئة أو حرجة) دون أن يتغير أو يتلخبط ترتيب باقي المرضى المنتظرين في الطابور (مثل 1، 2، 3، 4 يبقون في طابورهم وبنفس أرقام دورهم).
-  * **التعديل البرمجي في المتحكم والمراقب**:
-    - إضافة دالة `callSpecific(Request $request, $appointmentId)` في [app/Http/Controllers/DoctorQueueController.php](file:///C:/get/hospital-system/app/Http/Controllers/DoctorQueueController.php) ومسار `POST /queue/appointment/{appointment}/call-specific`.
-    - تثبيت ترقيم الأدوار الثابت غير القابل للتلاشي أو اللخبطة: ربط توليد `queue_number` برمجياً في `AppointmentObserver::creating` و `InquiryController::storeRequest` بحساب أقصى رقم تسلسل لليوم الحالي `max(queue_number) + 1` فور الإنشاء.
-    - تعديل استعلام طابور الانتظار لترتيب المرضى دائماً حسب `queue_number asc` ورفع الحد إلى 50 مريضاً.
-  * **تطوير واجهة الطبيب [resources/views/doctors/visits/index.blade.php](file:///C:/get/hospital-system/resources/views/doctors/visits/index.blade.php)**:
-    - إظهار زر `[ 📢 استدعاء ]` للمريض الأول في الطابور، وزر `[ 📢 تقديم واستدعاء ]` متبوعاً بوسام `[ دور #X ]` لبقية المرضى المنتظرين في الجدول، مع ربطهما بوظيفة `doctorCallSpecific(appointmentId)` عبر الـ JavaScript والتحديث الفوري.
-- **دعم تسديد الطلبات المختلطة (المشمولة وغير المشمولة بالضمان) في الكاشير دون حظر (`request-payment-form`)**:
-  * **الخلفية والدافع**: عند طلب الطبيب فحوصات متعددة لمريض ضمان، ويكون بعضها غير مسعر للضمان أو غير مشمول (مثل أشعة الصدر `Chest Ap`)، كان النظام يمنع التسديد تماماً برسالة خطأ ويعطل زر الدفع.
-  * **المرونة والاحتساب المالي التلقائي**:
-    - تعديل منطق الحسابات في [app/Traits/HasInsurancePricing.php](file:///C:/get/hospital-system/app/Traits/HasInsurancePricing.php) بحيث يعتبر الفحص مشمولاً فقط إذا كان الضمان مفعلاً وسعره أكبر من الصفر؛ وفي حال كان السعر غير مدخل أو غير مشمول، يتم اعتباره خدمة كاش عادية (100% على المريض و0 على الضمان) دون المساس بسعر الخدمة الأصلي.
-    - تحديث واجهة كاشير الطلبات [resources/views/cashier/request-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/request-payment-form.blade.php) لتمييز كل بند بوسام ملون: `[ مشمول بالضمان ]` بالأخضر أو `[ غير مشمول (كاش 100%) ]` بالكهرماني.
-    - تفعيل زر التسديد دائماً وعرض تنبيه توضيحي للكاشير بحساب الفحوصات غير المشمولة كاش 100% وإشراك بقية الفحوصات في الضمان.
-- **الاختبارات الآلية (Automated Tests)**:
-  * اجتياز اختبارات استدعاء المريض الاستثنائي [tests/Feature/DoctorQueueCallSpecificTest.php](file:///C:/get/hospital-system/tests/Feature/DoctorQueueCallSpecificTest.php): `1 passed (16 assertions)`.
-  * اجتياز اختبارات تسعير الضمان [tests/Unit/InsurancePricingTest.php](file:///C:/get/hospital-system/tests/Unit/InsurancePricingTest.php): `4 passed (37 assertions)`.
-
-## Session log (2026-10-16 — المرحلة 60: فصل المبالغ المسترجعة للمرضى في كارت خزينة مستقل ومطابقة السيرفر السحابي Treasury Refunds Dedicated KPI Card, Hostinger Sync & Cascaded Deletion Guard)
-
-### Done
-- **فصل المبالغ المسترجعة للمرضى عن المصروفات التشغيلية في الخزينة المركزية (`/treasury`)**:
-  * **الخلفية والدافع**: عند استرجاع كشفية ملغاة لمريض (مثل وصل REC-0013 بقيمة 35,000 د.ع)، كانت تُدمج في كارت «إجمالي المنصرف» الذي يحمل عنواناً فرعياً «مستحقات أطباء ومشتريات ونثريات»، مما يسبب التباساً رقابياً لدى الإدارة.
-  * **توسيع نموذج الحركات المالية ومراقب الدفع**:
-    - إضافة تصنيف `refund` (استرجاع مالي للمرضى) في [app/Models/FinancialTransaction.php](file:///C:/get/hospital-system/app/Models/FinancialTransaction.php).
-    - تحديث [app/Observers/PaymentObserver.php](file:///C:/get/hospital-system/app/Observers/PaymentObserver.php) ليتم تعيين تصنيف `category = 'refund'` تلقائياً لسندات الصرف الناتجة عن مبالغ الدفع السالبة.
-    - إضافة معالج الحذف التتابعي `deleted(Payment $payment)` لحذف قيود الخزينة وأرباح الأطباء وإيراد الاستشارية فورياً عند حذف أي دفعة.
-  * **المتحكم [app/Http/Controllers/HospitalTreasuryController.php](file:///C:/get/hospital-system/app/Http/Controllers/HospitalTreasuryController.php)**:
-    - حساب `$periodRefunds` (مجموع المبالغ المسترجعة للمرضى) و `$periodRefundsCount` (عدد حركات الاسترجاع).
-    - حساب `$periodExpenses` (المصروفات ومستحقات الأطباء الفعلية فقط بدون المسترجعات).
-    - تمرير المتغيرات للواجهة واستخراج نسبة كل بند في شريط التوزيع.
-  * **هيكلية الـ 5 كروت في الواجهة [resources/views/treasury/index.blade.php](file:///C:/get/hospital-system/resources/views/treasury/index.blade.php)**:
-    1. **الرصيد الفعلي بالخزينة**: الرصيد اللحظي التراكمي في الصندوق.
-    2. **إجمالي الوارد (الفترة)**: كافة مقبوضات الأقسام والكاشير.
-    3. **المبالغ المسترجعة للمرضى (كارت جديد مخصص ومستقل)**: يوضح مسترجعات الكشفية والسونار باللون الكهرماني مع عداد حركات الاسترجاع.
-    4. **المصروفات ومستحقات الأطباء**: يوضح الصرفيات التشغيلية والمشتريات فقط باللون الأحمر.
-    5. **الصافي الفعلي للفترة**: الوارد مطروحاً منه (المسترجع + المصروف).
-    - إضافة شريط استرجاعات مبالغ المرضى في بطاقة تفكيك وتوزيع المصروفات.
-- **تحديث ومطابقة الخزينة السحابية على هوستنجر**:
-  * تحديث تصنيف حركة الاسترجاع رقم 134 إلى `category = 'refund'` على قاعدة بيانات هوستنجر ومطابقة الرصيد الصافي ليوم 15-10 عند **552,500 د.ع**.
-- **الاختبارات الآلية (Automated Tests)**:
-  * اجتياز كامل اختبارات الخزينة: `9 passed (41 assertions)`.
-
-## Session log (2026-10-16 — المرحلة 59: منظومة الحد من تكرار الحجز وتنبيهات الحجوزات النشطة للكشفية والسونار وتأكيد الموظف ومنع النقر المزدوج Duplicate Booking Prevention, Active Alerts, Staff Confirmation & Debounce)
-
-### Done
-- **التحقق اللحظي والفوري من الحجوزات النشطة غير المكتملة عبر AJAX (`/inquiry/check-active-booking`)**:
-  * **الخلفية والدافع**: معالجة مشكلة تكرار الحجز للمريض في نفس اليوم بالخطأ لكشفيات الأطباء الاستشاريين أو السونار الخارجي المباشر، مع مراعاة حق المريض في حجز موعد ثانٍ مقصود لنفس اليوم بعد تنبيه الموظف وتأكيده الصريح.
-  * **تعريف الحجز النشط**:
-    - أي حجز أو موعد لم يكتمل بعد (`status not in ('completed', 'cancelled')`) لتاريخ اليوم، بصرف النظر عما إذا كان قد سدد في الكاشير أو ما زال بانتظار الدفع (فطالما لم ينهِ الطبيب أو أخصائي السونار الفحص، فهو حجز نشط في الطابور).
-    - إذا كان الحجز السابق مكتملاً (`status = 'completed'`) أو ملغياً (`status = 'cancelled'`)، يُسمح بالحجز مباشرة دون أي اعتراض.
-  * **تطوير واجهة الاستعلامات التفاعلية [resources/views/inquiry/create.blade.php](file:///C:/get/hospital-system/resources/views/inquiry/create.blade.php)**:
-    - **صناديق تنبيه فورية (`duplicateDoctorWarningBox` و `duplicateUltrasoundWarningBox`)**: تظهر أسفل اختيار الطبيب أو نوع السونار فورياً مع تفاصيل رقم التسلسل وحالة الطابور والدفع.
-    - **نافذة تأكيد مودال حديثة (`#confirmDuplicateModal`)**: تعترض الإرسال في حال وجود حجز نشط غير مؤكد، وتطلب من موظف الاستعلامات تأكيد رغبته في إصدار حجز إضافي مكرر.
-    - **قيد التدقيق الرقابي**: إضافة وسام ونص صريح في الملاحظات `حجز إضافي مؤكد من الاستعلامات` عند التأكيد.
-    - **حماية النقر المزدوج (Submit Debounce)**: تعطيل زر الحفظ فوراً وإظهار مؤشر التحميل الدوار لمنع الإرسال المكرر السريع.
-  * **التحقق والتحصين في الخادم [app/Http/Controllers/InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php)**:
-    - فحص وجود حجز نشط في دالة `storeRequest` للكشفية والسونار؛ فإذا وُجد ولم يُرسل حقل التأكيد `confirm_duplicate_booking = 1`، يتم الرد بتنبيه التكرار `duplicate_booking_warning` مع الاحتفاظ بكافة بيانات الإدخال.
-- **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبارات [tests/Feature/InquiryDuplicateBookingTest.php](file:///C:/get/hospital-system/tests/Feature/InquiryDuplicateBookingTest.php): `5 passed (14 assertions)`.
-  * اجتياز كامل اختبارات الحركات المالية للاستشارية: `8 passed (42 assertions)`.
-
-## Session log (2026-10-16 — المرحلة 58: حجب وصولات القبض للمواعيد الملغاة والمسترجعة والتقرير المالي الرسمي بفورمة المستشفى Hide Cancelled Receipts & Official Hospital Form Financial Report)
-
-### Done
-- **حجب وصولات القبض للمواعيد الملغاة والمسترجعة من فلتر وصولات القبض (`filter_type=payment`)**:
-  * **الخلفية والدافع**: عند إلغاء حجز واسترجاع مبلغه (مثل حجز المريض فراس رزاق مع د. زياد طارق)، يبقى وصل القبض `REC-0012` ووصل الاسترجاع `REC-0013` محفوظين في قاعدة البيانات للتدقيق المالي وصندوق الكاشير، لكن وصل القبض كان يظهر عند تصفية «حركات قبض» كقيد قبض نشط اعتيادي.
-  * **تعديل الاستعلامات البرمجية (`ConsultantAvailabilityController` و `ConsultantFinancialMovementsExport`)**:
-    - تعديل استعلام فلتر «حركات قبض (النشطة فقط)» لاستثناء أي قيد مرتبط بموعد ملغى أو مسترجع (`payment_status in ('refunded', 'cancelled')` أو `status = 'cancelled'`).
-    - تحسين فلتر «المواعيد المسترجعة والملغاة» لإبرازها بدقة.
-  * **الواجهة وتصدير الإكسل**:
-    - إضافة محدد `is_refunded_or_cancelled` في نموذج [app/Models/ConsultationRevenue.php](file:///C:/get/hospital-system/app/Models/ConsultationRevenue.php).
-    - في واجهة الحركات المالية [resources/views/consultant-availability/financial-movements.blade.php](file:///C:/get/hospital-system/resources/views/consultant-availability/financial-movements.blade.php):
-      * إبراز القيود الملغاة والمسترجعة بوسام مميز رمادي `[ 🚫 قبض (ملغى ومسترجع) ]` مع شطب المبلغ وتوضيح `ملغى ومسترجع`.
-      * تعديل تسمية الخيار في القائمة المنسدلة إلى «حركات قبض (النشطة فقط)».
-    - تحديث تصدير الإكسل [app/Exports/ConsultantFinancialMovementsExport.php](file:///C:/get/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php) ليعكس الحالة بدقة `قبض (ملغى ومسترجع)`.
-- **التقرير المالي الرسمي بفورمة المستشفى (Official Hospital Form Financial Movements Report)**:
-  * بناء استمارة تقرير رسمي فاخرة [resources/views/consultant-availability/financial-movements-report.blade.php](file:///C:/get/hospital-system/resources/views/consultant-availability/financial-movements-report.blade.php) مطابقة لفورمة تقرير الطوارئ (A4 Portrait - عمودي):
-    - إطار مزدوج ملكي أخضر زمردي (`#0f766e` و `#99f6e4`) وعلامة مائية رسمية لشعار المستشفى (`images/1.jpg`).
-    - ترويسة رسمية ثنائية اللغة: مستشفى الكفاءات الأهلي (Al-Kafaat Private Hospital) - قسم الإدارة المالية والتدقيق الحسابي - العيادات الاستشارية والتخصصية وفحوصات السونار.
-    - شريط عنوان أنيق مع رقم مرجعي مشفر `REF-FIN-{{ now() }}` وشارة نسخة الإدارة والتدقيق.
-    - بطاقة محددات التقرير (الفترة الزمنية، فترة الدوام، نوع الخدمة، نوع الحركة، التغطية، والمحاسب المنظم).
-    - بطاقات إحصائية مالية ملونة للمجاميع: المستلم نقداً (الدرج)، المسترجع نقداً للمرضى، الصافي النقدي الفعلي، وإجمالي القيود.
-    - جدول الحركات المالية الرسمي بتنسيق عالي الدقة يوضح تفاصيل كل قيد، شطب وملاحظات القيود الملغاة، وحصص الأطباء والمستشفى للمخولين.
-    - تذييل رسمي ثلاثي الأعمدة:
-      * رمز استجابة سريعة QR Code مولد برمجياً عبر مكتبة `qrcode.min.js` المحلية للتحقق من بيانات التقرير ومطابقته.
-      * الختم الدائري الرسمي لقسم التدقيق المالي بمستشفى الكفاءات الأهلي.
-      * تواقيع المحاسب المنظم والمدير المالي / الإدارة للمصادقة والاعتماد.
-  * تسجيل مسار التقرير `consultant-availability.financial-movements.print` في [routes/web.php](file:///C:/get/hospital-system/routes/web.php) والدالة `printFinancialMovements` في [app/Http/Controllers/ConsultantAvailabilityController.php](file:///C:/get/hospital-system/app/Http/Controllers/ConsultantAvailabilityController.php).
-  * ربط زر **[ 🖨️ طباعة التقرير الرسمي ]** في واجهة الحركات المالية ليفتح التقرير في نافذة جديدة مع شريط علوي للطباعة الفورية.
-- **الاختبارات الآلية (Automated Tests)**:
-  * إضافة واجتياز اختبارات [tests/Feature/ConsultantFinancialMovementsTest.php](file:///C:/get/hospital-system/tests/Feature/ConsultantFinancialMovementsTest.php): `8 passed (42 assertions)`.
-
-## Session log (2026-10-15 — المرحلة 57: شمول السونار الخارجي المباشر ضمن الحركات المالية للاستشارية وفلتر نوع الخدمة وحصص الأطباء Direct External Ultrasound Integration into Consultant Financial Movements & Service Category Filter)
-
-### Done
-- **شمول السونار الخارجي المباشر المحجوز من استعلامات الاستشارية في الحركات المالية (`/consultant-availability/financial-movements`)**:
-  * **الخلفية والدافع**: حركات السونار الخارجي المباشر يتم حجزها واستقبالها مباشرة عبر استعلامات الاستشارية ويفحصها أطباء السونار الاستشاريون (د. رشا، د. إسراء، د. هبة)، ويتم تحصيلها في الكاشير، وكان من الضروري محاسبياً ومالياً أن تظهر في شاشة الحركات المالية للاستشارية.
-  * **المايجريشن والترحيل التراجعي (Backfill)**:
-    - إنشاء وتشغيل مايجريشن [database/migrations/2026_10_15_230000_backfill_direct_ultrasound_to_consultation_revenues.php](file:///C:/get/hospital-system/database/migrations/2026_10_15_230000_backfill_direct_ultrasound_to_consultation_revenues.php).
-    - ترحيل 16 دفعة سونار خارجي مباشر سابقة بقيمة 535,000 د.ع وتوليد قيودها في `consultation_revenues` بنوع حركة `payment_type = 'ultrasound'`.
-  * **التسجيل اللحظي المباشر عند دفع الكاشير (Real-time Recording in Cashier)**:
-    - تحديث [app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php) في دالة `processRequestPayment` لتسجيل/تحديث قيد في `ConsultationRevenue` تلقائياً بنوع `ultrasound` وبكافة تفاصيل الحصة وحسابات الطبيب عند تسديد أي طلب سونار مباشر مرتبط بالاستعلامات.
-  * **الفلاتر والواجهة وتصدير Excel**:
-    - إضافة فلتر **«نوع الخدمة»** (`service_category`):
-      * `الكل (كشفيات عيادات + سونار)`
-      * `🩺 كشفيات العيادات فقط`
-      * `📡 السونار الخارجي المباشر فقط`
-    - تمييز حركات السونار بوسام مميز في الواجهة `[ 📡 سونار خارجي ]` باللون السماوي مقابل `[ 🩺 كشفية عيادة ]` باللون الأزرق.
-    - تحديث [app/Exports/ConsultantFinancialMovementsExport.php](file:///C:/get/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php) لتضمين فلتر وعمود «نوع الخدمة».
-- **الاختبارات الآلية (Automated Tests)**:
-  * تحديث واجتياز اختبارات [tests/Feature/ConsultantFinancialMovementsTest.php](file:///C:/get/hospital-system/tests/Feature/ConsultantFinancialMovementsTest.php): `5 passed (23 assertions)`.
-
-## Session log (2026-10-15 — المرحلة 56: تصحيح الحركات المالية للاستشارية وفلتر الضمان والدوام الصباحي/المسائي وعرض النقد الفعلي وتصدير الإكسل Consultant Financial Movements, Actual Paid Copay, Insurance & Shift Filters)
-
-### Done
-- **تصحيح عمود المبلغ والبطاقات الإحصائية لواجهة الحركات المالية للاستشارية (`/consultant-availability/financial-movements`)**:
-  * معالجة مشكلة عرض كشفية الطبيب الكاملة لمرضى الضمان: كان يظهر 25,000 د.ع بدلاً من ما دفعه المريض فعلياً نقداً بالدرج (مثلاً 2,500 د.ع نسبة التحمل).
-  * إضافة دالة ومحددات `patient_paid_amount` و `is_insurance` و `insurance_share_amount` و `insurance_type_label` بنموذج [app/Models/ConsultationRevenue.php](file:///C:/get/hospital-system/app/Models/ConsultationRevenue.php).
-  * تحديث استعلامات البطاقات الإحصائية العليا (`المستلم نقداً بالصندوق (الدرج)`، `المسترجع نقداً`، `الصافي النقدي الفعلي`) لاحتساب النقد الفعلي المدفوع باستخدام `COALESCE(payments.amount, consultation_revenues.total_amount)`.
-  * إبراز المبلغ النقدي الفعلي بخط كبير وواضح مع وسام تفصيلي شفاف تحته يوضح تفاصيل الكشفية وحصة الضمان لمرضى الضمان الصحي وقوى الأمن.
-- **إضافة الفلاتر والبحث السريع وفترة الدوام (صباحي ومسائي) وتحديث تصدير Excel**:
-  * إضافة فلتر فئة المريض (`الكل` / `نقداً فقط (كاش)` / `مشمول بالضمان`).
-  * إضافة فلتر **فترة الدوام** (`shift`):
-    - **☀️ الدوام الصباحي (8 ص - 3 م)**: الحركات المسجلة قبل 15:00:00.
-    - **🌙 الدوام المسائي (3 م فما بعد)**: الحركات المسجلة من 15:00:00 فما بعد.
-  * إضافة وسام ملون وأنيق (Pill Badge) في عمود التاريخ والتوقيت يوضح فترة كل حركة مباشرة.
-  * إضافة حقل البحث السريع بالاسم، رقم الهاتف، أو رقم الوصل/الحركة.
-  * تحديث [app/Exports/ConsultantFinancialMovementsExport.php](file:///C:/get/hospital-system/app/Exports/ConsultantFinancialMovementsExport.php) لتضمين أعمدة (فترة الدوام، المدفوع نقداً، إجمالي الكشفية، تغطية الضمان، ونوع التأمين).
-  * حل وتفادي خطأ تعارض أسماء الحقول في الـ SQL (`Column 'paid_at' in where clause is ambiguous`) عند الربط مع جدول `payments` عبر تحديد بادئة الجدول `consultation_revenues.` صراحة.
-- **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبار الميزة [tests/Feature/ConsultantFinancialMovementsTest.php](file:///C:/get/hospital-system/tests/Feature/ConsultantFinancialMovementsTest.php): `4 passed (16 assertions)`.
-
-## Session log (2026-10-15 — المرحلة 55: استيراد 7,930 مريض ضمان صحي، التصنيف الذكي للجنس، صف التحرير السريع المدمج وعمود حالة السجل والمزامنة السحابية Insurance Patients Import, Gender AI Classifier, Inline Drawer Quick Edit & Hostinger Sync)
-
-### Done
-- **استيراد مرضى الضمان الصحي ومعالجة فئاتهم (Insurance Patients Import)**:
-  * تحليل ملف سجلات الخدمات `service_records.csv` (116,474 سجلاً و 8,108 مرضى فريدين).
-  * مطابقة ومقارنة الأسماء مع قاعدة البيانات: تحديد 178 مريضاً مسجلاً مسبقاً وتحديث فئات 4 مرضى من الفئة H إلى الفئة A، واستيراد 7,930 مريضاً جديداً بأمان مع ربط حسابات المستخدمين التلقائية.
-  * بناء أمر Artisan مخصص [app/Console/Commands/ImportInsurancePatientsCommand.php](file:///C:/get/hospital-system/app/Console/Commands/ImportInsurancePatientsCommand.php). ارتفع إجمالي المرضى في المنظومة إلى 8,372 مريضاً.
-- **التصنيف الذكي لجنس المرضى (Smart Gender Classifier)**:
-  * تطوير أمر ذكاء سريري ولغوي [app/Console/Commands/DetectPatientsGenderCommand.php](file:///C:/get/hospital-system/app/Console/Commands/DetectPatientsGenderCommand.php) يعتمد على:
-    1. الإجراءات والخدمات السريرية النسائية (الولادات القيصرية والطبيعية، السونار النسائي والرحمي) والرجالية (البروستات ودوالي الخصية) لتصنيف قطعي مؤكد (915 أنثى، 341 ذكراً).
-    2. البوادق واللواحق الصرفية العربية (`عبد`، `أم`، `أبو`، `ة`، `ات`، `اء`، `ون`).
-    3. المعاجم الاسمية العربية، مع ترك الأسماء المشتركة محايدة لتأكيد موظفي الاستقبال.
-  * تصنيف 6,626 مريضاً (بنسبة دقة ونجاح 83.5%).
-- **مزامنة قاعدة البيانات السحابية الحصرية على Hostinger (Selective Patients Hostinger Sync)**:
-  * تطوير أمر [app/Console/Commands/PushPatientsOnlyToHostingerCommand.php](file:///C:/get/hospital-system/app/Console/Commands/PushPatientsOnlyToHostingerCommand.php) لمزامنة جدولي `patients` و `users` فقط دون المساس ببقية الـ 104 جداول على هوستنجر.
-  * أخذ نسخة احتياطية سحابية كاملة قبل المزامنة، وتحديث المنظومة على هوستنجر إلى 8,372 مريضاً.
-- **إعادة هيكلة واجهة المرضى وعمود حالة السجل وصف التحرير السريع المدمج (Inline Accordion Drawer)**:
-  * إضافة عمود مخصص **«حالة السجل»** (العمود رقم 3) يوضح بنظرة واحدة:
-    - `[ مكتمل 100% ✓ ]` للأضابير المكتملة.
-    - `[ ⚠️ بحاجة إكمال ]` مع أوسمة تفصيلية للنواقص (`هاتف مفقود`، `رقم الضمان مفقود`، `البطاقة الوطنية`).
-  * إلغاء النافذة المنبثقة (Modal) نهائياً واستبدالها بـ **«صف تحرير سريع مدمج» (Inline Drawer Row)** يفتح مباشرة أسفل صف المريض عند الضغط على **[ ✏️ إكمال ]**.
-  * يتيح للموظف تعبئة الهاتف، الجنس، رقم الضمان، والبطاقة الموحدة، وحفظها مباشرة عبر AJAX (`PATCH /patients/{id}/quick-update`) دون أي تشويش أو تنقل أو إعادة تحميل للصفحة، مع وميض أخضر سلس وتحديث لحظي لبيانات الصف.
-- **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز [tests/Feature/PatientCompletionAndQuickUpdateTest.php](file:///C:/get/hospital-system/tests/Feature/PatientCompletionAndQuickUpdateTest.php): `3 passed (12 assertions)`.
-  * اجتياز كامل اختبارات المرضى: `19 passed (81 assertions)`.
-
-## Session log (2026-10-15 — المرحلة 54: التقرير الطبي لحالة الطوارئ وتوقيع الطبيب المعتمد والتحقق الرقمي عبر QR Code والطباعة بنسختين Emergency Medical Report, Dr. Mohanad Ismail Signature & Dual-Copy QR Verification)
-
-### Done
-- **نظام التقرير الطبي الرسمي لحالات الطوارئ (Emergency Medical Report)**:
-  * **الأهداف والمتطلبات**: بناء نموذج تقرير طبي رسمي عالي الدقة (A4 Portrait) لكل حالة طوارئ يطبع مباشرة، متضمناً اسم وتوقيع طبيب الطوارئ المعتمد (د. مهند إسماعيل)، رمز استجابة سريعة (QR Code) للتحقق الإلكتروني، وخيار الطباعة المزدوجة (نسخة المريض + نسخة الإدارة والأرشيف).
-  * **التطوير المعماري والبرمجي**:
-    1. **التوقيع اليدوي الحقيقي لطبيب الطوارئ (د. مهند إسماعيل)**:
-       - استخلاص ومعالجة الصورة المرفوعة لتوقيع د. مهند إسماعيل (`media_1792064825819.jpg`)، عزل الحبر الأزرق مع شفافية قناة ألفا (Alpha Channel) وتوليد الصورة النقية في [public/images/signatures/doctor_244.png](file:///C:/get/hospital-system/public/images/signatures/doctor_244.png).
-       - إضافة حقل `signature` إلى جدول `doctors` عبر مايجريشن [database/migrations/2026_10_15_160000_add_signature_to_doctors_table.php](file:///C:/get/hospital-system/database/migrations/2026_10_15_160000_add_signature_to_doctors_table.php) وتحديث نموذج [app/Models/Doctor.php](file:///C:/get/hospital-system/app/Models/Doctor.php).
-       - ربط التوقيع بحساب د. مهند إسماعيل (`Doctor #244` / `User #627`).
-    2. **قالب التقرير الطبي المتطور والطباعة المزدوجة**:
-       - إنشاء استمارة [resources/views/emergency/medical-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php):
-         * مقاس A4 قياسي مع علامة مائية لشعار المستشفى وإطار مزدوج.
-         * تفاصيل المريض (الاسم، العمر، الجنس، رقم الملف/الإضبارة، الهاتف، وقت الدخول والخروج، درجة الفرز الخطورة).
-         * العلامات الحيوية عند الاستقبال (الضغط، النبض، الحرارة، التنفس، SpO2، السكر).
-         * الشكوى الرئيسية والأعراض والتشخيص السريري المعتمد.
-         * جدول التدخلات الطبية والعلاجات والمحاليل الوريدية والخدمات التمريضية.
-         * جدول الفحوصات التشخيصية (مختبر الطوارئ والأشعة والتصوير).
-         * قرار وتوصيات الخروج ومسار الحالة ومدة الإقامة.
-         * خيارات الطباعة المزدوجة: شريط علوي للتبديل اللحظي بين (نسخة المريض فقط / نسخة الإدارة والأرشيف فقط / طباعة النسختين معاً بفاصل صفحات تلقائي).
-         * تذييل رسمي: ختم قسم الطوارئ، وتوقيع د. مهند إسماعيل المعتمد، ورمز QR المشفر برابط التحقق المباشر.
-    3. **بوابة التحقق الرقمي العام من التقرير (Public Verification Page)**:
-       - إنشاء واجهة متوافقة مع الهواتف الذكية [resources/views/emergency/verify-report.blade.php](file:///C:/get/hospital-system/resources/views/emergency/verify-report.blade.php) تتيح لأي شخص أو جهة مسح رمز الـ QR والتحقق من صحة ومطابقة التقرير السريري مع سجلات المستشفى دون الحاجة لتسجيل الدخول.
-       - تسجيل المسار العام `emergency.verify-report` في [routes/web.php](file:///C:/get/hospital-system/routes/web.php) واستثناؤه من ميدلوير المصادقة في `EmergencyController::__construct()`.
-    4. **أزرار سريعة للوصول للتقرير**:
-       - إضافة زر **[ 📄 التقرير الطبي للطوارئ ]** في ترويسة محطة الفحص [resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php).
-       - إضافة أيقونة طباعة سريعة للتقرير في جدول الطوارئ العام [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php).
-- **الاختبارات الآلية (Automated Tests)**:
-  * إنشاء واجتياز اختبار الميزة [tests/Feature/EmergencyMedicalReportTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyMedicalReportTest.php): `3 passed (18 assertions)`.
-  * اجتياز كامل اختبارات قسم الطوارئ: `19 passed (102 assertions)`.
-
-## Session log (2026-10-15 — المرحلة 53: تنظيم وتوحيد أزرار الطوارئ وإضافة مسار توثيق تحويل للاستشارية Emergency Actions Consolidation & Referral to Outpatient Discharge)
-
-### Done
-- **تنظيم وتوحيد أزرار إجراءات الطوارئ وإنهاء الازدحام والتكرار**:
-  * **الأهداف والمتطلبات**: معالجة مشكلة تشتت وتكرار الأزرار في محطة الفحص وجدول الطوارئ، وإضافة خيار توثيقي مخصص لإحالة المريض إلى العيادات الاستشارية.
-  * **التطوير البرمجي**:
-    1. في ترويسة محطة الفحص [resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php):
-       - دمج أزرار التحويل والتخريج المتناثرة في قائمة منسدلة موحدة أنيقة **«إجراءات وتحويل وتخريج الحالة ▾»** مقسمة لقسمين: (تحويل الحالة: للعمليات، رقود، تحويل للاستشارية) و (تسجيل الخروج: متعافي، على مسؤوليته).
-       - إبقاء زر **[ طلب استشارة 📅 ]** وزر **[ 🖨️ طباعة ]** وزر **[ ↩️ الرجوع للقائمة ]** بارزة في الترويسة.
-    2. إضافة نوع تخريج جديد للتوثيق الطبي والسريري **«تحويل للاستشارية»** (`transferred_to_consultation`):
-       - إنشاء مايجريشن [database/migrations/2026_10_15_150000_update_discharge_type_in_emergencies_table.php](file:///C:/get/hospital-system/database/migrations/2026_10_15_150000_update_discharge_type_in_emergencies_table.php) لتوسيع نوع حقل `discharge_type` إلى `varchar(50)`.
-       - تحديث وحدة التحكم [app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php) لدعم `transferred_to_consultation` في التحقق والترجمة وتوثيق وقت الخروج وملاحظات الطبيب.
-       - إضافة وسام مميز (Badge باللون الكحلي/الأزرق السماوي) في جدول الطوارئ [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php) ومحطة الفحص.
-    3. تبسيط جدول الطوارئ العام [resources/views/emergency/index.blade.php](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php):
-       - إزالة كافة القوائم المنسدلة والأزرار المتكررة نهائياً من الجدول العام.
-       - حصر الجدول في 6 أعمدة أساسية مركزة (#، المريض، الحالة، الطبيب المسؤول، وقت الدخول، والإجراء) مع زر موحد مباشر وسريع **[ 🩺 فتح ملف الكشف ]**، وحصر كافة الإجراءات والتحويلات السريرية داخل المحطة الموثقة.
-- **الاختبارات الآلية (Automated Tests)**:
-  * تحديث [tests/Feature/EmergencyWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/EmergencyWorkflowTest.php) بإضافة اختبار `test_emergency_discharge_transferred_to_consultation_workflow` بنجاح: `9 passed (39 assertions)`.
-  * اجتياز كامل اختبارات الطوارئ: `16 passed (84 assertions)`.
-
-## Session log (2026-10-15 — المرحلة 52: تطوير وتكامل استشارات الطوارئ، السجل الطبي التراكمي، والحماية المالية للخدمات المسددة Emergency Consultation Financial Split, Medical History & Paid Services Protection)
-
-### Done
-- **تكامل استشارات الطوارئ المالية واحتساب حصص الطبيب والمستشفى (80% / 20%)**:
-  * **الأهداف والمتطلبات**: معالجة وصولات كاشير الطوارئ عند طلب استشارة طبية (50,000 د.ع) بحيث يظهر اسم الطبيب الاستشاري المحول إليه في الوصل والتقرير المالي، مع توزيع الرسوم: 40,000 د.ع للطبيب و 10,000 د.ع للمستشفى.
-  * **التطوير البرمجي**:
-    1. تحديث [app/Http/Controllers/CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php):
-       - تطوير دالة `processEmergencyPayment` لاحتساب وتوزيع أتعاب الاستشارة الطارئة تلقائياً: إنشاء سجل `ConsultationRevenue` بحصة 40,000 د.ع للطبيب و10,000 د.ع للمستشفى (80% / 20%)، إنشاء استحقاق `DoctorDue`، وتحديث الرصيد التراكمي في `DoctorFinancialAccount`.
-       - إظهار اسم الطبيب الاستشاري واختصاصه وقسمه في نموذج دفع الطوارئ [emergency-payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/emergency-payment-form.blade.php).
-    2. تحديث قوالب وصولات الكاشير:
-       - [receipt-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt-print.blade.php): طباعة بند «استشارة طبية طوارئ: د. [اسم الاستشاري]» مع التاريخ والمبلغ، وتحديد اسم الطبيب في ترويسة الوصل.
-       - [receipt.blade.php](file:///C:/get/hospital-system/resources/views/cashier/receipt.blade.php): إظهار بنود الاستشارة مع اسم الطبيب في تفاصيل الفاتورة.
-- **الحماية المالية للخدمات المسددة في الطوارئ (Paid Services Integrity & Safeguarding)**:
-  * **الضوابط المحاسبية والرقابية**: منع حذف أي خدمة تم تسديدها في الكاشير وصدر بها وصل مالي رسمي (`payment_id IS NOT NULL`) مباشرة من واجهة التمريض/الطوارئ دون تسوية واسترجاع مالي في الكاشير.
-  * **التطوير البرمجي**:
-    1. في [app/Http/Controllers/EmergencyController.php](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php):
-       - في `updateMedical`: فحص الخدمات المسددة مسبقاً في `emergency_emergency_service` والحفاظ عليها إجبارياً أثناء مزامنة `sync` حتى لو أرسل المتصفح قائمة بدونها.
-       - في `show`: جلب خريطة الخدمات المسددة وأرقام وصولاتها لتمريرها للواجهة.
-    2. في [resources/views/emergency/show.blade.php](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php):
-       - قفل مربع الاختيار (Disabled) للخدمة المسددة مع وسم أخضر مميز ورقم الوصل `[مسددة - إيصال #...]`.
-       - إتاحة إضافة أو إزالة الخدمات غير المسددة بحرية تامة وتحديث فاتورة الكاشير التلقائية.
-       - إضافة تنبيه إرشادي بالضوابط المالية وإجراءات الاسترجاع المالي (Refund) عبر الكاشير.
-- **محطة عمل الطوارئ المقسمة والسجل الطبي التراكمي (Emergency Split-Screen Workstation & Sticky Medical History)**:
-  * **الهدف والتصميم المعماري**: توحيد وتطابق تجربة المستخدم لمحطة عمل الطوارئ مع محطة طبيب الاستشارية بتصميم الشاشة المزدوجة المتزامنة (Split-Screen 2-Column Layout):
-    1. **العمود الأيمن (`col-12 col-xl-7 col-lg-7`)**: التبويبات الـ 4 الإجرائية المباشرة:
-       - 1. العلامات الحيوية (`vitals-tab`)
-       - 2. التشخيص والخدمات التمريضية والطبية (`diagnosis-tab`) مع حماية الخدمات المسددة.
-       - 3. طلب المختبر والأشعة (`requests-tab`)
-       - 4. علاج وأدوية الطوارئ والوصفة الإلكترونية (`treatment-tab`)
-    2. **العمود الأيسر (`col-12 col-xl-5 col-lg-5`)**: اللوحة الدائمة الثابتة (`card sticky-top` على ارتفاع `top: 80px; z-index: 10`) لـ **«السجل الطبي ونتائج الفحوصات»** تظل ظاهرة أمام الطبيب والتمريض طوال وقت الفحص والعلاج، وتحتوي على:
-       - زر وصول مباشر: **«السجل الزمني التفاعلي الكامل للمريض ↗»** (`route('doctor.patient.history', $emergency->patient)`).
-       - 5 أشرطة تبويب سريعة ومتقدمة:
-         1. **طلبات الحالة**: المتابعة اللحظية المباشرة لفحوصات المختبر الحالية (ونتائجها المعتمدة وطباعتها)، طلبات الأشعة الحالية (وتقاريرها)، والعلاجات والمحاليل المعطاة حالياً.
-         2. **نتائج التحاليل السابقة**: نتائج المختبر السابقة مع القيم المرجعية ومؤشرات الطبيعي وغير الطبيعي وروابط تقارير أجهزة الفحص المرفقة.
-         3. **تقارير الأشعة والتصوير**: المشاهدات (Findings)، الانطباع التشخيصي (Impression)، التوصيات، والصور ومرفقات الـ PDF.
-         4. **الزيارات الاستشارية السابقة**: تواريخ الزيارات، الأطباء، الأقسام، الشكوى، التشخيصات، والوصفات الطبية.
-         5. **عمليات/طوارئ**: س
 ... [truncated for diff preview]

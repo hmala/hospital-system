@@ -220,33 +220,33 @@
                 <div>
                     <h3 class="mb-0 fw-bold text-dark">
                         @if($selectedCategory === 'ultrasound')
-                            محطة فحص السونار والدوبلر
-                            <span class="badge bg-info-subtle text-info border border-info-subtle fs-6 ms-2"><i class="fas fa-wave-square me-1"></i> السونار</span>
+                            {{ __("محطة فحص السونار والدوبلر") }}
+                            <span class="badge bg-info-subtle text-info border border-info-subtle fs-6 ms-2"><i class="fas fa-wave-square me-1"></i> {{ __("السونار") }}</span>
                         @elseif($selectedCategory === 'mri')
-                            قسم الرنين المغناطيسي والمفراس
-                            <span class="badge bg-purple-subtle text-purple border border-purple-subtle fs-6 ms-2" style="background-color: #f3e8ff; color: #7e22ce;"><i class="fas fa-magnet me-1"></i> الرنين والمفراس</span>
+                            {{ __("قسم الرنين المغناطيسي والمفراس") }}
+                            <span class="badge bg-purple-subtle text-purple border border-purple-subtle fs-6 ms-2" style="background-color: #f3e8ff; color: #7e22ce;"><i class="fas fa-magnet me-1"></i> {{ __("الرنين والمفراس") }}</span>
                         @elseif($selectedCategory === 'echo')
-                            قسم فحص إيكو القلب
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-6 ms-2"><i class="fas fa-heartbeat me-1"></i> إيكو القلب</span>
+                            {{ __("قسم فحص إيكو القلب") }}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fs-6 ms-2"><i class="fas fa-heartbeat me-1"></i> {{ __("إيكو القلب") }}</span>
                         @elseif($selectedCategory === 'radiology')
-                            قسم الأشعة والتصوير التشخيصي (X-Ray)
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-2"><i class="fas fa-film me-1"></i> الأشعة السينية</span>
+                            {{ __("قسم الأشعة والتصوير التشخيصي (X-Ray)") }}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-2"><i class="fas fa-film me-1"></i> {{ __("الأشعة السينية") }}</span>
                         @else
-                            قسم الأشعة والتصوير الطبي
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-2"><i class="fas fa-hospital me-1"></i> المركز العام</span>
+                            {{ __("قسم الأشعة والتصوير الطبي") }}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 ms-2"><i class="fas fa-hospital me-1"></i> {{ __("المركز العام") }}</span>
                         @endif
                     </h3>
                     <div class="d-flex align-items-center gap-2 mt-1">
                         @if($selectedCategory === 'ultrasound')
                             <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle py-1 px-2">
-                                <i class="fas fa-circle fa-xs me-1 text-success"></i> طابور مباشر متزامن مع الغرفة 11
+                                <i class="fas fa-circle fa-xs me-1 text-success"></i> {{ __("طابور مباشر متزامن مع الغرفة 11") }}
                             </span>
                         @else
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2">
-                                <i class="fas fa-layer-group fa-xs me-1"></i> نظام الفحوصات والتقارير الطبية
+                                <i class="fas fa-layer-group fa-xs me-1"></i> {{ __("نظام الفحوصات والتقارير الطبية") }}
                             </span>
                         @endif
-                        <small class="text-muted" id="last-update-time">آخر تحديث: {{ now()->format('H:i:s') }}</small>
+                        <small class="text-muted" id="last-update-time">{{ __("آخر تحديث:") }} {{ now()->format('H:i:s') }}</small>
                     </div>
                 </div>
             </div>
@@ -257,23 +257,23 @@
             <div class="d-flex flex-wrap gap-1 bg-white p-1 rounded-pill shadow-xs border">
                 <a href="{{ route('radiology-staff.index', ['category' => 'all', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'all' ? 'btn-primary shadow-xs' : 'btn-light text-dark' }}">
-                    🌐 الكل
+                    🌐 {{ __("الكل") }}
                 </a>
                 <a href="{{ route('radiology-staff.index', ['category' => 'ultrasound', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'ultrasound' ? 'btn-info text-white shadow-xs' : 'btn-light text-dark' }}">
-                    🔊 السونار
+                    🔊 {{ __("السونار") }}
                 </a>
                 <a href="{{ route('radiology-staff.index', ['category' => 'radiology', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'radiology' ? 'btn-secondary text-white shadow-xs' : 'btn-light text-dark' }}">
-                    🩻 الأشعة
+                    🩻 {{ __("الأشعة") }}
                 </a>
                 <a href="{{ route('radiology-staff.index', ['category' => 'mri', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'mri' ? 'btn-dark text-white shadow-xs' : 'btn-light text-dark' }}">
-                    🧲 الرنين والمفراس
+                    🧲 {{ __("الرنين والمفراس") }}
                 </a>
                 <a href="{{ route('radiology-staff.index', ['category' => 'echo', 'tab' => $activeTab, 'date' => $dateFilter]) }}" 
                    class="btn btn-sm rounded-pill px-3 fw-bold {{ $selectedCategory === 'echo' ? 'btn-danger text-white shadow-xs' : 'btn-light text-dark' }}">
-                    ❤️ الإيكو
+                    ❤️ {{ __("الإيكو") }}
                 </a>
             </div>
         @endif
@@ -304,30 +304,30 @@
                 </div>
                 <div>
                     <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-primary text-white px-2 py-1 fs-6 font-monospace" id="radiology-station-current-num">الدور: -</span>
-                        <strong class="text-dark fs-6" id="radiology-station-current-name">لا يوجد مريض مستدعى</strong>
-                        <span class="status-badge status-pending" id="radiology-station-status-badge">غرفة الفحص جاهزة</span>
+                        <span class="badge bg-primary text-white px-2 py-1 fs-6 font-monospace" id="radiology-station-current-num">{{ __("الدور: -") }}</span>
+                        <strong class="text-dark fs-6" id="radiology-station-current-name">{{ __("لا يوجد مريض مستدعى") }}</strong>
+                        <span class="status-badge status-pending" id="radiology-station-status-badge">{{ __("غرفة الفحص جاهزة") }}</span>
                     </div>
-                    <small class="text-muted" id="radiology-station-current-status">اضغط "استدعاء التالي" لمناداة أول مريض مسدد في طابور الانتظار</small>
+                    <small class="text-muted" id="radiology-station-current-status">{{ __("اضغط \"استدعاء التالي\" لمناداة أول مريض مسدد في طابور الانتظار") }}</small>
                 </div>
             </div>
 
             <!-- Actions & Screen Link -->
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <button type="button" class="btn btn-success fw-bold px-3 py-2" onclick="radiologyCallNext()" id="btn-call-next">
-                    <i class="fas fa-bullhorn me-1"></i> استدعاء التالي
+                    <i class="fas fa-bullhorn me-1"></i> {{ __("استدعاء التالي") }}
                 </button>
                 <button type="button" class="btn btn-warning fw-bold px-3 py-2 text-dark" onclick="radiologyRecall()" id="btn-recall" style="display: none;">
-                    <i class="fas fa-redo me-1"></i> إعادة المناداة
+                    <i class="fas fa-redo me-1"></i> {{ __("إعادة المناداة") }}
                 </button>
                 <button type="button" class="btn btn-primary fw-bold px-3 py-2" onclick="radiologyStartExam()" id="btn-start-exam" style="display: none;">
-                    <i class="fas fa-door-open me-1"></i> إدخال وبدء الفحص
+                    <i class="fas fa-door-open me-1"></i> {{ __("إدخال وبدء الفحص") }}
                 </button>
                 <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2" onclick="radiologySkip()" id="btn-skip" style="display: none;">
-                    <i class="fas fa-forward me-1"></i> تخطي
+                    <i class="fas fa-forward me-1"></i> {{ __("تخطي") }}
                 </button>
                 <a href="{{ url('/queue/room/' . (auth()->user()->doctor?->current_room ?? 11)) }}" target="_blank" class="btn btn-outline-primary px-3 py-2">
-                    <i class="fas fa-tv me-1"></i> شاشة العرض (الغرفة {{ auth()->user()->doctor?->current_room ?? 11 }})
+                    <i class="fas fa-tv me-1"></i> {{ __("شاشة العرض (الغرفة :room)", ["room" => auth()->user()->doctor?->current_room ?? 11]) }}
                 </a>
             </div>
         </div>
@@ -342,9 +342,9 @@
                  onclick="switchRadiologyTab('station-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
                 <div class="card-body p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات العيادات الاستشارية</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">{{ __("طلبات العيادات الاستشارية") }}</span>
                         <h4 class="mb-0 fw-bold text-primary font-monospace" id="kpi-consultation-count">{{ $counts['consultation'] ?? 0 }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">فحوصات محولة من الأطباء</small>
+                        <small class="text-muted" style="font-size: 0.72rem;">{{ __("فحوصات محولة من الأطباء") }}</small>
                     </div>
                     <div class="bg-primary-subtle text-primary p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="fas fa-user-md fs-5"></i>
@@ -359,9 +359,9 @@
                  onclick="switchRadiologyTab('direct-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
                 <div class="card-body p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">طلبات الأشعة المباشرة</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">{{ __("طلبات الأشعة المباشرة") }}</span>
                         <h4 class="mb-0 fw-bold text-info font-monospace" id="kpi-direct-count">{{ $counts['direct'] ?? 0 }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">مراجعي الصندوق والاستقبال</small>
+                        <small class="text-muted" style="font-size: 0.72rem;">{{ __("مراجعي الصندوق والاستقبال") }}</small>
                     </div>
                     <div class="bg-info-subtle text-info p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="fas fa-x-ray fs-5"></i>
@@ -376,9 +376,9 @@
                  onclick="switchRadiologyTab('emergency-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
                 <div class="card-body p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">أشعة وفحوصات قسم الطوارئ</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">{{ __("أشعة وفحوصات قسم الطوارئ") }}</span>
                         <h4 class="mb-0 fw-bold text-danger font-monospace" id="kpi-emergency-count">{{ $counts['emergency'] ?? 0 }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">حالات الطوارئ والكسور الحرجة</small>
+                        <small class="text-muted" style="font-size: 0.72rem;">{{ __("حالات الطوارئ والكسور الحرجة") }}</small>
                     </div>
                     <div class="bg-danger-subtle text-danger p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="fas fa-ambulance fs-5"></i>
@@ -393,9 +393,9 @@
                  onclick="switchRadiologyTab('all-tab')" style="background: #ffffff; cursor: pointer; transition: all 0.2s ease;">
                 <div class="card-body p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block mb-1 fw-semibold">كافة طلبات القسم</span>
+                        <span class="text-muted small d-block mb-1 fw-semibold">{{ __("كافة طلبات القسم") }}</span>
                         <h4 class="mb-0 fw-bold text-dark font-monospace" id="kpi-all-count">{{ $counts['all'] ?? 0 }}</h4>
-                        <small class="text-muted" style="font-size: 0.72rem;">مكتمل: {{ $counts['completed'] ?? 0 }} • معلق: {{ $counts['pending'] ?? 0 }}</small>
+                        <small class="text-muted" style="font-size: 0.72rem;">{{ __("مكتمل:") }} {{ $counts['completed'] ?? 0 }} • {{ __("معلق:") }} {{ $counts['pending'] ?? 0 }}</small>
                     </div>
                     <div class="bg-secondary-subtle text-secondary p-2 rounded-circle text-center d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                         <i class="fas fa-layer-group fs-5"></i>
@@ -415,56 +415,56 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ in_array($activeTab, ['station', 'waiting']) || ($sourceFilter ?? '') === 'consultation' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="station-tab" data-bs-toggle="tab" data-bs-target="#station-pane" type="button" role="tab">
                                 <i class="fas fa-user-md"></i>
-                                <span>الاستشارية</span>
+                                <span>{{ __("الاستشارية") }}</span>
                                 <span class="badge {{ in_array($activeTab, ['station', 'waiting']) || ($sourceFilter ?? '') === 'consultation' ? 'bg-white text-primary' : 'bg-primary text-white' }} rounded-pill font-monospace" id="badge-tab-waiting-count">{{ $counts['consultation'] ?? 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $activeTab === 'direct' || ($sourceFilter ?? '') === 'direct' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="direct-tab" data-bs-toggle="tab" data-bs-target="#direct-pane" type="button" role="tab">
                                 <i class="fas fa-x-ray"></i>
-                                <span>طلبات مباشرة</span>
+                                <span>{{ __("طلبات مباشرة") }}</span>
                                 <span class="badge {{ $activeTab === 'direct' || ($sourceFilter ?? '') === 'direct' ? 'bg-white text-info' : 'bg-info text-white' }} rounded-pill font-monospace" id="badge-tab-direct-count">{{ $counts['direct'] ?? 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ in_array($activeTab, ['inprogress', 'in-progress']) ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="inprogress-tab" data-bs-toggle="tab" data-bs-target="#inprogress-pane" type="button" role="tab">
                                 <i class="fas fa-stethoscope"></i>
-                                <span>قيد الفحص</span>
+                                <span>{{ __("قيد الفحص") }}</span>
                                 <span class="badge {{ in_array($activeTab, ['inprogress', 'in-progress']) ? 'bg-white text-info' : 'bg-info text-white' }} rounded-pill font-monospace" id="badge-tab-inprogress-count">{{ $counts['in_progress'] ?? 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $activeTab === 'completed' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed-pane" type="button" role="tab">
                                 <i class="fas fa-check-circle"></i>
-                                <span>المكتملة والطباعة</span>
+                                <span>{{ __("المكتملة والطباعة") }}</span>
                                 <span class="badge {{ $activeTab === 'completed' ? 'bg-white text-success' : 'bg-success text-white' }} rounded-pill font-monospace" id="badge-tab-completed-count">{{ $counts['completed'] ?? 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $activeTab === 'pending' || ($sourceFilter ?? '') === 'pending' ? 'active bg-warning text-dark' : 'text-dark' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-pane" type="button" role="tab">
                                 <i class="fas fa-history text-warning"></i>
-                                <span>الطلبات المعلقة (أيام سابقة)</span>
+                                <span>{{ __("الطلبات المعلقة (أيام سابقة)") }}</span>
                                 <span class="badge {{ $activeTab === 'pending' || ($sourceFilter ?? '') === 'pending' ? 'bg-white text-warning' : 'bg-warning text-dark' }} rounded-pill font-monospace" id="badge-tab-pending-count">{{ $counts['prior_pending'] ?? 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $activeTab === 'emergency' || ($sourceFilter ?? '') === 'emergency' ? 'active bg-danger text-white' : 'text-danger' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="emergency-tab" data-bs-toggle="tab" data-bs-target="#emergency-pane" type="button" role="tab">
                                 <i class="fas fa-ambulance"></i>
-                                <span>الطوارئ</span>
+                                <span>{{ __("الطوارئ") }}</span>
                                 <span class="badge {{ $activeTab === 'emergency' || ($sourceFilter ?? '') === 'emergency' ? 'bg-white text-danger' : 'bg-danger text-white' }} rounded-pill font-monospace">{{ $counts['emergency'] ?? 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $activeTab === 'nicu' || ($sourceFilter ?? '') === 'nicu' ? 'active bg-primary text-white' : 'text-primary' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="nicu-tab" data-bs-toggle="tab" data-bs-target="#nicu-pane" type="button" role="tab">
                                 <i class="fas fa-baby"></i>
-                                <span>الخدج والحاضنات</span>
+                                <span>{{ __("الخدج والحاضنات") }}</span>
                                 <span class="badge {{ $activeTab === 'nicu' || ($sourceFilter ?? '') === 'nicu' ? 'bg-white text-primary' : (($stats['nicu'] ?? 0) > 0 ? 'bg-danger text-white' : 'bg-primary text-white') }} rounded-pill font-monospace" id="badge-tab-nicu-count">{{ $stats['nicu'] ?? 0 }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link {{ $activeTab === 'all' || ($sourceFilter ?? '') === 'all' ? 'active' : '' }} fw-bold small py-1 px-3 d-flex align-items-center gap-2" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-pane" type="button" role="tab">
                                 <i class="fas fa-list"></i>
-                                <span>كافة الطلبات</span>
+                                <span>{{ __("كافة الطلبات") }}</span>
                                 <span class="badge {{ $activeTab === 'all' || ($sourceFilter ?? '') === 'all' ? 'bg-white text-dark' : 'bg-secondary text-white' }} rounded-pill font-monospace">{{ $counts['all'] ?? 0 }}</span>
                             </button>
                         </li>
@@ -481,27 +481,27 @@
                         <!-- فلتر التاريخ الموحد والشامل -->
                         <div class="d-flex align-items-center gap-1">
                             <select name="date" class="form-select form-select-sm" style="width: auto; min-width: 125px;" onchange="this.form.submit()">
-                                <option value="today" {{ ($dateFilter ?? '') === 'today' ? 'selected' : '' }}>📅 اليوم</option>
-                                <option value="yesterday" {{ ($dateFilter ?? '') === 'yesterday' ? 'selected' : '' }}>⏮️ أمس</option>
-                                <option value="week" {{ ($dateFilter ?? '') === 'week' ? 'selected' : '' }}>🗓️ هذا الأسبوع</option>
-                                <option value="month" {{ ($dateFilter ?? '') === 'month' ? 'selected' : '' }}>📆 هذا الشهر</option>
-                                <option value="all" {{ ($dateFilter ?? '') === 'all' ? 'selected' : '' }}>🗂️ كافة التواريخ</option>
+                                <option value="today" {{ ($dateFilter ?? '') === 'today' ? 'selected' : '' }}>📅 {{ __("اليوم") }}</option>
+                                <option value="yesterday" {{ ($dateFilter ?? '') === 'yesterday' ? 'selected' : '' }}>⏮️ {{ __("أمس") }}</option>
+                                <option value="week" {{ ($dateFilter ?? '') === 'week' ? 'selected' : '' }}>🗓️ {{ __("هذا الأسبوع") }}</option>
+                                <option value="month" {{ ($dateFilter ?? '') === 'month' ? 'selected' : '' }}>📆 {{ __("هذا الشهر") }}</option>
+                                <option value="all" {{ ($dateFilter ?? '') === 'all' ? 'selected' : '' }}>🗂️ {{ __("كافة التواريخ") }}</option>
                             </select>
                             <input type="date" name="custom_date" class="form-control form-control-sm" style="width: 130px;" 
                                    value="{{ !in_array($dateFilter ?? '', ['today', 'yesterday', 'week', 'month', 'all']) ? $dateFilter : '' }}" 
-                                   title="اختر تاريخاً محدداً" onchange="this.form.submit()">
+                                   title="{{ __("اختر تاريخاً محدداً") }}" onchange="this.form.submit()">
                         </div>
 
                         <!-- البحث السريع الموحد -->
                         <div class="input-group input-group-sm" style="max-width: 220px;">
                             <input type="text" name="search" id="radiology-search-input" class="form-control" 
-                                   placeholder="بحث باسم، رقم..." 
+                                   placeholder="{{ __("بحث باسم، رقم...") }}" 
                                    value="{{ $search }}">
-                            <button class="btn btn-primary" type="submit" title="بحث">
+                            <button class="btn btn-primary" type="submit" title="{{ __("بحث") }}">
                                 <i class="fas fa-search"></i>
                             </button>
                             @if(!empty($search) || ($dateFilter ?? 'today') !== 'today')
-                                <a href="{{ route('radiology-staff.index', ['category' => $selectedCategory, 'tab' => $activeTab, 'date' => 'today']) }}" class="btn btn-outline-secondary" title="إعادة ضبط الفلاتر">
+                                <a href="{{ route('radiology-staff.index', ['category' => $selectedCategory, 'tab' => $activeTab, 'date' => 'today']) }}" class="btn btn-outline-secondary" title="{{ __("إعادة ضبط الفلاتر") }}">
                                     <i class="fas fa-undo"></i>
                                 </a>
                             @endif
@@ -521,24 +521,24 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-user-md me-2 text-primary"></i>
-                    طلبات العيادات الاستشارية (المحولة من الأطباء)
+                    {{ __("طلبات العيادات الاستشارية (المحولة من الأطباء)") }}
                 </h5>
-                <span class="badge bg-primary text-white" id="badge-live-waiting-count">{{ $counts['consultation'] ?? 0 }} طلب</span>
+                <span class="badge bg-primary text-white" id="badge-live-waiting-count">{{ $counts['consultation'] ?? 0 }} {{ __("طلب") }}</span>
             </div>
 
             <div class="table-responsive">
                 <table class="table unified-table mb-2">
                     <thead>
                         <tr>
-                            <th style="width: 80px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
-                            <th style="width: 75px;"><i class="fas fa-receipt me-1"></i>#الطلب</th>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات المطلوبة</th>
-                            <th><i class="fas fa-user-md me-2"></i>الطبيب المحول</th>
-                            <th style="width: 80px;" class="text-center"><i class="fas fa-clock me-1"></i>الوقت</th>
-                            <th style="width: 120px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>الدفع</th>
-                            <th style="width: 120px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
-                            <th class="text-end" style="width: 180px;"><i class="fas fa-cogs me-2"></i>الإجراء والنداء</th>
+                            <th style="width: 80px;"><i class="fas fa-hashtag me-1"></i>{{ __("الدور") }}</th>
+                            <th style="width: 75px;"><i class="fas fa-receipt me-1"></i>{{ __("#الطلب") }}</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-x-ray me-2"></i>{{ __("الفحوصات المطلوبة") }}</th>
+                            <th><i class="fas fa-user-md me-2"></i>{{ __("الطبيب المحول") }}</th>
+                            <th style="width: 80px;" class="text-center"><i class="fas fa-clock me-1"></i>{{ __("الوقت") }}</th>
+                            <th style="width: 120px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>{{ __("الدفع") }}</th>
+                            <th style="width: 120px;" class="text-center"><i class="fas fa-tasks me-1"></i>{{ __("الحالة") }}</th>
+                            <th class="text-end" style="width: 180px;"><i class="fas fa-cogs me-2"></i>{{ __("الإجراء والنداء") }}</th>
                         </tr>
                     </thead>
                     <tbody id="radiology-station-waiting-list">
@@ -550,7 +550,7 @@
                                 $isPaid = $isNicu || $req->payment_status === 'paid';
                                 $isCalling = $req->status === 'calling';
                                 $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
-                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? __('طفل') . ' ' . $p->user->name : __('طفل خديج')))) : ($p?->name ?? $p?->user?->name ?? __('مريض'));
                                 $qNum = $req->visit?->appointment?->queue_number ?? ($turnNum++);
                             @endphp
                             <tr class="{{ $isCalling ? 'calling-row fw-bold' : ($req->status === 'in_progress' ? 'inprogress-row' : ($req->status === 'completed' ? 'completed-row' : '')) }}" id="request-row-{{ $req->id }}">
@@ -573,11 +573,11 @@
                                             <strong class="text-dark">{{ $pName }}</strong>
                                             <small class="text-muted d-block" style="font-size: 0.75rem;">
                                                 @if($isNicu)
-                                                    <span class="badge bg-info-subtle text-dark border border-info-subtle me-1">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }}</span>
-                                                    <span>ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</span>
+                                                    <span class="badge bg-info-subtle text-dark border border-info-subtle me-1">#{{ $nicuRes?->incubator?->name ?? __('حاضنة') }}</span>
+                                                    <span>{{ __("ملف:") }} #{{ $p?->national_id ?: ($p?->id ?? '-') }}</span>
                                                 @else
-                                                    @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
-                                                    @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                    @if($p?->gender) <span>{{ $p->gender === 'male' ? __('ذكر') : __('أنثى') }} • </span> @endif
+                                                    @if($p?->age) <span>{{ $p->age }} {{ __('سنة') }}</span> @endif
                                                     @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
                                                 @endif
                                             </small>
@@ -594,18 +594,18 @@
                                             @endforeach
                                         </div>
                                     @else
-                                        <span class="text-muted">{{ $req->description ?: 'فحص تصوير' }}</span>
+                                        <span class="text-muted">{{ $req->description ?: __('فحص تصوير') }}</span>
                                     @endif
                                 </td>
                                 <td>
                                     @if($isNicu)
-                                        <div class="small fw-semibold text-dark">د. {{ $nicuRes?->doctor?->user?->name ?? 'طبيب الخدج' }}</div>
+                                        <div class="small fw-semibold text-dark">{{ __("د.") }} {{ $nicuRes?->doctor?->user?->name ?? __("طبيب الخدج") }}</div>
                                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;">
-                                            <i class="fas fa-baby me-1"></i> قسم الخدج
+                                            <i class="fas fa-baby me-1"></i> {{ __("قسم الخدج") }}
                                         </span>
                                     @else
-                                        <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
-                                        <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                        <div class="small fw-semibold text-dark">{{ __("د.") }} {{ $req->visit?->doctor?->user?->name ?? __("الاستشارية") }}</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? __("العيادات") }}</small>
                                     @endif
                                     @if(!empty($req->doctor_notes))
                                         <div class="mt-1">
@@ -618,57 +618,57 @@
                                 <td class="text-center font-monospace small">{{ $req->created_at ? $req->created_at->format('H:i') : '—' }}</td>
                                 <td class="text-center">
                                     @if($isNicu)
-                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold" title="يُسدد ضمن حساب الحاضنة الموحد لدى الكاشير"><i class="fas fa-file-invoice-dollar me-1"></i> حساب الحاضنة</span>
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold" title="{{ __("يُسدد ضمن حساب الحاضنة الموحد لدى الكاشير") }}"><i class="fas fa-file-invoice-dollar me-1"></i> {{ __("حساب الحاضنة") }}</span>
                                     @elseif($isPaid)
-                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> {{ __("مدفوع") }}</span>
                                     @else
-                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
+                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> {{ __("غير مدفوع") }}</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if($req->status === 'completed')
-                                        <span class="badge bg-success text-white py-1 px-2 fw-bold"><i class="fas fa-check-circle me-1"></i> مكتمل</span>
+                                        <span class="badge bg-success text-white py-1 px-2 fw-bold"><i class="fas fa-check-circle me-1"></i> {{ __("مكتمل") }}</span>
                                     @elseif($req->status === 'in_progress')
-                                        <span class="badge bg-info text-white py-1 px-2 fw-bold"><i class="fas fa-stethoscope me-1"></i> قيد الفحص</span>
+                                        <span class="badge bg-info text-white py-1 px-2 fw-bold"><i class="fas fa-stethoscope me-1"></i> {{ __("قيد الفحص") }}</span>
                                     @elseif($isCalling)
-                                        <span class="badge bg-warning text-dark border border-warning py-1 px-2 fw-bold"><i class="fas fa-bullhorn me-1"></i> قيد النداء</span>
+                                        <span class="badge bg-warning text-dark border border-warning py-1 px-2 fw-bold"><i class="fas fa-bullhorn me-1"></i> {{ __("قيد النداء") }}</span>
                                     @else
-                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ بالانتظار</span>
+                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ {{ __("بالانتظار") }}</span>
                                     @endif
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex gap-1 justify-content-end align-items-center">
                                         @if($req->status === 'completed')
-                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="عرض وطباعة التقرير">
-                                                <i class="fas fa-print me-1"></i> عرض / طباعة
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="{{ __("عرض وطباعة التقرير") }}">
+                                                <i class="fas fa-print me-1"></i> {{ __("عرض / طباعة") }}
                                             </a>
                                         @elseif($req->status === 'in_progress')
-                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-success fw-bold shadow-xs" title="كتابة التقرير">
-                                                <i class="fas fa-edit me-1"></i> كتابة التقرير
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-success fw-bold shadow-xs" title="{{ __("كتابة التقرير") }}">
+                                                <i class="fas fa-edit me-1"></i> {{ __("كتابة التقرير") }}
                                             </a>
                                         @elseif($isCalling)
-                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="إدخال وبدء الفحص">
-                                                <i class="fas fa-door-open me-1"></i> إدخال
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="{{ __("إدخال وبدء الفحص") }}">
+                                                <i class="fas fa-door-open me-1"></i> {{ __("إدخال") }}
                                             </a>
                                         @elseif($selectedCategory === 'ultrasound')
                                             @if($isPaid)
-                                                <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific({{ $req->id }}, '{{ addslashes($pName) }}')" title="مناداة واستدعاء للغرفة">
-                                                    <i class="fas fa-bullhorn"></i> نداء
+                                                <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific({{ $req->id }}, '{{ addslashes($pName) }}')" title="{{ __("مناداة واستدعاء للغرفة") }}">
+                                                    <i class="fas fa-bullhorn"></i> {{ __("نداء") }}
                                                 </button>
                                             @else
-                                                <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-secondary" title="معاينة الطلب">
-                                                    <i class="fas fa-eye"></i> معاينة
+                                                <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-secondary" title="{{ __("معاينة الطلب") }}">
+                                                    <i class="fas fa-eye"></i> {{ __("معاينة") }}
                                                 </a>
                                             @endif
                                         @else
-                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="بدء الفحص وكتابة التقرير">
-                                                <i class="fas fa-play me-1"></i> بدء الفحص
+                                            <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="{{ __("بدء الفحص وكتابة التقرير") }}">
+                                                <i class="fas fa-play me-1"></i> {{ __("بدء الفحص") }}
                                             </a>
                                         @endif
                                         @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
                                             <button type="button" 
                                                     class="action-btn btn-outline-danger" 
-                                                    title="إلغاء الطلب الخارجي"
+                                                    title="{{ __("إلغاء الطلب الخارجي") }}"
                                                     onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($pName) }}')">
                                                 <i class="fas fa-ban"></i>
                                             </button>
@@ -679,7 +679,7 @@
                         @empty
                             <tr>
                                 <td colspan="9" class="text-center py-4 text-muted">
-                                    <i class="fas fa-info-circle text-muted me-1"></i> لا توجد طلبات أشعة محولة من العيادات الاستشارية لهذا التاريخ
+                                    <i class="fas fa-info-circle text-muted me-1"></i> {{ __("لا توجد طلبات أشعة محولة من العيادات الاستشارية لهذا التاريخ") }}
                                 </td>
                             </tr>
                         @endforelse
@@ -694,22 +694,22 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-x-ray me-2 text-info"></i>
-                    طلبات الأشعة المباشرة (مراجعي الصندوق وقسم الأشعة الخارجي)
+                    {{ __("طلبات الأشعة المباشرة (مراجعي الصندوق وقسم الأشعة الخارجي)") }}
                 </h5>
-                <span class="badge bg-info text-white" id="badge-direct-count">{{ $counts['direct'] ?? 0 }} طلب مباشر</span>
+                <span class="badge bg-info text-white" id="badge-direct-count">{{ $counts['direct'] ?? 0 }} {{ __("طلب مباشر") }}</span>
             </div>
             <div class="table-responsive">
                 <table class="table unified-table mb-2">
                     <thead>
                         <tr>
-                            <th style="width: 75px;"><i class="fas fa-receipt me-1"></i>#الطلب</th>
-                            <th><i class="fas fa-user me-2"></i>المريض</th>
-                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات المطلوبة</th>
-                            <th><i class="fas fa-hospital me-2"></i>المصدر</th>
-                            <th style="width: 100px;" class="text-center"><i class="fas fa-clock me-1"></i>الوقت</th>
-                            <th style="width: 120px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>الدفع</th>
-                            <th style="width: 120px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
-                            <th class="text-end" style="width: 180px;"><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                            <th style="width: 75px;"><i class="fas fa-receipt me-1"></i>{{ __("#الطلب") }}</th>
+                            <th><i class="fas fa-user me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-x-ray me-2"></i>{{ __("الفحوصات المطلوبة") }}</th>
+                            <th><i class="fas fa-hospital me-2"></i>{{ __("المصدر") }}</th>
+                            <th style="width: 100px;" class="text-center"><i class="fas fa-clock me-1"></i>{{ __("الوقت") }}</th>
+                            <th style="width: 120px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>{{ __("الدفع") }}</th>
+                            <th style="width: 120px;" class="text-center"><i class="fas fa-tasks me-1"></i>{{ __("الحالة") }}</th>
+                            <th class="text-end" style="width: 180px;"><i class="fas fa-cogs me-2"></i>{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -717,7 +717,7 @@
                             @php
                                 $isPaid = $req->payment_status === 'paid';
                                 $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $pName = $p?->name ?? $p?->user?->name ?? __('مريض');
                             @endphp
                             <tr id="direct-row-{{ $req->id }}">
                                 <td class="font-monospace text-muted">#{{ $req->id }}</td>
@@ -729,8 +729,8 @@
                                         <div class="ms-2">
                                             <strong class="text-dark">{{ $pName }}</strong>
                                             <small class="text-muted d-block" style="font-size: 0.75rem;">
-                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
-                                                @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? __('ذكر') : __('أنثى') }} • </span> @endif
+                                                @if($p?->age) <span>{{ $p->age }} {{ __('سنة') }}</span> @endif
                                                 @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
                                             </small>
                                         </div>
@@ -746,43 +746,43 @@
                                             @endforeach
                                         </div>
                                     @else
-                                        <span class="text-muted">{{ $req->description ?: 'فحص تصوير' }}</span>
+                                        <span class="text-muted">{{ $req->description ?: __('فحص تصوير') }}</span>
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="small fw-semibold text-dark">استقبال الصندوق / مباشر</div>
+                                    <div class="small fw-semibold text-dark">{{ __("استقبال الصندوق / مباشر") }}</div>
                                     <small class="badge bg-light text-info border border-info-subtle" style="font-size: 0.68rem;">
-                                        مريض خارجي
+                                        {{ __("مريض خارجي") }}
                                     </small>
                                 </td>
                                 <td class="text-center font-monospace small">{{ $req->created_at ? $req->created_at->format('H:i') : '—' }}</td>
                                 <td class="text-center">
                                     @if($isPaid)
-                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>
+                                        <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> {{ __("مدفوع") }}</span>
                                     @else
-                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>
+                                        <span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> {{ __("غير مدفوع") }}</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if($req->status === 'completed')
-                                        <span class="badge bg-success text-white py-1 px-2 fw-bold"><i class="fas fa-check-circle me-1"></i> مكتمل</span>
+                                        <span class="badge bg-success text-white py-1 px-2 fw-bold"><i class="fas fa-check-circle me-1"></i> {{ __("مكتمل") }}</span>
                                     @elseif($req->status === 'in_progress')
-                                        <span class="badge bg-info text-white py-1 px-2 fw-bold"><i class="fas fa-stethoscope me-1"></i> قيد الفحص</span>
+                                        <span class="badge bg-info text-white py-1 px-2 fw-bold"><i class="fas fa-stethoscope me-1"></i> {{ __("قيد الفحص") }}</span>
                                     @else
-                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ بالانتظار</span>
+                                        <span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ {{ __("بالانتظار") }}</span>
                                     @endif
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex gap-1 justify-content-end align-items-center">
-                                        <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="معاينة وبدء الفحص">
-                                            <i class="fas fa-eye"></i> عرض
+                                        <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="{{ __("معاينة وبدء الفحص") }}">
+                                            <i class="fas fa-eye"></i> {{ __("عرض") }}
                                         </a>
                                         @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
                                             <button type="button" 
                                                     class="action-btn btn-outline-danger" 
-                                                    title="إلغاء الطلب الخارجي"
+                                                    title="{{ __("إلغاء الطلب الخارجي") }}"
                                                     onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($pName) }}')">
-                                                <i class="fas fa-ban"></i> إلغاء
+                                                <i class="fas fa-ban"></i> {{ __("إلغاء") }}
                                             </button>
                                         @endif
                                     </div>
@@ -791,7 +791,7 @@
                         @empty
                             <tr>
                                 <td colspan="8" class="text-center py-4 text-muted">
-                                    <i class="fas fa-info-circle text-muted me-1"></i> لا توجد طلبات أشعة مباشرة مسجلة حالياً
+                                    <i class="fas fa-info-circle text-muted me-1"></i> {{ __("لا توجد طلبات أشعة مباشرة مسجلة حالياً") }}
                                 </td>
                             </tr>
                         @endforelse
@@ -805,20 +805,20 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-stethoscope me-2 text-info"></i>
-                    الفحوصات الجارية الآن وكتابة التقارير والنتائج
+                    {{ __("الفحوصات الجارية الآن وكتابة التقارير والنتائج") }}
                 </h5>
-                <span class="badge bg-info text-white" id="badge-tab-inprogress-inner-count">{{ $stats['in_progress'] }} قيد الفحص</span>
+                <span class="badge bg-info text-white" id="badge-tab-inprogress-inner-count">{{ $stats['in_progress'] }} {{ __("قيد الفحص") }}</span>
             </div>
             <div class="table-responsive">
                 <table class="table unified-table">
                     <thead>
                         <tr>
-                            <th style="width: 80px;">الدور</th>
-                            <th>المريض</th>
-                            <th>الفحوصات المطلوبة</th>
-                            <th>الطبيب المحول</th>
-                            <th style="width: 100px;" class="text-center">الوقت</th>
-                            <th class="text-end" style="width: 170px;">كتابة التقرير والنتائج</th>
+                            <th style="width: 80px;">{{ __("الدور") }}</th>
+                            <th>{{ __("المريض") }}</th>
+                            <th>{{ __("الفحوصات المطلوبة") }}</th>
+                            <th>{{ __("الطبيب المحول") }}</th>
+                            <th style="width: 100px;" class="text-center">{{ __("الوقت") }}</th>
+                            <th class="text-end" style="width: 170px;">{{ __("كتابة التقرير والنتائج") }}</th>
                         </tr>
                     </thead>
                     <tbody id="radiology-tab-inprogress-tbody">
@@ -827,8 +827,8 @@
                                 $isNicu = !empty($req->incubator_reservation_id);
                                 $nicuRes = $isNicu ? $req->incubatorReservation : null;
                                 $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
-                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
-                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? 'طبيب الخدج') : ($req->visit?->doctor?->user?->name ?? 'الاستشارية');
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? __('طفل') . ' ' . $p->user->name : __('طفل خديج')))) : ($p?->name ?? $p?->user?->name ?? __('مريض'));
+                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? __('طبيب الخدج')) : ($req->visit?->doctor?->user?->name ?? __('الاستشارية'));
                                 $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
                             @endphp
                             <tr class="inprogress-row">
@@ -836,27 +836,27 @@
                                 <td>
                                     <strong class="text-dark">{{ $pName }}</strong>
                                     @if($isNicu)
-                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }} • ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? __('حاضنة') }} • {{ __('ملف:') }} #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
                                     @endif
                                 </td>
-                                <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
+                                <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: __('فحص تصوير')) }}</td>
                                 <td>
-                                    <span>د. {{ $docName }}</span>
+                                    <span>{{ __("د.") }} {{ $docName }}</span>
                                     @if($isNicu)
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">قسم الخدج</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">{{ __("قسم الخدج") }}</span>
                                     @endif
                                 </td>
                                 <td class="text-center font-monospace small">{{ $req->details['started_at'] ?? $req->updated_at->format('H:i') }}</td>
                                 <td class="text-end">
                                     <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-success fw-bold shadow-xs">
-                                        <i class="fas fa-edit"></i> كتابة التقرير والنتائج
+                                        <i class="fas fa-edit"></i> {{ __("كتابة التقرير والنتائج") }}
                                     </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="6" class="text-center py-4 text-muted">
-                                    <i class="fas fa-check-circle text-success me-1"></i> لا توجد فحوصات جارية داخل غرفة الفحص حالياً
+                                    <i class="fas fa-check-circle text-success me-1"></i> {{ __("لا توجد فحوصات جارية داخل غرفة الفحص حالياً") }}
                                 </td>
                             </tr>
                         @endforelse
@@ -870,20 +870,20 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-check-circle me-2 text-success"></i>
-                    الفحوصات المكتملة الجاهزة للمعاينة والطباعة
+                    {{ __("الفحوصات المكتملة الجاهزة للمعاينة والطباعة") }}
                 </h5>
-                <span class="badge bg-success text-white">{{ $stats['completed'] }} مكتمل</span>
+                <span class="badge bg-success text-white">{{ $stats['completed'] }} {{ __("مكتمل") }}</span>
             </div>
             <div class="table-responsive">
                 <table class="table unified-table">
                     <thead>
                         <tr>
-                            <th style="width: 80px;">الدور</th>
-                            <th>المريض</th>
-                            <th>الفحوصات المنجزة</th>
-                            <th>الطبيب المحول</th>
-                            <th class="text-center">تاريخ الإنجاز</th>
-                            <th class="text-end">الطباعة والمعاينة</th>
+                            <th style="width: 80px;">{{ __("الدور") }}</th>
+                            <th>{{ __("المريض") }}</th>
+                            <th>{{ __("الفحوصات المنجزة") }}</th>
+                            <th>{{ __("الطبيب المحول") }}</th>
+                            <th class="text-center">{{ __("تاريخ الإنجاز") }}</th>
+                            <th class="text-end">{{ __("الطباعة والمعاينة") }}</th>
                         </tr>
                     </thead>
                     <tbody id="radiology-tab-completed-tbody">
@@ -892,8 +892,8 @@
                                 $isNicu = !empty($req->incubator_reservation_id);
                                 $nicuRes = $isNicu ? $req->incubatorReservation : null;
                                 $p = $isNicu ? $nicuRes?->patient : $req->visit?->patient;
-                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? 'طفل ' . $p->user->name : 'طفل خديج'))) : ($p?->name ?? $p?->user?->name ?? 'مريض');
-                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? 'طبيب الخدج') : ($req->visit?->doctor?->user?->name ?? 'الاستشارية');
+                                $pName = $isNicu ? ($nicuRes?->baby_title ?: ($nicuRes?->baby_name ?: ($p?->user?->name ? __('طفل') . ' ' . $p->user->name : __('طفل خديج')))) : ($p?->name ?? $p?->user?->name ?? __('مريض'));
+                                $docName = $isNicu ? ($nicuRes?->doctor?->user?->name ?? __('طبيب الخدج')) : ($req->visit?->doctor?->user?->name ?? __('الاستشارية'));
                                 $qNum = $req->visit?->appointment?->queue_number ?? $req->id;
                             @endphp
                             <tr class="completed-row">
@@ -901,27 +901,27 @@
                                 <td>
                                     <strong class="text-dark">{{ $pName }}</strong>
                                     @if($isNicu)
-                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? 'حاضنة' }} • ملف: #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
+                                        <small class="text-muted d-block" style="font-size: 0.72rem;">#{{ $nicuRes?->incubator?->name ?? __('حاضنة') }} • {{ __('ملف:') }} #{{ $p?->national_id ?: ($p?->id ?? '-') }}</small>
                                     @endif
                                 </td>
-                                <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
+                                <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: __('فحص تصوير')) }}</td>
                                 <td>
-                                    <span>د. {{ $docName }}</span>
+                                    <span>{{ __("د.") }} {{ $docName }}</span>
                                     @if($isNicu)
-                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">قسم الخدج</span>
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle d-block mt-0.5" style="font-size: 0.65rem;">{{ __("قسم الخدج") }}</span>
                                     @endif
                                 </td>
                                 <td class="text-center font-monospace small">{{ $req->updated_at ? $req->updated_at->format('H:i') : '—' }}</td>
                                 <td class="text-end">
-                                    <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="عرض وطباعة">
-                                        <i class="fas fa-print"></i> عرض / طباعة
+                                    <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary" title="{{ __("عرض وطباعة") }}">
+                                        <i class="fas fa-print"></i> {{ __("عرض / طباعة") }}
                                     </a>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="6" class="text-center py-4 text-muted">
-                                    <i class="fas fa-info-circle text-secondary me-1"></i> لا توجد فحوصات مكتملة اليوم حتى الآن
+                                    <i class="fas fa-info-circle text-secondary me-1"></i> {{ __("لا توجد فحوصات مكتملة اليوم حتى الآن") }}
                                 </td>
                             </tr>
                         @endforelse
@@ -936,16 +936,16 @@
                 <div>
                     <h5 class="mb-1 text-dark fw-bold">
                         <i class="fas fa-history text-warning me-2"></i>
-                        سجل الطلبات المعلقة وغير المكتملة من الأيام السابقة
+                        {{ __("سجل الطلبات المعلقة وغير المكتملة من الأيام السابقة") }}
                     </h5>
                     <small class="text-muted">
-                        الفحوصات المطلوبة في تواريخ سابقة وما زالت قيد الانتظار أو الإجراء ولم يتم اعتماد تقريرها النهائي
+                        {{ __("الفحوصات المطلوبة في تواريخ سابقة وما زالت قيد الانتظار أو الإجراء ولم يتم اعتماد تقريرها النهائي") }}
                     </small>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge {{ ($stats['prior_pending'] ?? 0) > 0 ? 'bg-danger' : 'bg-success' }} fs-6 px-3 py-2 rounded-pill">
                         <i class="fas {{ ($stats['prior_pending'] ?? 0) > 0 ? 'fa-clock' : 'fa-check' }} me-1"></i>
-                        {{ $priorPendingRequests->count() }} طلب معلق
+                        {{ $priorPendingRequests->count() }} {{ __("طلب معلق") }}
                     </span>
                 </div>
             </div>
@@ -954,14 +954,14 @@
                 <table class="table unified-table mb-2">
                     <thead>
                         <tr>
-                            <th style="width: 80px;"><i class="fas fa-receipt me-1"></i>#الطلب</th>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات المطلوبة</th>
-                            <th><i class="fas fa-user-md me-2"></i>الطبيب المحول / العيادة</th>
-                            <th style="width: 140px;" class="text-center"><i class="fas fa-calendar-alt me-1"></i>تاريخ الطلب الأصلي</th>
-                            <th style="width: 100px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>الدفع</th>
-                            <th style="width: 110px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
-                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراء والمتابعة</th>
+                            <th style="width: 80px;"><i class="fas fa-receipt me-1"></i>{{ __("#الطلب") }}</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-x-ray me-2"></i>{{ __("الفحوصات المطلوبة") }}</th>
+                            <th><i class="fas fa-user-md me-2"></i>{{ __("الطبيب المحول / العيادة") }}</th>
+                            <th style="width: 140px;" class="text-center"><i class="fas fa-calendar-alt me-1"></i>{{ __("تاريخ الطلب الأصلي") }}</th>
+                            <th style="width: 100px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>{{ __("الدفع") }}</th>
+                            <th style="width: 110px;" class="text-center"><i class="fas fa-tasks me-1"></i>{{ __("الحالة") }}</th>
+                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>{{ __("الإجراء والمتابعة") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -969,7 +969,7 @@
                             @php
                                 $isPaid = $req->payment_status === 'paid';
                                 $p = $req->visit?->patient;
-                                $pName = $p?->name ?? $p?->user?->name ?? 'مريض';
+                                $pName = $p?->name ?? $p?->user?->name ?? __('مريض');
                             @endphp
                             <tr id="prior-pending-row-{{ $req->id }}">
                                 <td class="font-monospace fw-bold text-dark">#{{ $req->id }}</td>
@@ -981,8 +981,8 @@
                                         <div class="ms-2">
                                             <strong class="text-dark">{{ $pName }}</strong>
                                             <small class="text-muted d-block" style="font-size: 0.75rem;">
-                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
-                                                @if($p?->age) <span>{{ $p->age }} سنة</span> @endif
+                                                @if($p?->gender) <span>{{ $p->gender === 'male' ? __('ذكر') : __('أنثى') }} • </span> @endif
+                                                @if($p?->age) <span>{{ $p->age }} {{ __('سنة') }}</span> @endif
                                                 @if($p?->medical_number) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $p->medical_number }}</span> @endif
                                             </small>
                                         </div>
@@ -998,12 +998,12 @@
                                             @endforeach
                                         </div>
                                     @else
-                                        <span class="text-muted">{{ $req->description ?: 'فحص تصوير' }}</span>
+                                        <span class="text-muted">{{ $req->description ?: __('فحص تصوير') }}</span>
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="small fw-semibold text-dark">د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</div>
-                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? 'العيادات' }}</small>
+                                    <div class="small fw-semibold text-dark">{{ __("د.") }} {{ $req->visit?->doctor?->user?->name ?? __("الاستشارية") }}</div>
+                                    <small class="text-muted" style="font-size: 0.72rem;">{{ $req->visit?->department?->name ?? __("العيادات") }}</small>
                                     @if(!empty($req->doctor_notes))
                                         <div class="mt-1">
                                             <span class="badge bg-warning-subtle text-dark border border-warning-subtle text-truncate d-inline-block" style="max-width: 170px; font-size: 0.68rem;" title="{{ $req->doctor_notes }}">
@@ -1023,38 +1023,38 @@
                                 <td class="text-center">
                                     @if($isPaid)
                                         <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold">
-                                            <i class="fas fa-check-circle me-1"></i> مدفوع
+                                            <i class="fas fa-check-circle me-1"></i> {{ __("مدفوع") }}
                                         </span>
                                     @else
                                         <span class="badge bg-danger text-white py-1 px-2 fw-bold">
-                                            <i class="fas fa-clock me-1"></i> غير مدفوع
+                                            <i class="fas fa-clock me-1"></i> {{ __("غير مدفوع") }}
                                         </span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if($req->status === 'in_progress')
                                         <span class="badge bg-info text-white py-1 px-2">
-                                            <i class="fas fa-stethoscope me-1"></i> قيد الفحص
+                                            <i class="fas fa-stethoscope me-1"></i> {{ __("قيد الفحص") }}
                                         </span>
                                     @elseif($req->status === 'calling')
                                         <span class="badge bg-warning text-dark py-1 px-2">
-                                            <i class="fas fa-bullhorn me-1"></i> قيد النداء
+                                            <i class="fas fa-bullhorn me-1"></i> {{ __("قيد النداء") }}
                                         </span>
                                     @else
                                         <span class="badge bg-secondary-subtle text-secondary py-1 px-2">
-                                            ⏳ معلق
+                                            ⏳ {{ __("معلق") }}
                                         </span>
                                     @endif
                                 </td>
                                 <td class="text-end">
                                     <div class="d-flex gap-1 justify-content-end align-items-center">
-                                        <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="بدء أو استكمال الفحص">
-                                            <i class="fas fa-play me-1"></i> بدء / متابعة الفحص
+                                        <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-primary fw-bold shadow-xs" title="{{ __("بدء أو استكمال الفحص") }}">
+                                            <i class="fas fa-play me-1"></i> {{ __("بدء / متابعة الفحص") }}
                                         </a>
                                         @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
                                             <button type="button" 
                                                     class="action-btn btn-outline-danger" 
-                                                    title="إلغاء الطلب الخارجي"
+                                                    title="{{ __("إلغاء الطلب الخارجي") }}"
                                                     onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($pName) }}')">
                                                 <i class="fas fa-ban"></i>
                                             </button>
@@ -1067,8 +1067,8 @@
                                 <td colspan="8" class="text-center py-5 text-muted">
                                     <div class="py-3">
                                         <i class="fas fa-check-circle text-success fa-3x mb-3 d-block opacity-75"></i>
-                                        <h6 class="fw-bold text-dark">ممتاز! لا توجد أي طلبات معلقة من أيام سابقة</h6>
-                                        <p class="small text-muted mb-0">كافة فحوصات الأيام الماضية مكتملة ومعتمدة بالكامل.</p>
+                                        <h6 class="fw-bold text-dark">{{ __("ممتاز! لا توجد أي طلبات معلقة من أيام سابقة") }}</h6>
+                                        <p class="small text-muted mb-0">{{ __("كافة فحوصات الأيام الماضية مكتملة ومعتمدة بالكامل.") }}</p>
                                     </div>
                                 </td>
                             </tr>
@@ -1085,19 +1085,19 @@
                 <div>
                     <h5 class="mb-1 text-danger fw-bold">
                         <i class="fas fa-ambulance me-2"></i>
-                        سجل طلبات فحوصات قسم الطوارئ (الأولوية العاجلة والحرجة)
+                        {{ __("سجل طلبات فحوصات قسم الطوارئ (الأولوية العاجلة والحرجة)") }}
                     </h5>
                     <small class="text-muted">
-                        الفحوصات المطلوبة مباشرة من أطباء طوارئ المستشفى والمصنفة كحالات حرجة وعاجلة
+                        {{ __("الفحوصات المطلوبة مباشرة من أطباء طوارئ المستشفى والمصنفة كحالات حرجة وعاجلة") }}
                     </small>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge {{ ($stats['emergency'] ?? 0) > 0 ? 'bg-danger' : 'bg-secondary' }} fs-6 px-3 py-2 rounded-pill shadow-xs">
                         <i class="fas fa-bolt me-1"></i>
-                        {{ $stats['emergency'] ?? 0 }} قيد الانتظار والفحص
+                        {{ $stats['emergency'] ?? 0 }} {{ __("قيد الانتظار والفحص") }}
                     </span>
                     <span class="badge bg-light text-dark border fs-6 px-3 py-2 rounded-pill">
-                        إجمالي الطوارئ: {{ $emergencyRadiologyRequests->count() }}
+                        {{ __("إجمالي الطوارئ:") }} {{ $emergencyRadiologyRequests->count() }}
                     </span>
                 </div>
             </div>
@@ -1106,14 +1106,14 @@
                 <table class="table unified-table mb-2">
                     <thead>
                         <tr>
-                            <th style="width: 80px;"><i class="fas fa-receipt me-1"></i>#الطلب</th>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-x-ray me-2"></i>الفحوصات المطلوبة</th>
-                            <th><i class="fas fa-user-md me-2"></i>طبيب الطوارئ المحول</th>
-                            <th style="width: 130px;" class="text-center"><i class="fas fa-exclamation-circle me-1"></i>الأولوية والوقت</th>
-                            <th style="width: 100px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>الدفع</th>
-                            <th style="width: 110px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
-                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراء والتقرير</th>
+                            <th style="width: 80px;"><i class="fas fa-receipt me-1"></i>{{ __("#الطلب") }}</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-x-ray me-2"></i>{{ __("الفحوصات المطلوبة") }}</th>
+                            <th><i class="fas fa-user-md me-2"></i>{{ __("طبيب الطوارئ المحول") }}</th>
+                            <th style="width: 130px;" class="text-center"><i class="fas fa-exclamation-circle me-1"></i>{{ __("الأولوية والوقت") }}</th>
+                            <th style="width: 100px;" class="text-center"><i class="fas fa-money-bill-wave me-1"></i>{{ __("الدفع") }}</th>
+                            <th style="width: 110px;" class="text-center"><i class="fas fa-tasks me-1"></i>{{ __("الحالة") }}</th>
+                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>{{ __("الإجراء والتقرير") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1121,19 +1121,19 @@
                             @php
                                 $p = $emReq->patient ?? $emReq->emergency?->patient;
                                 $emP = $emReq->emergency?->emergencyPatient;
-                                $pName = $p?->name ?? $p?->user?->name ?? $emP?->name ?? 'مريض طوارئ';
+                                $pName = $p?->name ?? $p?->user?->name ?? $emP?->name ?? __('مريض طوارئ');
                                 $pAge = $p?->age ?? $emP?->age;
                                 $pGender = $p?->gender ?? $emP?->gender;
                                 $pMedNum = $p?->medical_number ?? $emP?->emergency_number;
                                 $isPaid = ($emReq->payment_status === 'paid' || $emReq->payment_id);
-                                $docName = $emReq->emergency?->doctor?->user?->name ?? $emReq->emergency?->consultantDoctor?->user?->name ?? 'طبيب الطوارئ';
+                                $docName = $emReq->emergency?->doctor?->user?->name ?? $emReq->emergency?->consultantDoctor?->user?->name ?? __('طبيب الطوارئ');
                                 $isCritical = ($emReq->priority === 'critical');
                             @endphp
                             <tr class="{{ $emReq->status === 'pending' ? 'table-warning' : ($emReq->status === 'in_progress' ? 'table-info' : '') }}" id="emergency-request-row-{{ $emReq->id }}">
                                 <td>
                                     <span class="font-monospace fw-bold text-dark d-block">#{{ $emReq->id }}</span>
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger-subtle font-monospace" style="font-size: 0.68rem;">
-                                        طوارئ #{{ $emReq->emergency_id }}
+                                        {{ __("طوارئ #") }}{{ $emReq->emergency_id }}
                                     </span>
                                 </td>
                                 <td>
@@ -1144,8 +1144,8 @@
                                         <div class="ms-2">
                                             <strong class="text-dark">{{ $pName }}</strong>
                                             <small class="text-muted d-block" style="font-size: 0.75rem;">
-                                                @if($pGender) <span>{{ $pGender === 'male' ? 'ذكر' : 'أنثى' }} • </span> @endif
-                                                @if($pAge) <span>{{ $pAge }} سنة</span> @endif
+                                                @if($pGender) <span>{{ $pGender === 'male' ? __('ذكر') : __('أنثى') }} • </span> @endif
+                                                @if($pAge) <span>{{ $pAge }} {{ __('سنة') }}</span> @endif
                                                 @if($pMedNum) <span class="badge bg-light text-muted border ms-1 font-monospace">{{ $pMedNum }}</span> @endif
                                             </small>
                                         </div>
@@ -1168,9 +1168,9 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="small fw-semibold text-dark">د. {{ $docName }}</div>
+                                    <div class="small fw-semibold text-dark">{{ __("د.") }} {{ $docName }}</div>
                                     <small class="badge bg-light text-danger border border-danger-subtle" style="font-size: 0.68rem;">
-                                        <i class="fas fa-ambulance me-1"></i> قسم الطوارئ
+                                        <i class="fas fa-ambulance me-1"></i> {{ __("قسم الطوارئ") }}
                                     </small>
                                 </td>
                                 <td class="text-center font-monospace">
@@ -1185,34 +1185,34 @@
                                 <td class="text-center">
                                     @if($isPaid)
                                         <span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold">
-                                            <i class="fas fa-check-circle me-1"></i> مدفوع
+                                            <i class="fas fa-check-circle me-1"></i> {{ __("مدفوع") }}
                                         </span>
                                     @elseif($emReq->payment_status === 'refunded')
                                         <span class="badge bg-secondary text-white py-1 px-2 fw-bold">
-                                            <i class="fas fa-undo me-1"></i> مسترجع
+                                            <i class="fas fa-undo me-1"></i> {{ __("مسترجع") }}
                                         </span>
                                     @else
                                         <span class="badge bg-danger text-white py-1 px-2 fw-bold">
-                                            <i class="fas fa-clock me-1"></i> غير مدفوع
+                                            <i class="fas fa-clock me-1"></i> {{ __("غير مدفوع") }}
                                         </span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if($emReq->status === 'in_progress')
                                         <span class="badge bg-info text-white py-1 px-2 fw-bold">
-                                            <i class="fas fa-stethoscope me-1"></i> قيد الفحص
+                                            <i class="fas fa-stethoscope me-1"></i> {{ __("قيد الفحص") }}
                                         </span>
                                     @elseif($emReq->status === 'completed')
                                         <span class="badge bg-success text-white py-1 px-2 fw-bold">
-                                            <i class="fas fa-check-circle me-1"></i> مكتمل
+                                            <i class="fas fa-check-circle me-1"></i> {{ __("مكتمل") }}
                                         </span>
                                     @elseif($emReq->status === 'cancelled')
                                         <span class="badge bg-danger-subtle text-danger py-1 px-2">
-                                            ملغي
+                                            {{ __("ملغي") }}
                                         </span>
                                     @else
                                         <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2 fw-bold">
-                                            ⏳ بالانتظار
+                                            ⏳ {{ __("بالانتظار") }}
                                         </span>
                                     @endif
                                 </td>
@@ -1221,17 +1221,17 @@
                                         @if($emReq->status === 'pending')
                                             <form action="{{ route('staff.emergency-radiology.start', $emReq) }}" method="POST" class="d-inline">
                                                 @csrf
-                                                <button type="submit" class="action-btn btn-primary fw-bold shadow-xs" title="بدء فحص الطوارئ">
-                                                    <i class="fas fa-play me-1"></i> بدء الفحص
+                                                <button type="submit" class="action-btn btn-primary fw-bold shadow-xs" title="{{ __("بدء فحص الطوارئ") }}">
+                                                    <i class="fas fa-play me-1"></i> {{ __("بدء الفحص") }}
                                                 </button>
                                             </form>
                                         @elseif($emReq->status === 'in_progress')
-                                            <a href="{{ route('staff.emergency-radiology.show', $emReq) }}" class="action-btn btn-success fw-bold shadow-xs" title="إدخال النتائج والتقرير">
-                                                <i class="fas fa-edit me-1"></i> إدخال التقرير
+                                            <a href="{{ route('staff.emergency-radiology.show', $emReq) }}" class="action-btn btn-success fw-bold shadow-xs" title="{{ __("إدخال النتائج والتقرير") }}">
+                                                <i class="fas fa-edit me-1"></i> {{ __("إدخال التقرير") }}
                                             </a>
                                         @elseif($emReq->status === 'completed')
-                                            <a href="{{ route('staff.emergency-radiology.print', $emReq) }}" class="action-btn btn-outline-primary fw-bold shadow-xs" target="_blank" title="عرض وطباعة التقرير">
-                                                <i class="fas fa-print me-1"></i> عرض / طباعة
+                                            <a href="{{ route('staff.emergency-radiology.print', $emReq) }}" class="action-btn btn-outline-primary fw-bold shadow-xs" target="_blank" title="{{ __("عرض وطباعة التقرير") }}">
+                                                <i class="fas fa-print me-1"></i> {{ __("عرض / طباعة") }}
                                             </a>
                                         @endif
                                     </div>
@@ -1242,8 +1242,8 @@
                                 <td colspan="8" class="text-center py-5 text-muted">
                                     <div class="py-3">
                                         <i class="fas fa-ambulance text-secondary fa-3x mb-3 d-block opacity-50"></i>
-                                        <h6 class="fw-bold text-dark">لا توجد طلبات أشعة طارئة حالياً</h6>
-                                        <p class="small text-muted mb-0">جميع طلبات الطوارئ معالجة أو لا توجد حالات محولة.</p>
+                                        <h6 class="fw-bold text-dark">{{ __("لا توجد طلبات أشعة طارئة حالياً") }}</h6>
+                                        <p class="small text-muted mb-0">{{ __("جميع طلبات الطوارئ معالجة أو لا توجد حالات محولة.") }}</p>
                                     </div>
                                 </td>
                             </tr>
@@ -1259,9 +1259,9 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-baby me-2 text-primary"></i>
-                    طلبات أشعة وسونار وإيكو الأطفال الخدج والحاضنات
+                    {{ __("طلبات أشعة وسونار وإيكو الأطفال الخدج والحاضنات") }}
                 </h5>
-                <span class="badge bg-primary text-white">{{ $nicuRadiologyRequests->count() }} طلب فحص</span>
+                <span class="badge bg-primary text-white">{{ $nicuRadiologyRequests->count() }} {{ __("طلب فحص") }}</span>
             </div>
 
             @if($nicuRadiologyRequests->count() > 0)
@@ -1269,15 +1269,15 @@
                     <table class="table unified-table">
                         <thead>
                             <tr>
-                                <th style="width: 75px;"><i class="fas fa-hashtag me-1"></i>#الطلب</th>
-                                <th><i class="fas fa-baby me-2"></i>الطفل / الحاضنة</th>
-                                <th><i class="fas fa-x-ray me-2"></i>الفحص والتصوير المطلوب</th>
-                                <th style="width: 100px;" class="text-center"><i class="fas fa-bolt me-1"></i>الأولوية</th>
-                                <th><i class="fas fa-user-md me-2"></i>الطبيب المشرف</th>
-                                <th style="width: 100px;" class="text-center"><i class="fas fa-clock me-1"></i>الوقت</th>
-                                <th style="width: 140px;" class="text-center"><i class="fas fa-file-invoice-dollar me-1"></i>الحساب المالي</th>
-                                <th style="width: 130px;" class="text-center"><i class="fas fa-tasks me-1"></i>الحالة</th>
-                                <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                                <th style="width: 75px;"><i class="fas fa-hashtag me-1"></i>{{ __("#الطلب") }}</th>
+                                <th><i class="fas fa-baby me-2"></i>{{ __("الطفل / الحاضنة") }}</th>
+                                <th><i class="fas fa-x-ray me-2"></i>{{ __("الفحص والتصوير المطلوب") }}</th>
+                                <th style="width: 100px;" class="text-center"><i class="fas fa-bolt me-1"></i>{{ __("الأولوية") }}</th>
+                                <th><i class="fas fa-user-md me-2"></i>{{ __("الطبيب المشرف") }}</th>
+                                <th style="width: 100px;" class="text-center"><i class="fas fa-clock me-1"></i>{{ __("الوقت") }}</th>
+                                <th style="width: 140px;" class="text-center"><i class="fas fa-file-invoice-dollar me-1"></i>{{ __("الحساب المالي") }}</th>
+                                <th style="width: 130px;" class="text-center"><i class="fas fa-tasks me-1"></i>{{ __("الحالة") }}</th>
+                                <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>{{ __("الإجراءات") }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1289,19 +1289,19 @@
                                     
                                     if ($isMedRequest) {
                                         $res = $nicuRad->incubatorReservation;
-                                        $babyName = $res?->baby_name ?: ($res?->baby_title ?: ('طفل ' . ($res?->patient?->name ?? 'غير محدد')));
+                                        $babyName = $res?->baby_name ?: ($res?->baby_title ?: (__('طفل') . ' ' . ($res?->patient?->name ?? __('غير محدد'))));
                                         $incubatorName = '#' . ($res?->incubator?->name ?? $res?->incubator_id);
-                                        $docName = $res?->doctor?->user?->name ?? 'طبيب الخدج المشرف';
+                                        $docName = $res?->doctor?->user?->name ?? __('طبيب الخدج المشرف');
                                         $reqDetails = is_string($nicuRad->details) ? json_decode($nicuRad->details, true) : ($nicuRad->details ?? []);
-                                        $radNames = $nicuRad->radiology_names ?: [$nicuRad->description ?: 'فحص تصوير'];
+                                        $radNames = $nicuRad->radiology_names ?: [$nicuRad->description ?: __('فحص تصوير')];
                                         $priority = $reqDetails['priority'] ?? 'normal';
                                         $notes = $reqDetails['doctor_notes'] ?? null;
                                         $orderedAt = $nicuRad->created_at;
                                         $fileNo = $res?->patient?->national_id ?: ($res?->patient_id ?? '-');
                                     } else {
-                                        $babyName = $nicuRad->reservation?->baby_name ?: 'طفل ' . ($nicuRad->reservation?->patient?->name ?? 'غير محدد');
-                                        $incubatorName = $nicuRad->reservation?->incubator?->name ?? ('حاضنة #' . $nicuRad->reservation?->incubator_id);
-                                        $docName = $nicuRad->reservation?->doctor?->user?->name ?? 'طبيب الخدج';
+                                        $babyName = $nicuRad->reservation?->baby_name ?: __('طفل') . ' ' . ($nicuRad->reservation?->patient?->name ?? __('غير محدد'));
+                                        $incubatorName = $nicuRad->reservation?->incubator?->name ?? (__('حاضنة #') . $nicuRad->reservation?->incubator_id);
+                                        $docName = $nicuRad->reservation?->doctor?->user?->name ?? __('طبيب الخدج');
                                         $radNames = [$nicuRad->item_name];
                                         $priority = $nicuRad->priority;
                                         $notes = $nicuRad->notes;
@@ -1316,9 +1316,9 @@
                                         default => 'secondary'
                                     };
                                     $prioText = match(strtolower($priority)) {
-                                        'stat', 'critical', 'emergency' => '🚨 طارئ جداً (STAT)',
-                                        'urgent' => '⚡ عاجل (Urgent)',
-                                        default => 'عادي (Normal)'
+                                        'stat', 'critical', 'emergency' => __('🚨 طارئ جداً (STAT)'),
+                                        'urgent' => __('⚡ عاجل (Urgent)'),
+                                        default => __('عادي (Normal)')
                                     };
                                 @endphp
                                 <tr style="{{ $isCompleted ? 'border-right: 4px solid #16a34a; background-color: #fafdfb;' : ($isInProgress ? 'border-right: 4px solid #0284c7; background-color: #f0f9ff;' : ($isStat ? 'border-right: 4px solid #dc2626; background-color: #fef2f2;' : 'border-right: 4px solid #f59e0b; background-color: #ffffff;')) }}">
@@ -1336,7 +1336,7 @@
                                                     <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-1">
                                                         {{ $incubatorName }}
                                                     </span>
-                                                    • ملف: #{{ $fileNo }}
+                                                    • {{ __("ملف:") }} #{{ $fileNo }}
                                                 </small>
                                             </div>
                                         </div>
@@ -1361,29 +1361,29 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <div class="small fw-semibold text-dark">د. {{ $docName }}</div>
-                                        <small class="text-muted" style="font-size: 0.72rem;">قسم العناية المركزة لحديثي الولادة</small>
+                                        <div class="small fw-semibold text-dark">{{ __("د.") }} {{ $docName }}</div>
+                                        <small class="text-muted" style="font-size: 0.72rem;">{{ __("قسم العناية المركزة لحديثي الولادة") }}</small>
                                     </td>
                                     <td class="text-center font-monospace small">
                                         {{ $orderedAt ? $orderedAt->format('H:i') : '—' }}
                                     </td>
                                     <td class="text-center">
                                         <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2">
-                                            <i class="fas fa-file-invoice-dollar me-1"></i> حساب الإقامة (الخدج)
+                                            <i class="fas fa-file-invoice-dollar me-1"></i> {{ __("حساب الإقامة (الخدج)") }}
                                         </span>
                                     </td>
                                     <td class="text-center">
                                         @if($isCompleted)
                                             <span class="badge bg-success py-1.5 px-2.5 shadow-xs fw-semibold">
-                                                <i class="fas fa-check-circle me-1"></i> مكتمل ومعتمد
+                                                <i class="fas fa-check-circle me-1"></i> {{ __("مكتمل ومعتمد") }}
                                             </span>
                                         @elseif($isInProgress)
                                             <span class="badge bg-info text-white py-1.5 px-2.5 shadow-xs fw-semibold">
-                                                <i class="fas fa-spinner fa-spin me-1"></i> قيد الفحص
+                                                <i class="fas fa-spinner fa-spin me-1"></i> {{ __("قيد الفحص") }}
                                             </span>
                                         @else
                                             <span class="badge bg-warning text-dark py-1.5 px-2.5 shadow-xs fw-bold">
-                                                <i class="fas fa-clock me-1"></i> بانتظار الفحص
+                                                <i class="fas fa-clock me-1"></i> {{ __("بانتظار الفحص") }}
                                             </span>
                                         @endif
                                     </td>
@@ -1391,10 +1391,10 @@
                                         <div class="d-flex gap-1 justify-content-end align-items-center">
                                             @if($isMedRequest)
                                                 <a href="{{ route('radiology-staff.show', $nicuRad->id) }}" class="btn btn-sm btn-info text-dark fw-bold shadow-xs px-2.5 py-1">
-                                                    <i class="fas fa-edit me-1"></i> {{ $isCompleted ? 'مراجعة التقرير' : 'بدء الفحص والتقرير' }}
+                                                    <i class="fas fa-edit me-1"></i> {{ $isCompleted ? __("مراجعة التقرير") : __("بدء الفحص والتقرير") }}
                                                 </a>
                                                 @if($isCompleted)
-                                                    <a href="{{ route('radiology-staff.print', $nicuRad->id) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-xs" target="_blank" title="طباعة التقرير">
+                                                    <a href="{{ route('radiology-staff.print', $nicuRad->id) }}" class="btn btn-sm btn-outline-dark fw-bold px-2 py-1 shadow-xs" target="_blank" title="{{ __("طباعة التقرير") }}">
                                                         <i class="fas fa-print"></i>
                                                     </a>
                                                 @endif
@@ -1403,19 +1403,19 @@
                                                     <form action="{{ route('radiology-staff.nicu-orders.start', $nicuRad) }}" method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-primary fw-bold shadow-xs px-2 py-1">
-                                                            <i class="fas fa-play me-1"></i> بدء الفحص
+                                                            <i class="fas fa-play me-1"></i> {{ __("بدء الفحص") }}
                                                         </button>
                                                     </form>
                                                 @elseif($nicuRad->status === 'in_progress')
                                                     <button type="button" class="btn btn-sm btn-success fw-bold shadow-xs px-2 py-1" data-bs-toggle="modal" data-bs-target="#completeNicuRadModal{{ $nicuRad->id }}">
-                                                        <i class="fas fa-edit me-1"></i> إدخال التقرير
+                                                        <i class="fas fa-edit me-1"></i> {{ __("إدخال التقرير") }}
                                                     </button>
                                                 @else
-                                                    <button type="button" class="btn btn-sm btn-outline-primary px-2 py-1" data-bs-toggle="modal" data-bs-target="#completeNicuRadModal{{ $nicuRad->id }}" title="تعديل التقرير">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary px-2 py-1" data-bs-toggle="modal" data-bs-target="#completeNicuRadModal{{ $nicuRad->id }}" title="{{ __("تعديل التقرير") }}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <a href="{{ route('radiology-staff.nicu-orders.print', $nicuRad) }}" class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-xs" target="_blank" title="طباعة">
-                                                        <i class="fas fa-print me-1"></i> طباعة
+                                                    <a href="{{ route('radiology-staff.nicu-orders.print', $nicuRad) }}" class="btn btn-sm btn-success fw-bold px-2 py-1 shadow-xs" target="_blank" title="{{ __("طباعة") }}">
+                                                        <i class="fas fa-print me-1"></i> {{ __("طباعة") }}
                                                     </a>
                                                 @endif
                                             @endif
@@ -1429,8 +1429,8 @@
             @else
                 <div class="text-center py-5 bg-light rounded-3">
                     <i class="fas fa-baby fa-3x text-muted opacity-50 mb-3"></i>
-                    <h6 class="text-dark fw-bold">لا توجد طلبات أشعة أو سونار مسجلة للخدج حالياً</h6>
-                    <p class="text-muted small mb-0">ستظهر الفحوصات هنا فور طلبها من محطة طبيب الخدج والحاضنات.</p>
+                    <h6 class="text-dark fw-bold">{{ __("لا توجد طلبات أشعة أو سونار مسجلة للخدج حالياً") }}</h6>
+                    <p class="text-muted small mb-0">{{ __("ستظهر الفحوصات هنا فور طلبها من محطة طبيب الخدج والحاضنات.") }}</p>
                 </div>
             @endif
         </div>
@@ -1440,51 +1440,51 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-list text-secondary me-2"></i>
-                    سجل كافة طلبات وأرشيف الأشعة والتصوير الطبي
+                    {{ __("سجل كافة طلبات وأرشيف الأشعة والتصوير الطبي") }}
                 </h5>
-                <span class="badge bg-secondary text-white">{{ $requests->total() }} طلب إجمالي</span>
+                <span class="badge bg-secondary text-white">{{ $requests->total() }} {{ __("طلب إجمالي") }}</span>
             </div>
 
             <div class="table-responsive">
                 <table class="table unified-table">
                     <thead>
                         <tr>
-                            <th>#الطلب</th>
-                            <th>المريض</th>
-                            <th>الفحوصات المطلوبة</th>
-                            <th>الطبيب المحول</th>
-                            <th>التاريخ</th>
-                            <th>الدفع</th>
-                            <th>الحالة</th>
-                            <th class="text-end">الإجراء</th>
+                            <th>{{ __("#الطلب") }}</th>
+                            <th>{{ __("المريض") }}</th>
+                            <th>{{ __("الفحوصات المطلوبة") }}</th>
+                            <th>{{ __("الطبيب المحول") }}</th>
+                            <th>{{ __("التاريخ") }}</th>
+                            <th>{{ __("الدفع") }}</th>
+                            <th>{{ __("الحالة") }}</th>
+                            <th class="text-end">{{ __("الإجراء") }}</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($requests as $req)
                         <tr>
                             <td class="font-monospace">#{{ $req->id }}</td>
-                            <td class="fw-bold">{{ $req->visit?->patient?->name ?? 'مريض' }}</td>
-                            <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: 'فحص تصوير') }}</td>
-                            <td>د. {{ $req->visit?->doctor?->user?->name ?? 'الاستشارية' }}</td>
+                            <td class="fw-bold">{{ $req->visit?->patient?->name ?? __('مريض') }}</td>
+                            <td>{{ implode(', ', $req->radiology_names) ?: ($req->description ?: __('فحص تصوير')) }}</td>
+                            <td>{{ __("د.") }} {{ $req->visit?->doctor?->user?->name ?? __("الاستشارية") }}</td>
                             <td>{{ $req->created_at ? $req->created_at->format('Y-m-d H:i') : '—' }}</td>
                             <td>
                                 @if($req->payment_status === 'paid')
-                                    <span class="badge bg-success">مدفوع</span>
+                                    <span class="badge bg-success">{{ __("مدفوع") }}</span>
                                 @else
-                                    <span class="badge bg-danger">غير مدفوع</span>
+                                    <span class="badge bg-danger">{{ __("غير مدفوع") }}</span>
                                 @endif
                             </td>
                             <td><span class="badge bg-secondary">{{ $req->status }}</span></td>
                             <td class="text-end">
                                 <div class="d-flex gap-1 justify-content-end align-items-center">
                                     <a href="{{ route('radiology-staff.show', $req) }}" class="action-btn btn-outline-primary">
-                                        <i class="fas fa-eye"></i> عرض
+                                        <i class="fas fa-eye"></i> {{ __("عرض") }}
                                     </a>
                                     @if($req->isDirectExternal() && !in_array($req->status, ['completed', 'cancelled']))
                                         <button type="button" 
                                                 class="action-btn btn-outline-danger" 
-                                                title="إلغاء الطلب الخارجي"
-                                                onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($req->visit?->patient?->name ?? 'المريض') }}')">
+                                                title="{{ __("إلغاء الطلب الخارجي") }}"
+                                                onclick="openCancelRadiologyModal({{ $req->id }}, '{{ addslashes($req->visit?->patient?->name ?? __('المريض')) }}')">
                                             <i class="fas fa-ban"></i>
                                         </button>
                                     @endif
@@ -1577,40 +1577,40 @@ async function syncRadiologyQueue() {
             currentCallingRequestId = currentPatient.id;
             currentCallingVisitId = currentPatient.visit_id;
 
-            numEl.textContent = `الدور: #${currentPatient.queue_number}`;
+            numEl.textContent = `{{ __("الدور:") }} #${currentPatient.queue_number}`;
             nameEl.textContent = currentPatient.name;
             
             if (currentPatient.status === 'in_progress') {
                 badgeEl.className = 'status-badge status-completed';
-                badgeEl.innerHTML = '<i class="fas fa-stethoscope me-1"></i> داخل الغرفة قيد الفحص';
+                badgeEl.innerHTML = '<i class="fas fa-stethoscope me-1"></i> {{ __("داخل الغرفة قيد الفحص") }}';
                 btnCallNext.style.display = 'none';
                 btnRecall.style.display = 'none';
                 btnStartExam.style.display = 'inline-flex';
-                btnStartExam.innerHTML = '<i class="fas fa-edit me-1"></i> كتابة التقرير والنتائج';
+                btnStartExam.innerHTML = '<i class="fas fa-edit me-1"></i> {{ __("كتابة التقرير والنتائج") }}';
                 btnSkip.style.display = 'none';
-                statusEl.textContent = `الفحوصات: ${currentPatient.radiology_names.join(', ')} • د. ${currentPatient.doctor_name}`;
+                statusEl.textContent = `{{ __("الفحوصات:") }} ${currentPatient.radiology_names.join(', ')} • {{ __("د.") }} ${currentPatient.doctor_name}`;
             } else {
                 badgeEl.className = 'status-badge status-calling';
-                badgeEl.innerHTML = '<i class="fas fa-bullhorn me-1"></i> قيد النداء الآن 📢';
+                badgeEl.innerHTML = '<i class="fas fa-bullhorn me-1"></i> {{ __("قيد النداء الآن 📢") }}';
                 btnCallNext.style.display = 'none';
                 btnRecall.style.display = 'inline-flex';
                 btnStartExam.style.display = 'inline-flex';
-                btnStartExam.innerHTML = '<i class="fas fa-door-open me-1"></i> إدخال وبدء الفحص';
+                btnStartExam.innerHTML = '<i class="fas fa-door-open me-1"></i> {{ __("إدخال وبدء الفحص") }}';
                 btnSkip.style.display = 'inline-flex';
-                statusEl.textContent = `تم النداء: ${currentPatient.called_at} • ${currentPatient.radiology_names.join(', ')}`;
+                statusEl.textContent = `{{ __("تم النداء:") }} ${currentPatient.called_at} • ${currentPatient.radiology_names.join(', ')}`;
             }
         } else {
             currentCallingRequestId = null;
             currentCallingVisitId = null;
-            numEl.textContent = 'الدور: -';
-            nameEl.textContent = 'لا يوجد مريض مستدعى';
+            numEl.textContent = '{{ __("الدور: -") }}';
+            nameEl.textContent = '{{ __("لا يوجد مريض مستدعى") }}';
             badgeEl.className = 'status-badge status-pending';
-            badgeEl.textContent = 'غرفة الفحص جاهزة';
+            badgeEl.textContent = '{{ __("غرفة الفحص جاهزة") }}';
             btnCallNext.style.display = 'inline-flex';
             btnRecall.style.display = 'none';
             btnStartExam.style.display = 'none';
             btnSkip.style.display = 'none';
-            statusEl.textContent = 'اضغط "استدعاء التالي" لمناداة أول مريض مسدد في طابور الانتظار';
+            statusEl.textContent = '{{ __("اضغط \"استدعاء التالي\" لمناداة أول مريض مسدد في طابور الانتظار") }}';
         }
 
         // 2. Update KPI Badges
@@ -1626,8 +1626,8 @@ async function syncRadiologyQueue() {
                     document.getElementById('badge-tab-pending-count').className = 'badge bg-secondary text-white rounded-pill px-2 py-1';
                 }
             }
-            document.getElementById('badge-live-waiting-count').textContent = `${data.stats.waiting} منتظر`;
-            document.getElementById('badge-live-inprogress-count').textContent = `${data.stats.in_progress} قيد الفحص`;
+            document.getElementById('badge-live-waiting-count').textContent = `${data.stats.waiting} {{ __("منتظر") }}`;
+            document.getElementById('badge-live-inprogress-count').textContent = `${data.stats.in_progress} {{ __("قيد الفحص") }}`;
 
             // Update Executive KPI Strip Cards
             if (document.getElementById('kpi-waiting-count')) document.getElementById('kpi-waiting-count').textContent = data.stats.waiting;
@@ -1643,7 +1643,7 @@ async function syncRadiologyQueue() {
                 waitingTbody.innerHTML = `
                     <tr>
                         <td colspan="9" class="text-center py-4 text-muted">
-                            <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مرضى في طابور الانتظار حالياً
+                            <i class="fas fa-check-circle text-success me-1"></i> {{ __("لا يوجد مرضى في طابور الانتظار حالياً") }}
                         </td>
                     </tr>
                 `;
@@ -1666,7 +1666,7 @@ async function syncRadiologyQueue() {
                                     <div class="ms-2">
                                         <strong class="text-dark">${r.name}</strong>
                                         <small class="text-muted d-block" style="font-size: 0.75rem;">
-                                            ${r.gender ? r.gender + ' • ' : ''}${r.age ? r.age + ' سنة' : ''}
+                                            ${r.gender ? r.gender + ' • ' : ''}${r.age ? r.age + ' {{ __("سنة") }}' : ''}
                                             ${r.medical_number ? '<span class="badge bg-light text-muted border ms-1 font-monospace">' + r.medical_number + '</span>' : ''}
                                         </small>
                                     </div>
@@ -1682,37 +1682,37 @@ async function syncRadiologyQueue() {
                                 </div>
                             </td>
                             <td>
-                                <div class="small fw-semibold text-dark">د. ${r.doctor_name}</div>
+                                <div class="small fw-semibold text-dark">{{ __("د.") }} ${r.doctor_name}</div>
                                 <small class="text-muted" style="font-size: 0.72rem;">${r.department_name}</small>
                             </td>
                             <td class="text-center font-monospace small">${r.created_time}</td>
                             <td class="text-center">
                                 ${r.is_paid 
-                                    ? '<span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> مدفوع</span>'
-                                    : '<span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> غير مدفوع</span>'
+                                    ? '<span class="badge bg-success text-white py-1 px-2 shadow-xs fw-bold"><i class="fas fa-check-circle me-1"></i> {{ __("مدفوع") }}</span>'
+                                    : '<span class="badge bg-danger text-white py-1 px-2 fw-bold"><i class="fas fa-clock me-1"></i> {{ __("غير مدفوع") }}</span>'
                                 }
                             </td>
                             <td class="text-center">
                                 ${isCalling 
-                                    ? '<span class="badge bg-warning text-dark border border-warning py-1 px-2 fw-bold"><i class="fas fa-bullhorn me-1"></i> قيد النداء</span>'
-                                    : '<span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ بالانتظار</span>'
+                                    ? '<span class="badge bg-warning text-dark border border-warning py-1 px-2 fw-bold"><i class="fas fa-bullhorn me-1"></i> {{ __("قيد النداء") }}</span>'
+                                    : '<span class="badge bg-secondary-subtle text-secondary py-1 px-2">⏳ {{ __("بالانتظار") }}</span>'
                                 }
                             </td>
                             <td class="text-end">
                                 <div class="d-flex gap-1 justify-content-end align-items-center">
                                     ${currentSelectedCategory === 'ultrasound' ? (
                                         r.is_paid ? `
-                                            <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific(${r.id}, '${r.name}')" title="مناداة واستدعاء للغرفة">
-                                                <i class="fas fa-bullhorn"></i> نداء
+                                            <button type="button" class="action-btn btn-warning text-dark fw-bold shadow-xs" onclick="radiologyCallSpecific(${r.id}, '${r.name}')" title="{{ __("مناداة واستدعاء للغرفة") }}">
+                                                <i class="fas fa-bullhorn"></i> {{ __("نداء") }}
                                             </button>
                                         ` : `
-                                            <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-secondary" title="معاينة الطلب">
-                                                <i class="fas fa-eye"></i> معاينة
+                                            <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-secondary" title="{{ __("معاينة الطلب") }}">
+                                                <i class="fas fa-eye"></i> {{ __("معاينة") }}
                                             </a>
                                         `
                                     ) : `
-                                        <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-primary fw-bold shadow-xs" title="بدء الفحص وكتابة التقرير">
-                                            <i class="fas fa-play me-1"></i> بدء الفحص
+                                        <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-primary fw-bold shadow-xs" title="{{ __("بدء الفحص وكتابة التقرير") }}">
+                                            <i class="fas fa-play me-1"></i> {{ __("بدء الفحص") }}
                                         </a>
                                     `}
                                 </div>
@@ -1731,7 +1731,7 @@ async function syncRadiologyQueue() {
                 inprogTbody.innerHTML = `
                     <tr>
                         <td colspan="6" class="text-center py-4 text-muted">
-                            <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مريض داخل غرفة الفحص حالياً
+                            <i class="fas fa-check-circle text-success me-1"></i> {{ __("لا يوجد مريض داخل غرفة الفحص حالياً") }}
                         </td>
                     </tr>
                 `;
@@ -1741,11 +1741,11 @@ async function syncRadiologyQueue() {
                         <td><span class="badge bg-info text-white font-monospace fs-6">#${r.queue_number}</span></td>
                         <td><strong class="text-dark">${r.name}</strong></td>
                         <td>${r.radiology_names.join(', ')}</td>
-                        <td>د. ${r.doctor_name}</td>
+                        <td>{{ __("د.") }} ${r.doctor_name}</td>
                         <td class="text-center font-monospace small">${r.started_time}</td>
                         <td class="text-end">
                             <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-success fw-bold shadow-xs">
-                                <i class="fas fa-edit"></i> كتابة التقرير
+                                <i class="fas fa-edit"></i> {{ __("كتابة التقرير") }}
                             </a>
                         </td>
                     </tr>
@@ -1757,24 +1757,24 @@ async function syncRadiologyQueue() {
 
         // 5. Render Completed Tab
         if (inprogTabTbody && inprogTabTbody.children.length === 0 && data.in_progress_list.length === 0) {
-            inprogTabTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">لا توجد فحوصات جارية حالياً</td></tr>`;
+            inprogTabTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">{{ __("لا توجد فحوصات جارية حالياً") }}</td></tr>`;
         }
 
         const compTbody = document.getElementById('radiology-tab-completed-tbody');
         if (compTbody && data.completed_list) {
             if (data.completed_list.length === 0) {
-                compTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">لا توجد فحوصات مكتملة اليوم حتى الآن</td></tr>`;
+                compTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">{{ __("لا توجد فحوصات مكتملة اليوم حتى الآن") }}</td></tr>`;
             } else {
                 compTbody.innerHTML = data.completed_list.map(r => `
                     <tr class="completed-row">
                         <td><span class="badge bg-success text-white font-monospace fs-6">#${r.queue_number}</span></td>
                         <td><strong class="text-dark">${r.name}</strong></td>
                         <td>${r.radiology_names.join(', ')}</td>
-                        <td>د. ${r.doctor_name}</td>
+                        <td>{{ __("د.") }} ${r.doctor_name}</td>
                         <td class="text-center font-monospace small">${r.completed_time}</td>
                         <td class="text-end">
-                            <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-primary" title="عرض وطباعة">
-                                <i class="fas fa-print"></i> عرض / طباعة
+                            <a href="${radiologyBaseUrl}/radiology-staff/requests/${r.id}/show" class="action-btn btn-outline-primary" title="{{ __("عرض وطباعة") }}">
+                                <i class="fas fa-print"></i> {{ __("عرض / طباعة") }}
                             </a>
                         </td>
                     </tr>
@@ -1782,7 +1782,7 @@ async function syncRadiologyQueue() {
             }
         }
 
-        document.getElementById('last-update-time').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('ar-IQ');
+        document.getElementById('last-update-time').textContent = '{{ __("آخر تحديث:") }} ' + new Date().toLocaleTimeString(document.documentElement.lang === 'en' ? 'en-US' : 'ar-IQ');
 
     } catch (err) {
         console.error('Radiology queue sync error:', err);
@@ -1807,9 +1807,10 @@ async function speakAnnouncement(patientName, queueNumber) {
     // Play chime sound first
     playChimeSound();
     
-    const text = queueNumber 
-        ? `المراجع ${patientName}، دورك رقم ${queueNumber}، تفضل لغرفة الفحص.`
-        : `المراجع ${patientName}، تفضل لغرفة الفحص.`;
+    const isEn = document.documentElement.lang === 'en';
+    const text = isEn
+        ? (queueNumber ? `Patient ${patientName}, your turn is number ${queueNumber}, please proceed to examination room.` : `Patient ${patientName}, please proceed to examination room.`)
+        : (queueNumber ? `المراجع ${patientName}، دورك رقم ${queueNumber}، تفضل لغرفة الفحص.` : `المراجع ${patientName}، تفضل لغرفة الفحص.`);
 
     // Wait 500ms after chime
     await new Promise(r => setTimeout(r, 500));
@@ -1850,7 +1851,7 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 async function radiologyCallNext() {
     const btn = document.getElementById('btn-call-next');
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الاستدعاء...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> {{ __("جاري الاستدعاء...") }}';
     try {
         const res = await fetch(`${radiologyBaseUrl}/radiology-staff/call-next?category=${currentSelectedCategory}`, {
             method: 'POST',
@@ -1859,17 +1860,17 @@ async function radiologyCallNext() {
         const data = await res.json();
         if (res.ok && data.success) {
             speakAnnouncement(data.patient_name, data.queue_number);
-            if (typeof toastr !== 'undefined') toastr.success(data.message || 'تم استدعاء المريض بنجاح.');
+            if (typeof toastr !== 'undefined') toastr.success(data.message || '{{ __("تم استدعاء المريض بنجاح.") }}');
             syncRadiologyQueue();
         } else {
-            if (typeof toastr !== 'undefined') toastr.warning(data.message || 'لا يوجد مرضى في طابور الانتظار');
-            else alert(data.message || 'لا يوجد مرضى في طابور الانتظار');
+            if (typeof toastr !== 'undefined') toastr.warning(data.message || '{{ __("لا يوجد مرضى في طابور الانتظار") }}');
+            else alert(data.message || '{{ __("لا يوجد مرضى في طابور الانتظار") }}');
         }
     } catch(e) {
-        alert('حدث خطأ في الاتصال');
+        alert('{{ __("حدث خطأ في الاتصال") }}');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-bullhorn me-1"></i> استدعاء التالي';
+        btn.innerHTML = '<i class="fas fa-bullhorn me-1"></i> {{ __("استدعاء التالي") }}';
     }
 }
 
@@ -1885,11 +1886,11 @@ async function radiologyRecall() {
         if (res.ok && data.success) {
             const curName = document.getElementById('radiology-station-current-name')?.textContent || data.patient_name;
             speakAnnouncement(data.patient_name || curName, data.queue_number);
-            if (typeof toastr !== 'undefined') toastr.success('تمت إعادة المناداة على المريض بنجاح.');
+            if (typeof toastr !== 'undefined') toastr.success('{{ __("تمت إعادة المناداة على المريض بنجاح.") }}');
             syncRadiologyQueue();
         }
     } catch(e) {
-        alert('حدث خطأ في الاتصال');
+        alert('{{ __("حدث خطأ في الاتصال") }}');
     } finally {
         btn.disabled = false;
     }
@@ -1901,7 +1902,7 @@ async function radiologyStartExam() {
 }
 
 async function radiologySkip() {
-    if (!confirm('هل تريد تأخير دور هذا المريض ونقله لآخر الطابور؟')) return;
+    if (!confirm('{{ __("هل تريد تأخير دور هذا المريض ونقله لآخر الطابور؟") }}')) return;
     try {
         const res = await fetch(`${radiologyBaseUrl}/radiology-staff/skip`, {
             method: 'POST',
@@ -1913,7 +1914,7 @@ async function radiologySkip() {
             syncRadiologyQueue();
         }
     } catch(e) {
-        alert('حدث خطأ في الاتصال');
+        alert('{{ __("حدث خطأ في الاتصال") }}');
     }
 }
 
@@ -1926,15 +1927,15 @@ async function radiologyCallSpecific(reqId, patientName) {
         const data = await res.json();
         if (res.ok && data.success) {
             speakAnnouncement(data.patient_name || patientName, data.queue_number);
-            if (typeof toastr !== 'undefined') toastr.success(data.message || `تمت المناداة على ${patientName}`);
+            if (typeof toastr !== 'undefined') toastr.success(data.message || (document.documentElement.lang === 'en' ? `Called ${patientName}` : `تمت المناداة على ${patientName}`));
             syncRadiologyQueue();
         } else {
-            const err = data.message || 'حدث خطأ أثناء المناداة';
+            const err = data.message || '{{ __("حدث خطأ أثناء المناداة") }}';
             if (typeof toastr !== 'undefined') toastr.error(err);
             else alert(err);
         }
     } catch(e) {
-        alert('حدث خطأ في الاتصال');
+        alert('{{ __("حدث خطأ في الاتصال") }}');
     }
 }
 
@@ -1967,7 +1968,7 @@ syncRadiologyQueue();
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title fw-bold">
-                    <i class="fas fa-exclamation-triangle me-2"></i> تأكيد إلغاء طلب الأشعة والتصوير الخارجي
+                    <i class="fas fa-exclamation-triangle me-2"></i> {{ __("تأكيد إلغاء طلب الأشعة والتصوير الخارجي") }}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -1975,20 +1976,20 @@ syncRadiologyQueue();
                 @csrf
                 <div class="modal-body p-4 text-end">
                     <p class="fs-6 text-dark mb-2">
-                        هل أنت متأكد من رغبتك في إلغاء طلب الأشعة والتصوير الخارجي للمريض <strong id="cancelRadModalPatientName" class="text-danger"></strong>؟
+                        {{ __("هل أنت متأكد من رغبتك في إلغاء طلب الأشعة والتصوير الخارجي للمريض") }} <strong id="cancelRadModalPatientName" class="text-danger"></strong>{{ app()->getLocale() === "en" ? "?" : "؟" }}
                     </p>
                     <div class="alert alert-warning py-2 px-3 small border-0 mb-3">
-                        <i class="fas fa-info-circle me-1"></i> سيتم إلغاء الطلب فوراً وإزالته من طابور الفحص والمناداة. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.
+                        <i class="fas fa-info-circle me-1"></i> {{ __("سيتم إلغاء الطلب فوراً وإزالته من طابور الفحص والمناداة. في حال كان الطلب مسدداً مالياً، سيتم توجيه المريض للكاشير لاسترداد المبلغ.") }}
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small text-muted">سبب الإلغاء (اختياري):</label>
-                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="مثال: رغبة المريض، مغادرة المستشفى..." value="إلغاء الطلب الخارجي بطلب من المريض">
+                        <label class="form-label fw-semibold small text-muted">{{ __("سبب الإلغاء (اختياري):") }}</label>
+                        <input type="text" name="cancel_reason" class="form-control form-control-sm" placeholder="{{ __("مثال: رغبة المريض، مغادرة المستشفى...") }}" value="{{ __("إلغاء الطلب الخارجي بطلب من المريض") }}">
                     </div>
                 </div>
                 <div class="modal-footer bg-light justify-content-between">
-                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">{{ __("تراجع") }}</button>
                     <button type="submit" class="btn btn-danger fw-bold px-4">
-                        <i class="fas fa-check me-1"></i> نعم، إلغاء الطلب الآن
+                        <i class="fas fa-check me-1"></i> {{ __("نعم، إلغاء الطلب الآن") }}
                     </button>
                 </div>
             </form>
@@ -2002,7 +2003,7 @@ syncRadiologyQueue();
                 <div class="modal-content border-0 shadow">
                     <div class="modal-header bg-primary text-white">
                         <h5 class="modal-title fw-bold">
-                            <i class="fas fa-x-ray me-2"></i> توثيق تقرير الأشعة / السونار للطفل الخديج
+                            <i class="fas fa-x-ray me-2"></i> {{ __("توثيق تقرير الأشعة / السونار للطفل الخديج") }}
                         </h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
@@ -2012,15 +2013,15 @@ syncRadiologyQueue();
                             <div class="bg-light p-3 rounded-3 mb-3 border">
                                 <div class="row g-2">
                                     <div class="col-md-6">
-                                        <span class="text-muted small d-block">الطفل / المريض:</span>
-                                        <strong class="text-dark">{{ $nicuRad->reservation?->baby_name ?: 'طفل ' . ($nicuRad->reservation?->patient?->name ?? 'غير محدد') }}</strong>
+                                        <span class="text-muted small d-block">{{ __("الطفل / المريض:") }}</span>
+                                        <strong class="text-dark">{{ $nicuRad->reservation?->baby_name ?: __('طفل') . ' ' . ($nicuRad->reservation?->patient?->name ?? __('غير محدد')) }}</strong>
                                     </div>
                                     <div class="col-md-3">
-                                        <span class="text-muted small d-block">الحاضنة:</span>
+                                        <span class="text-muted small d-block">{{ __("الحاضنة:") }}</span>
                                         <span class="badge bg-primary">#{{ $nicuRad->reservation?->incubator?->name ?? $nicuRad->reservation?->incubator_id }}</span>
                                     </div>
                                     <div class="col-md-3">
-                                        <span class="text-muted small d-block">نوع الفحص:</span>
+                                        <span class="text-muted small d-block">{{ __("نوع الفحص:") }}</span>
                                         <strong class="text-primary">{{ $nicuRad->item_name }}</strong>
                                     </div>
                                 </div>
@@ -2028,21 +2029,21 @@ syncRadiologyQueue();
 
                             <div class="row g-3">
                                 <div class="col-md-12">
-                                    <label class="form-label fw-bold text-dark small">التقرير الشعاعي / النتائج والمشاهدات التشخيصية (Findings & Impression) <span class="text-danger">*</span></label>
-                                    <textarea name="result" class="form-control" rows="5" placeholder="اكتب تقرير الفحص الطبي بالتفصيل والمشاهدات السريرية..." required>{{ $nicuRad->result }}</textarea>
+                                    <label class="form-label fw-bold text-dark small">{{ __("التقرير الشعاعي / النتائج والمشاهدات التشخيصية (Findings & Impression)") }} <span class="text-danger">*</span></label>
+                                    <textarea name="result" class="form-control" rows="5" placeholder="{{ __("اكتب تقرير الفحص الطبي بالتفصيل والمشاهدات السريرية...") }}" required>{{ $nicuRad->result }}</textarea>
                                 </div>
                                 <div class="col-md-12">
-                                    <label class="form-label fw-bold text-dark small">توصيات أخصائي الأشعة / ملاحظات فنية إضافية</label>
-                                    <textarea name="technician_notes" class="form-control" rows="2" placeholder="اكتب أي توصيات للمتابعة أو إعادة الفحص...">{{ $nicuRad->technician_notes }}</textarea>
+                                    <label class="form-label fw-bold text-dark small">{{ __("توصيات أخصائي الأشعة / ملاحظات فنية إضافية") }}</label>
+                                    <textarea name="technician_notes" class="form-control" rows="2" placeholder="{{ __("اكتب أي توصيات للمتابعة أو إعادة الفحص...") }}">{{ $nicuRad->technician_notes }}</textarea>
                                 </div>
                                 <div class="col-md-12">
-                                    <label class="form-label fw-bold text-dark small">إرفاق صورة الأشعة / السونار أو ملف DICOM/PDF (اختياري)</label>
+                                    <label class="form-label fw-bold text-dark small">{{ __("إرفاق صورة الأشعة / السونار أو ملف DICOM/PDF (اختياري)") }}</label>
                                     <input type="file" name="attachment" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.dcm">
                                     @if($nicuRad->attachment_path)
                                         <div class="mt-2 small">
-                                            <i class="fas fa-paperclip text-primary me-1"></i> مرفق حالي: 
+                                            <i class="fas fa-paperclip text-primary me-1"></i> {{ __("مرفق حالي:") }} 
                                             <a href="{{ asset('storage/' . $nicuRad->attachment_path) }}" target="_blank" class="fw-semibold text-primary">
-                                                {{ $nicuRad->attachment_name ?: 'عرض المرفق' }}
+                                                {{ $nicuRad->attachment_name ?: __("عرض المرفق") }}
                                             </a>
                                         </div>
                                     @endif
@@ -2050,9 +2051,9 @@ syncRadiologyQueue();
                             </div>
                         </div>
                         <div class="modal-footer bg-light justify-content-between">
-                            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">{{ __("إلغاء") }}</button>
                             <button type="submit" class="btn btn-success fw-bold px-4 shadow-sm">
-                                <i class="fas fa-check-circle me-1"></i> حفظ واعتماد تقرير الفحص
+                                <i class="fas fa-check-circle me-1"></i> {{ __("حفظ واعتماد تقرير الفحص") }}
                             </button>
                         </div>
                     </form>
@@ -2068,13 +2069,13 @@ syncRadiologyQueue();
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold">
-                    <i class="fas fa-file-medical me-2"></i> تفاصيل طلب الفحص <span id="qv-req-id" class="font-monospace"></span>
+                    <i class="fas fa-file-medical me-2"></i> {{ __("تفاصيل طلب الفحص") }} <span id="qv-req-id" class="font-monospace"></span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-4 text-end">
                 <div class="d-flex align-items-center gap-3 mb-3 p-3 bg-light rounded border">
-                    <div class="avatar-circle fs-4" id="qv-avatar">م</div>
+                    <div class="avatar-circle fs-4" id="qv-avatar">{{ __("م") }}</div>
                     <div>
                         <h5 class="mb-0 fw-bold text-dark" id="qv-patient-name"></h5>
                         <small class="text-muted" id="qv-patient-info"></small>
@@ -2082,27 +2083,27 @@ syncRadiologyQueue();
                 </div>
                 <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <label class="small text-muted fw-bold d-block">الطبيب المحول:</label>
+                        <label class="small text-muted fw-bold d-block">{{ __("الطبيب المحول:") }}</label>
                         <span class="fw-semibold text-dark" id="qv-doctor-name"></span>
                     </div>
                     <div class="col-6">
-                        <label class="small text-muted fw-bold d-block">حالة السداد:</label>
+                        <label class="small text-muted fw-bold d-block">{{ __("حالة السداد:") }}</label>
                         <span id="qv-payment"></span>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="small text-muted fw-bold d-block">الفحوصات المطلوبة:</label>
+                    <label class="small text-muted fw-bold d-block">{{ __("الفحوصات المطلوبة:") }}</label>
                     <div id="qv-tests" class="d-flex flex-wrap gap-1 mt-1"></div>
                 </div>
                 <div class="mb-3">
-                    <label class="small text-muted fw-bold d-block">ملاحظات الطبيب المعالج:</label>
+                    <label class="small text-muted fw-bold d-block">{{ __("ملاحظات الطبيب المعالج:") }}</label>
                     <div class="p-2 bg-warning-subtle rounded border border-warning-subtle text-dark small" id="qv-notes"></div>
                 </div>
             </div>
             <div class="modal-footer bg-light justify-content-between">
-                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">{{ __("إغلاق") }}</button>
                 <a href="#" id="qv-action-btn" class="btn btn-primary fw-bold px-4">
-                    <i class="fas fa-play me-1"></i> فتح محطة الفحص
+                    <i class="fas fa-play me-1"></i> {{ __("فتح محطة الفحص") }}
                 </a>
             </div>
         </div>

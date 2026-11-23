@@ -28,12 +28,32 @@ class LoginController extends Controller
     public function redirectTo()
     {
         $user = auth()->user();
+
+        if ($user && ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام']) || $user->email === 'gh@hospital.com')) {
+            return route('surgeon-station.index');
+        }
+
+        if ($user && ($user->hasRole(['التخدير', 'anesthesiologist']) || ($user->doctor && ($user->doctor->type === 'anesthesiologist' || $user->doctor->type === 'anesthesia')) || in_array($user->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير']) || $user->email === 'anth@hospital.com')) {
+            return route('anesthesia-station.index');
+        }
+
         if ($user && $user->hasRole('doctor')) {
             return route('doctor.visits.index');
         }
 
         if ($user && $user->hasRole('thaman')) {
             return route('patients.index');
+        }
+
+        if ($user && ($user->hasRole(['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض']) || ($user->role ?? '') === 'nurse')) {
+            if (! $user->isNurseAvailableToday() && ! $user->hasRole(['admin', 'head_nurse', 'hospital_admin']) && ! $user->can('manage nurse availability')) {
+                return route('nurse.off-duty');
+            }
+            return route('nursing-station.index');
+        }
+
+        if ($user && ($user->hasRole(['surgery_staff', 'موظف عمليات']) || $user->user_type === 'surgery_staff')) {
+            return route('surgeries.index');
         }
 
         return '/dashboard';
@@ -53,7 +73,6 @@ class LoginController extends Controller
     /**
      * The user has been authenticated.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  mixed  $user
      * @return mixed
      */
@@ -79,7 +98,6 @@ class LoginController extends Controller
     /**
      * Log the user out of the application.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
      */
     public function logout(\Illuminate\Http\Request $request)

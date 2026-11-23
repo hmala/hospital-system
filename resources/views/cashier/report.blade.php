@@ -10,21 +10,21 @@
                 <div>
                     <h2 class="mb-1">
                         <i class="fas fa-file-invoice-dollar me-2 text-success"></i>
-                        تقرير حركات ومدفوعات الكاشير
+                        {{ __('تقرير حركات ومدفوعات الكاشير') }}
                     </h2>
-                    <p class="text-muted mb-0">سجل الوصولات المالية والمقبوضات اليومية والتفصيلية</p>
+                    <p class="text-muted mb-0">{{ __('سجل الوصولات المالية والمقبوضات اليومية والتفصيلية') }}</p>
                 </div>
                 <div class="d-flex gap-2">
                     @canany(['void payment receipt', 'view cashier reports'])
                         <a href="{{ route('cashier.payments.void.logs') }}" class="btn btn-outline-danger shadow-sm">
-                            <i class="fas fa-shield-alt me-1"></i> تدقيق الملغيات
+                            <i class="fas fa-shield-alt me-1"></i> {{ __('تدقيق الملغيات') }}
                         </a>
                     @endcanany
                     <a href="{{ request()->fullUrlWithQuery(['print' => '1']) }}" target="_blank" class="btn btn-primary shadow-sm">
-                        <i class="fas fa-print me-1"></i> طباعة التقرير (A4)
+                        <i class="fas fa-print me-1"></i> {{ __('طباعة التقرير (A4)') }}
                     </a>
                     <a href="{{ route('cashier.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> العودة للكاشير
+                        <i class="fas fa-arrow-left me-1"></i> {{ __('العودة للكاشير') }}
                     </a>
                 </div>
             </div>
@@ -38,8 +38,8 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">إجمالي المقبوضات النقدية</span>
-                            <h3 class="mb-0 fw-bold">{{ number_format($totalAmount, 0) }} <small style="font-size: 0.9rem;">د.ع</small></h3>
+                            <span class="small opacity-75 d-block mb-1">{{ __('إجمالي المقبوضات النقدية') }}</span>
+                            <h3 class="mb-0 fw-bold">{{ number_format($totalAmount, 0) }} <small style="font-size: 0.9rem;">{{ __('د.ع') }}</small></h3>
                         </div>
                         <i class="fas fa-money-bill-wave fa-2x opacity-50"></i>
                     </div>
@@ -51,8 +51,8 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">مطالبات جهات الضمان</span>
-                            <h3 class="mb-0 fw-bold">{{ number_format($totalInsuranceShare ?? 0, 0) }} <small style="font-size: 0.9rem;">د.ع</small></h3>
+                            <span class="small opacity-75 d-block mb-1">{{ __('مطالبات جهات الضمان') }}</span>
+                            <h3 class="mb-0 fw-bold">{{ number_format($totalInsuranceShare ?? 0, 0) }} <small style="font-size: 0.9rem;">{{ __('د.ع') }}</small></h3>
                         </div>
                         <i class="fas fa-shield-alt fa-2x opacity-50"></i>
                     </div>
@@ -64,7 +64,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">عدد الوصولات المصدرة</span>
+                            <span class="small opacity-75 d-block mb-1">{{ __('عدد الوصولات المصدرة') }}</span>
                             <h3 class="mb-0 fw-bold">{{ number_format($totalCount) }}</h3>
                         </div>
                         <i class="fas fa-receipt fa-2x opacity-50"></i>
@@ -77,12 +77,12 @@
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">الفترة الزمنية</span>
+                            <span class="small opacity-75 d-block mb-1">{{ __('الفترة الزمنية') }}</span>
                             <h6 class="mb-0 fw-bold" style="font-size: 0.95rem;">
                                 @if($fromDate && $toDate)
-                                    {{ $fromDate }} <br><span class="opacity-75">إلى</span> {{ $toDate }}
+                                    {{ $fromDate }} <br><span class="opacity-75">{{ __('إلى') }}</span> {{ $toDate }}
                                 @else
-                                    كافة السجلات
+                                    {{ __('كافة السجلات') }}
                                 @endif
                             </h6>
                         </div>
@@ -101,21 +101,21 @@
                 <div class="row g-2 align-items-end">
                     <!-- من تاريخ -->
                     <div class="col-lg-2 col-md-3 col-sm-6">
-                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-calendar-day me-1"></i>من تاريخ</label>
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-calendar-day me-1"></i>{{ __('من تاريخ') }}</label>
                         <input type="date" name="from_date" id="fromDateInput" class="form-control form-control-sm" value="{{ $fromDate }}">
                     </div>
 
                     <!-- إلى تاريخ -->
                     <div class="col-lg-2 col-md-3 col-sm-6">
-                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-calendar-day me-1"></i>إلى تاريخ</label>
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-calendar-day me-1"></i>{{ __('إلى تاريخ') }}</label>
                         <input type="date" name="to_date" id="toDateInput" class="form-control form-control-sm" value="{{ $toDate }}">
                     </div>
 
                     <!-- القسم -->
                     <div class="col-lg-2 col-md-3 col-sm-6">
-                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-clinic-medical me-1"></i>القسم / الخدمة</label>
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-clinic-medical me-1"></i>{{ __('القسم / الخدمة') }}</label>
                         <select name="payment_type" class="form-select form-select-sm">
-                            <option value="">جميع الأقسام</option>
+                            <option value="">{{ __('جميع الأقسام') }}</option>
                             @foreach(\App\Models\Payment::PAYMENT_TYPES as $typeKey => $typeLabel)
                                 <option value="{{ $typeKey }}" {{ $paymentType == $typeKey ? 'selected' : '' }}>{{ $typeLabel }}</option>
                             @endforeach
@@ -124,22 +124,22 @@
 
                     <!-- جهة الضمان -->
                     <div class="col-lg-2 col-md-3 col-sm-6">
-                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-shield-alt me-1"></i>جهة الضمان</label>
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-shield-alt me-1"></i>{{ __('جهة الضمان') }}</label>
                         <select name="insurance_type" class="form-select form-select-sm">
-                            <option value="">الكل (ضمان ونقدي)</option>
-                            <option value="insured" {{ ($insuranceType ?? '') === 'insured' ? 'selected' : '' }}>جميع المشمولين بالضمان</option>
-                            <option value="moi" {{ ($insuranceType ?? '') === 'moi' ? 'selected' : '' }}>ضمان وزارة الداخلية</option>
-                            <option value="hi" {{ ($insuranceType ?? '') === 'hi' ? 'selected' : '' }}>الضمان الصحي الوطني</option>
-                            <option value="none" {{ ($insuranceType ?? '') === 'none' ? 'selected' : '' }}>بدون ضمان (نقدي فقط)</option>
+                            <option value="">{{ __('الكل (ضمان ونقدي)') }}</option>
+                            <option value="insured" {{ ($insuranceType ?? '') === 'insured' ? 'selected' : '' }}>{{ __('جميع المشمولين بالضمان') }}</option>
+                            <option value="moi" {{ ($insuranceType ?? '') === 'moi' ? 'selected' : '' }}>{{ __('ضمان وزارة الداخلية') }}</option>
+                            <option value="hi" {{ ($insuranceType ?? '') === 'hi' ? 'selected' : '' }}>{{ __('الضمان الصحي الوطني') }}</option>
+                            <option value="none" {{ ($insuranceType ?? '') === 'none' ? 'selected' : '' }}>{{ __('بدون ضمان (نقدي فقط)') }}</option>
                         </select>
                     </div>
 
                     @if(($canViewAllCashiers ?? (auth()->user()->hasRole(['admin', 'accountant', 'super_admin', 'casshieradmin']) || auth()->user()->can('void payment receipt'))) && isset($cashiers) && $cashiers->count() > 0)
                     <!-- الكاشير (للإدارة والمحاسبين والكاشير الإداري) -->
                     <div class="col-lg-2 col-md-3 col-sm-6">
-                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user-tie me-1"></i>الكاشير</label>
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-user-tie me-1"></i>{{ __('الكاشير') }}</label>
                         <select name="cashier_id" class="form-select form-select-sm">
-                            <option value="">جميع الكاشيرات</option>
+                            <option value="">{{ __('جميع الكاشيرات') }}</option>
                             @foreach($cashiers as $c)
                                 <option value="{{ $c->id }}" {{ ($cashierId ?? '') == $c->id ? 'selected' : '' }}>{{ $c->name }}</option>
                             @endforeach
@@ -149,16 +149,16 @@
 
                     <!-- البحث النصي -->
                     <div class="col-lg-2 col-md-6 col-sm-6">
-                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-search me-1"></i>رقم الوصل أو المريض</label>
-                        <input type="text" name="search" class="form-control form-control-sm" placeholder="بحث بالاسم أو الرقم..." value="{{ $search }}">
+                        <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-search me-1"></i>{{ __('رقم الوصل أو المريض') }}</label>
+                        <input type="text" name="search" class="form-control form-control-sm" placeholder="{{ __('بحث بالاسم أو الرقم...') }}" value="{{ $search }}">
                     </div>
 
                     <!-- أزرار الفلترة -->
                     <div class="col-lg-2 col-md-6 col-sm-6 d-flex gap-1">
                         <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
-                            <i class="fas fa-filter me-1"></i> تطبيق
+                            <i class="fas fa-filter me-1"></i> {{ __('تطبيق') }}
                         </button>
-                        <a href="{{ route('cashier.report') }}" class="btn btn-outline-secondary btn-sm" title="إعادة تعيين">
+                        <a href="{{ route('cashier.report') }}" class="btn btn-outline-secondary btn-sm" title="{{ __('إعادة تعيين') }}">
                             <i class="fas fa-undo"></i>
                         </a>
                     </div>
@@ -166,12 +166,12 @@
 
                 <!-- أزرار التاريخ السريعة -->
                 <div class="d-flex flex-wrap gap-2 mt-3 pt-2 border-top">
-                    <span class="small text-muted align-self-center"><i class="fas fa-bolt text-warning me-1"></i>فترات سريعة:</span>
-                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'today' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="today">اليوم</button>
-                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'yesterday' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="yesterday">أمس</button>
-                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'this_week' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="this_week">هذا الأسبوع</button>
-                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'this_month' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="this_month">هذا الشهر</button>
-                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'all' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="all">الكل (كافة السجلات)</button>
+                    <span class="small text-muted align-self-center"><i class="fas fa-bolt text-warning me-1"></i>{{ __('فترات سريعة:') }}</span>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'today' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="today">{{ __('اليوم') }}</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'yesterday' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="yesterday">{{ __('أمس') }}</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'this_week' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="this_week">{{ __('هذا الأسبوع') }}</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'this_month' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="this_month">{{ __('هذا الشهر') }}</button>
+                    <button type="button" class="btn btn-sm py-0 px-2 quick-date {{ ($range ?? '') === 'all' ? 'btn-primary active' : 'btn-outline-secondary' }}" data-range="all">{{ __('الكل (كافة السجلات)') }}</button>
                 </div>
             </form>
         </div>
@@ -181,10 +181,10 @@
     <div class="card border-0 shadow-sm" style="border-radius: 12px;">
         <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold text-dark">
-                <i class="fas fa-list-alt me-2 text-primary"></i>تفاصيل المقبوضات والوصولات
+                <i class="fas fa-list-alt me-2 text-primary"></i>{{ __('تفاصيل المقبوضات والوصولات') }}
             </h5>
             <span class="badge bg-light text-dark border">
-                عرض {{ $payments->count() }} من أصل {{ $payments->total() }} وصل
+                {{ __('عرض') }} {{ $payments->count() }} {{ __('من أصل') }} {{ $payments->total() }} {{ __('وصل') }}
             </span>
         </div>
         <div class="card-body p-0">
@@ -193,16 +193,16 @@
                     <thead class="table-light">
                         <tr>
                             <th style="width: 50px;">#</th>
-                            <th>رقم الوصل</th>
-                            <th>التاريخ والوقت</th>
-                            <th class="text-start">اسم المريض</th>
-                            <th>المستخدم (الكاشير)</th>
-                            <th>القسم / الخدمة</th>
-                            <th>تغطية الضمان</th>
-                            <th>المحصل (المريض)</th>
-                            <th>حصة الضمان</th>
-                            <th>طريقة الدفع</th>
-                            <th style="width: 90px;">الإجراء</th>
+                            <th>{{ __('رقم الوصل') }}</th>
+                            <th>{{ __('التاريخ والوقت') }}</th>
+                            <th class="text-start">{{ __('اسم المريض') }}</th>
+                            <th>{{ __('المستخدم (الكاشير)') }}</th>
+                            <th>{{ __('القسم / الخدمة') }}</th>
+                            <th>{{ __('تغطية الضمان') }}</th>
+                            <th>{{ __('المحصل (المريض)') }}</th>
+                            <th>{{ __('حصة الضمان') }}</th>
+                            <th>{{ __('طريقة الدفع') }}</th>
+                            <th style="width: 90px;">{{ __('الإجراء') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -224,29 +224,29 @@
                             <td class="text-start">
                                 <div class="d-flex align-items-center">
                                     <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold; min-width: 35px;">
-                                        {{ mb_substr(optional($payment->patient)->user->name ?? optional($payment->emergency)->emergencyPatient?->name ?? optional($payment->emergency)->patient?->user?->name ?? 'م', 0, 1) }}
+                                        {{ mb_substr(optional($payment->patient)->user->name ?? optional($payment->emergency)->emergencyPatient?->name ?? optional($payment->emergency)->patient?->user?->name ?? __('م'), 0, 1) }}
                                     </div>
                                     <div>
-                                        <strong class="text-dark">{{ optional($payment->patient)->user->name ?? optional($payment->emergency)->emergencyPatient?->name ?? optional($payment->emergency)->patient?->user?->name ?? 'غير محدد' }}</strong>
+                                        <strong class="text-dark">{{ optional($payment->patient)->user->name ?? optional($payment->emergency)->emergencyPatient?->name ?? optional($payment->emergency)->patient?->user?->name ?? __('غير محدد') }}</strong>
                                         <br>
-                                        <small class="text-muted">{{ optional($payment->patient)->user->phone ?? optional($payment->emergency)->emergencyPatient?->phone ?? optional($payment->emergency)->patient?->user?->phone ?? 'لا يوجد هاتف' }}</small>
+                                        <small class="text-muted">{{ optional($payment->patient)->user->phone ?? optional($payment->emergency)->emergencyPatient?->phone ?? optional($payment->emergency)->patient?->user?->phone ?? __('لا يوجد هاتف') }}</small>
                                     </div>
                                 </div>
                             </td>
                             <td>
                                 <span class="badge bg-light text-dark border">
-                                    <i class="fas fa-user-circle me-1 text-secondary"></i>{{ optional($payment->cashier)->name ?? 'النظام' }}
+                                    <i class="fas fa-user-circle me-1 text-secondary"></i>{{ optional($payment->cashier)->name ?? __('النظام') }}
                                 </span>
                             </td>
                             <td>
                                 @php
                                     $typeBadge = match($payment->payment_type) {
-                                        'appointment' => ['class' => 'bg-info bg-opacity-10 text-info border-info', 'icon' => 'fas fa-stethoscope', 'label' => 'استشارية / كشفية'],
-                                        'lab' => ['class' => 'bg-warning bg-opacity-10 text-warning border-warning', 'icon' => 'fas fa-vial', 'label' => 'مختبر'],
-                                        'radiology' => ['class' => 'bg-primary bg-opacity-10 text-primary border-primary', 'icon' => 'fas fa-x-ray', 'label' => 'أشعة'],
-                                        'emergency' => ['class' => 'bg-danger bg-opacity-10 text-danger border-danger', 'icon' => 'fas fa-ambulance', 'label' => 'طوارئ'],
-                                        'surgery' => ['class' => 'bg-purple bg-opacity-10 text-purple border-purple', 'icon' => 'fas fa-procedures', 'label' => 'عمليات'],
-                                        'pharmacy' => ['class' => 'bg-success bg-opacity-10 text-success border-success', 'icon' => 'fas fa-pills', 'label' => 'صيدلية'],
+                                        'appointment' => ['class' => 'bg-info bg-opacity-10 text-info border-info', 'icon' => 'fas fa-stethoscope', 'label' => __('استشارية / كشفية')],
+                                        'lab' => ['class' => 'bg-warning bg-opacity-10 text-warning border-warning', 'icon' => 'fas fa-vial', 'label' => __('مختبر')],
+                                        'radiology' => ['class' => 'bg-primary bg-opacity-10 text-primary border-primary', 'icon' => 'fas fa-x-ray', 'label' => __('أشعة')],
+                                        'emergency' => ['class' => 'bg-danger bg-opacity-10 text-danger border-danger', 'icon' => 'fas fa-ambulance', 'label' => __('طوارئ')],
+                                        'surgery' => ['class' => 'bg-purple bg-opacity-10 text-purple border-purple', 'icon' => 'fas fa-procedures', 'label' => __('عمليات')],
+                                        'pharmacy' => ['class' => 'bg-success bg-opacity-10 text-success border-success', 'icon' => 'fas fa-pills', 'label' => __('صيدلية')],
                                         default => ['class' => 'bg-secondary bg-opacity-10 text-secondary border-secondary', 'icon' => 'fas fa-file-invoice', 'label' => $payment->payment_type_name]
                                     };
                                 @endphp
@@ -266,17 +266,17 @@
                                         <br><small class="text-muted">#{{ $payment->insurance_card_no }}</small>
                                     @endif
                                 @else
-                                    <span class="badge bg-light text-muted border">نقدي</span>
+                                    <span class="badge bg-light text-muted border">{{ __('نقدي') }}</span>
                                 @endif
                             </td>
                             <td>
                                 <strong class="text-success fs-6">{{ number_format($payment->amount, 0) }}</strong>
-                                <small class="text-muted d-block" style="font-size: 0.75rem;">د.ع</small>
+                                <small class="text-muted d-block" style="font-size: 0.75rem;">{{ __('د.ع') }}</small>
                             </td>
                             <td>
                                 @if($payment->insurance_share > 0)
                                     <strong class="text-primary fs-6">{{ number_format($payment->insurance_share, 0) }}</strong>
-                                    <small class="text-muted d-block" style="font-size: 0.75rem;">د.ع</small>
+                                    <small class="text-muted d-block" style="font-size: 0.75rem;">{{ __('د.ع') }}</small>
                                 @else
                                     <span class="text-muted">-</span>
                                 @endif
@@ -288,10 +288,10 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ route('cashier.receipt', $payment) }}" class="btn btn-outline-primary" title="عرض الوصل">
+                                    <a href="{{ route('cashier.receipt', $payment) }}" class="btn btn-outline-primary" title="{{ __('عرض الوصل') }}">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ route('cashier.receipt.print', $payment) }}" target="_blank" class="btn btn-outline-success" title="طباعة الوصل">
+                                    <a href="{{ route('cashier.receipt.print', $payment) }}" target="_blank" class="btn btn-outline-success" title="{{ __('طباعة الوصل') }}">
                                         <i class="fas fa-print"></i>
                                     </a>
                                 </div>
@@ -301,8 +301,8 @@
                         <tr>
                             <td colspan="11" class="text-center text-muted py-5">
                                 <i class="fas fa-receipt fa-3x mb-3 text-secondary opacity-50"></i>
-                                <h5 class="fw-bold">لا توجد حركات أو وصولات مسجلة بهذه الفلاتر</h5>
-                                <p class="small text-muted">جرب تغيير نطاق التواريخ أو تصفية الأقسام</p>
+                                <h5 class="fw-bold">{{ __('لا توجد حركات أو وصولات مسجلة بهذه الفلاتر') }}</h5>
+                                <p class="small text-muted">{{ __('جرب تغيير نطاق التواريخ أو تصفية الأقسام') }}</p>
                             </td>
                         </tr>
                         @endforelse
@@ -311,13 +311,13 @@
                     <tfoot class="table-light">
                         <tr class="fw-bold">
                             <td colspan="7" class="text-start py-3 fs-6">
-                                <i class="fas fa-sigma me-1"></i> إجمالي المقبوضات ومطالبات الضمان:
+                                <i class="fas fa-sigma me-1"></i> {{ __('إجمالي المقبوضات ومطالبات الضمان:') }}
                             </td>
                             <td class="text-success fs-5 py-3">
-                                {{ number_format($payments->sum('amount'), 0) }} <small class="fs-6">د.ع</small>
+                                {{ number_format($payments->sum('amount'), 0) }} <small class="fs-6">{{ __('د.ع') }}</small>
                             </td>
                             <td class="text-primary fs-5 py-3">
-                                {{ number_format($payments->sum('insurance_share'), 0) }} <small class="fs-6">د.ع</small>
+                                {{ number_format($payments->sum('insurance_share'), 0) }} <small class="fs-6">{{ __('د.ع') }}</small>
                             </td>
                             <td colspan="2"></td>
                         </tr>

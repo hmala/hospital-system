@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,19 +7,19 @@
         $nicuRes = optional($radiology)->medical_request?->incubatorReservation;
         $patient = $radiology->patient ?? optional(optional($radiology)->medical_request)->visit?->patient ?? $nicuRes?->patient;
         $patientUser = optional($patient)->user;
-        $patientName = $nicuRes ? $nicuRes->baby_title : ($patientUser->name ?? optional($patient)->name ?? 'مريض غير محدد');
+        $patientName = $nicuRes ? $nicuRes->baby_title : ($patientUser->name ?? optional($patient)->name ?? __('مريض غير محدد'));
         $patientPhone = $patientUser->phone ?? optional($patient)->phone ?? '—';
-        $patientAge = $nicuRes ? ($nicuRes->days_count . ' يوم (حاضنة)') : (optional($patient)->age ?? '—');
-        $patientGender = optional($patient)->gender === 'male' ? 'ذكر' : (optional($patient)->gender === 'female' ? 'أنثى' : '—');
+        $patientAge = $nicuRes ? ($nicuRes->days_count . ' ' . __('يوم (حاضنة)')) : (optional($patient)->age ?? '—');
+        $patientGender = optional($patient)->gender === 'male' ? __('ذكر') : (optional($patient)->gender === 'female' ? __('أنثى') : '—');
         $patientMedNo = optional($patient)->medical_number ?? (optional($patient)->id ? '#' . optional($patient)->id : '—');
 
         $doctor = $radiology->doctor ?? optional(optional($radiology)->medical_request)->visit?->doctor ?? $nicuRes?->doctor;
-        $doctorName = optional(optional($doctor)->user)->name ?? optional($doctor)->name ?? 'الاستشارية';
-        $departmentName = $nicuRes ? ('قسم الخدج والحاضنات (' . ($nicuRes->incubator?->name ?? 'حاضنة') . ')') : (optional(optional(optional($radiology)->medical_request)->visit)->department?->name ?? 'العيادات الاستشارية');
+        $doctorName = optional(optional($doctor)->user)->name ?? optional($doctor)->name ?? __('الاستشارية');
+        $departmentName = $nicuRes ? (__('قسم الخدج والحاضنات (') . ($nicuRes->incubator?->name ?? __('حاضنة')) . ')') : (optional(optional(optional($radiology)->medical_request)->visit)->department?->name ?? __('العيادات الاستشارية'));
 
-        $scanName = optional($radiology->radiologyType)->name ?? ($radiology->clinical_indication ?: 'فحص السونار والتصوير الطبي');
+        $scanName = optional($radiology->radiologyType)->name ?? ($radiology->clinical_indication ?: __('فحص السونار والتصوير الطبي'));
         $scanCode = optional($radiology->radiologyType)->code ?? ('RAD-' . $radiology->id);
-        $scanCategory = optional($radiology->radiologyType)->subcategory ?? (optional($radiology->radiologyType)->main_category ?? 'السونار والأشعة');
+        $scanCategory = optional($radiology->radiologyType)->subcategory ?? (optional($radiology->radiologyType)->main_category ?? __('السونار والأشعة'));
 
         $resultObj = $radiology->result ?? null;
         $findings = optional($resultObj)->findings ?? '';
@@ -28,7 +28,7 @@
         $images = optional($resultObj)->images ?? [];
         if (!is_array($images)) $images = [];
 
-        $radiologistName = optional(optional($resultObj)->radiologist)->name ?? (is_string(optional($resultObj)->radiologist) ? optional($resultObj)->radiologist : 'أخصائي الأشعة والتصوير');
+        $radiologistName = optional(optional($resultObj)->radiologist)->name ?? (is_string(optional($resultObj)->radiologist) ? optional($resultObj)->radiologist : __('أخصائي الأشعة والتصوير'));
         $reportedDate = optional($resultObj)->reported_at ? (\Carbon\Carbon::parse(optional($resultObj)->reported_at)->format('Y-m-d H:i')) : now()->format('Y-m-d H:i');
         $examDate = !empty($radiology->requested_date) ? (\Carbon\Carbon::parse($radiology->requested_date)->format('Y-m-d H:i')) : now()->format('Y-m-d H:i');
 
@@ -44,7 +44,7 @@
             : asset('images/1.jpg');
     @endphp
 
-    <title>تقرير فحص السونار والأشعة - #{{ $radiology->id }} - {{ $patientName }}</title>
+    <title>{{ __("تقرير فحص السونار والأشعة") }} - #{{ $radiology->id }} - {{ $patientName }}</title>
 
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -599,22 +599,22 @@
     <div class="no-print">
         <div class="action-group">
             <span style="font-weight: 800; color: #005a9c; font-size: 13.5px;">
-                <i class="fas fa-file-medical-alt me-1"></i> استمارة التقرير الطبي المعتمد للسونار والأشعة التشخيصية
+                <i class="fas fa-file-medical-alt me-1"></i> {{ __("استمارة التقرير الطبي المعتمد للسونار والأشعة التشخيصية") }}
             </span>
             <span style="color: #cbd5e1;">|</span>
             <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
-                {{ $isInsured ? '🛡️ مريض مسجل بالضمان الصحي' : '💵 فحص حساب نقدي (كاش)' }}
+                {{ $isInsured ? __('🛡️ مريض مسجل بالضمان الصحي') : __('💵 فحص حساب نقدي (كاش)') }}
             </span>
         </div>
         <div class="action-group">
             <button class="btn btn-print" onclick="window.print()">
-                <i class="fas fa-print"></i> طباعة التقرير (Print)
+                <i class="fas fa-print"></i> {{ __("طباعة التقرير (Print)") }}
             </button>
             <button class="btn btn-pdf" onclick="window.print()">
-                <i class="fas fa-file-pdf"></i> حفظ كـ PDF
+                <i class="fas fa-file-pdf"></i> {{ __("حفظ كـ PDF") }}
             </button>
             <button class="btn btn-back" onclick="window.history.back()">
-                <i class="fas fa-arrow-right"></i> رجوع
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }}"></i> {{ __("رجوع") }}
             </button>
         </div>
     </div>
@@ -629,9 +629,9 @@
                 <!-- 1. Hospital Header -->
                 <div class="report-header">
                     <div class="header-hospital-ar">
-                        <h2>مستشفى الكفاءات الأهلي</h2>
-                        <h4>قسم الأشعة والتصوير الطبي والسونار</h4>
-                        <p>وحدة الموجات فوق الصوتية والتشخيص الإشعاعي المعتمد</p>
+                        <h2>{{ __("مستشفى الكفاءات الأهلي") }}</h2>
+                        <h4>{{ __("قسم الأشعة والتصوير الطبي والسونار") }}</h4>
+                        <p>{{ __("وحدة الموجات فوق الصوتية والتشخيص الإشعاعي المعتمد") }}</p>
                     </div>
                     <div class="header-logo">
                         <img src="{!! $hospitalLogoSrc !!}" 
@@ -649,7 +649,7 @@
 
                 <!-- 2. Document Title Banner -->
                 <div class="document-title-banner">
-                    <h3>تقرير الفحص الطبي التشخيصي (Diagnostic Imaging Report)</h3>
+                    <h3>{{ __("تقرير الفحص الطبي التشخيصي (Diagnostic Imaging Report)") }}</h3>
                     <div class="report-code-badge">
                         RAD-#{{ $radiology->id }}
                     </div>
@@ -659,38 +659,38 @@
                 <div class="patient-card">
                     <div class="patient-grid">
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-user text-secondary me-1"></i> اسم المريض:</span>
+                            <span class="p-label"><i class="fas fa-user text-secondary me-1"></i> {{ __("اسم المريض:") }}</span>
                             <span class="p-val" style="font-size: 13px; color: #005a9c;">{{ $patientName }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-birthday-cake text-secondary me-1"></i> العمر والجنس:</span>
-                            <span class="p-val">{{ $patientAge }} سنة • {{ $patientGender }}</span>
+                            <span class="p-label"><i class="fas fa-birthday-cake text-secondary me-1"></i> {{ __("العمر والجنس:") }}</span>
+                            <span class="p-val">{{ $patientAge }} {{ __("سنة") }} • {{ $patientGender }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-phone text-secondary me-1"></i> رقم الهاتف:</span>
+                            <span class="p-label"><i class="fas fa-phone text-secondary me-1"></i> {{ __("رقم الهاتف:") }}</span>
                             <span class="p-val" style="direction: ltr; text-align: right;">{{ $patientPhone }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-id-card text-secondary me-1"></i> التغطية المالية:</span>
+                            <span class="p-label"><i class="fas fa-id-card text-secondary me-1"></i> {{ __("التغطية المالية:") }}</span>
                             <span class="badge-coverage {{ $isInsured ? 'badge-insurance' : 'badge-cash' }}">
-                                {{ $isInsured ? '🛡️ الضمان الصحي' : '💵 حساب نقدي' }}
+                                {{ $isInsured ? __('🛡️ الضمان الصحي') : __('💵 حساب نقدي') }}
                             </span>
                         </div>
 
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-user-md text-secondary me-1"></i> الطبيب المحول:</span>
-                            <span class="p-val">د. {{ $doctorName }}</span>
+                            <span class="p-label"><i class="fas fa-user-md text-secondary me-1"></i> {{ __("الطبيب المحول:") }}</span>
+                            <span class="p-val">{{ __("د.") }} {{ $doctorName }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-clinic-medical text-secondary me-1"></i> العيادة / القسم:</span>
+                            <span class="p-label"><i class="fas fa-clinic-medical text-secondary me-1"></i> {{ __("العيادة / القسم:") }}</span>
                             <span class="p-val">{{ $departmentName }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-calendar-alt text-secondary me-1"></i> تاريخ وتوقيت الفحص:</span>
+                            <span class="p-label"><i class="fas fa-calendar-alt text-secondary me-1"></i> {{ __("تاريخ وتوقيت الفحص:") }}</span>
                             <span class="p-val">{{ $examDate }}</span>
                         </div>
                         <div class="p-field">
-                            <span class="p-label"><i class="fas fa-folder text-secondary me-1"></i> رقم الملف الطبي:</span>
+                            <span class="p-label"><i class="fas fa-folder text-secondary me-1"></i> {{ __("رقم الملف الطبي:") }}</span>
                             <span class="p-val">{{ $patientMedNo }}</span>
                         </div>
                     </div>
@@ -699,11 +699,11 @@
                 <!-- 4. Required Scan Banner -->
                 <div class="scan-banner">
                     <div>
-                        <span class="scan-meta d-block" style="font-size: 10px; color: #0284c7;">نوع الفحص المطلوب (Procedure / Study):</span>
+                        <span class="scan-meta d-block" style="font-size: 10px; color: #0284c7;">{{ __("نوع الفحص المطلوب (Procedure / Study):") }}</span>
                         <span class="scan-title">{{ $scanName }}</span>
                     </div>
                     <div style="text-align: left; direction: ltr;">
-                        <span class="scan-meta d-block" style="font-size: 10px;">التصنيف:</span>
+                        <span class="scan-meta d-block" style="font-size: 10px;">{{ __("التصنيف:") }}</span>
                         <span style="font-size: 11.5px; font-weight: 800; color: #005a9c;">{{ $scanCategory }}</span>
                     </div>
                 </div>
@@ -712,16 +712,16 @@
                 <div class="section-box">
                     <div class="section-header">
                         <i class="fas fa-file-medical-alt text-primary"></i>
-                        <span>المشاهدات والتقرير الشعاعي السريري (Clinical Findings)</span>
+                        <span>{{ __("المشاهدات والتقرير الشعاعي السريري (Clinical Findings)") }}</span>
                     </div>
-                    <div class="section-body findings-body">@if(!empty(trim($findings))){{ trim($findings) }}@else<span style="color: #94a3b8; font-style: italic;">لم يتم تدوين المشاهدات التفصيلية للفحص بعد.</span>@endif</div>
+                    <div class="section-body findings-body">@if(!empty(trim($findings))){{ trim($findings) }}@else<span style="color: #94a3b8; font-style: italic;">{{ __("لم يتم تدوين المشاهدات التفصيلية للفحص بعد.") }}</span>@endif</div>
                 </div>
 
                 <!-- 6. Impression Box (الانطباع التشخيصي) -->
                 @if(!empty(trim($impression)))
                     <div class="impression-box">
                         <div class="impression-title">
-                            <i class="fas fa-check-circle me-1"></i> الانطباع والتشخيص النهائي (Impression / Conclusion):
+                            <i class="fas fa-check-circle me-1"></i> {{ __("الانطباع والتشخيص النهائي (Impression / Conclusion):") }}
                         </div>
                         <div class="impression-text">
                             {{ trim($impression) }}
@@ -733,7 +733,7 @@
                 @if(!empty(trim($recommendations)))
                     <div class="recommendation-box">
                         <div class="rec-title">
-                            <i class="fas fa-notes-medical me-1"></i> التوصيات والمتابعة (Recommendations):
+                            <i class="fas fa-notes-medical me-1"></i> {{ __("التوصيات والمتابعة (Recommendations):") }}
                         </div>
                         <div class="rec-text">
                             {{ trim($recommendations) }}
@@ -746,7 +746,7 @@
                     <div class="section-box" style="margin-top: 10px;">
                         <div class="section-header">
                             <i class="fas fa-images text-primary"></i>
-                            <span>الصور والمرفقات الإشعاعية التوضيحية ({{ count($images) }})</span>
+                            <span>{{ __("الصور والمرفقات الإشعاعية التوضيحية") }} ({{ count($images) }})</span>
                         </div>
                         <div style="padding: 10px;">
                             <div class="images-grid">
@@ -768,14 +768,14 @@
                     <!-- 1. Doctor / Radiologist Signature (مربع التوقيع فارغ تماماً للاختبار اليدوي) -->
                     <div class="auth-cell">
                         <div class="signature-box-empty">
-                            <div class="sig-title">أخصائي الأشعة والتصوير الطبي / فاحص السونار</div>
-                            <div class="sig-subtitle">د. {{ $radiologistName }}</div>
+                            <div class="sig-title">{{ __("أخصائي الأشعة والتصوير الطبي / فاحص السونار") }}</div>
+                            <div class="sig-subtitle">{{ __("د.") }} {{ $radiologistName }}</div>
                             <!-- مكان التوقيع فارغ -->
                             <div class="sig-empty-line">
-                                (مكان التوقيع والاعتماد)
+                                {{ __("(مكان التوقيع والاعتماد)") }}
                             </div>
                             <div style="font-size: 10px; color: #64748b; font-weight: 700; margin-top: 2px;">
-                                التاريخ: {{ now()->format('Y-m-d') }}
+                                {{ __("التاريخ:") }} {{ now()->format('Y-m-d') }}
                             </div>
                         </div>
                     </div>
@@ -784,9 +784,9 @@
                     <div class="auth-cell">
                         <div class="stamp-circle-box">
                             <div style="font-size: 8px; font-weight: 800; color: #005a9c;">★ ★ ★</div>
-                            <div style="font-size: 9.5px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات</div>
-                            <div style="font-size: 8.5px; font-weight: 800; color: #0284c7;">الأشعة والسونار</div>
-                            <div style="font-size: 8px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                            <div style="font-size: 9.5px; font-weight: 900; line-height: 1.2;">{{ __("مستشفى الكفاءات") }}</div>
+                            <div style="font-size: 8.5px; font-weight: 800; color: #0284c7;">{{ __("الأشعة والسونار") }}</div>
+                            <div style="font-size: 8px; color: #b91c1c; font-weight: 900; margin-top: 1px;">{{ __("مُعتمَــد") }}</div>
                         </div>
                     </div>
 
@@ -808,12 +808,12 @@
             <!-- 10. Official Footer -->
             <div class="report-footer">
                 <div class="footer-contacts">
-                    <span>📍 بغداد - الحارثية - شارع الكندي</span>
-                    <span>📞 هاتف: +964 (0) 778 050 7060</span>
+                    <span>{{ __("📍 بغداد - الحارثية - شارع الكندي") }}</span>
+                    <span>{{ __("📞 هاتف: +964 (0) 778 050 7060") }}</span>
                     <span>📧 info@alkafaathospital.com</span>
                 </div>
                 <div>
-                    <span>صفحة 1 من 1 • Al-Kafa'at Hospital HIS</span>
+                    <span>{{ __("صفحة 1 من 1 • Al-Kafa'at Hospital HIS") }}</span>
                 </div>
             </div>
 

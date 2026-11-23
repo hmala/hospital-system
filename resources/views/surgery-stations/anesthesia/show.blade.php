@@ -111,13 +111,11 @@
                                     <label>نوع التخدير</label>
                                     <input type="text" name="anesthesia_type" class="form-control" list="anesthesiaTypeSuggestions" value="{{ $surgery->anesthesiaStation?->anesthesia_type ?? $surgery->anesthesia_type ?? '' }}" placeholder="أدخل نوع التخدير...">
                                     <datalist id="anesthesiaTypeSuggestions">
-                                        <option value="تخدير عام"></option>
-                                        <option value="تخدير إقليمي"></option>
-                                        <option value="تخدير موضعي"></option>
-                                        <option value="تهدئة"></option>
-                                        <option value="سباينال"></option>
-                                        <option value="إبيديورال"></option>
-                                        <option value="تخدير فوق الجافية"></option>
+                                        <option value="تخدير عام (General Anesthesia)"></option>
+                                        <option value="تخدير نصفي (Spinal Anesthesia)"></option>
+                                        <option value="تخدير موضعي (Local Anesthesia)"></option>
+                                        <option value="تخدير مناطقي (Regional Anesthesia)"></option>
+                                        <option value="سديشن (Sedation)"></option>
                                     </datalist>
                                 </div>
                             </div>

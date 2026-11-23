@@ -84,14 +84,10 @@
                                         </form>
                                     </li>
                                     <li>
-                                        <form action="{{ route('emergency.discharge', $emergency) }}" method="POST" onsubmit="return confirm('تأكيد تسجيل خروج المريض (خرج متوفي)؟')">
-                                            @csrf
-                                            <input type="hidden" name="discharge_type" value="deceased">
-                                            <button type="submit" class="dropdown-item d-flex align-items-center text-dark fw-bold py-2">
-                                                <i class="fas fa-heart-broken me-2 text-danger"></i>
-                                                <span>خرج متوفي</span>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="dropdown-item d-flex align-items-center text-dark fw-bold py-2" data-bs-toggle="modal" data-bs-target="#dischargeDeceasedModal">
+                                            <i class="fas fa-heart-broken me-2 text-danger"></i>
+                                            <span>خرج متوفي (توثيق الوفاة)</span>
+                                        </button>
                                     </li>
                                 </ul>
                             </div>
@@ -99,6 +95,9 @@
                             <button class="btn btn-sm btn-secondary shadow-sm fw-bold d-inline-flex align-items-center disabled" type="button" disabled title="معلق: بانتظار تسديد رسوم الطوارئ بالكاشير (المتبقي: {{ number_format($unpaidAmount) }} د.ع)">
                                 <i class="fas fa-lock me-1 text-warning"></i>
                                 <span>إجراءات وتحويل وتخريج (بانتظار التسديد)</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-dark fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#dischargeDeceasedModal" title="تسجيل وتوثيق خروج متوفي">
+                                <i class="fas fa-heart-broken text-danger me-1"></i> تسجيل وفاة
                             </button>
                         @endif
 
@@ -131,6 +130,36 @@
                                 <i class="fas fa-sign-out-alt me-1"></i> تم الخروج ({{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : '' }})
                             </span>
                         @endif
+                    @endif
+
+                    @if($emergency->discharge_type === 'deceased')
+                        <div class="alert alert-dark border-dark border-opacity-25 d-flex align-items-center justify-content-between p-3 rounded-3 shadow-sm bg-dark text-white w-100 my-2">
+                            <div>
+                                <div class="fw-bold fs-6 text-danger">
+                                    <i class="fas fa-heart-broken me-2"></i>تم توثيق خروج المريض كـ (متوفي)
+                                </div>
+                                <div class="small mt-1 text-light">
+                                    <span><strong>وقت وتاريخ الوفاة:</strong> {{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : 'غير محدد' }}</span>
+                                    <span class="mx-2">|</span>
+                                    <span><strong>جهة تسليم الجثمان:</strong> {{ $emergency->discharge_destination ?? 'ذوي المتوفي' }}</span>
+                                </div>
+                                @if($emergency->discharge_notes)
+                                    <div class="small mt-1 text-warning">
+                                        <strong>سبب الوفاة والتقرير السريري:</strong> {{ $emergency->discharge_notes }}
+                                    </div>
+                                @endif
+                                @if($emergency->discharge_recommendations)
+                                    <div class="extra-small mt-1 text-white-50">
+                                        <strong>الإجراءات الرسمية:</strong> {{ $emergency->discharge_recommendations }}
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="ms-3">
+                                <a href="{{ route('emergency.medical-report', $emergency) }}" target="_blank" class="btn btn-sm btn-outline-light fw-bold">
+                                    <i class="fas fa-print me-1"></i> التقرير الطبي
+                                </a>
+                            </div>
+                        </div>
                     @endif
                     @if($emergency->appointments && $emergency->appointments->count() > 0)
                         @php
@@ -2210,6 +2239,86 @@
                     <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
                     <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
                         <i class="fas fa-ban me-1"></i> تأكيد إلغاء الحالة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal تسجيل خروج متوفي -->
+<div class="modal fade" id="dischargeDeceasedModal" tabindex="-1" aria-labelledby="dischargeDeceasedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-dark text-white p-3">
+                <h5 class="modal-title fw-bold mb-0" id="dischargeDeceasedModalLabel">
+                    <i class="fas fa-heart-broken text-danger me-2"></i>تسجيل خروج متوفي وتوثيق التقرير الطبي للوفاة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('emergency.discharge', $emergency) }}" method="POST">
+                @csrf
+                <input type="hidden" name="discharge_type" value="deceased">
+                <div class="modal-body p-4 bg-light text-end">
+                    <div class="card border-0 shadow-xs p-3 bg-white mb-3 rounded-3 border-start border-4 border-danger">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">المريض:</span>
+                            <strong class="text-dark">{{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد' }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">الطبيب المعالج:</span>
+                            <span class="text-dark">{{ $emergency->doctor?->user?->name ?? 'غير محدد' }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">تاريخ ووقت الدخول:</span>
+                            <span class="text-dark font-monospace">{{ $emergency->admission_time ? \Carbon\Carbon::parse($emergency->admission_time)->format('Y-m-d H:i') : $emergency->created_at->format('Y-m-d H:i') }}</span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="deceased_time" class="form-label fw-bold text-dark small">
+                                وقت وتاريخ الوفاة المثبت <span class="text-danger">*</span>:
+                            </label>
+                            <input type="datetime-local" class="form-control" id="deceased_time" name="discharge_time" 
+                                   value="{{ now()->format('Y-m-d\TH:i') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="discharge_destination" class="form-label fw-bold text-dark small">
+                                جهة تسليم الجثمان <span class="text-danger">*</span>:
+                            </label>
+                            <input type="text" class="form-control" id="discharge_destination" name="discharge_destination" 
+                                   list="deceased_destinations" value="ذوي المتوفي" required placeholder="مثال: ذوي المتوفي، دائرة الطب العدلي...">
+                            <datalist id="deceased_destinations">
+                                <option value="ذوي المتوفي">
+                                <option value="دائرة الطب العدلي">
+                                <option value="ثلاجة حفظ الموتى">
+                                <option value="إحالة إلى مستشفى آخر">
+                            </datalist>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="discharge_notes" class="form-label fw-bold text-dark small">
+                                سبب الوفاة والتقرير السريري للوفاة <span class="text-danger">*</span>:
+                            </label>
+                            <textarea class="form-control" id="discharge_notes" name="discharge_notes" rows="3" required
+                                      placeholder="يرجى كتابة سبب الوفاة والتشخيص النهائي بدقة (مثال: توقف مفاجئ بعضلة القلب والتنفس مع فشل الإنعاش القلبي الرئوي CPR)..."></textarea>
+                            <small class="text-muted">هذا النص سيظهر رسمياً ومباشرة في التقرير الطبي للطوارئ ووثيقة الخروج.</small>
+                        </div>
+
+                        <div class="col-12">
+                            <label for="discharge_recommendations" class="form-label fw-bold text-dark small">
+                                الإجراءات الرسمية والتوصيات المتبعة (اختياري):
+                            </label>
+                            <textarea class="form-control" id="discharge_recommendations" name="discharge_recommendations" rows="2"
+                                      placeholder="مثال: تم إبلاغ ذوي المتوفي، تنظيم شهادة الوفاة، تسليم الأمانات..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-white justify-content-between p-3">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">تراجع</button>
+                    <button type="submit" class="btn btn-dark px-4 fw-bold">
+                        <i class="fas fa-check-circle me-1 text-danger"></i> تثبيت وتسجيل الوفاة
                     </button>
                 </div>
             </form>

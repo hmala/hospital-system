@@ -25,7 +25,7 @@
         <!-- ترويسة المستشفى -->
         <div class="row align-items-center pb-3 border-bottom mb-4">
             <div class="col-8">
-                <h3 class="fw-bold mb-1 text-primary">مستشفى الرعاية التخصصي</h3>
+                <h3 class="fw-bold mb-1 text-primary">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</h3>
                 <h5 class="text-secondary fw-bold mb-1">قسم العناية المركزة لحديثي الولادة والخدج (NICU)</h5>
                 <p class="text-muted small mb-0">كشف حساب الإقامة والرعاية السريرية التفصيلي</p>
             </div>

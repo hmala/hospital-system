@@ -17,6 +17,7 @@ class SurgeryRadiologyTest extends Model
         'result',
         'result_file',
         'completed_at',
+        'notes',
         'payment_id',
         'is_package_included',
         'included_deductible_price',

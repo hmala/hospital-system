@@ -248,9 +248,9 @@
         <!-- ترويسة القسيمة -->
         <div class="payslip-header d-flex justify-content-between align-items-center">
             <div class="hospital-brand">
-                <h4>{{ $hospital->name ?? 'مستشفى الفيحاء الأهلي' }}</h4>
+                <h4>{{ $hospital->name ?? 'مستشفى الكفاءات الأهلي' }}</h4>
                 <div class="text-muted small">
-                    <i class="fas fa-map-marker-alt me-1"></i> {{ $hospital->address ?? 'العراق - البصرة' }} 
+                    <i class="fas fa-map-marker-alt me-1"></i> {{ $hospital->address ?? 'العراق - بغداد' }} 
                     | <i class="fas fa-phone me-1"></i> {{ $hospital->phone ?? '07700000000' }}
                 </div>
                 <div class="small fw-semibold text-secondary mt-1">قسم الموارد البشرية والرواتب (HR Department)</div>

@@ -331,9 +331,15 @@ class NicuGranularPermissionsAndMilkTypesTest extends TestCase
         // شاشة تسعير الخدمات وباقات الخدج
         $servicesView = $this->get(route('nicu.services.index'));
         $servicesView->assertOk();
+        $servicesView->assertSee('تسعير باقات وخدمات الخدج (NICU)');
         $servicesView->assertSee('قائمة وتصنيفات حليب وتغذية الخدج');
-        $servicesView->assertSee('حليب أم طبيعي (EBM)');
-        $servicesView->assertSee('حليب خدج صناعي (Pre-term Formula)');
+
+        // شاشة إدارة أنواع وتصنيفات الحليب المستقلة
+        $milkTypesView = $this->get(route('nicu.milk-types.index'));
+        $milkTypesView->assertOk();
+        $milkTypesView->assertSee('قائمة وتصنيفات حليب وتغذية الخدج');
+        $milkTypesView->assertSee('حليب أم طبيعي (EBM)');
+        $milkTypesView->assertSee('حليب خدج صناعي (Pre-term Formula)');
 
         // إضبارة الطفل السريرية
         $babyChartView = $this->get(route('nicu.show', $this->activeReservation));

@@ -61,7 +61,7 @@
     </div>
     <div class="barcode-col">
         <div class="barcode">*NICU-{{ $reservation->id }}*</div>
-        <div style="font-size: 8px;">مستشفى الرعاية التخصصي</div>
+        <div style="font-size: 8px;">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
     </div>
 </div>
 

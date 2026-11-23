@@ -1318,34 +1318,13 @@ class EmergencyController extends Controller
             }
         }
 
-        // 1. إضافة خدمة "استشارة اخصائي من العيادة الاستشارية" إلى جدول خدمات الطوارئ (30,000 د.ع)
-        $consultationService = EmergencyService::where('id', 115)
-            ->orWhere('name', 'like', '%استشارة اخصائي من العيادة الاستشارية%')
-            ->first();
-
-        if ($consultationService) {
-            $existingPivot = \DB::table('emergency_emergency_service')
-                ->where('emergency_id', $emergency->id)
-                ->where('emergency_service_id', $consultationService->id)
-                ->whereNull('payment_id')
-                ->first();
-
-            if ($existingPivot) {
-                \DB::table('emergency_emergency_service')
-                    ->where('id', $existingPivot->id)
-                    ->update([
-                        'quantity' => ($existingPivot->quantity ?? 1) + 1,
-                    ]);
-            } else {
-                $emergency->services()->attach($consultationService->id, [
-                    'quantity' => 1,
-                    'payment_id' => null,
-                ]);
-            }
-        }
+        // 1. تحديد أجر الكشفية المباشرة المعتمد في بطاقة الطبيب (دون أي تعطيل سريري لإنقاذ المريض)
+        $doctorName = $doctor->user?->name ?? 'طبيب';
+        $directFee = ! is_null($doctor->direct_consultation_fee) && (float) $doctor->direct_consultation_fee > 0
+            ? (float) $doctor->direct_consultation_fee
+            : 0.0;
 
         // 2. إنشاء الموعد للطبيب الاستشاري ليدخل المريض في طابور عيادته فوراً
-        $doctorName = $doctor->user?->name ?? 'طبيب';
         $appointment = Appointment::create([
             'patient_id' => $emergency->patient_id,
             'doctor_id' => $doctorId,
@@ -1354,7 +1333,7 @@ class EmergencyController extends Controller
             'appointment_date' => $appointmentDateTime,
             'reason' => $request->reason ?: ($request->notes ? Str::limit($request->notes, 100) : 'استشارة طوارئ: د. '.$doctorName),
             'notes' => $request->notes,
-            'consultation_fee' => 0, // الرسوم محتسبة رسمياً عبر خدمة الطوارئ المضافة (استشارة اخصائي من العيادة الاستشارية - 30,000 د.ع)
+            'consultation_fee' => $directFee, // يُعتمد أجر الكشفية المباشرة للطبيب (وإن كان 0 يُمنع التسديد بالكاشير لنقص التسعيرة)
             'duration' => 30,
             'status' => 'scheduled',
             'payment_status' => 'pending',
@@ -1370,7 +1349,11 @@ class EmergencyController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', "تم طلب استشارة د. {$doctorName} بنجاح وإضافة خدمة الاستشارة (30,000 د.ع) إلى حساب الطوارئ.");
+        $feeMsg = $directFee > 0
+            ? 'برسم كشفية مباشرة ('.number_format($directFee, 0).' د.ع)'
+            : '⚠️ (بانتظار تحديد التسعيرة في الكاشير)';
+
+        return redirect()->back()->with('success', "تم طلب استشارة د. {$doctorName} بنجاح {$feeMsg}.");
     }
 
     /**
@@ -1836,10 +1819,19 @@ class EmergencyController extends Controller
             }
         }
 
-        $consultationAmount = $emergency->appointments
+        $pendingAppointments = $emergency->appointments
             ->where('payment_status', 'pending')
-            ->where('status', '<>', 'cancelled')
-            ->sum('consultation_fee');
+            ->where('status', '<>', 'cancelled');
+
+        // مزامنة تلقائية لرسوم الكشفية إذا كانت غير محددة أو 0 وتم تحديد direct_consultation_fee للطبيب لاحقاً
+        foreach ($pendingAppointments as $apt) {
+            if (((float) $apt->consultation_fee <= 0 || is_null($apt->consultation_fee)) && $apt->doctor && (float) $apt->doctor->direct_consultation_fee > 0) {
+                $apt->update(['consultation_fee' => (float) $apt->doctor->direct_consultation_fee]);
+                $apt->consultation_fee = (float) $apt->doctor->direct_consultation_fee;
+            }
+        }
+
+        $consultationAmount = $pendingAppointments->sum('consultation_fee');
 
         // رسوم المتابعة تُحسب فقط إذا لم تُدفع بعد
         $followUpFee = ($emergency->doctor_follow_up_fee > 0 && ! $emergency->follow_up_payment_id)
@@ -1852,9 +1844,15 @@ class EmergencyController extends Controller
         $patientShare = $servicesPatientShare + $labPatientShare + $radiologyPatientShare + $consultationAmount + $followUpPatientShare;
         $insuranceShare = $servicesInsuranceShare + $labInsuranceShare + $radiologyInsuranceShare + $followUpInsuranceShare;
 
-        $hasPendingAmount = $totalAmount > 0;
+        // التحقق من وجود بنود معلقة تستوجب وجود فاتورة في الكاشير (خدمات، تحاليل، أشعة، أو استشارات حتى لو كانت غير مسعرة)
+        $hasPendingItems = ($totalAmount > 0)
+            || $unpaidServices->isNotEmpty()
+            || $unpaidLabRequests->isNotEmpty()
+            || $unpaidRadiologyRequests->isNotEmpty()
+            || $pendingAppointments->isNotEmpty()
+            || ($followUpFee > 0);
 
-        if (! $hasPendingAmount) {
+        if (! $hasPendingItems) {
             if ($existingPayment) {
                 $existingPayment->delete();
                 $emergency->update([
@@ -1906,16 +1904,19 @@ class EmergencyController extends Controller
             $descriptionParts[] = 'أشعة: '.$radiologyNames->implode('، ');
         }
 
-        if ($consultationAmount > 0) {
-            $consultationNames = $emergency->appointments
-                ->where('payment_status', 'pending')
-                ->where('status', '<>', 'cancelled')
-                ->pluck('reason')
+        if ($pendingAppointments->isNotEmpty()) {
+            $consultationNames = $pendingAppointments
+                ->map(function ($apt) {
+                    $dName = $apt->doctor?->user?->name ?? 'طبيب استشاري';
+                    $feeStr = $apt->consultation_fee > 0 ? number_format($apt->consultation_fee).' د.ع' : 'غير مسعرة';
+
+                    return "استشارة: د. {$dName} ({$feeStr})";
+                })
                 ->filter()
                 ->unique()
                 ->values();
 
-            $descriptionParts[] = 'استشارة: '.($consultationNames->isNotEmpty() ? $consultationNames->implode('، ') : 'استشارة طوارئ');
+            $descriptionParts[] = $consultationNames->implode('، ');
         }
 
         if ($followUpFee > 0) {
@@ -2002,18 +2003,25 @@ class EmergencyController extends Controller
                 'payment_status' => 'pending',
                 'payment_id' => $existingPayment->id,
             ]);
+            $payment = $existingPayment;
+        } else {
+            $paymentData['emergency_id'] = $emergency->id;
+            $paymentData['receipt_number'] = Payment::generateReceiptNumber();
+            $payment = Payment::create($paymentData);
 
-            return $existingPayment;
+            $emergency->update([
+                'payment_status' => 'pending',
+                'payment_id' => $payment->id,
+            ]);
         }
 
-        $paymentData['emergency_id'] = $emergency->id;
-        $paymentData['receipt_number'] = Payment::generateReceiptNumber();
-        $payment = Payment::create($paymentData);
-
-        $emergency->update([
-            'payment_status' => 'pending',
-            'payment_id' => $payment->id,
-        ]);
+        // ربط مواعيد الاستشارات المعلقة بالدفعة
+        foreach ($pendingAppointments as $apt) {
+            $apt->update([
+                'payment_id' => $payment->id,
+                'payment_status' => 'pending',
+            ]);
+        }
 
         return $payment;
     }
@@ -2206,9 +2214,11 @@ class EmergencyController extends Controller
         }
 
         // التحقق من وجود مستحقات مالية غير مسددة في الطوارئ (إبراء الذمة المالية)
+        // يُستثنى خروج المتوفي وخروج على المسؤولية من حظر التخريج
         $this->upsertUnifiedEmergencyPayment($emergency);
         $unpaidAmount = $emergency->getUnpaidAmount();
-        if ($unpaidAmount > 0) {
+        $dischargeType = $request->input('discharge_type');
+        if ($unpaidAmount > 0 && ! in_array($dischargeType, ['deceased', 'against_medical_advice'])) {
             $formattedAmount = number_format($unpaidAmount, 0);
 
             return redirect()->back()->with('error', "لا يمكن تخريج المريض: توجد مستحقات طوارئ غير مسددة بقيمة {$formattedAmount} د.ع. يرجى التوجه للكاشير للسداد أولاً.");
@@ -2219,6 +2229,7 @@ class EmergencyController extends Controller
             'discharge_notes' => 'nullable|string|max:1000',
             'discharge_destination' => 'nullable|string|max:100',
             'discharge_recommendations' => 'nullable|string|max:1000',
+            'discharge_time' => 'nullable|date',
         ]);
 
         $destination = $request->discharge_destination;
@@ -2239,16 +2250,20 @@ class EmergencyController extends Controller
             : 'مراجعة العيادة الخارجية';
         $recommendations = $request->discharge_recommendations ?? $request->discharge_notes ?? $defaultRecommendation;
 
+        $dischargeTime = $request->filled('discharge_time')
+            ? \Carbon\Carbon::parse($request->discharge_time)
+            : now();
+
         $updateData = [
             'status' => 'discharged',
             'discharge_type' => $request->discharge_type,
             'discharge_destination' => $destination,
             'discharge_recommendations' => $recommendations,
-            'discharge_time' => now(),
+            'discharge_time' => $dischargeTime,
             'discharge_notes' => $request->discharge_notes,
         ];
 
-        if ($emergency->total_due_amount == 0 || $request->discharge_type === 'against_medical_advice') {
+        if ($emergency->total_due_amount == 0 || $request->discharge_type === 'against_medical_advice' || $request->discharge_type === 'deceased') {
             if ($emergency->payment_status !== 'paid') {
                 $updateData['payment_status'] = 'waived';
                 if ($emergency->payment && $emergency->payment->paid_at === null) {

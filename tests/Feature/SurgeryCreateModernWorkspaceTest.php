@@ -74,6 +74,7 @@ class SurgeryCreateModernWorkspaceTest extends TestCase
         $response = $this->actingAs($adminUser)->get(route('surgeries.create', ['patient_id' => $patient->id]));
 
         $response->assertStatus(200);
+        $response->assertSee('<form action="'.route('surgeries.store').'" method="POST" id="surgeryForm" enctype="multipart/form-data">', false);
         $response->assertSee('منير سمير يوسف');
         $response->assertSee('HI-998877');
         $response->assertSee('هيئة الضمان الصحي الوطني');
@@ -82,6 +83,17 @@ class SurgeryCreateModernWorkspaceTest extends TestCase
         $response->assertSee('اختيار الغرفة والإقامة السريرية');
         $response->assertSee('تأكيد وحجز العملية الجراحية');
         $response->assertDontSee('لوحة الاعتماد والملخص');
+
+        // Verify room selection state is declared before early #patient_id change trigger (no JS TDZ crash)
+        $html = $response->getContent();
+        $roomDeclPos = strpos($html, "let selectedRoomType = '';");
+        $patientTriggerPos = strpos($html, "$('#patient_id').trigger('change');");
+        $this->assertNotFalse($roomDeclPos);
+        $this->assertNotFalse($patientTriggerPos);
+        $this->assertLessThan($patientTriggerPos, $roomDeclPos);
+
+        // Verify /surgeries/create without patient_id renders cleanly too
+        $this->actingAs($adminUser)->get(route('surgeries.create'))->assertStatus(200);
 
         // اختبار شاشة التعديل للعمليات
         $surgery = \App\Models\Surgery::create([

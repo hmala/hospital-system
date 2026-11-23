@@ -9,6 +9,10 @@ class Product extends Model
 {
     use HasFactory;
 
+    public const TYPE_MEDICATION = 'medication';
+
+    public const TYPE_SUPPLY = 'supply';
+
     protected $fillable = [
         'name',
         'code',
@@ -51,5 +55,63 @@ class Product extends Model
         }
 
         return $this->reorder_level;
+    }
+
+    public function resolveItemType(): string
+    {
+        $category = mb_strtolower(trim((string) ($this->category ?? '')));
+        if ($category === '') {
+            return self::TYPE_SUPPLY;
+        }
+
+        $medicationKeywords = [
+            'أدوية',
+            'ادوية',
+            'دواء',
+            'مغذي',
+            'مغذيات',
+            'علاج',
+            'علاجات',
+            'محلول',
+            'محاليل',
+            'pharma',
+            'pharmacy',
+            'medicine',
+            'medicines',
+            'medication',
+            'medications',
+            'drug',
+            'drugs',
+            'iv fluid',
+            'infusion',
+            'injection',
+            'antibiotic',
+            'ampoule',
+            'vial',
+            'tablet',
+            'syrup',
+        ];
+
+        foreach ($medicationKeywords as $keyword) {
+            if (str_contains($category, $keyword)) {
+                return self::TYPE_MEDICATION;
+            }
+        }
+
+        if (preg_match('/\bmeds?\b/i', $category) === 1) {
+            return self::TYPE_MEDICATION;
+        }
+
+        return self::TYPE_SUPPLY;
+    }
+
+    public function isMedication(): bool
+    {
+        return $this->resolveItemType() === self::TYPE_MEDICATION;
+    }
+
+    public function isSupply(): bool
+    {
+        return $this->resolveItemType() === self::TYPE_SUPPLY;
     }
 }

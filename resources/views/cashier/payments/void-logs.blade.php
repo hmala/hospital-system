@@ -7,19 +7,19 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
                 <span class="badge bg-danger text-white fw-bold px-3 py-2 rounded-pill mb-2 shadow-sm border border-danger-subtle">
-                    <i class="fas fa-shield-alt me-1"></i> وحدة الرقابة المالية والتدقيق الإداري (Audit Trail)
+                    <i class="fas fa-shield-alt me-1"></i> {{ __('وحدة الرقابة المالية والتدقيق الإداري (Audit Trail)') }}
                 </span>
-                <h3 class="fw-bold mb-1">سجل تدقيق الوصولات الملغاة والمبطلة</h3>
+                <h3 class="fw-bold mb-1">{{ __('سجل تدقيق الوصولات الملغاة والمبطلة') }}</h3>
                 <p class="mb-0 text-white-50 small">
-                    كشف رقابي وحسابي شامل ومفصل يوثق بالثانية كافة عمليات إلغاء الدفع، إعادة فتح الوصولات للتصحيح، وسندات الاسترجاع المالي.
+                    {{ __('كشف رقابي وحسابي شامل ومفصل يوثق بالثانية كافة عمليات إلغاء الدفع، إعادة فتح الوصولات للتصحيح، وسندات الاسترجاع المالي.') }}
                 </p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{{ route('cashier.index') }}" class="btn btn-outline-light px-3 rounded-pill">
-                    <i class="fas fa-cash-register me-1"></i> محطة الكاشير
+                    <i class="fas fa-cash-register me-1"></i> {{ __('محطة الكاشير') }}
                 </a>
                 <a href="{{ route('cashier.report') }}" class="btn btn-light px-3 rounded-pill text-dark fw-bold">
-                    <i class="fas fa-file-invoice-dollar me-1 text-danger"></i> كشف المقبوضات اليومية
+                    <i class="fas fa-file-invoice-dollar me-1 text-danger"></i> {{ __('كشف المقبوضات اليومية') }}
                 </a>
             </div>
         </div>
@@ -31,7 +31,7 @@
             <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-top border-4 border-dark h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="text-muted small d-block mb-1">إجمالي الحركات الرقابية</span>
+                        <span class="text-muted small d-block mb-1">{{ __('إجمالي الحركات الرقابية') }}</span>
                         <h4 class="fw-bold text-dark mb-0">{{ number_format($totalLogsCount) }}</h4>
                     </div>
                     <div class="rounded-circle bg-dark bg-opacity-10 p-3 text-dark">
@@ -45,7 +45,7 @@
             <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-top border-4 border-success h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="text-muted small d-block mb-1">إعادة فتح للتسديد والتصحيح</span>
+                        <span class="text-muted small d-block mb-1">{{ __('إعادة فتح للتسديد والتصحيح') }}</span>
                         <h4 class="fw-bold text-success mb-0">{{ number_format($rebillCount) }}</h4>
                         <small class="text-muted" style="font-size: 0.75rem;">Re-billed & Corrected</small>
                     </div>
@@ -60,7 +60,7 @@
             <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-top border-4 border-danger h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="text-muted small d-block mb-1">إلغاء نهائي واسترداد للمريض</span>
+                        <span class="text-muted small d-block mb-1">{{ __('إلغاء نهائي واسترداد للمريض') }}</span>
                         <h4 class="fw-bold text-danger mb-0">{{ number_format($refundCount) }}</h4>
                         <small class="text-muted" style="font-size: 0.75rem;">Refunded & Cancelled</small>
                     </div>
@@ -75,8 +75,8 @@
             <div class="card border-0 rounded-4 shadow-sm p-3 bg-white border-top border-4 border-primary h-100">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <span class="text-muted small d-block mb-1">إجمالي مبالغ الوصولات المعالجة</span>
-                        <h4 class="fw-bold text-primary mb-0">{{ number_format($totalVoidedAmount) }} <small class="fs-6">د.ع</small></h4>
+                        <span class="text-muted small d-block mb-1">{{ __('إجمالي مبالغ الوصولات المعالجة') }}</span>
+                        <h4 class="fw-bold text-primary mb-0">{{ number_format($totalVoidedAmount) }} <small class="fs-6">{{ __('د.ع') }}</small></h4>
                     </div>
                     <div class="rounded-circle bg-primary bg-opacity-10 p-3 text-primary">
                         <i class="fas fa-coins fa-lg"></i>
@@ -93,24 +93,24 @@
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
-                        <input type="text" name="search" class="form-control border-start-0" placeholder="بحث برقم الوصل، اسم المريض، السبب، أو المشرف..." value="{{ $search ?? '' }}">
+                        <input type="text" name="search" class="form-control border-start-0" placeholder="{{ __('بحث برقم الوصل، اسم المريض، السبب، أو المشرف...') }}" value="{{ $search ?? '' }}">
                     </div>
                 </div>
 
                 <div class="col-md-3">
                     <select name="void_type" class="form-select">
-                        <option value="">كافة أنواع الإجراءات الرقابية</option>
-                        <option value="rebill" {{ ($voidType ?? '') === 'rebill' ? 'selected' : '' }}>🔄 إعادة فتح للتسديد والتصحيح (Re-bill)</option>
-                        <option value="refund" {{ ($voidType ?? '') === 'refund' ? 'selected' : '' }}>💵 إبطال نهائي واسترداد للمريض (Refund)</option>
+                        <option value="">{{ __('كافة أنواع الإجراءات الرقابية') }}</option>
+                        <option value="rebill" {{ ($voidType ?? '') === 'rebill' ? 'selected' : '' }}>{{ __('🔄 إعادة فتح للتسديد والتصحيح (Re-bill)') }}</option>
+                        <option value="refund" {{ ($voidType ?? '') === 'refund' ? 'selected' : '' }}>{{ __('💵 إبطال نهائي واسترداد للمريض (Refund)') }}</option>
                     </select>
                 </div>
 
                 <div class="col-md-2">
-                    <input type="date" name="from_date" class="form-control" title="من تاريخ" value="{{ $fromDate ?? '' }}" placeholder="من تاريخ">
+                    <input type="date" name="from_date" class="form-control" title="{{ __('من تاريخ') }}" value="{{ $fromDate ?? '' }}" placeholder="{{ __('من تاريخ') }}">
                 </div>
 
                 <div class="col-md-2">
-                    <input type="date" name="to_date" class="form-control" title="إلى تاريخ" value="{{ $toDate ?? '' }}" placeholder="إلى تاريخ">
+                    <input type="date" name="to_date" class="form-control" title="{{ __('إلى تاريخ') }}" value="{{ $toDate ?? '' }}" placeholder="{{ __('إلى تاريخ') }}">
                 </div>
 
                 <div class="col-md-1 d-flex gap-1">
@@ -118,7 +118,7 @@
                         <i class="fas fa-filter"></i>
                     </button>
                     @if(!empty($search) || !empty($voidType) || !empty($fromDate) || !empty($toDate))
-                        <a href="{{ route('cashier.payments.void.logs') }}" class="btn btn-outline-secondary" title="إعادة تعيين">
+                        <a href="{{ route('cashier.payments.void.logs') }}" class="btn btn-outline-secondary" title="{{ __('إعادة تعيين') }}">
                             <i class="fas fa-times"></i>
                         </a>
                     @endif
@@ -132,10 +132,10 @@
         <div class="p-3 px-4 border-bottom bg-light d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-2">
                 <i class="fas fa-history text-danger fs-5"></i>
-                <h5 class="fw-bold mb-0 text-dark">سجل الحركات المنفذة بالتفصيل</h5>
+                <h5 class="fw-bold mb-0 text-dark">{{ __('سجل الحركات المنفذة بالتفصيل') }}</h5>
             </div>
             <span class="badge bg-secondary-subtle text-secondary border">
-                إجمالي النتائج: {{ $logs->total() }} سجل
+                {{ __('إجمالي النتائج:') }} {{ $logs->total() }} {{ __('سجل') }}
             </span>
         </div>
 
@@ -144,14 +144,14 @@
                 <thead class="table-light text-muted small">
                     <tr>
                         <th class="ps-4"># / التوقيت الدقيق</th>
-                        <th>رقم الوصل الأصلي</th>
-                        <th>المريض والتغطية</th>
-                        <th>أمين الصندوق (الكاشير)</th>
-                        <th>المشرف المنفّذ للإلغاء</th>
-                        <th>نوع الإجراء</th>
-                        <th>المبلغ المقبوض</th>
-                        <th>سبب الإلغاء والتوثيق</th>
-                        <th class="text-center pe-4">الإجراء</th>
+                        <th>{{ __('رقم الوصل الأصلي') }}</th>
+                        <th>{{ __('المريض والتغطية') }}</th>
+                        <th>{{ __('أمين الصندوق (الكاشير)') }}</th>
+                        <th>{{ __('المشرف المنفّذ للإلغاء') }}</th>
+                        <th>{{ __('نوع الإجراء') }}</th>
+                        <th>{{ __('المبلغ المقبوض') }}</th>
+                        <th>{{ __('سبب الإلغاء والتوثيق') }}</th>
+                        <th class="text-center pe-4">{{ __('الإجراء') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -173,7 +173,7 @@
 
                             <td>
                                 @php
-                                    $patientName = $log->patient?->user?->name ?? 'غير محدد';
+                                    $patientName = $log->patient?->user?->name ?? __('غير محدد');
                                     $patientId = $log->patient?->national_id ?? ('#' . $log->patient_id);
                                 @endphp
                                 <strong class="text-dark d-block">{{ $patientName }}</strong>
@@ -183,14 +183,14 @@
                             <td>
                                 <div class="d-flex align-items-center gap-1">
                                     <i class="fas fa-user-circle text-muted"></i>
-                                    <span class="small text-dark">{{ $log->cashier?->name ?? 'غير محدد' }}</span>
+                                    <span class="small text-dark">{{ $log->cashier?->name ?? __('غير محدد') }}</span>
                                 </div>
                             </td>
 
                             <td>
                                 <div class="d-flex align-items-center gap-1">
                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2 py-1">
-                                        <i class="fas fa-user-shield me-1"></i> {{ $log->voidedBy?->name ?? 'غير محدد' }}
+                                        <i class="fas fa-user-shield me-1"></i> {{ $log->voidedBy?->name ?? __('غير محدد') }}
                                     </span>
                                 </div>
                             </td>
@@ -198,20 +198,20 @@
                             <td>
                                 @if($log->void_type === 'rebill')
                                     <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1-5 rounded-pill shadow-xs">
-                                        <i class="fas fa-sync-alt me-1"></i> إعادة فتح للتصحيح
+                                        <i class="fas fa-sync-alt me-1"></i> {{ __('إعادة فتح للتصحيح') }}
                                     </span>
                                 @else
                                     <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1-5 rounded-pill shadow-xs">
-                                        <i class="fas fa-hand-holding-usd me-1"></i> استرداد نقدي
+                                        <i class="fas fa-hand-holding-usd me-1"></i> {{ __('استرداد نقدي') }}
                                     </span>
                                 @endif
                             </td>
 
                             <td>
-                                <strong class="text-dark d-block">{{ number_format($log->amount) }} د.ع</strong>
+                                <strong class="text-dark d-block">{{ number_format($log->amount) }} {{ __('د.ع') }}</strong>
                                 @if($log->insurance_share > 0)
                                     <small class="text-muted" style="font-size: 0.72rem;">
-                                        حصة الضمان: <span class="text-primary">{{ number_format($log->insurance_share) }}</span>
+                                        {{ __('حصة الضمان:') }} <span class="text-primary">{{ number_format($log->insurance_share) }}</span>
                                     </small>
                                 @endif
                             </td>
@@ -225,8 +225,8 @@
 
                             <td class="text-center pe-4">
                                 @if($log->payment_id)
-                                    <a href="{{ route('cashier.receipt', $log->payment_id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-xs" title="عرض قيد الوصل">
-                                        <i class="fas fa-eye me-1"></i> الوصل
+                                    <a href="{{ route('cashier.receipt', $log->payment_id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-xs" title="{{ __('عرض قيد الوصل') }}">
+                                        <i class="fas fa-eye me-1"></i> {{ __('الوصل') }}
                                     </a>
                                 @else
                                     <span class="text-muted small">-</span>
@@ -238,8 +238,8 @@
                             <td colspan="9" class="text-center py-5">
                                 <div class="text-muted">
                                     <i class="fas fa-check-circle text-success fa-3x mb-3 d-block"></i>
-                                    <h6 class="fw-bold">لا توجد حركات إبطال مسجلة</h6>
-                                    <p class="small text-muted mb-0">كافة الوصولات المالية سليمة ولم تسجل أي حركات إبطال مطابقة لمعايير البحث.</p>
+                                    <h6 class="fw-bold">{{ __('لا توجد حركات إبطال مسجلة') }}</h6>
+                                    <p class="small text-muted mb-0">{{ __('كافة الوصولات المالية سليمة ولم تسجل أي حركات إبطال مطابقة لمعايير البحث.') }}</p>
                                 </div>
                             </td>
                         </tr>

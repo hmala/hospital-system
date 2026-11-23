@@ -35,6 +35,10 @@
         background: linear-gradient(90deg, #3b82f6, #60a5fa);
         border-radius: 2px;
     }
+    html[dir="ltr"] .dashboard-title::after {
+        right: auto;
+        left: 0;
+    }
 
     /* Glassmorphism General Cards */
     .glass-card-dashboard {
@@ -394,7 +398,7 @@
         <div class="col-12">
             <h2 class="dashboard-title">
                 <i class="fas fa-tachometer-alt me-2 text-primary"></i>
-                لوحة التحكم
+                {{ __('لوحة التحكم') }}
             </h2>
         </div>
     </div>
@@ -414,14 +418,14 @@
                         </div>
                         <div>
                             <div class="d-flex align-items-center gap-2 mb-1">
-                                <span class="welcome-badge">عيادة الاستشارية</span>
-                                <span class="badge bg-white text-primary fw-bold">{{ $doctorStats['doctor']->department->name ?? 'العيادة التخصصية' }}</span>
+                                <span class="welcome-badge">{{ __('عيادة الاستشارية') }}</span>
+                                <span class="badge bg-white text-primary fw-bold">{{ $doctorStats['doctor']->department->name ?? __('العيادة التخصصية') }}</span>
                             </div>
-                            <h3 class="welcome-title mb-1">د. {{ $doctorStats['doctor']->user->name ?? $userStats['name'] }}</h3>
+                            <h3 class="welcome-title mb-1">{{ __('د.') }} {{ $doctorStats['doctor']->user->name ?? $userStats['name'] }}</h3>
                             <p class="welcome-subtitle mb-0">
-                                <i class="fas fa-stethoscope me-1 opacity-75"></i> {{ $doctorStats['doctor']->specialization ?? 'استشاري' }}
+                                <i class="fas fa-stethoscope me-1 opacity-75"></i> {{ $doctorStats['doctor']->specialization ?? __('استشاري') }}
                                 <span class="mx-2">•</span>
-                                <i class="fas fa-calendar-alt me-1 opacity-75"></i> نشاط وإحصائيات العيادة للشهر: <strong>{{ $doctorStats['monthName'] }}</strong>
+                                <i class="fas fa-calendar-alt me-1 opacity-75"></i> {{ __('نشاط وإحصائيات العيادة للشهر:') }} <strong>{{ $doctorStats['monthName'] }}</strong>
                             </p>
                         </div>
                     </div>
@@ -429,7 +433,7 @@
                     <div class="bg-white bg-opacity-20 p-2 rounded-4 backdrop-blur border border-white border-opacity-25">
                         <form method="GET" action="{{ route('dashboard') }}" class="d-flex align-items-center gap-2 mb-0">
                             <label class="text-white fw-bold small text-nowrap mb-0 ms-1">
-                                <i class="fas fa-filter me-1"></i> اختر الشهر:
+                                <i class="fas fa-filter me-1"></i> {{ __('اختر الشهر:') }}
                             </label>
                             <select name="month" class="form-select form-select-sm fw-bold border-0 shadow-sm" style="min-width: 160px; border-radius: 12px; background: #ffffff; color: #1e3a8a;" onchange="this.form.submit()">
                                 @foreach($doctorStats['availableMonths'] as $m)
@@ -439,8 +443,8 @@
                                 @endforeach
                             </select>
                             @if($doctorStats['selectedMonth'] !== now()->format('Y-m'))
-                                <a href="{{ route('dashboard') }}" class="btn btn-sm btn-light text-primary fw-bold text-nowrap" style="border-radius: 12px;" title="العودة للشهر الحالي">
-                                    <i class="fas fa-history"></i> الآن
+                                <a href="{{ route('dashboard') }}" class="btn btn-sm btn-light text-primary fw-bold text-nowrap" style="border-radius: 12px;" title="{{ __('العودة للشهر الحالي') }}">
+                                    <i class="fas fa-history"></i> {{ __('الآن') }}
                                 </a>
                             @endif
                         </form>
@@ -458,11 +462,11 @@
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-primary fw-bold mb-1">
-                            <i class="fas fa-users me-1"></i> مراجعو العيادة للشهر
+                            <i class="fas fa-users me-1"></i> {{ __('مراجعو العيادة للشهر') }}
                         </h6>
-                        <h3 class="stat-card-value text-primary mb-1">{{ $doctorStats['monthlyVisitsCount'] }} <small class="fs-6 fw-normal text-muted">مراجع</small></h3>
+                        <h3 class="stat-card-value text-primary mb-1">{{ $doctorStats['monthlyVisitsCount'] }} <small class="fs-6 fw-normal text-muted">{{ __('مراجع') }}</small></h3>
                         <span class="stat-card-sub text-muted">
-                            كشفيات عيادة شهر {{ $doctorStats['monthName'] }}
+                            {{ __('كشفيات عيادة شهر') }} {{ $doctorStats['monthName'] }}
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #dbeafe 0%, #3b82f6 100%); color: #fff;">
@@ -478,11 +482,11 @@
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-success fw-bold mb-1">
-                            <i class="fas fa-redo-alt me-1"></i> المراجعات المجانية
+                            <i class="fas fa-redo-alt me-1"></i> {{ __('المراجعات المجانية') }}
                         </h6>
-                        <h3 class="stat-card-value text-success mb-1">{{ $doctorStats['monthlyRechecksCount'] }} <small class="fs-6 fw-normal text-muted">مراجعة</small></h3>
+                        <h3 class="stat-card-value text-success mb-1">{{ $doctorStats['monthlyRechecksCount'] }} <small class="fs-6 fw-normal text-muted">{{ __('مراجعة') }}</small></h3>
                         <span class="stat-card-sub text-success fw-bold">
-                            <i class="fas fa-check-circle me-1"></i> مراجعات واستشارات مجانية
+                            <i class="fas fa-check-circle me-1"></i> {{ __('مراجعات واستشارات مجانية') }}
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #dcfce7 0%, #10b981 100%); color: #fff;">
@@ -498,11 +502,11 @@
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-warning fw-bold mb-1">
-                            <i class="fas fa-procedures me-1"></i> العمليات الجراحية
+                            <i class="fas fa-procedures me-1"></i> {{ __('العمليات الجراحية') }}
                         </h6>
-                        <h3 class="stat-card-value text-dark mb-1">{{ $doctorStats['monthlySurgeriesCount'] }} <small class="fs-6 fw-normal text-muted">عملية</small></h3>
+                        <h3 class="stat-card-value text-dark mb-1">{{ $doctorStats['monthlySurgeriesCount'] }} <small class="fs-6 fw-normal text-muted">{{ __('عملية') }}</small></h3>
                         <span class="stat-card-sub text-warning fw-bold">
-                            عمليات مجدولة ومنجزة للشهر
+                            {{ __('عمليات مجدولة ومنجزة للشهر') }}
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%); color: #fff;">
@@ -518,11 +522,11 @@
                 <div class="card-body d-flex align-items-center justify-content-between">
                     <div class="stat-info-area">
                         <h6 class="stat-card-title text-info fw-bold mb-1">
-                            <i class="fas fa-user-clock me-1"></i> طابور مراجعي اليوم
+                            <i class="fas fa-user-clock me-1"></i> {{ __('طابور مراجعي اليوم') }}
                         </h6>
-                        <h3 class="stat-card-value text-info mb-1">{{ $doctorStats['todayTotal'] }} <small class="fs-6 fw-normal text-muted">مراجع</small></h3>
+                        <h3 class="stat-card-value text-info mb-1">{{ $doctorStats['todayTotal'] }} <small class="fs-6 fw-normal text-muted">{{ __('مراجع') }}</small></h3>
                         <span class="stat-card-sub text-muted">
-                            مكتمل: {{ $doctorStats['todayCompleted'] }} • بالانتظار: {{ $doctorStats['todayPending'] }}
+                            {{ __('مكتمل:') }} {{ $doctorStats['todayCompleted'] }} • {{ __('بالانتظار:') }} {{ $doctorStats['todayPending'] }}
                         </span>
                     </div>
                     <div class="stat-icon-wrapper shadow" style="background: linear-gradient(135deg, #cffafe 0%, #06b6d4 100%); color: #fff;">
@@ -541,18 +545,18 @@
                 <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h5 class="mb-0 text-primary">
                         <i class="fas fa-list-ol text-primary"></i>
-                        طابور مراجعي اليوم بالعيادة
-                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3">{{ $doctorStats['todayTotal'] }} مراجع</span>
+                        {{ __('طابور مراجعي اليوم بالعيادة') }}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3">{{ $doctorStats['todayTotal'] }} {{ __('مراجع') }}</span>
                     </h5>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-success-subtle text-success border border-success-subtle">
-                            <i class="fas fa-check-double me-1"></i> مكتمل: {{ $doctorStats['todayCompleted'] }}
+                            <i class="fas fa-check-double me-1"></i> {{ __('مكتمل:') }} {{ $doctorStats['todayCompleted'] }}
                         </span>
                         <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                            <i class="fas fa-hourglass-start me-1"></i> بالانتظار: {{ $doctorStats['todayPending'] }}
+                            <i class="fas fa-hourglass-start me-1"></i> {{ __('بالانتظار:') }} {{ $doctorStats['todayPending'] }}
                         </span>
                         <a href="{{ route('visits.index') }}" class="btn btn-sm btn-primary fw-bold px-3" style="border-radius: 8px;">
-                            <i class="fas fa-stethoscope me-1"></i> الانتقال لمحطة الكشف والعيادة
+                            <i class="fas fa-stethoscope me-1"></i> {{ __('الانتقال لمحطة الكشف والعيادة') }}
                         </a>
                     </div>
                 </div>
@@ -560,8 +564,8 @@
                     @if($doctorStats['todayAppointments']->isEmpty())
                         <div class="text-center py-5 text-muted">
                             <i class="fas fa-user-clock fa-3x mb-3 text-secondary opacity-50"></i>
-                            <h6 class="fw-bold">لا يوجد مراجعون مسجلون في طابور اليوم بعد</h6>
-                            <p class="small text-muted mb-0">عند حجز كشفية من الاستقبال ستظهر هنا فورياً.</p>
+                            <h6 class="fw-bold">{{ __('لا يوجد مراجعون مسجلون في طابور اليوم بعد') }}</h6>
+                            <p class="small text-muted mb-0">{{ __('عند حجز كشفية من الاستقبال ستظهر هنا فورياً.') }}</p>
                         </div>
                     @else
                         <div class="table-responsive">
@@ -569,10 +573,10 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="text-center" style="width: 50px;">#</th>
-                                        <th>اسم المريض</th>
-                                        <th>النوع / الكشفية</th>
-                                        <th>حالة الحجز</th>
-                                        <th class="text-center">الإجراء</th>
+                                        <th>{{ __('اسم المريض') }}</th>
+                                        <th>{{ __('النوع / الكشفية') }}</th>
+                                        <th>{{ __('حالة الحجز') }}</th>
+                                        <th class="text-center">{{ __('الإجراء') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -582,49 +586,49 @@
                                                 <span class="badge bg-light text-dark border">{{ $appt->queue_number ?? $loop->iteration }}</span>
                                             </td>
                                             <td>
-                                                <div class="fw-bold text-dark">{{ $appt->patient->name ?? 'غير محدد' }}</div>
-                                                <small class="text-muted">ملف: {{ $appt->patient->file_number ?? $appt->patient->phone ?? '-' }}</small>
+                                                <div class="fw-bold text-dark">{{ $appt->patient->name ?? __('غير محدد') }}</div>
+                                                <small class="text-muted">{{ __('ملف:') }} {{ $appt->patient->file_number ?? $appt->patient->phone ?? '-' }}</small>
                                             </td>
                                             <td>
                                                 @if($appt->is_free_recheck)
                                                     <span class="badge bg-info-subtle text-info border border-info-subtle">
-                                                        <i class="fas fa-redo-alt me-1"></i> مراجعة مجانية
+                                                        <i class="fas fa-redo-alt me-1"></i> {{ __('مراجعة مجانية') }}
                                                     </span>
                                                 @else
                                                     <span class="badge bg-secondary-subtle text-secondary border">
-                                                        كشفية عادية
+                                                        {{ __('كشفية عادية') }}
                                                     </span>
                                                 @endif
                                             </td>
                                             <td>
                                                 @if($appt->is_free_recheck)
                                                     <span class="badge bg-info-subtle text-info border border-info-subtle">
-                                                        <i class="fas fa-gift me-1"></i> مراجعة مجانية
+                                                        <i class="fas fa-gift me-1"></i> {{ __('مراجعة مجانية') }}
                                                     </span>
                                                 @elseif($appt->payment && $appt->payment->paid_at)
                                                     @if($appt->payment->payment_method === 'insurance' || $appt->payment->insurance_company_id)
                                                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
-                                                            <i class="fas fa-shield-alt me-1"></i> ضمان صحي
+                                                            <i class="fas fa-shield-alt me-1"></i> {{ __('ضمان صحي') }}
                                                         </span>
                                                     @else
                                                         <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                                            <i class="fas fa-check-circle me-1"></i> مسدد
+                                                            <i class="fas fa-check-circle me-1"></i> {{ __('مسدد') }}
                                                         </span>
                                                     @endif
                                                 @else
                                                     <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
-                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار الصندوق
+                                                        <i class="fas fa-hourglass-start me-1"></i> {{ __('بانتظار الصندوق') }}
                                                     </span>
                                                 @endif
                                             </td>
                                             <td class="text-center">
                                                 @if($appt->visit_id)
                                                     <a href="{{ route('visits.show', $appt->visit_id) }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" style="font-size: 0.82rem;">
-                                                        <i class="fas fa-stethoscope me-1"></i> الكشف الطبي
+                                                        <i class="fas fa-stethoscope me-1"></i> {{ __('الكشف الطبي') }}
                                                     </a>
                                                 @else
                                                     <a href="{{ route('visits.index') }}" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" style="font-size: 0.82rem;">
-                                                        <i class="fas fa-door-open me-1"></i> استدعاء
+                                                        <i class="fas fa-door-open me-1"></i> {{ __('استدعاء') }}
                                                     </a>
                                                 @endif
                                             </td>
@@ -646,9 +650,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">طلبات معلقة</h5>
+                        <h5 class="stat-card-title">{{ __('طلبات معلقة') }}</h5>
                         <h2 class="stat-card-value">{{ $radiologyStats['pending'] }}</h2>
-                        <span class="stat-card-sub">تحتاج للمعالجة الفورية</span>
+                        <span class="stat-card-sub">{{ __('تحتاج للمعالجة الفورية') }}</span>
                     </div>
                     <div class="ms-3">
                         <div class="stat-icon-wrapper icon-pending shadow">
@@ -663,9 +667,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">مجدولة</h5>
+                        <h5 class="stat-card-title">{{ __('مجدولة') }}</h5>
                         <h2 class="stat-card-value">{{ $radiologyStats['scheduled'] }}</h2>
-                        <span class="stat-card-sub">تم حجز موعد لها</span>
+                        <span class="stat-card-sub">{{ __('تم حجز موعد لها') }}</span>
                     </div>
                     <div class="ms-3">
                         <div class="stat-icon-wrapper icon-scheduled shadow">
@@ -680,9 +684,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">قيد التنفيذ</h5>
+                        <h5 class="stat-card-title">{{ __('قيد التنفيذ') }}</h5>
                         <h2 class="stat-card-value">{{ $radiologyStats['in_progress'] }}</h2>
-                        <span class="stat-card-sub">جاري العمل عليها الآن</span>
+                        <span class="stat-card-sub">{{ __('جاري العمل عليها الآن') }}</span>
                     </div>
                     <div class="ms-3">
                         <div class="stat-icon-wrapper icon-inprogress shadow">
@@ -697,9 +701,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">اكتملت اليوم</h5>
+                        <h5 class="stat-card-title">{{ __('اكتملت اليوم') }}</h5>
                         <h2 class="stat-card-value">{{ $radiologyStats['completed_today'] }}</h2>
-                        <span class="stat-card-sub">تمت معالجتها بنجاح اليوم</span>
+                        <span class="stat-card-sub">{{ __('تمت معالجتها بنجاح اليوم') }}</span>
                     </div>
                     <div class="ms-3">
                         <div class="stat-icon-wrapper icon-visits shadow">
@@ -720,11 +724,11 @@
                         <div class="rounded-circle bg-primary bg-opacity-10 p-3 mb-3 text-primary" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-x-ray fa-3x"></i>
                         </div>
-                        <h4 class="fw-bold text-dark mb-2">بوابة طلبات الأشعة</h4>
-                        <p class="text-muted mb-4 max-w-md">عرض وتحديث ونتائج فحوصات الأشعة للمرضى في النظام بشكل فوري ومباشر.</p>
+                        <h4 class="fw-bold text-dark mb-2">{{ __('بوابة طلبات الأشعة') }}</h4>
+                        <p class="text-muted mb-4 max-w-md">{{ __('عرض وتحديث ونتائج فحوصات الأشعة للمرضى في النظام بشكل فوري ومباشر.') }}</p>
                         <a href="{{ route('radiology.index') }}" class="portal-banner-btn">
-                            الانتقال إلى طلبات الأشعة
-                            <i class="fas fa-arrow-left ms-2"></i>
+                            {{ __('الانتقال إلى طلبات الأشعة') }}
+                            <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} ms-2"></i>
                         </a>
                     </div>
                 </div>
@@ -739,9 +743,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">طلبات معلقة</h5>
+                        <h5 class="stat-card-title">{{ __('طلبات معلقة') }}</h5>
                         <h2 class="stat-card-value">{{ $labStats['pending'] }}</h2>
-                        <span class="stat-card-sub">تحتاج للمعالجة الفورية</span>
+                        <span class="stat-card-sub">{{ __('تحتاج للمعالجة الفورية') }}</span>
                     </div>
                     <div class="ms-3">
                         <div class="stat-icon-wrapper icon-pending shadow">
@@ -756,9 +760,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">اكتملت اليوم</h5>
+                        <h5 class="stat-card-title">{{ __('اكتملت اليوم') }}</h5>
                         <h2 class="stat-card-value">{{ $labStats['completed_today'] }}</h2>
-                        <span class="stat-card-sub">تم فحصها وتسليمها اليوم</span>
+                        <span class="stat-card-sub">{{ __('تم فحصها وتسليمها اليوم') }}</span>
                     </div>
                     <div class="ms-3">
                         <div class="stat-icon-wrapper icon-visits shadow">
@@ -779,11 +783,11 @@
                         <div class="rounded-circle bg-primary bg-opacity-10 p-3 mb-3 text-primary" style="width: 80px; height: 80px; display: flex; align-items: center; justify-content: center;">
                             <i class="fas fa-flask fa-3x"></i>
                         </div>
-                        <h4 class="fw-bold text-dark mb-2">بوابة تحاليل المختبر</h4>
-                        <p class="text-muted mb-4 max-w-md">إدارة نتائج الفحوصات الطبية والمختبرية، بنك الدم، والطلبات الطبية المختلفة.</p>
+                        <h4 class="fw-bold text-dark mb-2">{{ __('بوابة تحاليل المختبر') }}</h4>
+                        <p class="text-muted mb-4 max-w-md">{{ __('إدارة نتائج الفحوصات الطبية والمختبرية، بنك الدم، والطلبات الطبية المختلفة.') }}</p>
                         <a href="{{ route('lab.index') }}" class="portal-banner-btn">
-                            الانتقال إلى طلبات المختبر
-                            <i class="fas fa-arrow-left ms-2"></i>
+                            {{ __('الانتقال إلى طلبات المختبر') }}
+                            <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} ms-2"></i>
                         </a>
                     </div>
                 </div>
@@ -798,9 +802,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">المرضى</h5>
+                        <h5 class="stat-card-title">{{ __('المرضى') }}</h5>
                         <h2 class="stat-card-value">{{ $stats['totalPatients'] }}</h2>
-                        <span class="stat-card-sub">مسجلين في النظام</span>
+                        <span class="stat-card-sub">{{ __('مسجلين في النظام') }}</span>
                         <div class="progress-premium">
                             <div class="progress-bar progress-bar-premium icon-patient" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
@@ -818,9 +822,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">الأطباء</h5>
+                        <h5 class="stat-card-title">{{ __('الأطباء') }}</h5>
                         <h2 class="stat-card-value">{{ $stats['totalDoctors'] }}</h2>
-                        <span class="stat-card-sub">يعملون في المستشفى</span>
+                        <span class="stat-card-sub">{{ __('يعملون في المستشفى') }}</span>
                         <div class="progress-premium">
                             <div class="progress-bar progress-bar-premium icon-doctor" role="progressbar" style="width: 60%" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
@@ -838,9 +842,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">العيادات</h5>
+                        <h5 class="stat-card-title">{{ __('العيادات') }}</h5>
                         <h2 class="stat-card-value">{{ $stats['totalDepartments'] }}</h2>
-                        <span class="stat-card-sub">عيادة نشطة في النظام</span>
+                        <span class="stat-card-sub">{{ __('عيادة نشطة في النظام') }}</span>
                         <div class="progress-premium">
                             <div class="progress-bar progress-bar-premium icon-dept" role="progressbar" style="width: 85%" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
@@ -858,9 +862,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">مواعيد اليوم</h5>
+                        <h5 class="stat-card-title">{{ __('مواعيد اليوم') }}</h5>
                         <h2 class="stat-card-value">{{ $stats['todayAppointments'] }}</h2>
-                        <span class="stat-card-sub">مجدولة لهذا اليوم</span>
+                        <span class="stat-card-sub">{{ __('مجدولة لهذا اليوم') }}</span>
                         <div class="progress-premium">
                             <div class="progress-bar progress-bar-premium icon-appts" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
@@ -878,9 +882,9 @@
             <div class="card stat-card-premium h-100">
                 <div class="card-body d-flex align-items-center">
                     <div class="stat-info-area">
-                        <h5 class="stat-card-title">الزيارات اليوم</h5>
+                        <h5 class="stat-card-title">{{ __('الزيارات اليوم') }}</h5>
                         <h2 class="stat-card-value">{{ $stats['todayVisits'] }}</h2>
-                        <span class="stat-card-sub">تم تسجيلها اليوم</span>
+                        <span class="stat-card-sub">{{ __('تم تسجيلها اليوم') }}</span>
                         <div class="progress-premium">
                             <div class="progress-bar progress-bar-premium icon-visits" role="progressbar" style="width: 55%" aria-valuenow="55" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
@@ -902,7 +906,7 @@
                 <div class="col-md-6 d-flex animate__animated animate__fadeIn" style="animation-delay: 0.6s;">
                     <div class="card glass-card-dashboard flex-fill">
                         <div class="card-header">
-                            <h5><i class="fas fa-chart-line me-2 text-primary"></i>زيارات آخر 7 أيام</h5>
+                            <h5><i class="fas fa-chart-line me-2 text-primary"></i>{{ __('زيارات آخر 7 أيام') }}</h5>
                         </div>
                         <div class="card-body">
                             <canvas id="visitsByDayChart" height="180"></canvas>
@@ -912,7 +916,7 @@
                 <div class="col-md-6 d-flex animate__animated animate__fadeIn" style="animation-delay: 0.7s;">
                     <div class="card glass-card-dashboard flex-fill">
                         <div class="card-header">
-                            <h5><i class="fas fa-chart-pie me-2 text-warning"></i>المواعيد حسب الحالة</h5>
+                            <h5><i class="fas fa-chart-pie me-2 text-warning"></i>{{ __('المواعيد حسب الحالة') }}</h5>
                         </div>
                         <div class="card-body">
                             <canvas id="appointmentsStatusChart" height="180"></canvas>
@@ -922,7 +926,7 @@
                 <div class="col-md-6 d-flex animate__animated animate__fadeIn" style="animation-delay: 0.8s;">
                     <div class="card glass-card-dashboard flex-fill">
                         <div class="card-header">
-                            <h5><i class="fas fa-chart-bar me-2 text-success"></i>عدد المرضى حسب العيادات</h5>
+                            <h5><i class="fas fa-chart-bar me-2 text-success"></i>{{ __('عدد المرضى حسب العيادات') }}</h5>
                         </div>
                         <div class="card-body">
                             <canvas id="patientsByDepartmentChart" height="180"></canvas>
@@ -932,7 +936,7 @@
                 <div class="col-md-6 d-flex animate__animated animate__fadeIn" style="animation-delay: 0.9s;">
                     <div class="card glass-card-dashboard flex-fill">
                         <div class="card-header">
-                            <h5><i class="fas fa-chart-area me-2 text-info"></i>المواعيد خلال 6 أشهر</h5>
+                            <h5><i class="fas fa-chart-area me-2 text-info"></i>{{ __('المواعيد خلال 6 أشهر') }}</h5>
                         </div>
                         <div class="card-body">
                             <canvas id="monthlyAppointmentsChart" height="180"></canvas>
@@ -946,7 +950,7 @@
             @if(isset($roomStats) && $roomStats['total'] > 0)
             <div class="card room-status-sidebar flex-fill shadow-sm">
                 <div class="card-header">
-                    <h5><i class="fas fa-bed me-2 text-danger"></i>حالة الغرف</h5>
+                    <h5><i class="fas fa-bed me-2 text-danger"></i>{{ __('حالة الغرف') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
@@ -957,7 +961,7 @@
                                         <i class="fas fa-bed fa-sm"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <small class="text-muted">إجمالي الغرف</small>
+                                        <small class="text-muted">{{ __('إجمالي الغرف') }}</small>
                                         <h6 class="mb-0 mt-1">{{ $roomStats['total'] }}</h6>
                                     </div>
                                 </div>
@@ -970,7 +974,7 @@
                                         <i class="fas fa-check fa-sm"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <small class="text-muted">الغرف النشطة</small>
+                                        <small class="text-muted">{{ __('الغرف النشطة') }}</small>
                                         <h6 class="mb-0 mt-1 text-info">{{ $roomStats['active'] }}</h6>
                                     </div>
                                 </div>
@@ -983,7 +987,7 @@
                                         <i class="fas fa-check-circle fa-sm"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <small class="text-muted">متاحة</small>
+                                        <small class="text-muted">{{ __('متاحة') }}</small>
                                         <h6 class="mb-0 mt-1 text-success">{{ $roomStats['available'] }}</h6>
                                     </div>
                                 </div>
@@ -996,7 +1000,7 @@
                                         <i class="fas fa-user fa-sm"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <small class="text-muted">محجوزة</small>
+                                        <small class="text-muted">{{ __('محجوزة') }}</small>
                                         <h6 class="mb-0 mt-1 text-danger">{{ $roomStats['occupied'] }}</h6>
                                     </div>
                                 </div>
@@ -1009,7 +1013,7 @@
                                         <i class="fas fa-tools fa-sm"></i>
                                     </div>
                                     <div class="flex-grow-1">
-                                        <small class="text-muted">صيانة</small>
+                                        <small class="text-muted">{{ __('صيانة') }}</small>
                                         <h6 class="mb-0 mt-1 text-warning">{{ $roomStats['maintenance'] }}</h6>
                                     </div>
                                 </div>
@@ -1064,7 +1068,7 @@
                         padding: 10,
                         cornerRadius: 8,
                         displayColors: true,
-                        rtl: true
+                        rtl: {{ app()->getLocale() === 'ar' ? 'true' : 'false' }}
                     }
                 },
                 scales: {
@@ -1103,7 +1107,7 @@
             data: {
                 labels: @json(array_keys($visitsByDay)),
                 datasets: [{
-                    label: 'الزيارات اليومية',
+                    label: @json(__('الزيارات اليومية')),
                     data: @json(array_values($visitsByDay)),
                     borderColor: '#6366f1',
                     borderWidth: 3,
@@ -1126,7 +1130,7 @@
         charts.push(new Chart(apptsCtx, {
             type: 'doughnut',
             data: {
-                labels: ['معلقة', 'مكتملة', 'ملغاة'],
+                labels: [@json(__('معلقة')), @json(__('مكتملة')), @json(__('ملغاة'))],
                 datasets: [{
                     data: @json(array_values($appointmentsByStatus)),
                     backgroundColor: ['#f59e0b', '#10b981', '#ef4444'],
@@ -1150,7 +1154,7 @@
             data: {
                 labels: @json($patientsByDepartment instanceof Illuminate\Support\Collection ? $patientsByDepartment->pluck('name')->toArray() : array_column($patientsByDepartment, 'name')),
                 datasets: [{
-                    label: 'عدد المرضى',
+                    label: @json(__('عدد المرضى')),
                     data: @json($patientsByDepartment instanceof Illuminate\Support\Collection ? $patientsByDepartment->pluck('count')->toArray() : array_column($patientsByDepartment, 'count')),
                     backgroundColor: deptGradient,
                     borderColor: '#14b8a6',
@@ -1171,7 +1175,7 @@
             data: {
                 labels: @json($monthlyAppointments->pluck('month')->toArray()),
                 datasets: [{
-                    label: 'المواعيد الشهرية',
+                    label: @json(__('المواعيد الشهرية')),
                     data: @json($monthlyAppointments->pluck('count')->toArray()),
                     borderColor: '#8b5cf6',
                     borderWidth: 3,

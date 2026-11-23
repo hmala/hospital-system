@@ -8,24 +8,24 @@
                 <div>
                     <h2>
                         <i class="fas fa-procedures me-2 text-danger"></i>
-                        كاشير العمليات الجراحية
+                        {{ __('كاشير العمليات الجراحية') }}
                     </h2>
                     <p class="text-muted">
-                        إدارة مدفوعات العمليات الجراحية والفحوصات المطلوبة
+                        {{ __('إدارة مدفوعات العمليات الجراحية والفحوصات المطلوبة') }}
                     </p>
                 </div>
                 <div>
                     <a href="{{ route('cashier.surgeries.doctor-accounts') }}" class="btn btn-outline-danger me-2">
                         <i class="fas fa-wallet me-2"></i>
-                        حسابات الجراحين
+                        {{ __('حسابات الجراحين') }}
                     </a>
                     <a href="{{ route('cashier.surgeries.paid') }}" class="btn btn-success me-2">
                         <i class="fas fa-file-invoice-dollar me-2"></i>
-                        المدفوعات والإيصالات
+                        {{ __('المدفوعات والإيصالات') }}
                     </a>
                     <a href="{{ route('cashier.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-right me-2"></i>
-                        العودة للكاشير الرئيسي
+                        {{ __('العودة للكاشير الرئيسي') }}
                     </a>
                 </div>
             </div>
@@ -43,13 +43,13 @@
                        class="btn btn-sm btn-light me-2" 
                        target="_blank">
                         <i class="fas fa-eye me-1"></i>
-                        عرض الإيصال
+                        {{ __('عرض الإيصال') }}
                     </a>
                     <a href="{{ route('cashier.receipt.print', session('payment_id')) }}" 
                        class="btn btn-sm btn-light" 
                        target="_blank">
                         <i class="fas fa-print me-1"></i>
-                        طباعة الإيصال
+                        {{ __('طباعة الإيصال') }}
                     </a>
                 </div>
             @endif
@@ -80,7 +80,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-1">المرضى المعلقين</p>
+                            <p class="text-muted mb-1">{{ __('المرضى المعلقين') }}</p>
                             <h3 class="mb-0 text-danger">{{ $surgeryStats['patients_count'] ?? 0 }}</h3>
                         </div>
                         <div class="bg-danger bg-opacity-10 p-3 rounded">
@@ -95,7 +95,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-1">العمليات المعلقة</p>
+                            <p class="text-muted mb-1">{{ __('العمليات المعلقة') }}</p>
                             <h3 class="mb-0 text-warning">{{ $surgeryStats['pending_count'] ?? 0 }}</h3>
                         </div>
                         <div class="bg-warning bg-opacity-10 p-3 rounded">
@@ -110,7 +110,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-1">عمليات مدفوعة اليوم</p>
+                            <p class="text-muted mb-1">{{ __('عمليات مدفوعة اليوم') }}</p>
                             <h3 class="mb-0 text-success">{{ $surgeryStats['today_paid'] ?? 0 }}</h3>
                         </div>
                         <div class="bg-success bg-opacity-10 p-3 rounded">
@@ -125,7 +125,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted mb-1">إيرادات اليوم</p>
+                            <p class="text-muted mb-1">{{ __('إيرادات اليوم') }}</p>
                             <h3 class="mb-0 text-primary">{{ number_format($surgeryStats['today_revenue'] ?? 0, 0) }} IQD</h3>
                         </div>
                         <div class="bg-primary bg-opacity-10 p-3 rounded">
@@ -142,9 +142,9 @@
         <div class="card-header bg-danger text-white">
             <h5 class="mb-0">
                 <i class="fas fa-procedures me-2"></i>
-                العمليات الجراحية بانتظار الدفع
+                {{ __('العمليات الجراحية بانتظار الدفع') }}
                 @if($surgeriesByPatient && $surgeriesByPatient->count() > 0)
-                    <span class="badge bg-light text-danger">{{ $surgeriesByPatient->count() }} مريض</span>
+                    <span class="badge bg-light text-danger">{{ $surgeriesByPatient->count() }} {{ __('مريض') }}</span>
                 @endif
             </h5>
         </div>
@@ -165,25 +165,78 @@
                                 $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                 $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
                                 
-                                // رسوم الغرفة
-                                $roomFee = $isCancelled ? 0 : ($surgery->room_fee ?? 0);
+                                // التأمين ونسبة التحمل للمريض
+                                $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
+                                $isIns = in_array($sIns, ['hi', 'moi']);
+
+                                // رسوم الغرفة وحساب الإقامة الفندقية التراكمية
+                                $stayDetails = $surgery->calculateStayDetails();
+                                $isStayIns = $isIns && ($stayDetails['is_insurance_calculated'] ?? false);
+                                $targetRoomFee = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+                                $roomFee = $isCancelled ? 0 : $targetRoomFee;
                                 $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                 $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
                                 
+                                // خدمات إضافية
+                                $pendingExtraFee = $isCancelled ? 0 : $surgery->extraServices->where('payment_status', '!=', 'paid')->sum('total_amount');
+                                $paidExtraFee = $surgery->extraServices->where('payment_status', 'paid')->sum(function($extra) {
+                                    if ($extra->is_package_included) return 0;
+                                    return (float)($extra->total_amount ?? 0);
+                                });
+
+                                // التأمين ونسبة التحمل للمريض
+                                $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
+                                $isIns = in_array($sIns, ['hi', 'moi']);
+                                $labCopayPct = match($sIns) {
+                                    'hi' => ($patient?->getCopayPercentageFor('lab') ?? 15),
+                                    'moi' => (float)($patient?->copay_percentage ?? 15),
+                                    default => 100
+                                };
+                                $radCopayPct = match($sIns) {
+                                    'hi' => ($patient?->getCopayPercentageFor('radiology') ?? 15),
+                                    'moi' => (float)($patient?->copay_percentage ?? 15),
+                                    default => 100
+                                };
+
                                 // تحاليل
-                                $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                    return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $labCopayPct) {
+                                    $m = $test->labTest;
+                                    if (!$m) return 0;
+                                    $base = (float)($m->price ?? 0);
+                                    if (!$isIns) return $base;
+                                    $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                    $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                    $approved = ($sIns === 'hi') ? $hi : $moi;
+                                    return round($approved * ($labCopayPct / 100));
                                 });
                                 $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
-                                    return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                    if ($test->is_package_included) return 0;
+                                    return (float)($test->labTest?->price ?? 0);
                                 });
                                 
                                 // أشعة
-                                $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                    return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $radCopayPct) {
+                                    $m = $test->radiologyType;
+                                    if (!$m) return 0;
+                                    $base = (float)($m->base_price ?? 0);
+                                    if (!$isIns) return $base;
+                                    $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                    $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                    $approved = ($sIns === 'hi') ? $hi : $moi;
+                                    return round($approved * ($radCopayPct / 100));
                                 });
                                 $paidRadiologyFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
-                                    return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                    if ($test->is_package_included) return 0;
+                                    return (float)($test->radiologyType?->base_price ?? 0);
+                                });
+
+                                // استشارات (غير مشمولة بالضمان كالطوارئ - كامل المبلغ على المريض)
+                                $pendingConsultationsFee = $isCancelled ? 0 : $surgery->consultations->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled')->sum(function($c) {
+                                    return (float)($c->fee > 0 ? $c->fee : 50000);
+                                });
+                                $paidConsultationsFee = $surgery->consultations->where('payment_status', 'paid')->sum(function($c) {
+                                    if ($c->is_package_included) return 0;
+                                    return (float)($c->fee ?? 0);
                                 });
                                 
                                 $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
@@ -191,10 +244,10 @@
                                     $patientRefundAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
                                     $patientPaidAmount += ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount));
                                 } else {
-                                    $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee;
-                                    $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee;
+                                    $patientPendingAmount += $remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee + $pendingConsultationsFee;
+                                    $patientPaidAmount += $surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee + $paidConsultationsFee;
                                 }
-                                $patientTotalAmount += $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+                                $patientTotalAmount += $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee + $pendingConsultationsFee + $paidConsultationsFee;
                             }
                         @endphp
                         <div class="accordion-item">
@@ -210,21 +263,21 @@
                                                 <i class="fas fa-user text-danger"></i>
                                             </div>
                                             <div>
-                                                <strong>{{ $patient && $patient->user ? $patient->user->name : 'غير محدد' }}</strong>
+                                                <strong>{{ $patient && $patient->user ? $patient->user->name : __('غير محدد') }}</strong>
                                                 @php $pIns = $patient->insurance_type ?? 'none'; @endphp
                                                 @if($pIns === 'moi')
                                                     <span class="badge bg-success py-1 px-2 ms-1" style="font-size: 0.72rem;">
-                                                        <i class="fas fa-shield-alt me-1"></i>داخليّة
+                                                        <i class="fas fa-shield-alt me-1"></i>{{ __('داخليّة') }}
                                                     </span>
                                                 @elseif($pIns === 'hi')
                                                     <span class="badge bg-info text-dark py-1 px-2 ms-1" style="font-size: 0.72rem;">
-                                                        <i class="fas fa-shield-alt me-1"></i>ضمان صحي{{ ($patient && $patient->healthInsuranceCategory) ? ' (فئة ' . $patient->healthInsuranceCategory->code . ')' : '' }}
+                                                        <i class="fas fa-shield-alt me-1"></i>{{ __('ضمان صحي') }}{{ ($patient && $patient->healthInsuranceCategory) ? ' (' . __('فئة') . ' ' . $patient->healthInsuranceCategory->code . ')' : '' }}
                                                     </span>
                                                 @endif
                                                 <br>
                                                 <small class="text-muted">
                                                     <i class="fas fa-id-card me-1"></i>
-                                                    {{ $patient ? ($patient->national_id ?? 'غير محدد') : 'غير محدد' }}
+                                                    {{ $patient ? ($patient->national_id ?? __('غير محدد')) : __('غير محدد') }}
                                                     @if($patient && $patient->user && $patient->user->phone)
                                                         <span class="mx-2">|</span>
                                                         <i class="fas fa-phone me-1"></i>
@@ -236,23 +289,23 @@
                                         <div class="text-end">
                                             <span class="badge bg-warning me-2">
                                                 <i class="fas fa-procedures me-1"></i>
-                                                {{ $surgeries->count() }} عملية
+                                                {{ $surgeries->count() }} {{ __('عملية') }}
                                             </span>
                                             @if($patientRefundAmount > 0)
                                             <span class="badge bg-danger me-1">
                                                 <i class="fas fa-undo me-1"></i>
-                                                مستحق استرجاع: {{ number_format($patientRefundAmount, 0) }} IQD
+                                                {{ __('مستحق استرجاع:') }} {{ number_format($patientRefundAmount, 0) }} IQD
                                             </span>
                                             @elseif($patientPaidAmount > 0)
                                             <span class="badge bg-success me-1">
                                                 <i class="fas fa-check me-1"></i>
-                                                مدفوع: {{ number_format($patientPaidAmount, 0) }}
+                                                {{ __('مدفوع:') }} {{ number_format($patientPaidAmount, 0) }}
                                             </span>
                                             @endif
                                             @if($patientPendingAmount > 0)
                                             <span class="badge bg-warning text-dark">
                                                 <i class="fas fa-clock me-1"></i>
-                                                معلق: {{ number_format($patientPendingAmount, 0) }} IQD
+                                                {{ __('معلق:') }} {{ number_format($patientPendingAmount, 0) }} IQD
                                             </span>
                                             @endif
                                         </div>
@@ -268,14 +321,14 @@
                                         <table class="table table-hover align-middle mb-0 text-right" style="direction: rtl;">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th>رقم العملية</th>
-                                                    <th>نوع العملية</th>
-                                                    <th>الجراح</th>
-                                                    <th>القسم</th>
-                                                    <th>التكلفة الإجمالية</th>
-                                                    <th>المدفوع</th>
-                                                    <th>المتبقي</th>
-                                                    <th class="text-center">الإجراءات</th>
+                                                    <th>{{ __('رقم العملية') }}</th>
+                                                    <th>{{ __('نوع العملية') }}</th>
+                                                    <th>{{ __('الجراح') }}</th>
+                                                    <th>{{ __('القسم') }}</th>
+                                                    <th>{{ __('التكلفة الإجمالية') }}</th>
+                                                    <th>{{ __('المدفوع') }}</th>
+                                                    <th>{{ __('المتبقي') }}</th>
+                                                    <th class="text-center">{{ __('الإجراءات') }}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -287,30 +340,80 @@
                                                         $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
                                                         $remainingSurgeryFee = max(0, $surgeryFee - $surgeryFeePaidAmount);
 
-                                                        $roomFee = $isCancelled ? 0 : ($surgery->room_fee ?? 0);
+                                                        // التأمين ونسبة التحمل للمريض
+                                                        $sIns = $surgery->insurance_type ?: ($patient?->insurance_type ?: 'none');
+                                                        $isIns = in_array($sIns, ['hi', 'moi']);
+
+                                                        // رسوم الغرفة وحساب الإقامة الفندقية التراكمية
+                                                        $stayDetails = $surgery->calculateStayDetails();
+                                                        $isStayIns = $isIns && ($stayDetails['is_insurance_calculated'] ?? false);
+                                                        $targetRoomFee = $isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($surgery->room_fee ?? 0));
+                                                        $roomFee = $isCancelled ? 0 : $targetRoomFee;
                                                         $roomFeePaidAmount = $surgery->room_fee_paid_amount ?? 0;
                                                         $remainingRoomFee = max(0, $roomFee - $roomFeePaidAmount);
 
-                                                        $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                                            return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                                        // خدمات إضافية
+                                                        $pendingExtraFee = $isCancelled ? 0 : $surgery->extraServices->where('payment_status', '!=', 'paid')->sum('total_amount');
+                                                        $paidExtraFee = $surgery->extraServices->where('payment_status', 'paid')->sum(function($extra) {
+                                                            if ($extra->is_package_included) return 0;
+                                                            return (float)($extra->total_amount ?? 0);
+                                                        });
+                                                        $labCopayPct = match($sIns) {
+                                                            'hi' => ($patient?->getCopayPercentageFor('lab') ?? 15),
+                                                            'moi' => (float)($patient?->copay_percentage ?? 15),
+                                                            default => 100
+                                                        };
+                                                        $radCopayPct = match($sIns) {
+                                                            'hi' => ($patient?->getCopayPercentageFor('radiology') ?? 15),
+                                                            'moi' => (float)($patient?->copay_percentage ?? 15),
+                                                            default => 100
+                                                        };
+
+                                                        $pendingLabFee = $isCancelled ? 0 : $surgery->labTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $labCopayPct) {
+                                                            $m = $test->labTest;
+                                                            if (!$m) return 0;
+                                                            $base = (float)($m->price ?? 0);
+                                                            if (!$isIns) return $base;
+                                                            $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                                            $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                                            $approved = ($sIns === 'hi') ? $hi : $moi;
+                                                            return round($approved * ($labCopayPct / 100));
                                                         });
                                                         $paidLabFee = $surgery->labTests->where('payment_status', 'paid')->sum(function($test) {
-                                                            return $test->labTest ? ($test->labTest->price ?? 0) : 0;
+                                                            if ($test->is_package_included) return 0;
+                                                            return (float)($test->labTest?->price ?? 0);
                                                         });
 
-                                                        $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) {
-                                                            return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                                        $pendingRadiologyFee = $isCancelled ? 0 : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->sum(function($test) use ($sIns, $isIns, $radCopayPct) {
+                                                            $m = $test->radiologyType;
+                                                            if (!$m) return 0;
+                                                            $base = (float)($m->base_price ?? 0);
+                                                            if (!$isIns) return $base;
+                                                            $hi = (float)(($m->hi_price > 0) ? $m->hi_price : $base);
+                                                            $moi = (float)(($m->moi_price > 0) ? $m->moi_price : $base);
+                                                            $approved = ($sIns === 'hi') ? $hi : $moi;
+                                                            return round($approved * ($radCopayPct / 100));
                                                         });
                                                         $paidRadiologyFee = $surgery->radiologyTests->where('payment_status', 'paid')->sum(function($test) {
-                                                            return $test->radiologyType ? ($test->radiologyType->base_price ?? 0) : 0;
+                                                            if ($test->is_package_included) return 0;
+                                                            return (float)($test->radiologyType?->base_price ?? 0);
+                                                        });
+
+                                                        // استشارات (غير مشمولة بالضمان كالطوارئ - كامل المبلغ على المريض)
+                                                        $pendingConsultationsFee = $isCancelled ? 0 : $surgery->consultations->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled')->sum(function($c) {
+                                                            return (float)($c->fee > 0 ? $c->fee : 50000);
+                                                        });
+                                                        $paidConsultationsFee = $surgery->consultations->where('payment_status', 'paid')->sum(function($c) {
+                                                            if ($c->is_package_included) return 0;
+                                                            return (float)($c->fee ?? 0);
                                                         });
 
                                                         $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
                                                         $paidAmount = $isCancelled 
                                                             ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : ($surgeryFeePaidAmount + $roomFeePaidAmount))
-                                                            : ($surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee);
-                                                        $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee);
-                                                        $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee;
+                                                            : ($surgeryFeePaidAmount + $roomFeePaidAmount + $paidLabFee + $paidRadiologyFee + $paidExtraFee + $paidConsultationsFee);
+                                                        $pendingAmount = $isCancelled ? 0 : ($remainingSurgeryFee + $remainingRoomFee + $pendingLabFee + $pendingRadiologyFee + $pendingExtraFee + $pendingConsultationsFee);
+                                                        $totalAmount = $surgeryFee + $roomFee + $pendingLabFee + $paidLabFee + $pendingRadiologyFee + $paidRadiologyFee + $pendingExtraFee + $paidExtraFee + $pendingConsultationsFee + $paidConsultationsFee;
                                                         
                                                         if ($isCancelled) {
                                                             $excessAmount = $paidAmount;
@@ -325,13 +428,13 @@
                                                         <td>
                                                             <div class="fw-bold">{{ $surgery->surgery_type }}</div>
                                                             @if($isCancelled)
-                                                                <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> ملغاة (مستحق استرجاع)</span>
+                                                                <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> {{ __('ملغاة (مستحق استرجاع)') }}</span>
                                                             @elseif($surgery->payment_status === 'partial')
-                                                                <small class="text-warning"><i class="fas fa-adjust"></i> دفع جزئي</small>
+                                                                <small class="text-warning"><i class="fas fa-adjust"></i> {{ __('دفع جزئي') }}</small>
                                                             @endif
                                                         </td>
-                                                        <td>{{ $surgery->doctor->user->name ?? $surgery->surgeon_name ?? 'غير محدد' }}</td>
-                                                        <td>{{ $surgery->department->name ?? 'غير محدد' }}</td>
+                                                        <td>{{ $surgery->doctor->user->name ?? $surgery->surgeon_name ?? __('غير محدد') }}</td>
+                                                        <td>{{ $surgery->department->name ?? __('غير محدد') }}</td>
                                                         <td>{{ number_format($totalAmount, 0) }} IQD</td>
                                                         <td class="text-success">{{ number_format($paidAmount, 0) }} IQD</td>
                                                         <td class="text-danger fw-bold">{{ number_format($pendingAmount, 0) }} IQD</td>
@@ -343,29 +446,29 @@
                                                             @if($isCancelled && $excessAmount > 0)
                                                                 @if($canRefund)
                                                                     <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-danger btn-sm px-3 fw-bold shadow-sm">
-                                                                        <i class="fas fa-undo me-1"></i> إرجاع المبلغ للمريض ({{ number_format($excessAmount, 0) }} د.ع)
+                                                                        <i class="fas fa-undo me-1"></i> {{ __('إرجاع المبلغ للمريض') }} ({{ number_format($excessAmount, 0) }} {{ __('د.ع') }})
                                                                     </a>
                                                                 @else
-                                                                    <span class="badge bg-secondary">غير مصرح بالاسترجاع</span>
+                                                                    <span class="badge bg-secondary">{{ __('غير مصرح بالاسترجاع') }}</span>
                                                                 @endif
                                                             @elseif($pendingAmount > 0)
                                                                 @if($canPaySurgeries)
                                                                     <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-success btn-sm px-3">
-                                                                        <i class="fas fa-money-bill-wave me-1"></i> تسديد الرسوم
+                                                                        <i class="fas fa-money-bill-wave me-1"></i> {{ __('تسديد الرسوم') }}
                                                                     </a>
                                                                 @else
-                                                                    <span class="badge bg-secondary">غير مصرح بالقبض</span>
+                                                                    <span class="badge bg-secondary">{{ __('غير مصرح بالقبض') }}</span>
                                                                 @endif
                                                             @elseif($excessAmount > 0)
                                                                 @if($canRefund)
                                                                     <a href="{{ route('cashier.surgeries.payment.form', $surgery->id) }}" class="btn btn-warning btn-sm px-3 text-dark fw-bold">
-                                                                        <i class="fas fa-undo me-1"></i> إرجاع الفارق ({{ number_format($excessAmount, 0) }} د.ع)
+                                                                        <i class="fas fa-undo me-1"></i> {{ __('إرجاع الفارق') }} ({{ number_format($excessAmount, 0) }} {{ __('د.ع') }})
                                                                     </a>
                                                                 @else
-                                                                    <span class="badge bg-secondary">غير مصرح بالاسترجاع</span>
+                                                                    <span class="badge bg-secondary">{{ __('غير مصرح بالاسترجاع') }}</span>
                                                                 @endif
                                                             @else
-                                                                <span class="text-success"><i class="fas fa-check-double me-1"></i> مدفوع بالكامل</span>
+                                                                <span class="text-success"><i class="fas fa-check-double me-1"></i> {{ __('مدفوع بالكامل') }}</span>
                                                             @endif
                                                         </td>
                                                     </tr>
@@ -382,7 +485,7 @@
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <strong>
                                                             <i class="fas fa-check-circle me-2"></i>
-                                                            المدفوع:
+                                                            {{ __('المدفوع:') }}
                                                         </strong>
                                                         <h5 class="mb-0">{{ number_format($patientPaidAmount, 0) }} IQD</h5>
                                                     </div>
@@ -395,7 +498,7 @@
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <strong>
                                                             <i class="fas fa-clock me-2"></i>
-                                                            المعلق:
+                                                            {{ __('المعلق:') }}
                                                         </strong>
                                                         <h5 class="mb-0">{{ number_format($patientPendingAmount, 0) }} IQD</h5>
                                                     </div>
@@ -407,7 +510,7 @@
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <strong>
                                                             <i class="fas fa-calculator me-2"></i>
-                                                            الإجمالي:
+                                                            {{ __('الإجمالي:') }}
                                                         </strong>
                                                         <h5 class="mb-0">{{ number_format($patientTotalAmount, 0) }} IQD</h5>
                                                     </div>
@@ -423,7 +526,7 @@
             @else
                 <div class="text-center py-5">
                     <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <p class="text-muted">لا توجد عمليات معلقة حالياً</p>
+                    <p class="text-muted">{{ __('لا توجد عمليات معلقة حالياً') }}</p>
                 </div>
             @endif
         </div>

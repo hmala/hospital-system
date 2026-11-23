@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>وصل موعد مراجعة - {{ $visit->patient?->user?->name ?? 'المريض' }}</title>
+    <title>{{ __("وصل موعد مراجعة") }} - {{ $visit->patient?->user?->name ?? 'المريض' }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -240,13 +240,13 @@
 <body>
 
     <div class="no-print">
-        <button class="btn-print" onclick="window.print()">🖨️ طباعة الوصل الحراري</button>
-        <button class="btn-back" onclick="window.close()">⬅️ إغلاق</button>
+        <button class="btn-print" onclick="window.print()">🖨️ {{ __("طباعة الوصل الحراري") }}</button>
+        <button class="btn-back" onclick="window.close()">⬅️ {{ __("إغلاق") }}</button>
     </div>
 
     @php
         $hospital = \App\Models\Hospital::first();
-        $hNameAr = $hospital?->name ?? 'مستشفى الكفاءات الاهلي';
+        $hNameAr = $hospital?->name ?? 'مستشفى الكفاءات الأهلي';
         $patient = $visit->patient;
         $patientUser = $patient?->user;
         $doctor = $visit->doctor;
@@ -268,47 +268,47 @@
         </div>
 
         <div class="title-badge">
-            بطاقة موعد مراجعة واستشارة
+            {{ __("بطاقة موعد مراجعة واستشارة") }}
         </div>
 
         <!-- Meta info -->
         <div class="meta-group">
             <div class="meta-row">
-                <span class="meta-label">رقم الموعد:</span>
+                <span class="meta-label">{{ __("رقم الموعد:") }}</span>
                 <span class="meta-val font-monospace">#APT-{{ $aptNum }}</span>
             </div>
             <div class="meta-row">
-                <span class="meta-label">تاريخ الإصدار:</span>
+                <span class="meta-label">{{ __("تاريخ الإصدار:") }}</span>
                 <span class="meta-val">{{ now()->format('Y/m/d h:i A') }}</span>
             </div>
             <div class="meta-row">
-                <span class="meta-label">اسم المريض:</span>
+                <span class="meta-label">{{ __("اسم المريض:") }}</span>
                 <span class="meta-val">{{ $patientUser?->name ?? 'مريض غير مسجل' }}</span>
             </div>
             <div class="meta-row">
-                <span class="meta-label">رقم الملف:</span>
+                <span class="meta-label">{{ __("رقم الملف:") }}</span>
                 <span class="meta-val font-monospace">#{{ $patient?->national_id ?: ($patient?->id ?? $visit->patient_id) }}</span>
             </div>
             <div class="meta-row">
-                <span class="meta-label">الطبيب المعالج:</span>
-                <span class="meta-val">د. {{ $doctorUser?->name ?? 'طبيب العيادة' }}</span>
+                <span class="meta-label">{{ __("الطبيب المعالج:") }}</span>
+                <span class="meta-val">{{ __("د.") }} {{ $doctorUser?->name ?? __("طبيب العيادة") }}</span>
             </div>
             <div class="meta-row">
-                <span class="meta-label">العيادة / القسم:</span>
-                <span class="meta-val">{{ $doctor?->specialization ?: ($visit->department?->name ?? 'الاستشارية') }}</span>
+                <span class="meta-label">{{ __("العيادة / القسم:") }}</span>
+                <span class="meta-val">{{ $doctor?->specialization ?: ($visit->department?->name ?? __('الاستشارية')) }}</span>
             </div>
         </div>
 
         <!-- الصندوق الحراري البارز لتاريخ المراجعة -->
         <div class="appointment-highlight-box">
-            <div class="apt-badge-free">★ مراجعة واستشارة مجانية (Free) ★</div>
+            <div class="apt-badge-free">{{ __("★ مراجعة واستشارة مجانية (Free) ★") }}</div>
             <div class="apt-date-big">
-                {{ $followUpDate ? \Carbon\Carbon::parse($followUpDate)->format('Y/m/d') : 'يرجى تحديد الموعد' }}
+                {{ $followUpDate ? \Carbon\Carbon::parse($followUpDate)->format('Y/m/d') : __('يرجى تحديد الموعد') }}
             </div>
             <div class="apt-day-text">
-                يوم: <strong>{{ $dayName }}</strong>
+                {{ __("يوم:") }} <strong>{{ $dayName }}</strong>
                 @if($followUpAppointment && $followUpAppointment->appointment_time)
-                    <span> | الساعة: {{ \Carbon\Carbon::parse($followUpAppointment->appointment_time)->format('h:i A') }}</span>
+                    <span> | {{ __("الساعة:") }} {{ \Carbon\Carbon::parse($followUpAppointment->appointment_time)->format('h:i A') }}</span>
                 @endif
             </div>
             @if($doctor && $doctor->recheck_validity_days)

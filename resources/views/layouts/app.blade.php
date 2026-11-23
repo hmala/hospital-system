@@ -78,16 +78,25 @@
             }
 
             if (Auth::user()->can('view anesthesia station')) {
-                // عداد محطة التخدير - بعد الجراح
-                $anesthesiaStationCount = \App\Models\Surgery::whereHas('surgeonStation', function($q) {
-                        $q->where('status', 'completed');
-                    })
-                    ->where(function($q) {
-                        $q->whereDoesntHave('anesthesiaStation')
-                          ->orWhereHas('anesthesiaStation', function($sq) {
-                              $sq->where('status', '!=', 'completed');
-                          });
-                    })->count();
+                // عداد محطة التخدير
+                $anesthesiaCountQuery = \App\Models\Surgery::where('status', '!=', 'cancelled');
+                if (Auth::user()->doctor && ! Auth::user()->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+                    $anesDocId = Auth::user()->doctor->id;
+                    $anesthesiaCountQuery->where(function ($q) use ($anesDocId) {
+                        $q->where('anesthesiologist_id', $anesDocId)
+                            ->orWhere('anesthesiologist_2_id', $anesDocId)
+                            ->orWhereHas('anesthesiaStation', function ($sq) use ($anesDocId) {
+                                $sq->where('anesthesiologist_id', $anesDocId)
+                                    ->orWhere('anesthesiologist_2_id', $anesDocId);
+                            });
+                    });
+                }
+                $anesthesiaStationCount = $anesthesiaCountQuery->where(function ($q) {
+                    $q->whereDoesntHave('anesthesiaStation')
+                        ->orWhereHas('anesthesiaStation', function ($sq) {
+                            $sq->where('status', '!=', 'completed');
+                        });
+                })->count();
             }
 
             if (Auth::user()->can('view nursing station')) {
@@ -138,12 +147,12 @@
     }
 @endphp
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>نظام المستشفى الأهلي</title>
+    <title>{{ __(config('app.name', 'مستشفى الكفاءات الأهلي')) }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
@@ -162,7 +171,7 @@
             background: #ffffff !important;
             box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
             color: #0f172a !important;
-            direction: rtl !important;
+            direction: {{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }} !important;
             text-align: center !important;
         }
         .swal2-title.hospital-swal-title {
@@ -288,7 +297,7 @@
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: rgba(148, 163, 184, 1);
         }
-        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; }
+        .sidebar-header { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: transparent; border-radius: 16px; margin: 0.75rem 0.75rem 0 0.75rem; padding: 1.25rem 1rem; position: relative; }
         .sidebar-header img,
         .sidebar-header .logo-badge { 
             background: transparent; 
@@ -322,6 +331,93 @@
         .sidebar-user span { display: block; color: #1d4ed8; }
         .sidebar-user .logout-link { color: #1d4ed8; font-size: 0.9rem; text-decoration: none; border: 1px solid rgba(59, 130, 246, 0.45); padding: 0.45rem 0.9rem; border-radius: 12px; background: rgba(59, 130, 246, 0.12); transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease; }
         .sidebar-user .logout-link:hover { background: rgba(59, 130, 246, 0.2); color: #1d4ed8; transform: translateY(-1px); }
+        /* ===== محول لغة النظام في الزاوية العلوية المعاكسة للقائمة ===== */
+        .lang-corner-dropdown {
+            position: fixed;
+            top: 10px;
+            inset-inline-end: 20px;
+            z-index: 1045;
+        }
+        @media (max-width: 1400px) {
+            .lang-corner-dropdown {
+                display: none !important;
+            }
+        }
+        .lang-dropdown-btn {
+            background: rgba(219, 234, 254, 0.72);
+            border: none;
+            border-radius: 9999px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            box-shadow: none;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+        .lang-dropdown-btn:hover, .lang-dropdown-btn:focus {
+            background: rgba(219, 234, 254, 0.96);
+            color: #1d4ed8;
+            box-shadow: 0 2px 8px rgba(30, 58, 138, 0.12);
+            transform: translateY(-1px);
+        }
+        .lang-dropdown-menu {
+            background: rgba(239, 246, 255, 0.98);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.16);
+            padding: 5px;
+            min-width: 145px;
+            font-size: 0.78rem;
+            z-index: 1055;
+        }
+        .lang-dropdown-menu .dropdown-item {
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-weight: 700;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+        .lang-dropdown-menu .dropdown-item:hover {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .lang-dropdown-menu .dropdown-item.active {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+        }
+        .flag-icon {
+            width: 19px;
+            height: 13px;
+            object-fit: cover;
+            border-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+            border: 0.5px solid rgba(0, 0, 0, 0.08);
+            display: inline-block;
+            vertical-align: middle;
+            flex-shrink: 0;
+        }
+        .topbar-lang-toggle {
+            background: #ffffff;
+            border: 1px solid rgba(203, 213, 225, 0.8) !important;
+            transition: all 0.2s ease;
+        }
+        .topbar-lang-toggle:hover {
+            background: #f8fafc;
+            border-color: #3b82f6 !important;
+        }
         .home-link {
             display: inline-flex;
             align-items: center;
@@ -570,7 +666,7 @@
             background: rgba(15, 23, 42, 0.52);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
-            z-index: 1040;
+            z-index: 1045;
             opacity: 0;
             transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             pointer-events: none;
@@ -597,14 +693,17 @@
                 right: 0 !important;
                 bottom: 0 !important;
                 width: 290px !important;
-                z-index: 1050 !important;
+                z-index: 1060 !important;
                 transform: translateX(100%) !important;
                 transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                box-shadow: -8px 0 28px rgba(15, 23, 42, 0.22) !important;
+                box-shadow: -8px 0 28px rgba(15, 23, 42, 0.3) !important;
                 background: #ebf3fe !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
             }
             body.sidebar-open .sidebar {
                 transform: translateX(0) !important;
+                z-index: 1060 !important;
             }
             body.sidebar-open .sidebar-backdrop {
                 display: block !important;
@@ -679,6 +778,69 @@
                 width: calc(100% - 250px) !important;
                 padding-top: 24px !important;
             }
+        }
+
+        /* ===== القائمة الجانبية: تثبيت الإحداثيات والطبقات للشاشات المكتبية الكبيرة ===== */
+        @media (min-width: 1401px) and (hover: hover) and (pointer: fine) {
+            .sidebar {
+                top: 0 !important;
+                bottom: 0 !important;
+                z-index: 1030 !important;
+            }
+            html[dir="rtl"] .sidebar,
+            html:not([dir="ltr"]) .sidebar {
+                right: 0 !important;
+                left: auto !important;
+            }
+
+            /* ===== دعم الواجهة باللغة الإنجليزية واتجاه LTR للشاشات المكتبية ===== */
+            html[dir="ltr"] .sidebar {
+                top: 0 !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: auto !important;
+                z-index: 1030 !important;
+                border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+                border-left: none !important;
+            }
+            html[dir="ltr"] .main-content {
+                margin-left: 250px !important;
+                margin-right: 0 !important;
+                width: calc(100% - 250px) !important;
+            }
+        }
+
+        /* ===== دعم التابلت والموبايل للغة الإنجليزية LTR ===== */
+        @media (max-width: 1400px), (hover: none) and (pointer: coarse) {
+            html[dir="ltr"] .sidebar {
+                left: 0 !important;
+                right: auto !important;
+                z-index: 1060 !important;
+                transform: translateX(-100%) !important;
+                box-shadow: 8px 0 28px rgba(15, 23, 42, 0.3) !important;
+                background: #ebf3fe !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+            }
+            html[dir="ltr"] body.sidebar-open .sidebar {
+                transform: translateX(0) !important;
+                z-index: 1060 !important;
+            }
+            html[dir="ltr"] .main-content {
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                width: 100% !important;
+            }
+        }
+        html[dir="ltr"] body {
+            text-align: left;
+        }
+        html[dir="ltr"] .sidebar-user,
+        html[dir="ltr"] .sidebar-header {
+            text-align: center;
+        }
+        html[dir="ltr"] .sidebar-section-title.collapsed i.toggle-icon {
+            transform: rotate(90deg);
         }
 
         /* حل جذري لمشكلة تجميد وحجب نوافذ المودل في Bootstrap بسبب backdrop-filter */
@@ -855,6 +1017,22 @@
         $systemLogoSrc = file_exists($logoFilePath) 
             ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFilePath)) 
             : asset('images/logo.png');
+
+        $iqFlagFile = public_path('images/flags/iq.svg');
+        if (!file_exists($iqFlagFile)) {
+            $iqFlagFile = base_path('images/flags/iq.svg');
+        }
+        $iqFlagSrc = file_exists($iqFlagFile)
+            ? 'data:image/svg+xml;base64,' . base64_encode(file_get_contents($iqFlagFile))
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjYwMCI+CiAgPHJlY3Qgd2lkdGg9IjkwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNjZTExMjYiLz4KICA8cmVjdCB5PSIyMDAiIHdpZHRoPSI5MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZmZmZmZmIi8+CiAgPHJlY3QgeT0iNDAwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzAwMDAwMCIvPgogIDx0ZXh0IHg9IjQ1MCIgeT0iMzQ4IiBmb250LWZhbWlseT0iJ0FtaXJpJywgJ1RyYWRpdGlvbmFsIEFyYWJpYycsICdTZWdvZSBVSScsIFRhaG9tYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI5MDAiIGZvbnQtc2l6ZT0iMTI0IiBmaWxsPSIjMDA3YTNkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkaXJlY3Rpb249InJ0bCI+2KfZhNmE2Ycg2KPZg9io2LE8L3RleHQ+Cjwvc3ZnPg==';
+
+        $gbFlagFile = public_path('images/flags/gb.svg');
+        if (!file_exists($gbFlagFile)) {
+            $gbFlagFile = base_path('images/flags/gb.svg');
+        }
+        $gbFlagSrc = file_exists($gbFlagFile)
+            ? 'data:image/svg+xml;base64,' . base64_encode(file_get_contents($gbFlagFile))
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MCAzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjMwIj4KICA8Y2xpcFBhdGggaWQ9InMiPgogICAgPHBhdGggZD0iTTAsMCB2MzAgaDYwIHYtMzAgeiIvPgogIDwvY2xpcFBhdGg+CiAgPGNsaXBQYXRoIGlkPSJ0Ij4KICAgIDxwYXRoIGQ9Ik0zMCwxNSBoMzAgdjE1IHogdjE1IGgtMzAgeiBoLTMwIHYtMTUgeiB2LTE1IGgzMCB6Ii8+CiAgPC9jbGlwUGF0aD4KICA8ZyBjbGlwLXBhdGg9InVybCgjcykiPgogICAgPHBhdGggZD0iTTAsMCB2MzAgaDYwIHYtMzAgeiIgZmlsbD0iIzAxMjE2OSIvPgogICAgPHBhdGggZD0iTTAsMCBMNjAsMzAgTTYwLDAgTDAsMzAiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSI2Ii8+CiAgICA8cGF0aCBkPSJNMCwwIEw2MCwzMCBNNjAsMCBMMCwzMCIgY2xpcC1wYXRoPSJ1cmwodHQpIiBzdHJva2U9IiNDODEwMkUiIHN0cm9rZS13aWR0aD0iNCIvPgogICAgPHBhdGggZD0iTTMwLDAgdjMwIE0wLDE1IGg2MCIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjEwIi8+CiAgICA8cGF0aCBkPSJNMzAsMCB2MzAgTTAsMTUgaDYwIiBzdHJva2U9IiNDODEwMkUiIHN0cm9rZS13aWR0aD0iNiIvPgogIDwvZz4KPC9zdmc+';
     @endphp
 
     {{-- Global Page Loader Ultra --}}
@@ -864,11 +1042,11 @@
             <div class="loader-glow-aura"></div>
             <div class="loader-spinner-ring-outer"></div>
             <div class="loader-spinner-ring"></div>
-            <img src="{{ $systemLogoSrc }}" alt="جاري التحميل..." class="loader-logo-img">
+            <img src="{{ $systemLogoSrc }}" alt="{{ __('جاري التحميل') }}..." class="loader-logo-img">
         </div>
         <div class="loader-text-wrapper">
             <div class="loader-text">
-                جاري التحميل<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
+                {{ __('جاري التحميل') }}<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
             </div>
         </div>
     </div>
@@ -876,25 +1054,34 @@
     <!-- شريط الترويسة العلوي للتابلت والموبايل -->
     <header class="tablet-topbar" id="tabletTopbar">
         <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" id="sidebarToggleBtn" style="width: 42px; height: 42px;" aria-label="تبديل القائمة">
+            <button type="button" class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center shadow-sm" id="sidebarToggleBtn" style="width: 42px; height: 42px;" aria-label="{{ __('تبديل القائمة') }}">
                 <i class="fas fa-bars fs-5"></i>
             </button>
             <div class="d-flex align-items-center gap-2">
                 <img src="{{ $systemLogoSrc }}" alt="MEDIX ERP" style="height: 36px; width: auto; border-radius: 6px;">
-                <span class="fw-bold text-primary small">نظام المستشفى</span>
+                <span class="fw-bold text-primary small">{{ __('نظام المستشفى') }}</span>
             </div>
         </div>
         <div class="d-flex align-items-center gap-2">
+            <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="btn btn-sm btn-light border rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1.5 shadow-xs topbar-lang-toggle" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
+                @if(app()->getLocale() === 'en')
+                    <img src="{{ $iqFlagSrc }}" data-src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <span class="fw-bold small text-dark">عربي</span>
+                @else
+                    <img src="{{ $gbFlagSrc }}" data-src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <span class="fw-bold small text-dark">EN</span>
+                @endif
+            </a>
             @if(Auth::check())
                 <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 small d-none d-sm-inline-flex align-items-center">
                     <i class="fas fa-user-circle me-1"></i> {{ Auth::user()->name }}
                 </span>
-               <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="تسجيل الخروج" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+               <a href="{{ route('logout') }}" class="btn btn-outline-danger btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="{{ __('تسجيل الخروج') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt"></i>
                 </a>
             @else
                 <a href="{{ route('login') }}" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm">
-                    <i class="fas fa-sign-in-alt me-1"></i> تسجيل الدخول
+                    <i class="fas fa-sign-in-alt me-1"></i> {{ __('تسجيل الدخول') }}
                 </a>
             @endif
         </div>
@@ -903,6 +1090,33 @@
     <!-- تظليل الخلفية عند فتح القائمة على التابلت -->
     <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
+    <!-- محول لغة منسدل مصغر في الزاوية العلوية المعاكسة للقائمة -->
+    <div class="dropdown lang-corner-dropdown d-none d-xl-block">
+        <button class="btn btn-sm lang-dropdown-btn dropdown-toggle shadow-xs" type="button" id="langCornerDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="{{ __('تبديل لغة النظام') }}">
+            @if(app()->getLocale() === 'en')
+                <img src="{{ $gbFlagSrc }}" data-src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                <span class="small fw-bold">EN</span>
+            @else
+                <img src="{{ $iqFlagSrc }}" data-src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                <span class="small fw-bold">عربي</span>
+            @endif
+        </button>
+        <ul class="dropdown-menu lang-dropdown-menu shadow-sm" aria-labelledby="langCornerDropdownBtn">
+            <li>
+                <a class="dropdown-item {{ app()->getLocale() === 'ar' ? 'active' : '' }}" href="{{ route('lang.switch', 'ar') }}">
+                    <img src="{{ $iqFlagSrc }}" data-src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <span>عربي (IQ)</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item {{ app()->getLocale() === 'en' ? 'active' : '' }}" href="{{ route('lang.switch', 'en') }}">
+                    <img src="{{ $gbFlagSrc }}" data-src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <span>English (UK)</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+
     <div class="container-fluid">
         <div class="row">
             <!-- الشريط الجانبي -->
@@ -910,8 +1124,8 @@
                 <div class="position-sticky pt-0">
                     <!-- زر إغلاق القائمة للتابلت -->
                     <div class="sidebar-close-wrapper justify-content-between align-items-center px-3 pt-3 pb-2 border-bottom border-primary-subtle">
-                        <span class="fw-bold text-primary small"><i class="fas fa-bars me-1"></i> القائمة الرئيسية</span>
-                        <button type="button" class="btn btn-sm btn-light rounded-circle shadow-xs d-flex align-items-center justify-content-center" id="sidebarCloseBtn" style="width: 34px; height: 34px;" aria-label="إغلاق القائمة">
+                        <span class="fw-bold text-primary small"><i class="fas fa-bars me-1"></i> {{ __('القائمة الرئيسية') }}</span>
+                        <button type="button" class="btn btn-sm btn-light rounded-circle shadow-xs d-flex align-items-center justify-content-center" id="sidebarCloseBtn" style="width: 34px; height: 34px;" aria-label="{{ __('إغلاق القائمة') }}">
                             <i class="fas fa-times text-secondary"></i>
                         </button>
                     </div>
@@ -922,14 +1136,18 @@
                         <div class="sidebar-user">
                             @if(Auth::check())
                                 <div><i class="fas fa-user-circle text-primary me-1"></i> <span>{{ Auth::user()->name }}</span></div>
-                                <a href="{{ route('logout') }}" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                                    <i class="fas fa-sign-out-alt"></i> تسجيل الخروج
-                                </a>
+                                <div class="mt-1">
+                                    <a href="{{ route('logout') }}" class="logout-link text-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        <i class="fas fa-sign-out-alt"></i> {{ __('تسجيل الخروج') }}
+                                    </a>
+                                </div>
                             @else
-                                <div><i class="fas fa-tv text-primary me-1"></i> <span>شاشة عرض عامة</span></div>
-                                <a href="{{ route('login') }}" class="logout-link text-primary fw-bold">
-                                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
-                                </a>
+                                <div><i class="fas fa-tv text-primary me-1"></i> <span>{{ __('شاشة عرض عامة') }}</span></div>
+                                <div class="mt-1">
+                                    <a href="{{ route('login') }}" class="logout-link text-primary fw-bold">
+                                        <i class="fas fa-sign-in-alt"></i> {{ __('تسجيل الدخول') }}
+                                    </a>
+                                </div>
                             @endif
                         </div>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
@@ -947,7 +1165,7 @@
                              style="background:rgba(59,130,246,0.10);border-radius:12px;padding:8px 14px;cursor:pointer;"
                              id="notifBellToggle">
                             <span style="font-size:.85rem;color:#1d4ed8;font-weight:600;">
-                                <i class="fas fa-bell me-1"></i> الإشعارات
+                                <i class="fas fa-bell me-1"></i> {{ __('الإشعارات') }}
                             </span>
                             @if($unreadNotifCount > 0)
                                 <span class="badge rounded-pill bg-danger" id="notifBadge" style="font-size:.75rem;">
@@ -968,7 +1186,7 @@
                                     @php $nd = is_string($notif->data) ? json_decode($notif->data, true) : $notif->data; @endphp
                                     <div class="notif-item" style="padding:10px 14px;border-bottom:1px solid #f0f4ff;">
                                         <div style="font-size:.82rem;font-weight:700;color:#1e3a8a;">
-                                            {{ $nd['title'] ?? 'إشعار' }}
+                                            {{ $nd['title'] ?? __('إشعار') }}
                                         </div>
                                         <div style="font-size:.78rem;color:#475569;margin-top:2px;line-height:1.4;">
                                             {{ Str::limit($nd['message'] ?? '', 70) }}
@@ -982,13 +1200,13 @@
                                 <div style="padding:8px 14px;text-align:center;">
                                     <a href="{{ route('notifications.index') }}"
                                        style="font-size:.8rem;color:#2563eb;font-weight:600;text-decoration:none;">
-                                        عرض كل الإشعارات
+                                        {{ __('عرض كل الإشعارات') }}
                                     </a>
                                 </div>
                             @else
                                 <div style="padding:20px;text-align:center;color:#94a3b8;font-size:.82rem;">
                                     <i class="fas fa-bell-slash mb-2 d-block fa-2x"></i>
-                                    لا توجد إشعارات جديدة
+                                    {{ __('لا توجد إشعارات جديدة') }}
                                 </div>
                             @endif
                         </div>
@@ -996,17 +1214,25 @@
                     {{-- ===== نهاية جرس الإشعارات ===== --}}
 
                     <div class="sidebar-item mt-1">
-                        @if(auth()->check() && auth()->user()->hasRole('doctor'))
+                        @if(auth()->check() && (auth()->user()->hasRole(['الجراح', 'surgeon']) || (auth()->user()->doctor && auth()->user()->doctor->type === 'surgeon') || in_array(auth()->user()->name, ['حساب الجراحين', 'حساب الجراحين العام']) || auth()->user()->email === 'gh@hospital.com'))
+                            <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
+                                <i class="fas fa-user-md me-2"></i>{{ __('محطة الجراح (الرئيسية)') }}
+                            </a>
+                        @elseif(auth()->check() && (auth()->user()->hasRole(['التخدير', 'anesthesiologist']) || (auth()->user()->doctor && (auth()->user()->doctor->type === 'anesthesiologist' || auth()->user()->doctor->type === 'anesthesia')) || in_array(auth()->user()->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير']) || auth()->user()->email === 'anth@hospital.com'))
+                            <a class="nav-link {{ request()->routeIs('anesthesia-station.*') ? 'active' : '' }}" href="{{ route('anesthesia-station.index') }}">
+                                <i class="fas fa-syringe me-2"></i>{{ __('محطة التخدير (الرئيسية)') }}
+                            </a>
+                        @elseif(auth()->check() && auth()->user()->hasRole('doctor'))
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
-                                <i class="fas fa-stethoscope me-2"></i>عيادتي وزيارات المرضى
+                                <i class="fas fa-stethoscope me-2"></i>{{ __('عيادتي وزيارات المرضى') }}
                             </a>
                         @elseif(auth()->check() && auth()->user()->hasRole('thaman'))
                             <a class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" href="{{ route('patients.index') }}">
-                                <i class="fas fa-user-injured me-2"></i>سجل وملفات المرضى
+                                <i class="fas fa-user-injured me-2"></i>{{ __('سجل وملفات المرضى') }}
                             </a>
                         @else
                             <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                                <i class="fas fa-home me-2"></i>الرئيسية
+                                <i class="fas fa-home me-2"></i>{{ __('الرئيسية') }}
                             </a>
                         @endif
                     </div>
@@ -1017,21 +1243,21 @@
                         @canany(['view patients', 'view inquiries', 'view patient history', 'view occupancy'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#patientMgmtSection" aria-expanded="false">
-                            <span><i class="fas fa-concierge-bell"></i> إدارة المرضى والاستعلامات</span>
+                            <span><i class="fas fa-concierge-bell"></i> {{ __('إدارة المرضى والاستعلامات') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="patientMgmtSection">
                         @can('view patients')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" href="{{ route('patients.index') }}">
-                                <i class="fas fa-user-injured"></i><span> المرضى</span>
+                                <i class="fas fa-user-injured"></i><span> {{ __('المرضى') }}</span>
                             </a>
                         </li>
                         @endcan
                         @can('view inquiries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.create') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
-                                <i class="fas fa-concierge-bell"></i><span> الاستعلامات</span>
+                                <i class="fas fa-concierge-bell"></i><span> {{ __('الاستعلامات') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRequestsCount }}</span>
                             </a>
                         </li>
@@ -1039,7 +1265,7 @@
                         @can('view patient history')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.patients.history') ? 'active' : '' }}" href="{{ route('inquiry.patients.history') }}">
-                                <i class="fas fa-folder-open"></i><span> سجل وأرشيف المرضى</span>
+                                <i class="fas fa-folder-open"></i><span> {{ __('سجل وأرشيف المرضى') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1047,7 +1273,7 @@
                         @can('view occupancy')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inquiry.occupancy') ? 'active' : '' }}" href="{{ route('inquiry.occupancy') }}">
-                                <i class="fas fa-bed"></i><span> المرضى المقيمين</span>
+                                <i class="fas fa-bed"></i><span> {{ __('المرضى المقيمين') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1066,14 +1292,14 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isCashierSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#cashierSection" aria-expanded="{{ $isCashierSectionActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-cash-register"></i> الصندوق والكاشير</span>
+                            <span><i class="fas fa-cash-register"></i> {{ __('الصندوق والكاشير') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isCashierSectionActive ? 'show' : '' }}" id="cashierSection">
                         @can('view cashier')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.index') || request()->routeIs('cashier.payment.*') || request()->routeIs('cashier.receipt*') ? 'active' : '' }}" href="{{ route('cashier.index') }}">
-                                <i class="fas fa-cash-register"></i><span> لوحة الكاشير العامة</span>
+                                <i class="fas fa-cash-register"></i><span> {{ __('لوحة الكاشير العامة') }}</span>
                                 @php
                                     $pendingPayments = \App\Models\Appointment::where('payment_status', 'pending')
                                         ->whereIn('status', ['scheduled', 'confirmed'])
@@ -1088,7 +1314,7 @@
                         @can('view cashier surgeries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.surgeries.*') ? 'active' : '' }}" href="{{ route('cashier.surgeries.index') }}">
-                                <i class="fas fa-procedures text-danger"></i><span> كاشير العمليات</span>
+                                <i class="fas fa-procedures text-danger"></i><span> {{ __('كاشير العمليات') }}</span>
                                 @php
                                     $pendingSurgeryPayments = \App\Models\Surgery::whereIn('payment_status', ['pending', 'partial'])
                                         ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
@@ -1103,14 +1329,14 @@
                         @can('view cashier reports')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.report') ? 'active' : '' }}" href="{{ route('cashier.report') }}">
-                                <i class="fas fa-file-invoice-dollar text-success"></i><span> تقرير ومدفوعات الصندوق</span>
+                                <i class="fas fa-file-invoice-dollar text-success"></i><span> {{ __('تقرير ومدفوعات الصندوق') }}</span>
                             </a>
                         </li>
                         @endcan
                         @canany(['void payment receipt', 'view cashier reports'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('cashier.payments.void.logs') ? 'active' : '' }}" href="{{ route('cashier.payments.void.logs') }}">
-                                <i class="fas fa-shield-alt text-danger"></i><span> تدقيق الوصولات الملغاة</span>
+                                <i class="fas fa-shield-alt text-danger"></i><span> {{ __('تدقيق الوصولات الملغاة') }}</span>
                             </a>
                         </li>
                         @endcanany
@@ -1163,7 +1389,7 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-file-invoice-dollar"></i> الحسابات العامة والمالية</span>
+                            <span><i class="fas fa-file-invoice-dollar"></i> {{ __('الحسابات العامة والمالية') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isAccountingSectionActive ? 'show' : '' }}" id="unifiedAccountingSection">
@@ -1175,7 +1401,7 @@
                         @can('view account statements')
                         <li class="nav-item">
                             <a class="nav-link {{ $isTreasuryActive ? 'active' : '' }}" href="{{ route('treasury.index') }}">
-                                <i class="fas fa-vault text-warning"></i><span class="fw-bold"> خزينة المستشفى والمصروفات</span>
+                                <i class="fas fa-vault text-warning"></i><span class="fw-bold"> {{ __('خزينة المستشفى والمصروفات') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1183,7 +1409,7 @@
                         @can('review surgery prices')
                         <li class="nav-item">
                             <a class="nav-link {{ $isSurgeryReviewActive ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
-                                <i class="fas fa-calculator text-primary"></i><span> مراجعة أسعار العمليات</span>
+                                <i class="fas fa-calculator text-primary"></i><span> {{ __('مراجعة أسعار العمليات') }}</span>
                                 @php
                                      $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
                                 @endphp
@@ -1197,7 +1423,7 @@
                         @canany(['manage health insurance', 'view insurance claims'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('insurance.claims.*') ? 'active' : '' }}" href="{{ route('insurance.claims.index') }}">
-                                <i class="fas fa-file-medical-alt text-primary"></i><span class="fw-bold"> مطالبات وسجلات الضمان</span>
+                                <i class="fas fa-file-medical-alt text-primary"></i><span class="fw-bold"> {{ __('مطالبات وسجلات الضمان') }}</span>
                             </a>
                         </li>
                         @endcanany
@@ -1205,7 +1431,7 @@
                         @can('manage health insurance')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('health-insurance-categories.*') ? 'active' : '' }}" href="{{ route('health-insurance-categories.index') }}">
-                                <i class="fas fa-shield-alt text-info"></i><span> نسب استقطاع الضمان</span>
+                                <i class="fas fa-shield-alt text-info"></i><span> {{ __('نسب استقطاع الضمان') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1213,35 +1439,35 @@
                         <!-- القسم الفرعي: الاستشارية والعيادات -->
                         @canany(['manage doctor commissions', 'view consultant financial movements', 'view account statements', 'view doctor accounts'])
                         <div class="sidebar-section-title {{ $isConsultantAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#consultantSubSection" aria-expanded="{{ $isConsultantAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); border-radius: 4px; cursor: pointer;">
-                            <span><i class="fas fa-clinic-medical me-1"></i> حسابات الاستشارية</span>
+                            <span><i class="fas fa-clinic-medical me-1"></i> {{ __('حسابات الاستشارية') }}</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isConsultantAccountsActive ? 'show' : '' }} ps-2" id="consultantSubSection">
                             @can('manage doctor commissions')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
-                                    <i class="fas fa-file-invoice-dollar"></i><span> إعدادات العمولات</span>
+                                    <i class="fas fa-file-invoice-dollar"></i><span> {{ __('إعدادات العمولات') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view consultant financial movements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('consultant-availability.financial-movements') ? 'active' : '' }}" href="{{ route('consultant-availability.financial-movements') }}">
-                                    <i class="fas fa-money-bill-wave"></i><span> الحركات المالية</span>
+                                    <i class="fas fa-money-bill-wave"></i><span> {{ __('الحركات المالية') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view account statements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.statements') ? 'active' : '' }}" href="{{ route('cashier.statements') }}">
-                                    <i class="fas fa-file-invoice-dollar"></i><span> كشوفات الحسابات</span>
+                                    <i class="fas fa-file-invoice-dollar"></i><span> {{ __('كشوفات الحسابات') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view doctor accounts')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('consultant-availability.doctor-accounts') ? 'active' : '' }}" href="{{ route('consultant-availability.doctor-accounts') }}">
-                                    <i class="fas fa-wallet"></i><span> حسابات الأطباء</span>
+                                    <i class="fas fa-wallet"></i><span> {{ __('حسابات الأطباء') }}</span>
                                 </a>
                             </li>
                             @endcan
@@ -1251,35 +1477,35 @@
                         <!-- القسم الفرعي: الطوارئ -->
                         @canany(['view emergency analytics', 'view emergency financial movements', 'view emergency statements', 'view emergency doctor accounts'])
                         <div class="sidebar-section-title {{ $isEmergencyAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#emergencySubSection" aria-expanded="{{ $isEmergencyAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
-                            <span><i class="fas fa-ambulance me-1"></i> حسابات الطوارئ</span>
+                            <span><i class="fas fa-ambulance me-1"></i> {{ __('حسابات الطوارئ') }}</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isEmergencyAccountsActive ? 'show' : '' }} ps-2" id="emergencySubSection">
                             @can('view emergency analytics')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('accountant.emergency.analytics') ? 'active' : '' }}" href="{{ route('accountant.emergency.analytics') }}">
-                                    <i class="fas fa-chart-bar text-danger"></i><span> تحليلات إحصاءات الطوارئ</span>
+                                    <i class="fas fa-chart-bar text-danger"></i><span> {{ __('تحليلات إحصاءات الطوارئ') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view emergency financial movements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.emergency.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.emergency.financial-movements') }}">
-                                    <i class="fas fa-money-bill-wave text-danger"></i><span> الحركات المالية للطوارئ</span>
+                                    <i class="fas fa-money-bill-wave text-danger"></i><span> {{ __('الحركات المالية للطوارئ') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view emergency statements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.emergency.statements') ? 'active' : '' }}" href="{{ route('cashier.emergency.statements') }}">
-                                    <i class="fas fa-file-invoice-dollar text-danger"></i><span> كشوفات الطوارئ</span>
+                                    <i class="fas fa-file-invoice-dollar text-danger"></i><span> {{ __('كشوفات الطوارئ') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view emergency doctor accounts')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.emergency.doctor-accounts') || request()->routeIs('cashier.emergency.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.emergency.doctor-accounts') }}">
-                                    <i class="fas fa-wallet text-danger"></i><span> حسابات أطباء الطوارئ</span>
+                                    <i class="fas fa-wallet text-danger"></i><span> {{ __('حسابات أطباء الطوارئ') }}</span>
                                 </a>
                             </li>
                             @endcan
@@ -1289,13 +1515,13 @@
                         <!-- القسم الفرعي: التشخيص (المختبر والأشعة والمفراس والإيكو) -->
                         @can('view diagnostic analytics')
                         <div class="sidebar-section-title {{ $isDiagnosticsAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#diagnosticsSubSection" aria-expanded="{{ $isDiagnosticsAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.05); color: #10b981; border-radius: 4px; cursor: pointer;">
-                            <span><i class="fas fa-microscope me-1"></i> حسابات المختبر والأشعّة</span>
+                            <span><i class="fas fa-microscope me-1"></i> {{ __('حسابات المختبر والأشعّة') }}</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isDiagnosticsAccountsActive ? 'show' : '' }} ps-2" id="diagnosticsSubSection">
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('accountant.diagnostics.analytics') ? 'active' : '' }}" href="{{ route('accountant.diagnostics.analytics') }}">
-                                    <i class="fas fa-chart-line text-success"></i><span> تحليلات المختبر والأشعة والمفراس</span>
+                                    <i class="fas fa-chart-line text-success"></i><span> {{ __('تحليلات المختبر والأشعة والمفراس') }}</span>
                                 </a>
                             </li>
                         </div>
@@ -1304,35 +1530,35 @@
                         <!-- القسم الفرعي: الخدج والحاضنات -->
                         @canany(['view nicu analytics', 'view nicu financial movements', 'view nicu statements', 'view nicu doctor accounts'])
                         <div class="sidebar-section-title {{ $isNicuAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#nicuAccountingSubSection" aria-expanded="{{ $isNicuAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(13, 202, 240, 0.05); color: #0dcaf0; border-radius: 4px; cursor: pointer;">
-                            <span><i class="fas fa-baby me-1"></i> حسابات الخدج والحاضنات</span>
+                            <span><i class="fas fa-baby me-1"></i> {{ __('حسابات الخدج والحاضنات') }}</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isNicuAccountsActive ? 'show' : '' }} ps-2" id="nicuAccountingSubSection">
                             @can('view nicu analytics')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('accountant.nicu.analytics') ? 'active' : '' }}" href="{{ route('accountant.nicu.analytics') }}">
-                                    <i class="fas fa-chart-bar text-info"></i><span> تحليلات إحصاءات الخدج</span>
+                                    <i class="fas fa-chart-bar text-info"></i><span> {{ __('تحليلات إحصاءات الخدج') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view nicu financial movements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.nicu.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.nicu.financial-movements') }}">
-                                    <i class="fas fa-money-bill-wave text-info"></i><span> الحركات المالية للخدج</span>
+                                    <i class="fas fa-money-bill-wave text-info"></i><span> {{ __('الحركات المالية للخدج') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view nicu statements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.nicu.statements') ? 'active' : '' }}" href="{{ route('cashier.nicu.statements') }}">
-                                    <i class="fas fa-file-invoice-dollar text-info"></i><span> كشوفات الخدج</span>
+                                    <i class="fas fa-file-invoice-dollar text-info"></i><span> {{ __('كشوفات الخدج') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view nicu doctor accounts')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.nicu.doctor-accounts') || request()->routeIs('cashier.nicu.doctor-account') ? 'active' : '' }}" href="{{ route('cashier.nicu.doctor-accounts') }}">
-                                    <i class="fas fa-wallet text-info"></i><span> حسابات أطباء الخدج</span>
+                                    <i class="fas fa-wallet text-info"></i><span> {{ __('حسابات أطباء الخدج') }}</span>
                                 </a>
                             </li>
                             @endcan
@@ -1342,28 +1568,28 @@
                         <!-- القسم الفرعي: العناية المركزة للكبار (CCU) -->
                         @canany(['view ccu analytics', 'view ccu financial movements', 'view ccu statements', 'manage ccu services'])
                         <div class="sidebar-section-title {{ $isCcuAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#ccuAccountingSubSection" aria-expanded="{{ $isCcuAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
-                            <span><i class="fas fa-heartbeat me-1"></i> حسابات العناية المركزة (CCU)</span>
+                            <span><i class="fas fa-heartbeat me-1"></i> {{ __('حسابات العناية المركزة (CCU)') }}</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isCcuAccountsActive ? 'show' : '' }} ps-2" id="ccuAccountingSubSection">
                             @can('view ccu analytics')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('accountant.ccu.analytics') ? 'active' : '' }}" href="{{ route('accountant.ccu.analytics') }}">
-                                    <i class="fas fa-chart-pie text-danger"></i><span> تحليلات وإحصاءات CCU</span>
+                                    <i class="fas fa-chart-pie text-danger"></i><span> {{ __('تحليلات وإحصاءات CCU') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view ccu financial movements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.ccu.financial-movements') ? 'active' : '' }}" href="{{ route('cashier.ccu.financial-movements') }}">
-                                    <i class="fas fa-money-bill-wave text-danger"></i><span> الحركات المالية لـ CCU</span>
+                                    <i class="fas fa-money-bill-wave text-danger"></i><span> {{ __('الحركات المالية لـ CCU') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view ccu statements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.ccu.statements') ? 'active' : '' }}" href="{{ route('cashier.ccu.statements') }}">
-                                    <i class="fas fa-file-invoice-dollar text-danger"></i><span> كشوفات ومطالبات CCU</span>
+                                    <i class="fas fa-file-invoice-dollar text-danger"></i><span> {{ __('كشوفات ومطالبات CCU') }}</span>
                                 </a>
                             </li>
                             @endcan
@@ -1373,13 +1599,13 @@
                         <!-- القسم الفرعي: العمليات الجراحية -->
                         @canany(['view account statements', 'view doctor accounts', 'process surgery payments'])
                         <div class="sidebar-section-title {{ $isSurgeryAccountsActive ? '' : 'collapsed' }} py-1 px-3 mt-3 ms-2" data-bs-toggle="collapse" data-bs-target="#surgeryAccountingSubSection" aria-expanded="{{ $isSurgeryAccountsActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(220, 53, 69, 0.05); color: #dc3545; border-radius: 4px; cursor: pointer;">
-                            <span><i class="fas fa-procedures text-danger me-1"></i> حسابات جراحي العمليات</span>
+                            <span><i class="fas fa-procedures text-danger me-1"></i> {{ __('حسابات جراحي العمليات') }}</span>
                             <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                         </div>
                         <div class="collapse {{ $isSurgeryAccountsActive ? 'show' : '' }} ms-2" id="surgeryAccountingSubSection">
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.surgeries.doctor-accounts*') ? 'active' : '' }}" href="{{ route('cashier.surgeries.doctor-accounts') }}">
-                                    <i class="fas fa-wallet text-danger"></i><span> حسابات الأطباء الجراحين</span>
+                                    <i class="fas fa-wallet text-danger"></i><span> {{ __('حسابات الأطباء الجراحين') }}</span>
                                 </a>
                             </li>
                         </div>
@@ -1393,14 +1619,14 @@
                         @canany(['view emergencies', 'create emergencies', 'edit emergencies', 'manage emergency vitals', 'manage emergency services'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#emergencySection" aria-expanded="false">
-                            <span><i class="fas fa-ambulance"></i> الطوارئ</span>
+                            <span><i class="fas fa-ambulance"></i> {{ __('الطوارئ') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="emergencySection">
                         @can('view emergencies')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('emergency.index') ? 'active' : '' }}" href="{{ route('emergency.index') }}">
-                                <i class="fas fa-list"></i><span> حالات الطوارئ</span>
+                                <i class="fas fa-list"></i><span> {{ __('حالات الطوارئ') }}</span>
                                 @php
                                     $criticalEmergencies = \App\Models\Emergency::where('priority', 'critical')
                                         ->whereNotIn('status', ['discharged', 'transferred'])
@@ -1416,7 +1642,7 @@
                         @can('create emergencies')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('emergency.create') ? 'active' : '' }}" href="{{ route('emergency.create') }}">
-                                <i class="fas fa-plus"></i><span> إضافة حالة طوارئ</span>
+                                <i class="fas fa-plus"></i><span> {{ __('إضافة حالة طوارئ') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1424,7 +1650,7 @@
                         @can('manage emergency services')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('emergency-services.*') ? 'active' : '' }}" href="{{ route('emergency-services.index') }}">
-                                <i class="fas fa-hand-holding-medical"></i><span> خدمات الطوارئ</span>
+                                <i class="fas fa-hand-holding-medical"></i><span> {{ __('خدمات الطوارئ') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1435,7 +1661,7 @@
                         @canany(['view doctors', 'view departments', 'manage own visits', 'manage consultant availability', 'view visits', 'view medicine groups', 'view lab test groups'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#doctorSection" aria-expanded="{{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? 'true' : 'false' }}">
-                            <span><i class="fas fa-stethoscope"></i> الأطباء والعيادات</span>
+                            <span><i class="fas fa-stethoscope"></i> {{ __('الأطباء والعيادات') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ request()->routeIs('doctors.*') || request()->routeIs('departments.*') || request()->routeIs('consultant-availability.*') || request()->routeIs('doctor.visits.*') || request()->routeIs('visits.*') || request()->routeIs('medicine-groups.*') || request()->routeIs('lab-tests.groups.*') ? 'show' : '' }}" id="doctorSection">
@@ -1443,14 +1669,14 @@
                         @can('view doctors')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('doctors.*') ? 'active' : '' }}" href="{{ route('doctors.index') }}">
-                                <i class="fas fa-user-md"></i><span> الأطباء</span>
+                                <i class="fas fa-user-md"></i><span> {{ __('الأطباء') }}</span>
                             </a>
                         </li>
                         @endcan
                         @can('view departments')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('departments.*') ? 'active' : '' }}" href="{{ route('departments.admin') }}">
-                                <i class="fas fa-clinic-medical"></i><span> العيادات</span>
+                                <i class="fas fa-clinic-medical"></i><span> {{ __('العيادات') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1458,12 +1684,12 @@
                         @can('manage consultant availability')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('consultant-availability.index') ? 'active' : '' }}" href="{{ route('consultant-availability.index') }}">
-                                <i class="fas fa-calendar-check"></i><span> توفر الأطباء الاستشاريين</span>
+                                <i class="fas fa-calendar-check"></i><span> {{ __('توفر الأطباء الاستشاريين') }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('queue.all.display') ? 'active' : '' }}" href="{{ route('queue.all.display') }}" target="_blank">
-                                <i class="fas fa-tv"></i><span> شاشة طابور الانتظار</span>
+                                <i class="fas fa-tv"></i><span> {{ __('شاشة طابور الانتظار') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1471,7 +1697,7 @@
                         @can('manage own visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('doctor.visits.*') ? 'active' : '' }}" href="{{ route('doctor.visits.index') }}">
-                                <i class="fas fa-user-md"></i><span> زياراتي</span>
+                                <i class="fas fa-user-md"></i><span> {{ __('زياراتي') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $doctorIncompleteVisits }}</span>
                             </a>
                         </li>
@@ -1480,7 +1706,7 @@
                         @can('view medicine groups')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('medicine-groups.*') ? 'active' : '' }}" href="{{ route('medicine-groups.index') }}">
-                                <i class="fas fa-pills"></i><span> مجموعات الأدوية المفضلة</span>
+                                <i class="fas fa-pills"></i><span> {{ __('مجموعات الأدوية المفضلة') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1488,7 +1714,7 @@
                         @can('view lab test groups')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
-                                <i class="fas fa-vials"></i><span> مجموعات التحاليل المفضلة</span>
+                                <i class="fas fa-vials"></i><span> {{ __('مجموعات التحاليل المفضلة') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1496,7 +1722,7 @@
                         @can('view visits')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('visits.*') ? 'active' : '' }}" href="{{ route('visits.index') }}">
-                                <i class="fas fa-file-medical"></i><span> سجل الزيارات العام</span>
+                                <i class="fas fa-file-medical"></i><span> {{ __('سجل الزيارات العام') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1508,7 +1734,7 @@
                         @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'manage surgery tab permissions', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#surgerySection" aria-expanded="false">
-                            <span><i class="fas fa-procedures"></i> العمليات الجراحية</span>
+                            <span><i class="fas fa-procedures"></i> {{ __('العمليات الجراحية') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section" id="surgerySection">
@@ -1516,7 +1742,7 @@
                         @can('view surgeries')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeries.*') && !request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.index') }}">
-                                <i class="fas fa-procedures"></i><span> جدول وسجل العمليات</span>
+                                <i class="fas fa-procedures"></i><span> {{ __('جدول وسجل العمليات') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeries }}</span>
                             </a>
                         </li>
@@ -1524,7 +1750,7 @@
                         @can('manage surgery waiting list')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeries.waiting') ? 'active' : '' }}" href="{{ route('surgeries.waiting') }}">
-                                <i class="fas fa-clock"></i><span> قائمة انتظار العمليات</span>
+                                <i class="fas fa-clock"></i><span> {{ __('قائمة انتظار العمليات') }}</span>
                                 @if($waitingSurgeries > 0)
                                 <span class="badge bg-warning ms-2">{{ $waitingSurgeries }}</span>
                                 @endif
@@ -1534,21 +1760,28 @@
                         @can('manage surgery tab permissions')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgery-stations.tab-settings.*') ? 'active' : '' }}" href="{{ route('surgery-stations.tab-settings.index') }}">
-                                <i class="fas fa-sliders-h text-warning"></i><span> صلاحيات تبويبات المحطة</span>
+                                <i class="fas fa-sliders-h text-warning"></i><span> {{ __('صلاحيات تبويبات المحطة') }}</span>
                             </a>
                         </li>
                         @endcan
                         @can('view surgical operations')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgical-operations.*') ? 'active' : '' }}" href="{{ route('surgical-operations.index') }}">
-                                <i class="fas fa-cogs"></i><span> أنواع العمليات</span>
+                                <i class="fas fa-cogs"></i><span> {{ __('أنواع العمليات') }}</span>
                             </a>
                         </li>
                         @endcan
+                        @canany(['view surgeries', 'edit surgeries'])
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgical-assistants.*') ? 'active' : '' }}" href="{{ route('surgical-assistants.index') }}">
+                                <i class="fas fa-hands-helping text-info"></i><span> {{ __('مساعدو الجراحين') }}</span>
+                            </a>
+                        </li>
+                        @endcanany
                         @can('view medical devices')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('medical-devices.*') ? 'active' : '' }}" href="{{ route('medical-devices.index') }}">
-                                <i class="fas fa-stethoscope"></i><span> الأجهزة الطبية</span>
+                                <i class="fas fa-stethoscope"></i><span> {{ __('الأجهزة الطبية') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1556,7 +1789,7 @@
                         @can('view resident station')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('resident-station.*') ? 'active' : '' }}" href="{{ route('resident-station.index') }}">
-                                <i class="fas fa-user-graduate"></i><span> محطة المقيم</span>
+                                <i class="fas fa-user-graduate"></i><span> {{ __('محطة المقيم') }}</span>
                                 @if($residentStationCount > 0)
                                     <span class="badge bg-primary ms-2">{{ $residentStationCount }}</span>
                                 @endif
@@ -1569,7 +1802,7 @@
                         @can('view surgeon station')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgeon-station.*') ? 'active' : '' }}" href="{{ route('surgeon-station.index') }}">
-                                <i class="fas fa-user-md"></i><span> محطة الجراح</span>
+                                <i class="fas fa-user-md"></i><span> {{ __('محطة الجراح') }}</span>
                                 @if($surgeonStationCount > 0)
                                     <span class="badge bg-info ms-2">{{ $surgeonStationCount }}</span>
                                 @endif
@@ -1580,7 +1813,7 @@
                         @can('view anesthesia station')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('anesthesia-station.*') ? 'active' : '' }}" href="{{ route('anesthesia-station.index') }}">
-                                <i class="fas fa-syringe"></i><span> محطة التخدير</span>
+                                <i class="fas fa-syringe"></i><span> {{ __('محطة التخدير') }}</span>
                                 @if($anesthesiaStationCount > 0)
                                     <span class="badge bg-warning ms-2">{{ $anesthesiaStationCount }}</span>
                                 @endif
@@ -1591,7 +1824,7 @@
                         @can('view nursing station')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('nursing-station.*') ? 'active' : '' }}" href="{{ route('nursing-station.index') }}">
-                                <i class="fas fa-user-nurse"></i><span> محطة التمريض</span>
+                                <i class="fas fa-user-nurse"></i><span> {{ __('محطة التمريض') }}</span>
                                 @if($nursingStationCount > 0)
                                     <span class="badge bg-success ms-2">{{ $nursingStationCount }}</span>
                                 @endif
@@ -1599,10 +1832,18 @@
                         </li>
                         @endcan
 
+                        @if(auth()->check() && (auth()->user()->can('manage nurse availability') || auth()->user()->hasRole(['admin', 'head_nurse', 'hospital_admin'])))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('nurse-availability.*') ? 'active' : '' }}" href="{{ route('nurse-availability.index') }}">
+                                <i class="fas fa-clipboard-user text-info"></i><span> {{ __('جدول دوام وتوفر التمريض') }}</span>
+                            </a>
+                        </li>
+                        @endif
+
                         @can('manage rooms')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('rooms.*') ? 'active' : '' }}" href="{{ route('rooms.index') }}">
-                                <i class="fas fa-bed text-danger"></i><span> إدارة الغرف</span>
+                                <i class="fas fa-bed text-danger"></i><span> {{ __('إدارة الغرف') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1621,48 +1862,65 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isNicuActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#nicuSection" aria-expanded="{{ $isNicuActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-baby text-info"></i> الخدج والحاضنات</span>
+                            <span><i class="fas fa-baby text-info"></i> {{ __('الخدج والحاضنات') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isNicuActive ? 'show' : '' }}" id="nicuSection">
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu.index') ? 'active' : '' }}" href="{{ route('nicu.index') }}">
-                                    <i class="fas fa-th-large text-primary"></i><span> لوحة الحاضنات اللحظية</span>
+                                    <i class="fas fa-th-large text-primary"></i><span> {{ __('لوحة الحاضنات اللحظية') }}</span>
                                     @if($occupiedNicuCount > 0)
-                                        <span class="badge bg-danger ms-auto">{{ $occupiedNicuCount }} مشغولة</span>
+                                        <span class="badge bg-danger ms-auto">{{ $occupiedNicuCount }} {{ __('مشغولة') }}</span>
                                     @endif
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu.delivery-radar.*') ? 'active' : '' }}" href="{{ route('nicu.delivery-radar.index') }}">
-                                    <i class="fas fa-satellite-dish text-danger"></i><span> رادار صالات العمليات والولادة</span>
+                                    <i class="fas fa-satellite-dish text-danger"></i><span> {{ __('رادار صالات العمليات والولادة') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('incubator-reservations.create') ? 'active' : '' }}" href="{{ route('incubator-reservations.create') }}">
-                                    <i class="fas fa-plus-circle text-success"></i><span> حجز ودخول خديج جديد</span>
+                                    <i class="fas fa-plus-circle text-success"></i><span> {{ __('حجز ودخول خديج جديد') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ (request()->routeIs('nicu.reservations.*') || request()->routeIs('incubator-reservations.index')) && request('view') !== 'archived' ? 'active' : '' }}" href="{{ route('nicu.reservations.index') }}">
-                                    <i class="fas fa-clipboard-list text-info"></i><span> سجل وإضبارات الخدج</span>
+                                    <i class="fas fa-clipboard-list text-info"></i><span> {{ __('سجل وإضبارات الخدج') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu.reservations.*') && request('view') === 'archived' ? 'active' : '' }}" href="{{ route('nicu.reservations.index', ['view' => 'archived', 'status' => 'discharged']) }}">
-                                    <i class="fas fa-archive text-secondary"></i><span> السجلات وأرشفة المرضى</span>
+                                    <i class="fas fa-archive text-secondary"></i><span> {{ __('السجلات وأرشفة المرضى') }}</span>
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('incubators.index') ? 'active' : '' }}" href="{{ route('incubators.index') }}">
-                                    <i class="fas fa-cogs text-warning"></i><span> إدارة الحاضنات والكبسولات</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('nicu.services.*') ? 'active' : '' }}" href="{{ route('nicu.services.index') }}">
-                                    <i class="fas fa-tags text-warning"></i><span> تسعير وباقات خدمات الخدج</span>
-                                </a>
-                            </li>
+                            <!-- Submenu: الإعدادات -->
+                            @canany(['manage nicu services', 'manage incubator reservations', 'manage nicu care plans'])
+                            @php
+                                $isNicuSettingsActive = request()->routeIs('nicu.services.*') || request()->routeIs('incubators.*') || request()->routeIs('nicu.milk-types.*');
+                            @endphp
+                            <div class="sidebar-section-title {{ $isNicuSettingsActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#nicuSettingsSubSection" aria-expanded="{{ $isNicuSettingsActive ? 'true' : 'false' }}" style="font-size: 0.82rem; background: rgba(245, 158, 11, 0.08); color: #d97706; border-radius: 6px; cursor: pointer;">
+                                <span><i class="fas fa-sliders-h me-1 text-warning"></i> {{ __('الإعدادات') }}</span>
+                                <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
+                            </div>
+                            <div class="collapse {{ $isNicuSettingsActive ? 'show' : '' }} ps-2" id="nicuSettingsSubSection">
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('nicu.services.*') ? 'active' : '' }}" href="{{ route('nicu.services.index') }}">
+                                        <i class="fas fa-tags text-warning"></i><span> {{ __('تسعير باقات وخدمات الخدج (NICU)') }}</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('incubators.*') ? 'active' : '' }}" href="{{ route('incubators.index') }}">
+                                        <i class="fas fa-cogs text-warning"></i><span> {{ __('إدارة حاضنات الخدج - ط6') }}</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('nicu.milk-types.*') ? 'active' : '' }}" href="{{ route('nicu.milk-types.index') }}">
+                                        <i class="fas fa-baby text-warning"></i><span> {{ __('قائمة وتصنيفات حليب وتغذية الخدج') }}</span>
+                                    </a>
+                                </li>
+                            </div>
+                            @endcanany
                         </div>
                         @endcanany
 
@@ -1677,39 +1935,39 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isIcuActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#icuSection" aria-expanded="{{ $isIcuActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-heartbeat text-danger"></i> العناية المركزة (ICU)</span>
+                            <span><i class="fas fa-heartbeat text-danger"></i> {{ __('العناية المركزة (ICU)') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isIcuActive ? 'show' : '' }}" id="icuSection">
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('icu.index') ? 'active' : '' }}" href="{{ route('icu.index') }}">
-                                    <i class="fas fa-satellite-dish text-danger"></i><span> رادار العناية الحية</span>
+                                    <i class="fas fa-satellite-dish text-danger"></i><span> {{ __('رادار العناية الحية') }}</span>
                                     @if($occupiedIcuCount > 0)
-                                        <span class="badge bg-danger ms-auto">{{ $occupiedIcuCount }} راقد</span>
+                                        <span class="badge bg-danger ms-auto">{{ $occupiedIcuCount }} {{ __('راقد') }}</span>
                                     @endif
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('icu.admissions.create') ? 'active' : '' }}" href="{{ route('icu.admissions.create') }}">
-                                    <i class="fas fa-user-plus text-success"></i><span> دخول وتسكين مريض</span>
+                                    <i class="fas fa-user-plus text-success"></i><span> {{ __('دخول وتسكين مريض') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('icu.beds.*') ? 'active' : '' }}" href="{{ route('icu.beds.index') }}">
-                                    <i class="fas fa-bed text-primary"></i><span> إدارة وتوزيع الأسرة</span>
+                                    <i class="fas fa-bed text-primary"></i><span> {{ __('إدارة وتوزيع الأسرة') }}</span>
                                 </a>
                             </li>
                             @can('manage ccu services')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('ccu.services.*') ? 'active' : '' }}" href="{{ route('ccu.services.index') }}">
-                                    <i class="fas fa-sliders-h text-warning"></i><span> أسعار وشرائح العناية (CCU)</span>
+                                    <i class="fas fa-sliders-h text-warning"></i><span> {{ __('أسعار وشرائح العناية (CCU)') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view ccu statements')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('cashier.ccu.statements') ? 'active' : '' }}" href="{{ route('cashier.ccu.statements') }}">
-                                    <i class="fas fa-file-invoice-dollar text-info"></i><span> كشوفات وحسابات CCU</span>
+                                    <i class="fas fa-file-invoice-dollar text-info"></i><span> {{ __('كشوفات وحسابات CCU') }}</span>
                                 </a>
                             </li>
                             @endcan
@@ -1731,18 +1989,18 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isEyeActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#eyeCenterSection" aria-expanded="{{ $isEyeActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-eye text-primary"></i> مركز وجراحة العيون</span>
+                            <span><i class="fas fa-eye text-primary"></i> {{ __('مركز وجراحة العيون') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isEyeActive ? 'show' : '' }}" id="eyeCenterSection">
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.availability.*') ? 'active' : '' }}" href="{{ route('eye.availability.index') }}">
-                                    <i class="fas fa-calendar-check text-success"></i><span> توفر أطباء العيون</span>
+                                    <i class="fas fa-calendar-check text-success"></i><span> {{ __('توفر أطباء العيون') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.reception.*') ? 'active' : '' }}" href="{{ route('eye.reception.index') }}">
-                                    <i class="fas fa-id-card text-primary"></i><span> استعلامات وطابور العيون</span>
+                                    <i class="fas fa-id-card text-primary"></i><span> {{ __('استعلامات وطابور العيون') }}</span>
                                     @if($todayEyeAppts > 0)
                                         <span class="badge bg-primary ms-auto">{{ $todayEyeAppts }}</span>
                                     @endif
@@ -1750,22 +2008,22 @@
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.cashier.*') ? 'active' : '' }}" href="{{ route('eye.cashier.index') }}">
-                                    <i class="fas fa-cash-register text-success"></i><span> كاشير وفواتير العيون</span>
+                                    <i class="fas fa-cash-register text-success"></i><span> {{ __('كاشير وفواتير العيون') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.examinations.*') ? 'active' : '' }}" href="{{ route('eye.examinations.index') }}">
-                                    <i class="fas fa-stethoscope text-info"></i><span> محطة الكشف السريري OD/OS</span>
+                                    <i class="fas fa-stethoscope text-info"></i><span> {{ __('محطة الكشف السريري OD/OS') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.investigations.*') ? 'active' : '' }}" href="{{ route('eye.investigations.index') }}">
-                                    <i class="fas fa-x-ray text-warning"></i><span> الفحوصات والأجهزة (OCT/ميدان)</span>
+                                    <i class="fas fa-x-ray text-warning"></i><span> {{ __('الفحوصات والأجهزة (OCT/ميدان)') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.surgeries.*') ? 'active' : '' }}" href="{{ route('eye.surgeries.index') }}">
-                                    <i class="fas fa-procedures text-danger"></i><span> جراحة العيون وحقن الفاكو</span>
+                                    <i class="fas fa-procedures text-danger"></i><span> {{ __('جراحة العيون وحقن الفاكو') }}</span>
                                     @if($todayEyeSurgeries > 0)
                                         <span class="badge bg-danger ms-auto">{{ $todayEyeSurgeries }}</span>
                                     @endif
@@ -1773,12 +2031,12 @@
                             </li>
                                                         <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.store.*') ? 'active' : '' }}" href="{{ route('eye.store.index') }}">
-                                    <i class="fas fa-boxes text-secondary"></i><span> مخزن مستلزمات وعدسات العيون</span>
+                                    <i class="fas fa-boxes text-secondary"></i><span> {{ __('مخزن مستلزمات وعدسات العيون') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('eye.permissions.*') ? 'active' : '' }}" href="{{ route('eye.permissions.index') }}">
-                                    <i class="fas fa-user-shield text-dark"></i><span> صلاحيات ومستخدمي العيون</span>
+                                    <i class="fas fa-user-shield text-dark"></i><span> {{ __('صلاحيات ومستخدمي العيون') }}</span>
                                 </a>
                             </li>
                         </div>
@@ -1793,20 +2051,20 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isRadiologyActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#radiologySection" aria-expanded="{{ $isRadiologyActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-x-ray"></i> الأشعة والسونار</span>
+                            <span><i class="fas fa-x-ray"></i> {{ __('الأشعة والسونار') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isRadiologyActive ? 'show' : '' }}" id="radiologySection">
                         @can('view radiology')
                         <li class="nav-item">
                             <a class="nav-link {{ (request()->routeIs('radiology.index') || request()->routeIs('radiology-staff.*')) ? 'active' : '' }}" href="{{ route('radiology.index') }}">
-                                <i class="fas fa-x-ray"></i><span> طلبات وفحوصات الأشعة والتصوير</span>
+                                <i class="fas fa-x-ray"></i><span> {{ __('طلبات وفحوصات الأشعة والتصوير') }}</span>
                                 <span class="badge bg-primary ms-2">{{ $pendingRadiology }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.surgery-radiology-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-radiology-tests.index') }}">
-                                <i class="fas fa-procedures"></i><span> أشعة العمليات</span>
+                                <i class="fas fa-procedures"></i><span> {{ __('أشعة العمليات') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeryRadiology }}</span>
                             </a>
                         </li>
@@ -1814,7 +2072,7 @@
                         @can('manage radiology types')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('radiology.types.*') ? 'active' : '' }}" href="{{ route('radiology.types.index') }}">
-                                <i class="fas fa-file-medical-alt"></i><span> أنواع وأسعار الأشعة</span>
+                                <i class="fas fa-file-medical-alt"></i><span> {{ __('أنواع وأسعار الأشعة') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1832,14 +2090,14 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isLabActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#labSection" aria-expanded="{{ $isLabActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-microscope"></i> المختبر والتحاليل</span>
+                            <span><i class="fas fa-microscope"></i> {{ __('المختبر والتحاليل') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isLabActive ? 'show' : '' }}" id="labSection">
                         @can('view lab tests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab.*') ? 'active' : '' }}" href="{{ route('lab.index') }}">
-                                <i class="fas fa-flask"></i><span> طلبات المختبر</span>
+                                <i class="fas fa-flask"></i><span> {{ __('طلبات المختبر') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingLab }}</span>
                             </a>
                         </li>
@@ -1848,7 +2106,7 @@
                         @can('manage surgery lab tests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('staff.surgery-lab-tests.*') ? 'active' : '' }}" href="{{ route('staff.surgery-lab-tests.index') }}">
-                                <i class="fas fa-vial"></i><span> تحاليل العمليات</span>
+                                <i class="fas fa-vial"></i><span> {{ __('تحاليل العمليات') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingSurgeryLabTests }}</span>
                             </a>
                         </li>
@@ -1857,7 +2115,7 @@
                         @can('view packages')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.packages.*') ? 'active' : '' }}" href="{{ route('admin.packages.index') }}">
-                                <i class="fas fa-boxes"></i><span> باقات المختبر (البكجات)</span>
+                                <i class="fas fa-boxes"></i><span> {{ __('باقات المختبر (البكجات)') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1865,7 +2123,7 @@
                         @can('view lab test groups')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.groups.*') ? 'active' : '' }}" href="{{ route('lab-tests.groups.index') }}">
-                                <i class="fas fa-layer-group text-warning"></i><span> مجموعات المفضلات</span>
+                                <i class="fas fa-layer-group text-warning"></i><span> {{ __('مجموعات المفضلات') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1873,12 +2131,12 @@
                         @can('view lab tests')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.index') || request()->routeIs('lab-tests.show') || request()->routeIs('lab-tests.edit') ? 'active' : '' }}" href="{{ route('lab-tests.index') }}">
-                                <i class="fas fa-flask"></i><span> أنواع التحاليل</span>
+                                <i class="fas fa-flask"></i><span> {{ __('أنواع التحاليل') }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.pricing-settings.*') ? 'active' : '' }}" href="{{ route('lab-tests.pricing-settings.index') }}">
-                                <i class="fas fa-tags text-success"></i><span> تسعير وتصنيف التحاليل</span>
+                                <i class="fas fa-tags text-success"></i><span> {{ __('تسعير وتصنيف التحاليل') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1892,7 +2150,7 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAdminSettingsActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#adminSettingsSection" aria-expanded="{{ $isAdminSettingsActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-tools"></i> الإدارة والإعدادات</span>
+                            <span><i class="fas fa-tools"></i> {{ __('الإدارة والإعدادات') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isAdminSettingsActive ? 'show' : '' }}" id="adminSettingsSection">
@@ -1900,7 +2158,7 @@
                         @can('view activity logs')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('activity-logs.*') ? 'active' : '' }}" href="{{ route('activity-logs.index') }}">
-                                <i class="fas fa-satellite-dish text-success"></i><span> سجل الحركات ونشاط الموظفين</span>
+                                <i class="fas fa-satellite-dish text-success"></i><span> {{ __('سجل الحركات ونشاط الموظفين') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1908,21 +2166,21 @@
                         @can('manage users')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">
-                                <i class="fas fa-users-cog"></i><span> إدارة المستخدمين</span>
+                                <i class="fas fa-users-cog"></i><span> {{ __('إدارة المستخدمين') }}</span>
                             </a>
                         </li>
                         @endcan
                         @can('manage roles')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}">
-                                <i class="fas fa-user-shield"></i><span> إدارة الأدوار</span>
+                                <i class="fas fa-user-shield"></i><span> {{ __('إدارة الأدوار') }}</span>
                             </a>
                         </li>
                         @endcan
                         @can('manage permissions')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('permissions.*') ? 'active' : '' }}" href="{{ route('permissions.index') }}">
-                                <i class="fas fa-key"></i><span> إدارة الصلاحيات</span>
+                                <i class="fas fa-key"></i><span> {{ __('إدارة الصلاحيات') }}</span>
                             </a>
                         </li>
                         @endcan
@@ -1931,13 +2189,13 @@
                         @can('manage doctor commissions')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('admin.doctor-commission-settings.*') ? 'active' : '' }}" href="{{ route('admin.doctor-commission-settings.index') }}">
-                                <i class="fas fa-file-invoice-dollar"></i><span> إعدادات عمولات الأطباء</span>
+                                <i class="fas fa-file-invoice-dollar"></i><span> {{ __('إعدادات عمولات الأطباء') }}</span>
                             </a>
                         </li>
                         @endcan
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.pricing-settings.*') ? 'active' : '' }}" href="{{ route('lab-tests.pricing-settings.index') }}">
-                                <i class="fas fa-tags"></i><span> تسعير وتصنيف التحاليل</span>
+                                <i class="fas fa-tags"></i><span> {{ __('تسعير وتصنيف التحاليل') }}</span>
                             </a>
                         </li>
                         @endcanany
@@ -1945,7 +2203,7 @@
                         @if(\App\Services\DatabaseSyncService::isSafeLocalEnvironment() && auth()->check() && (auth()->user()->hasAnyRole(['admin', 'super_admin', 'hospital_admin', 'مدير النظام']) || auth()->user()->can('manage settings')))
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('system.database-sync.*') ? 'active' : '' }}" href="{{ route('system.database-sync.index') }}">
-                                <i class="fas fa-cloud-download-alt text-primary"></i><span> سحب الداتا بيس من هوستنجر</span>
+                                <i class="fas fa-cloud-download-alt text-primary"></i><span> {{ __('سحب الداتا بيس من هوستنجر') }}</span>
                             </a>
                         </li>
                         @endif
@@ -1960,42 +2218,49 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isHrActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#hrSection" aria-expanded="{{ $isHrActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-users-cog"></i> الموارد البشرية</span>
+                            <span><i class="fas fa-users-cog"></i> {{ __('الموارد البشرية') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isHrActive ? 'show' : '' }}" id="hrSection">
                             @can('view employees')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.employees.index') || request()->routeIs('hr.employees.show') ? 'active' : '' }}" href="{{ route('hr.employees.index') }}">
-                                    <i class="fas fa-id-card"></i><span> سجل الموظفين</span>
+                                    <i class="fas fa-id-card"></i><span> {{ __('سجل الموظفين') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('create employees')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.employees.create') ? 'active' : '' }}" href="{{ route('hr.employees.create') }}">
-                                    <i class="fas fa-user-plus"></i><span> إضافة موظف جديد</span>
+                                    <i class="fas fa-user-plus"></i><span> {{ __('إضافة موظف جديد') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('manage hr settings')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.settings.*') ? 'active' : '' }}" href="{{ route('hr.settings.index') }}">
-                                    <i class="fas fa-sliders-h"></i><span> إعدادات وقوائم HR</span>
+                                    <i class="fas fa-sliders-h"></i><span> {{ __('إعدادات وقوائم HR') }}</span>
+                                </a>
+                            </li>
+                            @endcan
+                            @can('view departments')
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('departments.*') ? 'active' : '' }}" href="{{ route('departments.admin') }}">
+                                    <i class="fas fa-sitemap"></i><span> {{ __('إدارة الأقسام والعيادات') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('manage hr actions')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.action_settings.*') ? 'active' : '' }}" href="{{ route('hr.action_settings.index') }}">
-                                    <i class="fas fa-balance-scale"></i><span> لائحة العقوبات والمكافآت</span>
+                                    <i class="fas fa-balance-scale"></i><span> {{ __('لائحة العقوبات والمكافآت') }}</span>
                                 </a>
                             </li>
                             @endcan
                             @can('view hr payroll')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.payrolls.*') ? 'active' : '' }}" href="{{ route('hr.payrolls.index') }}">
-                                    <i class="fas fa-money-check-alt"></i><span> مسير الرواتب والأجور</span>
+                                    <i class="fas fa-money-check-alt"></i><span> {{ __('مسير الرواتب والأجور') }}</span>
                                 </a>
                             </li>
                             @endcan
@@ -2006,21 +2271,21 @@
                                 $isAttendanceActive = request()->routeIs('hr.shifts.*') || request()->routeIs('hr.schedules.*');
                             @endphp
                             <div class="sidebar-section-title {{ $isAttendanceActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#attendanceSubSection" aria-expanded="{{ $isAttendanceActive ? 'true' : 'false' }}" style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); border-radius: 4px; cursor: pointer;">
-                                <span><i class="fas fa-clock me-1"></i> الدوام والخفارات</span>
+                                <span><i class="fas fa-clock me-1"></i> {{ __('الدوام والخفارات') }}</span>
                                 <i class="fas fa-chevron-down toggle-icon" style="font-size: 0.7rem;"></i>
                             </div>
                             <div class="collapse {{ $isAttendanceActive ? 'show' : '' }} ps-2" id="attendanceSubSection">
                                 @can('manage hr shifts')
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('hr.shifts.*') ? 'active' : '' }}" href="{{ route('hr.shifts.index') }}">
-                                        <i class="fas fa-calendar-day"></i><span> إعدادات الشفتات</span>
+                                        <i class="fas fa-calendar-day"></i><span> {{ __('إعدادات الشفتات') }}</span>
                                     </a>
                                 </li>
                                 @endcan
                                 @can('manage hr schedules')
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('hr.schedules.*') ? 'active' : '' }}" href="{{ route('hr.schedules.index') }}">
-                                        <i class="fas fa-calendar-alt"></i><span> جدول الدوام الأسبوعي</span>
+                                        <i class="fas fa-calendar-alt"></i><span> {{ __('جدول الدوام الأسبوعي') }}</span>
                                     </a>
                                 </li>
                                 @endcan
@@ -2039,52 +2304,52 @@
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isPharmacyActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#pharmacySection" aria-expanded="{{ $isPharmacyActive ? 'true' : 'false' }}">
-                            <span><i class="fas fa-pills"></i> الصيدلية وصرف الأدوية</span>
+                            <span><i class="fas fa-pills"></i> {{ __('الصيدلية وصرف الأدوية') }}</span>
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isPharmacyActive ? 'show' : '' }}" id="pharmacySection">
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.pos.index') ? 'active' : '' }}" href="{{ route('pharmacy.pos.index') }}">
-                                    <i class="fas fa-cash-register text-success"></i><span> نقطة البيع والصرف (POS)</span>
+                                    <i class="fas fa-cash-register text-success"></i><span> {{ __('نقطة البيع والصرف (POS)') }}</span>
                                     @if($pendingRxCount > 0)
-                                        <span class="badge bg-danger ms-auto">{{ $pendingRxCount }} وصفة</span>
+                                        <span class="badge bg-danger ms-auto">{{ $pendingRxCount }} {{ __('وصفة') }}</span>
                                     @endif
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.pos.sales.*') ? 'active' : '' }}" href="{{ route('pharmacy.pos.sales.history') }}">
-                                    <i class="fas fa-history text-primary"></i><span> سجل مبيعات الصيدلية</span>
+                                    <i class="fas fa-history text-primary"></i><span> {{ __('سجل مبيعات الصيدلية') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.batches.*') ? 'active' : '' }}" href="{{ route('pharmacy.batches.index') }}">
-                                    <i class="fas fa-boxes text-warning"></i><span> تتبع الشحنات والصلاحية (FEFO)</span>
+                                    <i class="fas fa-boxes text-warning"></i><span> {{ __('تتبع الشحنات والصلاحية (FEFO)') }}</span>
                                     @if($expiringBatchesCount > 0)
-                                        <span class="badge bg-warning text-dark ms-auto">{{ $expiringBatchesCount }} تنبيه</span>
+                                        <span class="badge bg-warning text-dark ms-auto">{{ $expiringBatchesCount }} {{ __('تنبيه') }}</span>
                                     @endif
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.index') || request()->routeIs('pharmacy.medicines.show') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.index') }}">
-                                    <i class="fas fa-capsules text-info"></i><span> دليل الأدوية والبدائل</span>
+                                    <i class="fas fa-capsules text-info"></i><span> {{ __('دليل الأدوية والبدائل') }}</span>
                                 </a>
                             </li>
                             @can('create medicines')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.create') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.create') }}">
-                                    <i class="fas fa-plus-circle text-success"></i><span> إضافة دواء / مستلزم جديد</span>
+                                    <i class="fas fa-plus-circle text-success"></i><span> {{ __('إضافة دواء / مستلزم جديد') }}</span>
                                 </a>
                             </li>
                             @endcan
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.services.*') ? 'active' : '' }}" href="{{ route('pharmacy.services.index') }}">
-                                    <i class="fas fa-syringe text-danger"></i><span> الخدمات الصيدلانية</span>
+                                    <i class="fas fa-syringe text-danger"></i><span> {{ __('الخدمات الصيدلانية') }}</span>
                                 </a>
                             </li>
                             @can('import medicines')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.import') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.import') }}">
-                                    <i class="fas fa-file-excel text-success"></i><span> استيراد وتحديث الأدوية</span>
+                                    <i class="fas fa-file-excel text-success"></i><span> {{ __('استيراد وتحديث الأدوية') }}</span>
                                 </a>
                             </li>
                             @endcan
@@ -2095,64 +2360,64 @@
                    @canany(['manage inventory', 'view products', 'view suppliers', 'view purchases', 'view stock transfers', 'view stock transfer requests'])
                     <div class="sidebar-divider"></div>
                     <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="false">
-                        <span><i class="fas fa-warehouse"></i> إدارة المخزون</span>
+                        <span><i class="fas fa-warehouse"></i> {{ __('إدارة المخزون') }}</span>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
                     <div class="collapse collapse-section" id="inventorySection">
                         @canany(['manage inventory', 'view products'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">
-                                <i class="fas fa-box"></i><span> المواد</span>
+                                <i class="fas fa-box"></i><span> {{ __('المواد') }}</span>
                             </a>
                         </li>
                         @endcanany
                         @canany(['manage inventory', 'view suppliers'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('suppliers.*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
-                                <i class="fas fa-truck"></i><span> الموردون</span>
+                                <i class="fas fa-truck"></i><span> {{ __('الموردون') }}</span>
                             </a>
                         </li>
                         @endcanany
                         @canany(['manage inventory', 'view inventory', 'create purchases', 'view cashier', 'view purchases'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inventory.index') ? 'active' : '' }}" href="{{ route('inventory.index') }}">
-                                <i class="fas fa-warehouse"></i><span> المخزون</span>
+                                <i class="fas fa-warehouse"></i><span> {{ __('المخزون') }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inventory.expiring') ? 'active' : '' }}" href="{{ route('inventory.expiring') }}">
-                                <i class="fas fa-calendar-times text-warning"></i><span> تنبيهات الصلاحية</span>
+                                <i class="fas fa-calendar-times text-warning"></i><span> {{ __('تنبيهات الصلاحية') }}</span>
                             </a>
                         </li>
                         @endcanany
                         @can('manage locations')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('locations.*') ? 'active' : '' }}" href="{{ route('locations.index') }}">
-                                <i class="fas fa-map-marker-alt"></i><span> الأقسام</span>
+                                <i class="fas fa-map-marker-alt"></i><span> {{ __('الأقسام') }}</span>
                             </a>
                         </li>
                         @endcan
                         @canany(['view stock transfers', 'view stock transfer requests'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('stock-transfers.create') ? 'active' : '' }}" href="{{ route('stock-transfers.create') }}">
-                                <i class="fas fa-exchange-alt"></i><span> نقل المخزون</span>
+                                <i class="fas fa-exchange-alt"></i><span> {{ __('نقل المخزون') }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('stock-transfers.requests.*') ? 'active' : '' }}" href="{{ route('stock-transfers.requests.index') }}">
-                                <i class="fas fa-clipboard-list"></i><span> طلبات النقل</span>
+                                <i class="fas fa-clipboard-list"></i><span> {{ __('طلبات النقل') }}</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('stock-transfers.returns.*') ? 'active' : '' }}" href="{{ route('stock-transfers.returns.create') }}">
-                                <i class="fas fa-undo"></i><span> إرجاع المخزون</span>
+                                <i class="fas fa-undo"></i><span> {{ __('إرجاع المخزون') }}</span>
                             </a>
                         </li>
                         @endcanany
                         @canany(['manage inventory', 'create purchases', 'view cashier', 'view purchases'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('purchases.index') ? 'active' : '' }}" href="{{ route('purchases.index') }}">
-                                <i class="fas fa-list-alt"></i><span> قائمة المشتريات</span>
+                                <i class="fas fa-list-alt"></i><span> {{ __('قائمة المشتريات') }}</span>
                             </a>
                         </li>
                         @endcanany
@@ -2181,7 +2446,7 @@
             "debug": false,
             "newestOnTop": true,
             "progressBar": true,
-            "positionClass": "toast-top-left",
+            "positionClass": "toast-top-center",
             "preventDuplicates": false,
             "onclick": null,
             "showDuration": "300",
@@ -2192,7 +2457,7 @@
             "hideEasing": "linear",
             "showMethod": "fadeIn",
             "hideMethod": "fadeOut",
-            "rtl": true
+            "rtl": {{ app()->getLocale() === 'ar' ? 'true' : 'false' }}
         };
 
         // ===== Universal Hospital SweetAlert2 Alert & Session Notification Engine =====
@@ -2207,24 +2472,24 @@
                 if (typeof Swal !== 'undefined') {
                     var msg = String(message || '');
                     var icon = 'info';
-                    var title = 'تنبيه من النظام';
+                    var title = @json(__('تنبيه من النظام'));
 
-                    if (/تنبيه|تحذير|عذراً|لا يمكن|ممنوع|يرجى|تأكد/i.test(msg)) {
+                    if (/تنبيه|تحذير|عذراً|لا يمكن|ممنوع|يرجى|تأكد|warning|cannot|please/i.test(msg)) {
                         icon = 'warning';
-                        title = 'تنبيه سريري / إداري';
-                    } else if (/خطأ|فشل|تعذر|لم يتم|رفض/i.test(msg)) {
+                        title = @json(__('تنبيه سريري / إداري'));
+                    } else if (/خطأ|فشل|تعذر|لم يتم|رفض|error|failed/i.test(msg)) {
                         icon = 'error';
-                        title = 'تنبيه بالنظام';
-                    } else if (/نجاح|تم|بنجاح|اكتمل/i.test(msg)) {
+                        title = @json(__('تنبيه بالنظام'));
+                    } else if (/نجاح|تم|بنجاح|اكتمل|success|completed/i.test(msg)) {
                         icon = 'success';
-                        title = 'تم بنجاح';
+                        title = @json(__('تم بنجاح'));
                     }
 
                     return Swal.fire({
                         title: title,
                         text: msg,
                         icon: icon,
-                        confirmButtonText: 'حسناً، فهمت',
+                        confirmButtonText: @json(__('حسناً، فهمت')),
                         customClass: {
                             popup: 'hospital-swal-popup',
                             title: 'hospital-swal-title',
@@ -2243,10 +2508,10 @@
             window.hospitalAlert = function(title, message, icon) {
                 if (typeof Swal !== 'undefined') {
                     return Swal.fire({
-                        title: title || 'تنبيه',
+                        title: title || @json(__('تنبيه')),
                         text: message || '',
                         icon: icon || 'info',
-                        confirmButtonText: 'حسناً',
+                        confirmButtonText: @json(__('حسناً')),
                         customClass: {
                             popup: 'hospital-swal-popup',
                             title: 'hospital-swal-title',
@@ -2265,12 +2530,12 @@
             window.hospitalConfirm = function(options) {
                 if (typeof Swal !== 'undefined') {
                     return Swal.fire({
-                        title: options.title || 'تأكيد الإجراء',
-                        text: options.text || 'هل أنت متأكد من المتابعة؟',
+                        title: options.title || @json(__('تأكيد الإجراء')),
+                        text: options.text || @json(__('هل أنت متأكد من المتابعة؟')),
                         icon: options.icon || 'warning',
                         showCancelButton: true,
-                        confirmButtonText: options.confirmButtonText || 'نعم، متابعة',
-                        cancelButtonText: options.cancelButtonText || 'إلغاء',
+                        confirmButtonText: options.confirmButtonText || @json(__('نعم، متابعة')),
+                        cancelButtonText: options.cancelButtonText || @json(__('إلغاء')),
                         customClass: {
                             popup: 'hospital-swal-popup',
                             title: 'hospital-swal-title',
@@ -2288,7 +2553,7 @@
                         }
                     });
                 } else {
-                    if (confirm(options.text || 'هل أنت متأكد؟')) {
+                    if (confirm(options.text || @json(__('هل أنت متأكد؟')))) {
                         if (typeof options.onConfirm === 'function') options.onConfirm();
                     }
                 }
@@ -2300,7 +2565,7 @@
                     if (typeof Swal !== 'undefined') {
                         Swal.fire({
                             toast: true,
-                            position: 'top-start',
+                            position: 'top',
                             icon: 'success',
                             title: @json(session('success')),
                             showConfirmButton: false,

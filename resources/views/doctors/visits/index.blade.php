@@ -242,9 +242,9 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-stethoscope me-2 text-primary"></i>
-                    لوحة تحكم الطبيب
+                    {{ __("لوحة تحكم الطبيب") }}
                 </h2>
-                <small class="text-muted">مرحباً د. {{ auth()->user()->name }}</small>
+                <small class="text-muted">{{ __("مرحباً") }} {{ __("د.") }} {{ auth()->user()->name }}</small>
             </div>
         </div>
     </div>
@@ -264,26 +264,64 @@
     @endif
 
     @if(auth()->user()->isDoctor() && isset($doctor))
+    @php
+        $pendingInpatientCount = isset($inpatientConsultations) && is_countable($inpatientConsultations) 
+            ? $inpatientConsultations->where('status', 'pending')->count() 
+            : 0;
+    @endphp
+
+    @if($pendingInpatientCount > 0)
+        <div class="alert alert-warning border-2 border-warning d-flex align-items-center justify-content-between p-3 mb-4 rounded-3 shadow-sm">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-warning text-dark p-2 d-flex align-items-center justify-content-center shadow-xs" style="width: 44px; height: 44px;">
+                    <i class="fas fa-procedures fa-lg"></i>
+                </div>
+                <div>
+                    <h6 class="mb-1 fw-bold text-dark">{{ __("يوجد طلبات استشارة لمرضى الرقود / العمليات بانتظار ردك") }}</h6>
+                    <p class="mb-0 text-muted small">
+                        {{ __("لديك") }} <strong class="text-danger">{{ $pendingInpatientCount }}</strong> {{ __("طلب استشارة طبية سريرية موجهة إليك من الأطباء المقيمين لمرضى العمليات.") }}
+                    </p>
+                </div>
+            </div>
+            <button type="button" class="btn btn-warning fw-bold text-dark px-3 py-2 shadow-xs" onclick="document.getElementById('inpatient-tab').click();">
+                <i class="fas fa-arrow-down me-1"></i> {{ __("عرض الاستشارات السريرية") }}
+            </button>
+        </div>
+    @endif
+
     <!-- Doctor Tabs Navigation -->
     <ul class="nav nav-tabs mb-4 border-bottom" id="doctorTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active d-flex align-items-center gap-2" id="station-tab" data-bs-toggle="tab" data-bs-target="#station-pane" type="button" role="tab" aria-controls="station-pane" aria-selected="true">
                 <i class="fas fa-bullhorn text-primary"></i>
-                <span>محطة العيادة والمناداة الحية</span>
+                <span>{{ __("محطة العيادة والمناداة الحية") }}</span>
                 <span class="badge bg-primary text-white rounded-pill px-2 py-1" id="badge-tab-waiting-count">0</span>
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link d-flex align-items-center gap-2" id="today-tab" data-bs-toggle="tab" data-bs-target="#today-pane" type="button" role="tab" aria-controls="today-pane" aria-selected="false">
                 <i class="fas fa-calendar-day text-info"></i>
-                <span>زيارات اليوم</span>
+                <span>{{ __("زيارات اليوم") }}</span>
                 <span class="badge bg-info text-white rounded-pill px-2 py-1">{{ isset($todayVisits) && is_countable($todayVisits) ? $todayVisits->count() : 0 }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link d-flex align-items-center gap-2" id="inpatient-tab" data-bs-toggle="tab" data-bs-target="#inpatient-pane" type="button" role="tab" aria-controls="inpatient-pane" aria-selected="false">
+                <i class="fas fa-procedures text-warning"></i>
+                <span>{{ __("استشارات الرقود والعمليات") }}</span>
+                @if($pendingInpatientCount > 0)
+                    <span class="badge bg-danger rounded-pill px-2 py-1 animate-pulse">{{ $pendingInpatientCount }}</span>
+                @elseif(isset($inpatientConsultations) && is_countable($inpatientConsultations) && $inpatientConsultations->count() > 0)
+                    <span class="badge bg-secondary rounded-pill px-2 py-1">{{ $inpatientConsultations->count() }}</span>
+                @else
+                    <span class="badge bg-light text-muted rounded-pill px-2 py-1">0</span>
+                @endif
             </button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link d-flex align-items-center gap-2" id="incomplete-tab" data-bs-toggle="tab" data-bs-target="#incomplete-pane" type="button" role="tab" aria-controls="incomplete-pane" aria-selected="false">
                 <i class="fas fa-exclamation-triangle text-warning"></i>
-                <span>زيارات معلقة</span>
+                <span>{{ __("زيارات معلقة") }}</span>
                 @if(isset($incompleteVisits) && is_countable($incompleteVisits) && $incompleteVisits->count() > 0)
                     <span class="badge bg-danger rounded-pill px-2 py-1">{{ $incompleteVisits->count() }}</span>
                 @else
@@ -294,7 +332,7 @@
         <li class="nav-item" role="presentation">
             <button class="nav-link d-flex align-items-center gap-2" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive-pane" type="button" role="tab" aria-controls="archive-pane" aria-selected="false">
                 <i class="fas fa-archive text-secondary"></i>
-                <span>أرشيف جميع الزيارات</span>
+                <span>{{ __("أرشيف جميع الزيارات") }}</span>
                 <span class="badge bg-secondary rounded-pill px-2 py-1">{{ isset($allVisits) && is_countable($allVisits) ? $allVisits->count() : 0 }}</span>
             </button>
         </li>
@@ -314,43 +352,43 @@
                         </div>
                         <div>
                             <div class="d-flex align-items-center gap-2">
-                                <span class="badge bg-primary text-white px-2 py-1" id="doctor-station-current-num">الدور: -</span>
-                                <strong class="text-dark fs-6" id="doctor-station-current-name">لا يوجد مريض مستدعى</strong>
-                                <span class="status-badge status-pending" id="doctor-station-status-badge">العيادة جاهزة</span>
+                                <span class="badge bg-primary text-white px-2 py-1" id="doctor-station-current-num">{{ __("الدور: -") }}</span>
+                                <strong class="text-dark fs-6" id="doctor-station-current-name">{{ __("لا يوجد مريض مستدعى") }}</strong>
+                                <span class="status-badge status-pending" id="doctor-station-status-badge">{{ __("العيادة جاهزة") }}</span>
                             </div>
-                            <small class="text-muted" id="doctor-station-current-status">اضغط "استدعاء التالي" لمناداة أول مريض في الانتظار</small>
+                            <small class="text-muted" id="doctor-station-current-status">{{ __("اضغط \"استدعاء التالي\" لمناداة أول مريض في الانتظار") }}</small>
                         </div>
                     </div>
 
                     <!-- Actions & Screen Link -->
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <button type="button" class="btn btn-success fw-bold px-3 py-2" onclick="doctorCallNext()" id="btn-call-next">
-                            <i class="fas fa-bullhorn me-1"></i> استدعاء التالي
+                            <i class="fas fa-bullhorn me-1"></i> {{ __("استدعاء التالي") }}
                         </button>
                         <button type="button" class="btn btn-warning fw-bold px-3 py-2" onclick="doctorRecall()" id="btn-recall" style="display: none;">
-                            <i class="fas fa-redo me-1"></i> إعادة المناداة
+                            <i class="fas fa-redo me-1"></i> {{ __("إعادة المناداة") }}
                         </button>
                         <button type="button" class="btn btn-info text-white fw-bold px-3 py-2 shadow-sm" id="btn-emergency-consult" style="display: none;" onclick="openEmergencyConsultModal()">
-                            <i class="fas fa-file-medical me-1"></i> تسجيل رأي الاستشارة للطوارئ
+                            <i class="fas fa-file-medical me-1"></i> {{ __("تسجيل رأي الاستشارة للطوارئ") }}
                         </button>
                         <button type="button" class="btn btn-primary fw-bold px-3 py-2" onclick="doctorStartConsultation()" id="btn-start-consult" style="display: none;">
-                            <i class="fas fa-sign-in-alt me-1"></i> بدء الكشف
+                            <i class="fas fa-sign-in-alt me-1"></i> {{ __("بدء الكشف") }}
                         </button>
                         <button type="button" class="btn btn-outline-secondary fw-semibold px-3 py-2" onclick="doctorSkip()" id="btn-skip" style="display: none;">
-                            <i class="fas fa-forward me-1"></i> تخطي
+                            <i class="fas fa-forward me-1"></i> {{ __("تخطي") }}
                         </button>
                         <a href="{{ route('queue.doctor.display', $doctor->id) }}" target="_blank" class="btn btn-outline-primary px-3 py-2">
-                            <i class="fas fa-tv me-1"></i> شاشة العرض
+                            <i class="fas fa-tv me-1"></i> {{ __("شاشة العرض") }}
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- 1. جدول طابور الانتظار الأولي (المرضى الجدد) -->
+            <!-- 1. جدول {{ __("طابور الانتظار الأولي (المرضى الجدد)") }} -->
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-users-line me-2 text-primary"></i>
-                    طابور الانتظار الأولي (المرضى الجدد)
+                    {{ __("طابور الانتظار الأولي (المرضى الجدد)") }}
                 </h5>
                 <span class="badge bg-primary text-white" id="badge-live-waiting-count">0 منتظر</span>
             </div>
@@ -358,17 +396,17 @@
                 <table class="table unified-table mb-4">
                     <thead>
                         <tr>
-                            <th style="width: 90px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-tag me-2"></i>نوع الحجز</th>
-                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
-                            <th class="text-end" style="width: 210px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
+                            <th style="width: 90px;"><i class="fas fa-hashtag me-1"></i>{{ __("الدور") }}</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-tag me-2"></i>{{ __("نوع الحجز") }}</th>
+                            <th><i class="fas fa-tasks me-2"></i>{{ __("الحالة") }}</th>
+                            <th class="text-end" style="width: 210px;"><i class="fas fa-cogs me-2"></i>{{ __("الإجراء") }}</th>
                         </tr>
                     </thead>
                     <tbody id="doctor-station-waiting-list">
                         <tr>
                             <td colspan="5" class="text-center py-4 text-muted">
-                                <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مرضى في طابور الانتظار حالياً
+                                <i class="fas fa-check-circle text-success me-1"></i> {{ __("لا يوجد مرضى في طابور الانتظار حالياً") }}
                             </td>
                         </tr>
                     </tbody>
@@ -381,7 +419,7 @@
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h5 class="mb-0 text-dark fw-bold">
                     <i class="fas fa-notes-medical me-2 text-info"></i>
-                    مراجعو الفحوصات الطبية وصرف الأدوية (الأشعة، المختبر، والصيدلية)
+                    {{ __("مراجعو الفحوصات الطبية وصرف الأدوية (الأشعة، المختبر، والصيدلية)") }}
                 </h5>
                 <span class="badge bg-info text-white" id="badge-pending-tests-count">0 مراجع</span>
             </div>
@@ -389,17 +427,17 @@
                 <table class="table unified-table mb-4">
                     <thead>
                         <tr>
-                            <th style="width: 90px;"><i class="fas fa-hashtag me-1"></i>الدور</th>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-clipboard-check me-2"></i>الفحوصات والأدوية المطلوبة</th>
-                            <th><i class="fas fa-tasks me-2"></i>حالة الإنجاز والصرف</th>
-                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>الإجراء</th>
+                            <th style="width: 90px;"><i class="fas fa-hashtag me-1"></i>{{ __("الدور") }}</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-clipboard-check me-2"></i>{{ __("الفحوصات والأدوية المطلوبة") }}</th>
+                            <th><i class="fas fa-tasks me-2"></i>{{ __("حالة الإنجاز والصرف") }}</th>
+                            <th class="text-end" style="width: 170px;"><i class="fas fa-cogs me-2"></i>{{ __("الإجراء") }}</th>
                         </tr>
                     </thead>
                     <tbody id="doctor-station-pending-tests">
                         <tr>
                             <td colspan="5" class="text-center py-4 text-muted">
-                                <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات أو صرف أدوية حالياً
+                                <i class="fas fa-check-circle text-success me-1"></i> {{ __("لا يوجد مراجعون بانتظار نتائج فحوصات أو صرف أدوية حالياً") }}
                             </td>
                         </tr>
                     </tbody>
@@ -413,11 +451,11 @@
                 <table class="table unified-table">
                     <thead>
                         <tr>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-clock me-2"></i>التوقيت</th>
-                            <th><i class="fas fa-tag me-2"></i>نوع الزيارة</th>
-                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
-                            <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-clock me-2"></i>{{ __("التوقيت") }}</th>
+                            <th><i class="fas fa-tag me-2"></i>{{ __("نوع الزيارة") }}</th>
+                            <th><i class="fas fa-tasks me-2"></i>{{ __("الحالة") }}</th>
+                            <th><i class="fas fa-cogs me-2"></i>{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -437,7 +475,7 @@
                                         <div class="ms-2">
                                             <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
                                             @if($visit->appointment && $visit->appointment->emergency_id)
-                                                <span class="badge bg-danger ms-2"><i class="fas fa-ambulance"></i> طوارئ</span>
+                                                <span class="badge bg-danger ms-2"><i class="fas fa-ambulance"></i> {{ __("طوارئ") }}</span>
                                             @endif
                                             <br>
                                             <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
@@ -455,28 +493,28 @@
                                 </td>
                                 <td>
                                     @if($isCompleted)
-                                        <span class="status-badge status-completed"><i class="fas fa-check-circle"></i> مكتملة</span>
+                                        <span class="status-badge status-completed"><i class="fas fa-check-circle"></i> {{ __("مكتملة") }}</span>
                                     @elseif($isCancelled)
-                                        <span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i> ملغية</span>
+                                        <span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i> {{ __("ملغية") }}</span>
                                     @elseif($isInProgress)
-                                        <span class="status-badge" style="background: #e0f2fe; color: #0369a1; border-color: #7dd3fc;"><i class="fas fa-spinner fa-spin"></i> قيد الفحص</span>
+                                        <span class="status-badge" style="background: #e0f2fe; color: #0369a1; border-color: #7dd3fc;"><i class="fas fa-spinner fa-spin"></i> {{ __("قيد الفحص") }}</span>
                                     @else
-                                        <span class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> في الانتظار</span>
+                                        <span class="status-badge status-pending"><i class="fas fa-hourglass-half"></i> {{ __("في الانتظار") }}</span>
                                     @endif
                                 </td>
                                 <td>
                                     @if($isCompleted)
                                         <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-outline-primary">
-                                            <i class="fas fa-eye"></i> عرض الملف
+                                            <i class="fas fa-eye"></i> {{ __("عرض الملف") }}
                                         </a>
                                     @elseif($visit->appointment && $visit->appointment->emergency_id)
                                         <button type="button" class="action-btn btn-danger fw-bold shadow-sm" 
                                                 onclick="openEmergencyConsultModal({{ $visit->appointment->id }}, '{{ addslashes(optional($visit->patient)->user->name ?? 'مريض طوارئ') }}', '{{ addslashes($visit->appointment->emergency->notes ?? $visit->chief_complaint ?? '') }}')">
-                                            <i class="fas fa-file-medical"></i> رأي الاستشارة
+                                            <i class="fas fa-file-medical"></i> {{ __("رأي الاستشارة") }}
                                         </button>
                                     @else
                                         <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-warning">
-                                            <i class="fas fa-clipboard-check"></i> متابعة الكشف
+                                            <i class="fas fa-clipboard-check"></i> {{ __("متابعة الكشف") }}
                                         </a>
                                     @endif
                                 </td>
@@ -486,7 +524,7 @@
                         <tr>
                             <td colspan="5" class="text-center py-5">
                                 <i class="fas fa-calendar-day fa-3x text-muted mb-3 d-block"></i>
-                                <h5 class="text-muted">لا توجد زيارات مسجلة لليوم حتى الآن</h5>
+                                <h5 class="text-muted">{{ __("لا توجد زيارات مسجلة لليوم حتى الآن") }}</h5>
                             </td>
                         </tr>
                         @endif
@@ -507,7 +545,7 @@
                         <h5 class="alert-heading mb-1 fw-bold">
                             لديك {{ $incompleteVisits->count() }} زيارة غير مكتملة من أيام سابقة
                         </h5>
-                        <p class="mb-0 small">يرجى المتابعة وإنهاء الفحوصات والوصفات الطبية لغلق ملف الزيارة.</p>
+                        <p class="mb-0 small">{{ __("يرجى المتابعة وإنهاء الفحوصات والوصفات الطبية لغلق ملف الزيارة.") }}</p>
                     </div>
                 </div>
             </div>
@@ -517,11 +555,11 @@
                 <table class="table unified-table">
                     <thead>
                         <tr>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-calendar me-2"></i>تاريخ الزيارة</th>
-                            <th><i class="fas fa-tag me-2"></i>نوع الزيارة</th>
-                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
-                            <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-calendar me-2"></i>{{ __("تاريخ الزيارة") }}</th>
+                            <th><i class="fas fa-tag me-2"></i>{{ __("نوع الزيارة") }}</th>
+                            <th><i class="fas fa-tasks me-2"></i>{{ __("الحالة") }}</th>
+                            <th><i class="fas fa-cogs me-2"></i>{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -550,11 +588,11 @@
                                     <span class="type-badge incomplete-visit">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</span>
                                 </td>
                                 <td>
-                                    <span class="status-badge status-pending"><i class="fas fa-clock"></i> غير مكتملة</span>
+                                    <span class="status-badge status-pending"><i class="fas fa-clock"></i> {{ __("غير مكتملة") }}</span>
                                 </td>
                                 <td>
                                     <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-warning">
-                                        <i class="fas fa-clipboard-check"></i> إكمال الفحص
+                                        <i class="fas fa-clipboard-check"></i> {{ __("إكمال الفحص") }}
                                     </a>
                                 </td>
                             </tr>
@@ -563,7 +601,7 @@
                         <tr>
                             <td colspan="5" class="text-center py-5">
                                 <i class="fas fa-check-circle fa-3x text-success mb-3 d-block"></i>
-                                <h5 class="text-muted">ممتاز! لا توجد أي زيارات معلقة من أيام سابقة</h5>
+                                <h5 class="text-muted">{{ __("ممتاز! لا توجد أي زيارات معلقة من أيام سابقة") }}</h5>
                             </td>
                         </tr>
                         @endif
@@ -578,11 +616,11 @@
                 <table class="table unified-table">
                     <thead>
                         <tr>
-                            <th><i class="fas fa-user-injured me-2"></i>المريض</th>
-                            <th><i class="fas fa-calendar-alt me-2"></i>التاريخ</th>
-                            <th><i class="fas fa-tag me-2"></i>نوع الزيارة</th>
-                            <th><i class="fas fa-tasks me-2"></i>الحالة</th>
-                            <th><i class="fas fa-cogs me-2"></i>الإجراءات</th>
+                            <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض") }}</th>
+                            <th><i class="fas fa-calendar-alt me-2"></i>{{ __("التاريخ") }}</th>
+                            <th><i class="fas fa-tag me-2"></i>{{ __("نوع الزيارة") }}</th>
+                            <th><i class="fas fa-tasks me-2"></i>{{ __("الحالة") }}</th>
+                            <th><i class="fas fa-cogs me-2"></i>{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -603,7 +641,7 @@
                                         <div class="ms-2">
                                             <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
                                             @if($visit->appointment && $visit->appointment->emergency_id)
-                                                <span class="badge bg-danger ms-2"><i class="fas fa-ambulance"></i> طوارئ</span>
+                                                <span class="badge bg-danger ms-2"><i class="fas fa-ambulance"></i> {{ __("طوارئ") }}</span>
                                             @endif
                                             <br>
                                             <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
@@ -621,16 +659,16 @@
                                 </td>
                                 <td>
                                     @if($isCompleted)
-                                        <span class="status-badge status-completed"><i class="fas fa-check-circle"></i> مكتملة</span>
+                                        <span class="status-badge status-completed"><i class="fas fa-check-circle"></i> {{ __("مكتملة") }}</span>
                                     @elseif($isCancelled)
-                                        <span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i> ملغية</span>
+                                        <span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i> {{ __("ملغية") }}</span>
                                     @else
                                         <span class="status-badge status-pending"><i class="fas fa-clock"></i> {{ $visit->status_text ?? $visit->status }}</span>
                                     @endif
                                 </td>
                                 <td>
                                     <a href="{{ route('doctor.visits.show', $visit) }}" class="action-btn btn-outline-primary">
-                                        <i class="fas fa-eye"></i> عرض الملف
+                                        <i class="fas fa-eye"></i> {{ __("عرض الملف") }}
                                     </a>
                                 </td>
                             </tr>
@@ -639,12 +677,168 @@
                         <tr>
                             <td colspan="5" class="text-center py-5">
                                 <i class="fas fa-archive fa-3x text-muted mb-3 d-block"></i>
-                                <h5 class="text-muted">لا توجد زيارات مسجلة في الأرشيف</h5>
+                                <h5 class="text-muted">{{ __("لا توجد زيارات مسجلة في الأرشيف") }}</h5>
                             </td>
                         </tr>
                         @endif
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- 5. INPATIENT & SURGERY CONSULTATIONS TAB (استشارات الرقود والعمليات) -->
+        <div class="tab-pane fade" id="inpatient-pane" role="tabpanel" aria-labelledby="inpatient-tab">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="fas fa-procedures text-warning me-2"></i>
+                        {{ __("طلبات الاستشارة الطبية لمرضى الرقود والعمليات الجراحية") }}
+                    </h5>
+                    <span class="badge bg-warning bg-opacity-10 text-dark border border-warning-subtle px-3 py-2">
+                        <i class="fas fa-user-md me-1"></i>
+                        {{ __("مطلوبة من الأطباء المقيمين") }}
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table unified-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-user-injured me-2"></i>{{ __("المريض والملف") }}</th>
+                                    <th><i class="fas fa-hospital me-2"></i>{{ __("العملية / الجناح") }}</th>
+                                    <th><i class="fas fa-user-nurse me-2"></i>{{ __("الطلب والسبب السريري") }}</th>
+                                    <th><i class="fas fa-calendar-alt me-2"></i>{{ __("الأولوية والتاريخ") }}</th>
+                                    <th><i class="fas fa-file-invoice-dollar me-2"></i>{{ __("حالة الدفع") }}</th>
+                                    <th class="text-center"><i class="fas fa-cogs me-2"></i>{{ __("الحالة والإجراء") }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if(isset($inpatientConsultations) && is_countable($inpatientConsultations) && $inpatientConsultations->count() > 0)
+                                    @foreach($inpatientConsultations as $consultation)
+                                        @if($consultation->status === 'cancelled')
+                                            @continue
+                                        @endif
+                                        @php
+                                            $cSurgery = $consultation->surgery;
+                                            $cPatient = $cSurgery?->patient;
+                                            $isHI = ($cSurgery?->insurance_type === 'hi') || ($cPatient?->insurance_type === 'hi');
+                                            $isMOI = ($cSurgery?->insurance_type === 'moi') || ($cPatient?->insurance_type === 'moi');
+                                        @endphp
+                                        <tr class="{{ $consultation->isPending() ? 'table-warning bg-opacity-25' : '' }}">
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="avatar-circle fs-6" style="width: 36px; height: 36px; background: #e0f2fe; color: #0284c7;">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong class="text-dark d-block">{{ $cPatient?->user?->name ?? __('مريض رقود') }}</strong>
+                                                        <div class="small text-muted">
+                                                            <span>#{{ $cPatient?->file_number ?? '-' }}</span>
+                                                            @if($cPatient?->gender)
+                                                                <span class="mx-1">•</span>
+                                                                <span>{{ $cPatient->gender == 'male' ? __('ذكر') : __('أنثى') }}</span>
+                                                            @endif
+                                                            @if($isHI)
+                                                                <span class="badge bg-info-subtle text-info border border-info ms-1">{{ __('ضمان صحي') }}</span>
+                                                            @elseif($isMOI)
+                                                                <span class="badge bg-primary-subtle text-primary border border-primary ms-1">{{ __('قوى الأمن') }}</span>
+                                                            @else
+                                                                <span class="badge bg-secondary-subtle text-secondary ms-1">{{ __('نقدي') }}</span>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <strong class="text-primary d-block">
+                                                    <i class="fas fa-procedures me-1"></i>{{ $cSurgery?->surgery_type ?? __('عملية جراحية') }}
+                                                </strong>
+                                                <small class="text-muted d-block">
+                                                    {{ __('غرفة:') }} {{ $cSurgery?->room?->room_number ?? __('غير محدد') }}
+                                                    @if($cSurgery?->doctor?->user)
+                                                        <span class="mx-1">•</span>{{ __('الجراح:') }} د. {{ $cSurgery->doctor->user->name }}
+                                                    @endif
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <div class="small">
+                                                    <span class="text-muted">{{ __('المقيم:') }}</span>
+                                                    <strong class="text-dark">{{ $consultation->requestedBy?->name ?? __('طبيب مقيم') }}</strong>
+                                                </div>
+                                                <div class="small text-dark mt-1 p-1 bg-light rounded border border-light-subtle">
+                                                    <i class="fas fa-comment-medical text-primary me-1"></i>
+                                                    {{ Str::limit($consultation->reason, 80) }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge {{ $consultation->priorityBadgeClass() }} mb-1">
+                                                    {{ $consultation->priorityLabel() }}
+                                                </span>
+                                                <small class="text-muted d-block">
+                                                    {{ $consultation->created_at?->diffForHumans() }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                @if($consultation->isPaid())
+                                                    <span class="badge bg-success-subtle text-success border border-success">
+                                                        <i class="fas fa-check-circle me-1"></i>{{ __("مسدد بالكاشير") }}
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning">
+                                                        <i class="fas fa-clock me-1"></i>{{ __("معلق بالكاشير") }}
+                                                    </span>
+                                                @endif
+                                                <div class="small text-muted mt-1">{{ number_format($consultation->fee, 0) }} د.ع</div>
+                                            </td>
+                                            <td class="text-center">
+                                                @if($consultation->isCompleted())
+                                                    <span class="badge bg-success text-white mb-2 d-inline-block">
+                                                        <i class="fas fa-check-double me-1"></i>{{ __("تم الرد والتوثيق") }}
+                                                    </span>
+                                                    <button type="button" 
+                                                            class="btn btn-outline-info btn-sm d-block w-100 py-1"
+                                                            onclick="viewInpatientConsultation(this)"
+                                                            data-patient="{{ $cPatient?->user?->name ?? '-' }}"
+                                                            data-operation="{{ $cSurgery?->surgery_type ?? '-' }}"
+                                                            data-room="غرفة {{ $cSurgery?->room?->room_number ?? '-' }}"
+                                                            data-reason="{{ $consultation->reason }}"
+                                                            data-response="{{ $consultation->consultant_response }}"
+                                                            data-recommendations="{{ $consultation->consultant_recommendations }}"
+                                                            data-responded-at="{{ $consultation->responded_at?->translatedFormat('Y/m/d h:i A') ?? '-' }}"
+                                                            data-doctor="{{ $consultation->respondedBy?->name ?? $consultation->doctor?->user?->name ?? '-' }}">
+                                                        <i class="fas fa-eye me-1"></i>{{ __("عرض الرد") }}
+                                                    </button>
+                                                @else
+                                                    <button type="button" 
+                                                            class="btn btn-warning btn-sm fw-bold px-3 shadow-xs text-dark"
+                                                            onclick="openInpatientConsultModal(this)"
+                                                            data-surgery-id="{{ $consultation->surgery_id }}"
+                                                            data-consultation-id="{{ $consultation->id }}"
+                                                            data-patient-name="{{ $cPatient?->user?->name ?? '-' }}"
+                                                            data-room="غرفة {{ $cSurgery?->room?->room_number ?? '-' }}"
+                                                            data-operation="{{ $cSurgery?->surgery_type ?? 'عملية جراحية' }}"
+                                                            data-priority="{{ $consultation->priorityLabel() }}"
+                                                            data-reason="{{ $consultation->reason }}">
+                                                        <i class="fas fa-pen-alt me-1"></i>
+                                                        {{ __("توثيق الرأي والتوصيات") }}
+                                                    </button>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td colspan="6" class="text-center py-5">
+                                            <i class="fas fa-procedures fa-3x text-muted mb-3 d-block"></i>
+                                            <h5 class="text-muted">{{ __("لا توجد طلبات استشارة لمرضى الرقود أو العمليات حالياً") }}</h5>
+                                            <p class="text-muted small mb-0">{{ __("عند قيام الأطباء المقيمين بطلب استشارتك لمريض في العمليات أو الردهة ستظهر هنا فوراً.") }}</p>
+                                        </td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -659,7 +853,7 @@
                 @csrf
                 <div class="modal-header bg-danger text-white">
                     <h5 class="modal-title fw-bold" id="emergencyConsultResponseModalLabel">
-                        <i class="fas fa-ambulance me-2"></i>تسجيل رأي الاستشارة الطبية لحالة الطوارئ
+                        <i class="fas fa-ambulance me-2"></i>{{ __("تسجيل رأي الاستشارة الطبية لحالة الطوارئ") }}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -669,17 +863,17 @@
                         <div class="card-body p-3">
                             <div class="row g-2">
                                 <div class="col-md-6">
-                                    <small class="text-muted d-block">اسم المريض:</small>
+                                    <small class="text-muted d-block">{{ __("اسم المريض:") }}</small>
                                     <strong class="fs-6 text-dark" id="modal-patient-name">-</strong>
                                 </div>
                                 <div class="col-md-6">
-                                    <small class="text-muted d-block">رقم الحالة / الدور:</small>
-                                    <span class="badge bg-danger" id="modal-queue-num">طوارئ</span>
+                                    <small class="text-muted d-block">{{ __("رقم الحالة / الدور:") }}</small>
+                                    <span class="badge bg-danger" id="modal-queue-num">{{ __("طوارئ") }}</span>
                                 </div>
                                 <div class="col-12 mt-2" id="modal-emergency-details-box">
                                     <div class="p-2 bg-white rounded border border-warning">
                                         <small class="fw-bold text-danger d-block mb-1">
-                                            <i class="fas fa-notes-medical me-1"></i>طلب وملاحظات طبيب الطوارئ:
+                                            <i class="fas fa-notes-medical me-1"></i>{{ __("طلب وملاحظات طبيب الطوارئ:") }}
                                         </small>
                                         <div class="text-muted small" id="modal-emergency-notes">-</div>
                                     </div>
@@ -692,22 +886,22 @@
                     <div class="mb-3">
                         <label for="consultant_notes_input" class="form-label fw-bold text-dark">
                             <i class="fas fa-user-md text-primary me-1"></i>
-                            رأي الاستشاري / الإجراء المتبع والتوصيات الطبية <span class="text-danger">*</span>
+                            {{ __("رأي الاستشاري / الإجراء المتبع والتوصيات الطبية") }} <span class="text-danger">*</span>
                         </label>
                         <textarea class="form-control" id="consultant_notes_input" name="consultant_notes" rows="4" 
-                                  placeholder="اكتب التقييم التخصصي، خطة التدخل، الأدوية أو الإجراءات الفورية لحالة المريض..." required></textarea>
+                                  placeholder="{{ __("اكتب التقييم التخصصي، خطة التدخل، الأدوية أو الإجراءات الفورية لحالة المريض...") }}" required></textarea>
                     </div>
 
                     <div class="mb-2">
                         <label for="consultant_recommendation_select" class="form-label fw-bold text-dark">
                             <i class="fas fa-directions text-secondary me-1"></i>
-                            التوصية بالمسار العلاجي (اختياري)
+                            {{ __("التوصية بالمسار العلاجي (اختياري)") }}
                         </label>
                         <select class="form-select" id="consultant_recommendation_select" name="consultant_recommendation">
-                            <option value="emergency_treatment" selected>علاج تحفظي ومتابعة بقسم الطوارئ</option>
-                            <option value="requires_surgery">تحويل عاجل إلى صالة العمليات (Requires Surgery)</option>
-                            <option value="requires_admission">تحويل ودخول للرقود (Requires Admission)</option>
-                            <option value="discharge_safe">مستقر ويمكن تخريجه للمنزل (Safe for Discharge)</option>
+                            <option value="emergency_treatment" selected>{{ __("علاج تحفظي ومتابعة بقسم الطوارئ") }}</option>
+                            <option value="requires_surgery">{{ __("تحويل عاجل إلى صالة العمليات (Requires Surgery)") }}</option>
+                            <option value="requires_admission">{{ __("تحويل ودخول للرقود (Requires Admission)") }}</option>
+                            <option value="discharge_safe">{{ __("مستقر ويمكن تخريجه للمنزل (Safe for Discharge)") }}</option>
                         </select>
                     </div>
                 </div>
@@ -716,10 +910,148 @@
                         <i class="fas fa-times me-1"></i>إلغاء
                     </button>
                     <button type="submit" class="btn btn-danger fw-bold px-4 shadow-sm">
-                        <i class="fas fa-save me-1"></i>حفظ وإرسال التقرير للطوارئ
+                        <i class="fas fa-save me-1"></i>{{ __("حفظ وإرسال التقرير للطوارئ") }}
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal تسجيل رأي الاستشارة لمرضى الرقود والعمليات -->
+<div class="modal fade" id="inpatientConsultResponseModal" tabindex="-1" aria-labelledby="inpatientConsultResponseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <form id="inpatientConsultResponseForm" method="POST" action="">
+                @csrf
+                <input type="hidden" name="redirect_to" value="{{ url()->current() }}?tab=inpatient">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title fw-bold" id="inpatientConsultResponseModalLabel">
+                        <i class="fas fa-user-md me-2"></i>{{ __("توثيق رد وتوصيات الاستشارة الطبية (مرضى الرقود / العمليات)") }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- معلومات الحالة والقادمة من المحطة السريرية -->
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body p-3">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">{{ __("اسم المريض:") }}</small>
+                                    <strong class="fs-6 text-dark" id="inpatient-modal-patient-name">-</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted d-block">{{ __("الغرفة والجناح:") }}</small>
+                                    <span class="badge bg-primary px-2 py-1" id="inpatient-modal-room">-</span>
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <small class="text-muted d-block">{{ __("العملية الجراحية:") }}</small>
+                                    <strong class="text-dark" id="inpatient-modal-operation">-</strong>
+                                </div>
+                                <div class="col-md-6 mt-2">
+                                    <small class="text-muted d-block">{{ __("درجة الأولوية:") }}</small>
+                                    <span class="badge bg-warning text-dark" id="inpatient-modal-priority">-</span>
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <div class="p-2 bg-white rounded border border-warning">
+                                        <small class="fw-bold text-primary d-block mb-1">
+                                            <i class="fas fa-comment-medical me-1"></i>{{ __("سبب الاستشارة وطلب المقيم:") }}
+                                        </small>
+                                        <div class="text-dark small" id="inpatient-modal-reason">-</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- رأي الاستشاري والتوصيات -->
+                    <div class="mb-3">
+                        <label for="consultant_response_input" class="form-label fw-bold text-dark">
+                            <i class="fas fa-stethoscope text-primary me-1"></i>
+                            {{ __("الرأي السريري والتقييم الطبي للاستشاري") }} <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="consultant_response_input" name="consultant_response" rows="4" 
+                                  placeholder="{{ __("اكتب التقييم الطبي الدقيق، التشخيص التخصصي، والتقييم السريري لحالة المريض...") }}" required></textarea>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="consultant_recommendations_input" class="form-label fw-bold text-dark">
+                            <i class="fas fa-clipboard-list text-success me-1"></i>
+                            {{ __("التوصيات الطبية والعلاجية الموجهة للفريق الجراحي والمقيم (اختياري)") }}
+                        </label>
+                        <textarea class="form-control" id="consultant_recommendations_input" name="consultant_recommendations" rows="3" 
+                                  placeholder="{{ __("توصيات الأدوية، الجرعات، خطة المتابعة، أو قيود ما بعد العملية...") }}"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>{{ __("إلغاء") }}
+                    </button>
+                    <button type="submit" class="btn btn-warning fw-bold text-dark px-4 shadow-sm">
+                        <i class="fas fa-check-circle me-1"></i>{{ __("اعتماد وتوثيق الرد السريري") }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal عرض رد الاستشارة الموثقة -->
+<div class="modal fade" id="viewInpatientConsultModal" tabindex="-1" aria-labelledby="viewInpatientConsultModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title fw-bold" id="viewInpatientConsultModalLabel">
+                    <i class="fas fa-clipboard-check me-2"></i>{{ __("تفاصيل رد الاستشارة الطبية المعتمدة") }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body p-3">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">{{ __("المريض:") }}</small>
+                                <strong class="fs-6 text-dark" id="view-modal-patient">-</strong>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-muted d-block">{{ __("العملية والغرفة:") }}</small>
+                                <span class="badge bg-secondary" id="view-modal-operation">-</span>
+                            </div>
+                            <div class="col-12 mt-2">
+                                <small class="text-muted d-block">{{ __("سبب الاستشارة:") }}</small>
+                                <div class="text-dark small p-2 bg-white rounded border" id="view-modal-reason">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">
+                        <i class="fas fa-stethoscope me-1"></i>{{ __("رد وتقييم الاستشاري:") }}
+                    </label>
+                    <div class="p-3 bg-white rounded border border-primary border-opacity-25" id="view-modal-response" style="white-space: pre-wrap;">-</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-success">
+                        <i class="fas fa-clipboard-list me-1"></i>{{ __("التوصيات السريرية:") }}
+                    </label>
+                    <div class="p-3 bg-white rounded border border-success border-opacity-25" id="view-modal-recommendations" style="white-space: pre-wrap;">-</div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center text-muted small">
+                    <div>
+                        <span>{{ __("الموثق:") }}</span> <strong id="view-modal-doctor">-</strong>
+                    </div>
+                    <div>
+                        <span>{{ __("تاريخ الرد:") }}</span> <span id="view-modal-date">-</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">{{ __("إغلاق") }}</button>
+            </div>
         </div>
     </div>
 </div>
@@ -761,10 +1093,10 @@
                     const statusBadge = document.getElementById('doctor-station-status-badge');
                     if (cur.status === 'calling') {
                         statusBadge.className = 'status-badge status-cancelled';
-                        statusBadge.innerHTML = '<i class="fas fa-bullhorn"></i> يتم الاستدعاء الآن';
+                        statusBadge.innerHTML = '<i class="fas fa-bullhorn"></i> {{ __('يتم الاستدعاء الآن') }}';
                     } else {
                         statusBadge.className = 'status-badge status-completed';
-                        statusBadge.innerHTML = '<i class="fas fa-user-check"></i> المريض بالداخل';
+                        statusBadge.innerHTML = '<i class="fas fa-user-check"></i> {{ __('المريض بالداخل') }}';
                     }
 
                     btnRecall.style.display = 'inline-block';
@@ -780,12 +1112,12 @@
                 } else {
                     currentAppointmentId = null;
                     document.getElementById('doctor-station-current-num').textContent = 'الدور: -';
-                    document.getElementById('doctor-station-current-name').textContent = 'لا يوجد مريض مستدعى';
-                    document.getElementById('doctor-station-current-status').textContent = 'اضغط "استدعاء التالي" لمناداة أول مريض في الانتظار';
+                    document.getElementById('doctor-station-current-name').textContent = '{{ __('لا يوجد مريض مستدعى') }}';
+                    document.getElementById('doctor-station-current-status').textContent = '{{ __('اضغط "استدعاء التالي" لمناداة أول مريض في الانتظار') }}';
                     
                     const statusBadge = document.getElementById('doctor-station-status-badge');
                     statusBadge.className = 'status-badge status-pending';
-                    statusBadge.innerHTML = '<i class="fas fa-clock"></i> العيادة جاهزة';
+                    statusBadge.innerHTML = '<i class="fas fa-clock"></i> {{ __('العيادة جاهزة') }}';
 
                     btnRecall.style.display = 'none';
                     btnStartConsult.style.display = 'none';
@@ -804,7 +1136,7 @@
                         waitingTbody.innerHTML = `
                             <tr>
                                 <td colspan="5" class="text-center py-4 text-muted">
-                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مرضى في طابور الانتظار حالياً
+                                    <i class="fas fa-check-circle text-success me-1"></i> {{ __("لا يوجد مرضى في طابور الانتظار حالياً") }}
                                 </td>
                             </tr>
                         `;
@@ -898,7 +1230,7 @@
                         pendingTbody.innerHTML = `
                             <tr>
                                 <td colspan="5" class="text-center py-4 text-muted">
-                                    <i class="fas fa-check-circle text-success me-1"></i> لا يوجد مراجعون بانتظار نتائج فحوصات أو صرف أدوية حالياً
+                                    <i class="fas fa-check-circle text-success me-1"></i> {{ __("لا يوجد مراجعون بانتظار نتائج فحوصات أو صرف أدوية حالياً") }}
                                 </td>
                             </tr>
                         `;
@@ -1150,9 +1482,60 @@
         }
     }
 
+    function openInpatientConsultModal(btn) {
+        const surgeryId = btn.getAttribute('data-surgery-id');
+        const consultationId = btn.getAttribute('data-consultation-id');
+        const patientName = btn.getAttribute('data-patient-name') || '-';
+        const room = btn.getAttribute('data-room') || '-';
+        const operation = btn.getAttribute('data-operation') || '-';
+        const priority = btn.getAttribute('data-priority') || '-';
+        const reason = btn.getAttribute('data-reason') || '-';
+
+        document.getElementById('inpatient-modal-patient-name').textContent = patientName;
+        document.getElementById('inpatient-modal-room').textContent = room;
+        document.getElementById('inpatient-modal-operation').textContent = operation;
+        document.getElementById('inpatient-modal-priority').textContent = priority;
+        document.getElementById('inpatient-modal-reason').textContent = reason;
+
+        const form = document.getElementById('inpatientConsultResponseForm');
+        const respondUrlTemplate = "{{ route('clinical-station.consultations.respond', ['surgery' => '__SURGERY__', 'consultation' => '__CONSULTATION__']) }}";
+        form.action = respondUrlTemplate.replace('__SURGERY__', surgeryId).replace('__CONSULTATION__', consultationId);
+
+        const modalEl = document.getElementById('inpatientConsultResponseModal');
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        } else if (typeof $ !== 'undefined') {
+            $('#inpatientConsultResponseModal').modal('show');
+        }
+    }
+
+    function viewInpatientConsultation(btn) {
+        document.getElementById('view-modal-patient').textContent = btn.getAttribute('data-patient') || '-';
+        document.getElementById('view-modal-operation').textContent = (btn.getAttribute('data-operation') || '-') + ' • ' + (btn.getAttribute('data-room') || '-');
+        document.getElementById('view-modal-reason').textContent = btn.getAttribute('data-reason') || '-';
+        document.getElementById('view-modal-response').textContent = btn.getAttribute('data-response') || 'لا يوجد رد مسجل';
+        document.getElementById('view-modal-recommendations').textContent = btn.getAttribute('data-recommendations') || 'لا توجد توصيات إضافية';
+        document.getElementById('view-modal-doctor').textContent = btn.getAttribute('data-doctor') || '-';
+        document.getElementById('view-modal-date').textContent = btn.getAttribute('data-responded-at') || '-';
+
+        const modalEl = document.getElementById('viewInpatientConsultModal');
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+        } else if (typeof $ !== 'undefined') {
+            $('#viewInpatientConsultModal').modal('show');
+        }
+    }
+
     // Auto poll doctor station every 4s
     setInterval(syncDoctorQueue, 4000);
     syncDoctorQueue();
+
+    if (window.location.hash === '#inpatient-pane' || window.location.search.includes('tab=inpatient')) {
+        const inpTab = document.getElementById('inpatient-tab');
+        if (inpTab) inpTab.click();
+    }
 </script>
 @endif
 @endsection

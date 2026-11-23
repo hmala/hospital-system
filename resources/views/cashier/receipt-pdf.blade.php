@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إيصال دفع - {{ $payment->receipt_number }}</title>
+    <title>{{ __('إيصال دفع') }} - {{ $payment->receipt_number }}</title>
     <style>
         @page {
             size: A4;
@@ -164,69 +164,69 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <h1>مستشفى الكفاءات الأهلي</h1>
-        <p>إيصال دفع رسوم الخدمات الطبية</p>
+        <h1>{{ __('مستشفى الكفاءات الأهلي') }}</h1>
+        <p>{{ __('إيصال دفع رسوم الخدمات الطبية') }}</p>
     </div>
 
     <!-- Receipt Info -->
     <div class="receipt-info">
         <table>
             <tr>
-                <td><strong>رقم الإيصال:</strong> <span class="text-success">{{ $payment->receipt_number }}</span></td>
-                <td style="text-align: left;"><strong>التاريخ:</strong> {{ $payment->paid_at->format('Y-m-d H:i') }}</td>
+                <td><strong>{{ __('رقم الإيصال:') }}</strong> <span class="text-success">{{ $payment->receipt_number }}</span></td>
+                <td style="text-align: left;"><strong>{{ __('التاريخ:') }}</strong> {{ $payment->paid_at->format('Y-m-d H:i') }}</td>
             </tr>
         </table>
     </div>
 
     <!-- Patient Info -->
-    <div class="section-title">معلومات المريض</div>
+    <div class="section-title">{{ __('معلومات المريض') }}</div>
     <table class="info-table">
         <tr>
-            <td>الاسم:</td>
-            <td><strong>{{ optional($payment->patient)->user->name ?? 'غير محدد' }}</strong></td>
+            <td>{{ __('الاسم:') }}</td>
+            <td><strong>{{ optional($payment->patient)->user->name ?? __('غير محدد') }}</strong></td>
         </tr>
         <tr>
-            <td>الرقم الوطني:</td>
-            <td><strong>{{ optional($payment->patient)->national_id ?? 'غير محدد' }}</strong></td>
+            <td>{{ __('الرقم الوطني:') }}</td>
+            <td><strong>{{ optional($payment->patient)->national_id ?? __('غير محدد') }}</strong></td>
         </tr>
         <tr>
-            <td>رقم الهاتف:</td>
-            <td><strong>{{ optional($payment->patient)->user->phone ?? 'غير محدد' }}</strong></td>
+            <td>{{ __('رقم الهاتف:') }}</td>
+            <td><strong>{{ optional($payment->patient)->user->phone ?? __('غير محدد') }}</strong></td>
         </tr>
     </table>
 
     @if($payment->appointment)
     <!-- Appointment Info -->
-    <div class="section-title">تفاصيل الموعد</div>
+    <div class="section-title">{{ __('تفاصيل الموعد') }}</div>
     <table class="info-table">
         <tr>
-            <td>رقم الموعد:</td>
+            <td>{{ __('رقم الموعد:') }}</td>
             <td><strong>#{{ $payment->appointment->id }}</strong></td>
         </tr>
         <tr>
-            <td>تاريخ الموعد:</td>
+            <td>{{ __('تاريخ الموعد:') }}</td>
             <td><strong>{{ $payment->appointment->appointment_date->format('Y-m-d H:i') }}</strong></td>
         </tr>
         <tr>
-            <td>الطبيب:</td>
-            <td><strong>د. {{ $payment->appointment->doctor?->user?->name ?? 'الكادر الطبي' }}</strong></td>
+            <td>{{ __('الطبيب:') }}</td>
+            <td><strong>{{ __('د.') }} {{ $payment->appointment->doctor?->user?->name ?? __('الكادر الطبي') }}</strong></td>
         </tr>
         <tr>
-            <td>القسم:</td>
-            <td><strong>{{ $payment->appointment->department?->name ?? 'العيادات الاستشارية' }}</strong></td>
+            <td>{{ __('القسم:') }}</td>
+            <td><strong>{{ $payment->appointment->department?->name ?? __('العيادات الاستشارية') }}</strong></td>
         </tr>
     </table>
     @endif
 
     <!-- Payment Details -->
-    <div class="section-title">تفاصيل الدفع</div>
+    <div class="section-title">{{ __('تفاصيل الدفع') }}</div>
     <table class="payment-table">
         <thead>
             <tr>
-                <th>الوصف</th>
-                <th>نوع الدفع</th>
-                <th>طريقة الدفع</th>
-                <th>المبلغ (IQD)</th>
+                <th>{{ __('الوصف') }}</th>
+                <th>{{ __('نوع الدفع') }}</th>
+                <th>{{ __('طريقة الدفع') }}</th>
+                <th>{{ __('المبلغ (IQD)') }}</th>
             </tr>
         </thead>
         <tbody>
@@ -239,7 +239,7 @@
             @if($payment->discount_amount > 0)
             <tr>
                 <td colspan="3" style="text-align: left; color: #dc3545;">
-                    خصم خاص ({{ (float)$payment->discount_percentage }}%)
+                    {{ __('خصم خاص') }} ({{ (float)$payment->discount_percentage }}%)
                     @if($payment->discount_reason)
                         <span style="font-size: 11px;"> - {{ $payment->discount_reason }}</span>
                     @endif
@@ -248,7 +248,7 @@
             </tr>
             @endif
             <tr class="total-row">
-                <td colspan="3" style="text-align: left;">الصافي المدفوع:</td>
+                <td colspan="3" style="text-align: left;">{{ __('الصافي المدفوع:') }}</td>
                 <td class="total-amount">{{ number_format($payment->amount, 2) }} IQD</td>
             </tr>
         </tbody>
@@ -257,7 +257,7 @@
     @if($payment->notes)
     <!-- Notes -->
     <div class="notes">
-        <strong>ملاحظات:</strong> {{ $payment->notes }}
+        <strong>{{ __('ملاحظات:') }}</strong> {{ $payment->notes }}
     </div>
     @endif
 
@@ -266,16 +266,16 @@
         <table style="width: 100%;">
             <tr>
                 <td>
-                    <strong>تم الاستلام بواسطة:</strong> {{ $payment->cashier->name }}
+                    <strong>{{ __('تم الاستلام بواسطة:') }}</strong> {{ $payment->cashier->name }}
                 </td>
             </tr>
         </table>
     </div>
 
     <div class="text-center" style="margin-top: 40px; font-size: 12px; color: #666;">
-        <p>هذا إيصال رسمي صادر من نظام إدارة المستشفى</p>
-        <p>للاستفسارات يرجى الاتصال على: 0790-XXX-XXXX</p>
-        <p style="margin-top: 20px;">تم الطباعة في: {{ now()->format('Y-m-d H:i:s') }}</p>
+        <p>{{ __('هذا إيصال رسمي صادر من نظام إدارة المستشفى') }}</p>
+        <p>{{ __('للاستفسارات يرجى الاتصال على: 0790-XXX-XXXX') }}</p>
+        <p style="margin-top: 20px;">{{ __('تم الطباعة في:') }} {{ now()->format('Y-m-d H:i:s') }}</p>
     </div>
 </body>
 </html>

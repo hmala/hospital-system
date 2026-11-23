@@ -455,6 +455,11 @@ class StockTransferController extends Controller
                 ->with('success', 'تم إنشاء طلب إرجاع المواد للمخزن الرئيسي بنجاح (طلب رقم #'.$stockTransferRequest->id.'). بانتظار اعتماد أمين المخزن.');
         }
 
+        if ($request->filled('from_surgery')) {
+            return redirect()->route('surgeries.index', ['tab' => 'or_store', 'location_id' => $fromLocationId])
+                ->with('success', 'تم إنشاء طلب إرجاع المواد من مخزن العمليات للمخزن الرئيسي بنجاح (طلب رقم #'.$stockTransferRequest->id.'). بانتظار اعتماد أمين المخزن.');
+        }
+
         return redirect()->route('stock-transfers.requests.index')
             ->with('success', 'تم إنشاء طلب إرجاع المخزون بنجاح (طلب رقم #'.$stockTransferRequest->id.'). لا يتم تنفيذ الإرجاع إلا بعد موافقة المخزن الرئيسي.');
     }

@@ -9,30 +9,29 @@
                 <div>
                     <h3 class="fw-bold mb-0 text-dark">
                         <i class="fas fa-flask text-primary me-2"></i>
-                        إدارة ودليل الفحوصات المختبرية
+                        {{ __("إدارة ودليل الفحوصات المختبرية") }}
                     </h3>
-                    <small class="text-muted">التحكم بتشغيل وإطفاء الفحوصات في محطات النظام والضمان الصحي وتحديث الأسعار</small>
+                    <small class="text-muted">{{ __("التحكم بتشغيل وإطفاء الفحوصات في محطات النظام والضمان الصحي وتحديث الأسعار") }}</small>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="{{ route('lab-tests.export', request()->query()) }}" class="btn btn-outline-success btn-sm">
-                        <i class="fas fa-file-excel me-1"></i> تصدير إكسل
-                    </a>
+                        <i class="fas fa-file-excel me-1"></i>{{ __("تصدير إكسل") }}</a>
                     @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('edit lab tests'))
                         <button type="button" class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#importLabTestsModal">
-                            <i class="fas fa-file-import me-1"></i> استيراد وتحديث إكسل
+                            <i class="fas fa-file-import me-1"></i> {{ __("استيراد وتحديث إكسل") }}
                         </button>
                     @endif
                     <a href="{{ route('lab-tests.pricing-settings.index') }}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-tags me-1"></i> إعدادات الأسعار والتصنيفات
+                        <i class="fas fa-tags me-1"></i> {{ __("إعدادات الأسعار والتصنيفات") }}
                     </a>
                     @if(Auth::user()->isAdmin() || Auth::user()->hasRole('admin') || Auth::user()->can('manage lab tests') || Auth::user()->can('edit lab tests'))
                         <a href="{{ route('lab-tests.entry-settings') }}" class="btn btn-outline-dark btn-sm">
-                            <i class="fas fa-sliders-h me-1"></i> أنماط إدخال النتائج
+                            <i class="fas fa-sliders-h me-1"></i> {{ __("أنماط إدخال النتائج") }}
                         </a>
                     @endif
                     @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('create lab tests'))
                         <a href="{{ route('lab-tests.create') }}" class="btn btn-success btn-sm fw-bold">
-                            <i class="fas fa-plus me-1"></i> إضافة فحص جديد
+                            <i class="fas fa-plus me-1"></i> {{ __("إضافة فحص جديد") }}
                         </a>
                     @endif
                 </div>
@@ -61,7 +60,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold d-block">إجمالي الفحوصات</span>
+                            <span class="text-muted small fw-bold d-block">{{ __("إجمالي الفحوصات") }}</span>
                             <h4 class="mb-0 fw-bold text-dark mt-1">{{ number_format($stats['total']) }}</h4>
                         </div>
                         <div class="p-2 rounded-circle bg-primary-subtle text-primary fs-5">
@@ -76,7 +75,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold d-block">النشطة عاماً (بالمحطات)</span>
+                            <span class="text-muted small fw-bold d-block">{{ __("النشطة عاماً (بالمحطات)") }}</span>
                             <h4 class="mb-0 fw-bold text-success mt-1">{{ number_format($stats['active']) }}</h4>
                         </div>
                         <div class="p-2 rounded-circle bg-success-subtle text-success fs-5">
@@ -91,7 +90,7 @@
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold d-block">المعطلة عاماً (محجوبة)</span>
+                            <span class="text-muted small fw-bold d-block">{{ __("المعطلة عاماً (محجوبة)") }}</span>
                             <h4 class="mb-0 fw-bold text-danger mt-1">{{ number_format($stats['inactive']) }}</h4>
                         </div>
                         <div class="p-2 rounded-circle bg-danger-subtle text-danger fs-5">
@@ -106,9 +105,9 @@
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <div>
-                            <span class="text-muted small fw-bold d-block">المشمولة بالضمان</span>
+                            <span class="text-muted small fw-bold d-block">{{ __("المشمولة بالضمان") }}</span>
                             <h4 class="mb-0 fw-bold text-info mt-1">{{ number_format($stats['hi_active']) }}</h4>
-                            <small class="text-muted" style="font-size: 0.72rem;">غير مشمولة: {{ number_format($stats['hi_inactive']) }}</small>
+                            <small class="text-muted" style="font-size: 0.72rem;">{{ __("غير مشمولة:") }} {{ number_format($stats['hi_inactive']) }}</small>
                         </div>
                         <div class="p-2 rounded-circle bg-info-subtle text-info fs-5">
                             <i class="fas fa-shield-alt"></i>
@@ -129,19 +128,19 @@
                         <i class="fas fa-bolt"></i>
                     </span>
                     <div>
-                        <h6 class="mb-0 fw-bold text-dark">التحكم الذكي الكلي بالفحوصات</h6>
-                        <small class="text-muted">إيقاف أو تشغيل مجموعات الفحوصات وفق تغطية الضمان الصحي بضغطة زر واحدة</small>
+                        <h6 class="mb-0 fw-bold text-dark">{{ __("التحكم الذكي الكلي بالفحوصات") }}</h6>
+                        <small class="text-muted">{{ __("إيقاف أو تشغيل مجموعات الفحوصات وفق تغطية الضمان الصحي بضغطة زر واحدة") }}</small>
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-danger btn-sm fw-bold px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#bulkDisableModal">
-                        <i class="fas fa-power-off me-1"></i> إطفاء كافة الفحوصات خارج الضمان ({{ number_format($stats['hi_unpriced']) }})
+                        <i class="fas fa-power-off me-1"></i> {{ __("إطفاء كافة الفحوصات خارج الضمان") }} ({{ number_format($stats['hi_unpriced']) }})
                     </button>
-                    <form action="{{ route('lab-tests.bulk-disable-non-insurance') }}" method="POST" class="d-inline" onsubmit="return confirm('هل تريد تفعيل جميع الفحوصات المسعرة بالضمان ({{ $stats['hi_active'] }} فحص) عاماً وبالضمان في كافة المحطات؟')">
+                    <form action="{{ route('lab-tests.bulk-disable-non-insurance') }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __("هل تريد تفعيل جميع الفحوصات المسعرة بالضمان عاماً وبالضمان في كافة المحطات؟") }}')">
                         @csrf
                         <input type="hidden" name="action" value="enable_all_insured">
                         <button type="submit" class="btn btn-success btn-sm fw-bold px-3 shadow-sm">
-                            <i class="fas fa-shield-check me-1"></i> تفعيل كافة المسعرة بالضمان ({{ number_format($stats['hi_active']) }})
+                            <i class="fas fa-shield-check me-1"></i> {{ __("تفعيل كافة المسعرة بالضمان") }} ({{ number_format($stats['hi_active']) }})
                         </button>
                     </form>
                 </div>
@@ -158,9 +157,9 @@
                 <div class="card-body p-3">
                     <form method="GET" action="{{ route('lab-tests.index') }}" class="row g-2 align-items-end">
                         <div class="col-lg-2 col-md-4 col-sm-6">
-                            <label for="main_category" class="form-label small fw-bold mb-1">التصنيف الرئيسي</label>
+                            <label for="main_category" class="form-label small fw-bold mb-1">{{ __("التصنيف الرئيسي") }}</label>
                             <select class="form-select form-select-sm" id="main_category" name="main_category">
-                                <option value="">جميع الأقسام الرئيسية</option>
+                                <option value="">{{ __("جميع الأقسام الرئيسية") }}</option>
                                 @foreach($mainCategories as $mainCat)
                                     <option value="{{ $mainCat }}" {{ request('main_category') == $mainCat ? 'selected' : '' }}>
                                         {{ $mainCat }}
@@ -169,9 +168,9 @@
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-4 col-sm-6">
-                            <label for="subcategory" class="form-label small fw-bold mb-1">التصنيف الفرعي</label>
+                            <label for="subcategory" class="form-label small fw-bold mb-1">{{ __("التصنيف الفرعي") }}</label>
                             <select class="form-select form-select-sm" id="subcategory" name="subcategory">
-                                <option value="">جميع التصنيفات الفرعية</option>
+                                <option value="">{{ __("جميع التصنيفات الفرعية") }}</option>
                                 @foreach($subcategories as $subcat)
                                     <option value="{{ $subcat }}" {{ request('subcategory') == $subcat ? 'selected' : '' }}>
                                         {{ $subcat }}
@@ -180,28 +179,28 @@
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-4 col-sm-6">
-                            <label for="status" class="form-label small fw-bold mb-1">الحالة بالمحطات</label>
+                            <label for="status" class="form-label small fw-bold mb-1">{{ __("الحالة بالمحطات") }}</label>
                             <select class="form-select form-select-sm" id="status" name="status">
-                                <option value="">جميع الحالات العامة</option>
-                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>🟢 نشط فقط (يظهر بالمحطات)</option>
-                                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>🔴 معطل فقط (محجوب بالمحطات)</option>
+                                <option value="">{{ __("جميع الحالات العامة") }}</option>
+                                <option value="active" {{ request('status') === 'active' ? 'selected' : '' }}>{{ __("🟢 نشط فقط (يظهر بالمحطات)") }}</option>
+                                <option value="inactive" {{ request('status') === 'inactive' ? 'selected' : '' }}>{{ __("🔴 معطل فقط (محجوب بالمحطات)") }}</option>
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-4 col-sm-6">
-                            <label for="insurance_status" class="form-label small fw-bold mb-1">مظلة الضمان الصحي</label>
+                            <label for="insurance_status" class="form-label small fw-bold mb-1">{{ __("مظلة الضمان الصحي") }}</label>
                             <select class="form-select form-select-sm" id="insurance_status" name="insurance_status">
-                                <option value="">جميع التحاليل</option>
-                                <option value="insured" {{ request('insurance_status') === 'insured' ? 'selected' : '' }}>🛡️ مشمول بالضمان فقط</option>
-                                <option value="non_insured" {{ request('insurance_status') === 'non_insured' ? 'selected' : '' }}>⚠️ خارج الضمان (غير مغطى)</option>
+                                <option value="">{{ __("جميع التحاليل") }}</option>
+                                <option value="insured" {{ request('insurance_status') === 'insured' ? 'selected' : '' }}>{{ __("🛡️ مشمول بالضمان فقط") }}</option>
+                                <option value="non_insured" {{ request('insurance_status') === 'non_insured' ? 'selected' : '' }}>{{ __("⚠️ خارج الضمان (غير مغطى)") }}</option>
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-4 col-sm-6">
-                            <label for="search" class="form-label small fw-bold mb-1">بحث بالاسم أو الكود</label>
+                            <label for="search" class="form-label small fw-bold mb-1">{{ __("بحث بالاسم أو الكود") }}</label>
                             <input type="text" class="form-control form-control-sm" id="search" name="search" 
-                                   placeholder="اسم الفحص أو الكود..." value="{{ request('search') }}">
+                                   placeholder="{{ __("اسم الفحص أو الكود...") }}" value="{{ request('search') }}">
                         </div>
                         <div class="col-lg-1 col-md-2 col-sm-3">
-                            <label for="per_page" class="form-label small fw-bold mb-1">العدد/صفحة</label>
+                            <label for="per_page" class="form-label small fw-bold mb-1">{{ __("العدد/صفحة") }}</label>
                             <select class="form-select form-select-sm" id="per_page" name="per_page">
                                 <option value="25" {{ request('per_page', 25) == 25 ? 'selected' : '' }}>25</option>
                                 <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
@@ -211,10 +210,10 @@
                             </select>
                         </div>
                         <div class="col-lg-1 col-md-2 col-sm-3 d-flex gap-1">
-                            <button type="submit" class="btn btn-primary btn-sm w-100" title="تطبيق الفلتر">
+                            <button type="submit" class="btn btn-primary btn-sm w-100" title="{{ __("تطبيق الفلتر") }}">
                                 <i class="fas fa-search"></i>
                             </button>
-                            <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-secondary btn-sm" title="إعادة تعيين">
+                            <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-secondary btn-sm" title="{{ __("إعادة تعيين") }}">
                                 <i class="fas fa-times"></i>
                             </a>
                         </div>
@@ -231,13 +230,13 @@
                 <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold text-dark">
                         <i class="fas fa-list-check text-primary me-2"></i>
-                        جدول الفحوصات المختبرية ({{ number_format($labTests->total()) }} فحص)
+                        {{ __("جدول الفحوصات المختبرية") }} ({{ number_format($labTests->total()) }} {{ __("فحص") }})
                         @if(request('main_category') || request('subcategory') || request('status') || request('insurance_status') || request('search'))
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-2">مفلترة</span>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-2">{{ __("مفلترة") }}</span>
                         @endif
                     </h5>
                     <div class="text-muted small">
-                        <i class="fas fa-info-circle me-1 text-primary"></i> التبديل عبر المفاتيح يحفظ فورياً بدون إعادة تحميل الصفحة
+                        <i class="fas fa-info-circle me-1 text-primary"></i> {{ __("التبديل عبر المفاتيح يحفظ فورياً بدون إعادة تحميل الصفحة") }}
                     </div>
                 </div>
                 <div class="card-body p-0">
@@ -247,22 +246,22 @@
                                 <thead class="table-light text-nowrap">
                                     <tr>
                                         <th style="width: 40px;" class="text-center">
-                                            <input type="checkbox" class="form-check-input cursor-pointer" id="selectAllCheckbox" title="تحديد الكل في هذه الصفحة">
+                                            <input type="checkbox" class="form-check-input cursor-pointer" id="selectAllCheckbox" title="{{ __("تحديد الكل في هذه الصفحة") }}">
                                         </th>
-                                        <th style="width: 90px;">الكود</th>
-                                        <th>اسم الفحص المختبري</th>
-                                        <th>التصنيف والقسم</th>
-                                        <th>سعر الكاش</th>
-                                        <th>سعر الضمان</th>
+                                        <th style="width: 90px;">{{ __("الكود") }}</th>
+                                        <th>{{ __("اسم الفحص المختبري") }}</th>
+                                        <th>{{ __("التصنيف والقسم") }}</th>
+                                        <th>{{ __("سعر الكاش") }}</th>
+                                        <th>{{ __("سعر الضمان") }}</th>
                                         <th class="text-center" style="width: 150px;">
-                                            الحالة العامة
-                                            <i class="fas fa-question-circle text-muted" title="عند الإطفاء يختفي الفحص كلياً من كافة محطات الأطباء والاستعلامات والطوارئ"></i>
+                                            {{ __("الحالة العامة") }}
+                                            <i class="fas fa-question-circle text-muted" title="{{ __("عند الإطفاء يختفي الفحص كلياً من كافة محطات الأطباء والاستعلامات والطوارئ") }}"></i>
                                         </th>
                                         <th class="text-center" style="width: 150px;">
-                                            الضمان الصحي
-                                            <i class="fas fa-question-circle text-muted" title="عند الإطفاء يختفي الفحص عن مرضى الضمان الصحي فقط"></i>
+                                            {{ __("الضمان الصحي") }}
+                                            <i class="fas fa-question-circle text-muted" title="{{ __("عند الإطفاء يختفي الفحص عن مرضى الضمان الصحي فقط") }}"></i>
                                         </th>
-                                        <th class="text-center" style="width: 140px;">الإجراءات</th>
+                                        <th class="text-center" style="width: 140px;">{{ __("الإجراءات") }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -297,16 +296,16 @@
                                         </td>
                                         <td>
                                             @if($labTest->price !== null && $labTest->price > 0)
-                                                <strong class="text-success">{{ number_format($labTest->price, 0) }}</strong> <small class="text-muted">د.ع</small>
+                                                <strong class="text-success">{{ number_format($labTest->price, 0) }}</strong> <small class="text-muted">{{ __("د.ع") }}</small>
                                             @else
-                                                <span class="text-muted small">0 د.ع</span>
+                                                <span class="text-muted small">{{ __("0 د.ع") }}</span>
                                             @endif
                                         </td>
                                         <td>
                                             @if($hasHiPrice)
-                                                <strong class="text-info">{{ number_format($labTest->hi_price, 0) }}</strong> <small class="text-muted">د.ع</small>
+                                                <strong class="text-info">{{ number_format($labTest->hi_price, 0) }}</strong> <small class="text-muted">{{ __("د.ع") }}</small>
                                             @else
-                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">غير مسعر</span>
+                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">{{ __("غير مسعر") }}</span>
                                             @endif
                                         </td>
                                         
@@ -325,7 +324,7 @@
                                                            {{ (!Auth::user()->isAdmin() && !Auth::user()->hasRole('lab_staff') && !Auth::user()->can('edit lab tests')) ? 'disabled' : '' }}>
                                                 </div>
                                                 <span class="badge status-badge mt-1 {{ $labTest->is_active ? 'bg-success' : 'bg-danger' }}" id="badge_active_{{ $labTest->id }}" style="font-size: 0.68rem;">
-                                                    {{ $labTest->is_active ? 'نشط بالمحطات' : 'معطل ومحجوب' }}
+                                                    {{ $labTest->is_active ? __("نشط بالمحطات") : __("معطل ومحجوب") }}
                                                 </span>
                                             </div>
                                         </td>
@@ -345,7 +344,7 @@
                                                            {{ (!Auth::user()->isAdmin() && !Auth::user()->hasRole('lab_staff') && !Auth::user()->can('edit lab tests')) ? 'disabled' : '' }}>
                                                 </div>
                                                 <span class="badge hi-badge mt-1 {{ $labTest->is_hi_active ? 'bg-info' : 'bg-secondary' }}" id="badge_hi_{{ $labTest->id }}" style="font-size: 0.68rem;">
-                                                    {{ $labTest->is_hi_active ? 'مشمول بالضمان' : 'خارج الضمان' }}
+                                                    {{ $labTest->is_hi_active ? __("مشمول بالضمان") : __("خارج الضمان") }}
                                                 </span>
                                             </div>
                                         </td>
@@ -353,25 +352,25 @@
                                         <!-- الإجراءات -->
                                         <td class="text-center">
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('lab-tests.show', $labTest) }}" class="btn btn-outline-primary" title="استعراض">
+                                                <a href="{{ route('lab-tests.show', $labTest) }}" class="btn btn-outline-primary" title="{{ __("استعراض") }}">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 @if(Auth::user()->isAdmin() || Auth::user()->hasRole('lab_staff') || Auth::user()->can('edit lab tests'))
-                                                    <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}" class="btn btn-outline-success" title="الفحوصات الفرعية (Sub-Tests)">
+                                                    <a href="{{ route('lab-tests.sub-tests.index', $labTest) }}" class="btn btn-outline-success" title="{{ __("الفحوصات الفرعية (Sub-Tests)") }}">
                                                         <i class="fas fa-list-check"></i>
                                                     </a>
-                                                    <a href="{{ route('lab-tests.references.index', $labTest) }}" class="btn btn-outline-info" title="القيم المرجعية">
+                                                    <a href="{{ route('lab-tests.references.index', $labTest) }}" class="btn btn-outline-info" title="{{ __("القيم المرجعية") }}">
                                                         <i class="fas fa-ruler-combined"></i>
                                                     </a>
-                                                    <a href="{{ route('lab-tests.edit', $labTest) }}" class="btn btn-outline-warning" title="تعديل">
+                                                    <a href="{{ route('lab-tests.edit', $labTest) }}" class="btn btn-outline-warning" title="{{ __("تعديل") }}">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                 @endif
                                                 @if(Auth::user()->isAdmin() || Auth::user()->can('delete lab tests'))
-                                                    <form action="{{ route('lab-tests.destroy', $labTest) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا الفحص نهائياً؟')">
+                                                    <form action="{{ route('lab-tests.destroy', $labTest) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __("هل أنت متأكد من حذف هذا الفحص نهائياً؟") }}')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-outline-danger" title="حذف">
+                                                        <button type="submit" class="btn btn-outline-danger" title="{{ __("حذف") }}">
                                                             <i class="fas fa-trash"></i>
                                                         </button>
                                                     </form>
@@ -387,7 +386,7 @@
                         <!-- ترقيم الصفحات -->
                         <div class="d-flex justify-content-between align-items-center flex-wrap p-3 border-top">
                             <div class="small text-muted">
-                                عرض من {{ $labTests->firstItem() }} إلى {{ $labTests->lastItem() }} من إجمالي {{ number_format($labTests->total()) }} فحص
+                                {{ __("عرض من") }} {{ $labTests->firstItem() }} {{ __("إلى") }} {{ $labTests->lastItem() }} {{ __("من إجمالي") }} {{ number_format($labTests->total()) }} {{ __("فحص") }}
                             </div>
                             <div>
                                 {{ $labTests->links('pagination::bootstrap-5') }}
@@ -396,10 +395,10 @@
                     @else
                         <div class="text-center py-5">
                             <i class="fas fa-flask fa-3x text-muted mb-3"></i>
-                            <h5 class="text-muted">لا توجد فحوصات مختبرية مطابقة</h5>
-                            <p class="text-muted small">جرب تغيير معايير البحث أو الفلترة</p>
+                            <h5 class="text-muted">{{ __("لا توجد فحوصات مختبرية مطابقة") }}</h5>
+                            <p class="text-muted small">{{ __("جرب تغيير معايير البحث أو الفلترة") }}</p>
                             <a href="{{ route('lab-tests.index') }}" class="btn btn-primary btn-sm">
-                                <i class="fas fa-undo me-1"></i> إعادة تعيين الفلاتر
+                                <i class="fas fa-undo me-1"></i> {{ __("إعادة تعيين الفلاتر") }}
                             </a>
                         </div>
                     @endif
@@ -414,22 +413,22 @@
      style="bottom: 25px; left: 50%; transform: translateX(-50%); z-index: 1060; min-width: 320px; max-width: 90vw; display: none; transition: all 0.3s ease;">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary px-3 py-2 rounded-pill fs-6" id="bulkSelectedBadge">0 فحص محدد</span>
+            <span class="badge bg-primary px-3 py-2 rounded-pill fs-6" id="bulkSelectedBadge">{{ __("0 فحص محدد") }}</span>
         </div>
         <div class="d-flex flex-wrap gap-2">
             <button type="button" class="btn btn-success btn-sm rounded-pill px-3 fw-bold btn-bulk-apply" data-field="is_active" data-status="active">
-                <i class="fas fa-check-circle me-1"></i> تفعيل عام بالمحطات
+                <i class="fas fa-check-circle me-1"></i> {{ __("تفعيل عام بالمحطات") }}
             </button>
             <button type="button" class="btn btn-danger btn-sm rounded-pill px-3 fw-bold btn-bulk-apply" data-field="is_active" data-status="inactive">
-                <i class="fas fa-ban me-1"></i> تعطيل عام وحجب
+                <i class="fas fa-ban me-1"></i> {{ __("تعطيل عام وحجب") }}
             </button>
             <button type="button" class="btn btn-info btn-sm rounded-pill px-3 fw-bold text-white btn-bulk-apply" data-field="is_hi_active" data-status="active">
-                <i class="fas fa-shield-alt me-1"></i> تفعيل بالضمان
+                <i class="fas fa-shield-alt me-1"></i> {{ __("تفعيل بالضمان") }}
             </button>
             <button type="button" class="btn btn-warning btn-sm rounded-pill px-3 fw-bold text-dark btn-bulk-apply" data-field="is_hi_active" data-status="inactive">
-                <i class="fas fa-shield-slash me-1"></i> إيقاف عن الضمان
+                <i class="fas fa-shield-slash me-1"></i> {{ __("إيقاف عن الضمان") }}
             </button>
-            <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-2" id="btnCancelBulkSelection" title="إلغاء التحديد">
+            <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-2" id="btnCancelBulkSelection" title="{{ __("إلغاء التحديد") }}">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -444,37 +443,37 @@
             <div class="modal-content shadow-lg border-0 rounded-4">
                 <div class="modal-header bg-danger text-white py-3 rounded-top-4">
                     <h5 class="modal-title fs-6 fw-bold" id="bulkDisableModalLabel">
-                        <i class="fas fa-power-off me-2"></i> إطفاء وتعطيل الفحوصات غير المشمولة بالضمان
+                        <i class="fas fa-power-off me-2"></i> {{ __("إطفاء وتعطيل الفحوصات غير المشمولة بالضمان") }}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="alert alert-warning small rounded-3 mb-3">
                         <i class="fas fa-exclamation-triangle me-1"></i>
-                        يوجد في النظام <strong>{{ number_format($stats['hi_unpriced'] ?? 0) }}</strong> فحص مختبري بدون تسعير للضمان الصحي (خارج الضمان).
+                        {{ __("يوجد في النظام") }} <strong>{{ number_format($stats['hi_unpriced'] ?? 0) }}</strong> {{ __("فحص مختبري بدون تسعير للضمان الصحي (خارج الضمان).") }}
                     </div>
-                    <p class="small text-dark mb-3">اختر نمط الإطفاء المطلوب تطبيقه فوراً على كافة هذه الفحوصات:</p>
+                    <p class="small text-dark mb-3">{{ __("اختر نمط الإطفاء المطلوب تطبيقه فوراً على كافة هذه الفحوصات:") }}</p>
 
                     <div class="form-check p-3 border rounded-3 mb-2 bg-light cursor-pointer">
                         <input class="form-check-input" type="radio" name="action" id="action_general" value="general_disable" checked>
                         <label class="form-check-label small fw-bold text-dark cursor-pointer ms-2" for="action_general">
-                            <i class="fas fa-eye-slash text-danger me-1"></i> إطفاء عام من كافة المحطات (تنزيلها تماماً)
-                            <div class="text-muted fw-normal small mt-1">تختفي هذه الفحوصات كلياً وفورياً من محطة الطبيب والاستعلامات والطوارئ حتى تعيد تفعيلها.</div>
+                            <i class="fas fa-eye-slash text-danger me-1"></i> {{ __("إطفاء عام من كافة المحطات (تنزيلها تماماً)") }}
+                            <div class="text-muted fw-normal small mt-1">{{ __("تختفي هذه الفحوصات كلياً وفورياً من محطة الطبيب والاستعلامات والطوارئ حتى تعيد تفعيلها.") }}</div>
                         </label>
                     </div>
 
                     <div class="form-check p-3 border rounded-3 bg-light cursor-pointer">
                         <input class="form-check-input" type="radio" name="action" id="action_hi" value="hi_disable">
                         <label class="form-check-label small fw-bold text-dark cursor-pointer ms-2" for="action_hi">
-                            <i class="fas fa-shield-slash text-warning me-1"></i> إيقاف عن الضمان الصحي فقط
-                            <div class="text-muted fw-normal small mt-1">تختفي فقط أمام مرضى الضمان الصحي، مع إمكانية بقائها متاحة لمرضى الدفع النقدي (الكاش).</div>
+                            <i class="fas fa-shield-slash text-warning me-1"></i> {{ __("إيقاف عن الضمان الصحي فقط") }}
+                            <div class="text-muted fw-normal small mt-1">{{ __("تختفي فقط أمام مرضى الضمان الصحي، مع إمكانية بقائها متاحة لمرضى الدفع النقدي (الكاش).") }}</div>
                         </label>
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2 rounded-bottom-4">
-                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">{{ __("إلغاء") }}</button>
                     <button type="submit" class="btn btn-danger btn-sm fw-bold rounded-pill px-4 shadow-sm">
-                        <i class="fas fa-check me-1"></i> تأكيد وتنفيذ الإطفاء
+                        <i class="fas fa-check me-1"></i> {{ __("تأكيد وتنفيذ الإطفاء") }}
                     </button>
                 </div>
             </div>
@@ -490,32 +489,32 @@
             <div class="modal-content shadow-lg border-0 rounded-4">
                 <div class="modal-header bg-info text-white py-3 rounded-top-4">
                     <h5 class="modal-title fs-6 fw-bold" id="importLabTestsModalLabel">
-                        <i class="fas fa-file-excel me-2"></i> استيراد وتحديث أسعار التحاليل من ملف إكسل
+                        <i class="fas fa-file-excel me-2"></i> {{ __("استيراد وتحديث أسعار التحاليل من ملف إكسل") }}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="alert alert-light border border-info-subtle small mb-3 rounded-3">
-                        <div class="fw-bold mb-1 text-primary"><i class="fas fa-info-circle me-1"></i> آلية المطابقة والتحديث الذكي:</div>
+                        <div class="fw-bold mb-1 text-primary"><i class="fas fa-info-circle me-1"></i>{{ __("آلية المطابقة والتحديث الذكي:") }}</div>
                         <ul class="mb-0 ps-3 text-muted">
-                            <li>يمكنك تصدير الجدول الحالي أولاً عبر زر <strong>تصدير إكسل</strong> وتعديل الأسعار فيه ثم إعادة رفعه هنا.</li>
-                            <li>يقوم النظام بمطابقة التحاليل تلقائياً برقم <strong>المعرف (# ID)</strong> أو <strong>الرمز الطبي (Code)</strong> أو الاسم.</li>
-                            <li>يتم تحديث: سعر الكاش، سعر الضمان، حالة شمول الضمان، وحالة التفعيل (نشط/معطل).</li>
-                            <li>الصيغ المدعومة: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code> (الحد الأقصى: 10 ميغابايت).</li>
+                            <li>{{ __("يمكنك تصدير الجدول الحالي أولاً عبر زر") }}<strong>{{ __("تصدير إكسل") }}</strong>{{ __("وتعديل الأسعار فيه ثم إعادة رفعه هنا.") }}</li>
+                            <li>{{ __("يقوم النظام بمطابقة التحاليل تلقائياً برقم") }}<strong>{{ __("المعرف (# ID)") }}</strong>{{ __("أو") }}<strong>{{ __("الرمز الطبي (Code)") }}</strong>{{ __("أو الاسم.") }}</li>
+                            <li>{{ __("يتم تحديث: سعر الكاش، سعر الضمان، حالة شمول الضمان، وحالة التفعيل (نشط/معطل).") }}</li>
+                            <li>{{ __("الصيغ المدعومة:") }}<code>.xlsx</code>, <code>.xls</code>, <code>.csv</code>{{ __("(الحد الأقصى: 10 ميغابايت).") }}</li>
                         </ul>
                     </div>
 
                     <div class="mb-3">
                         <label for="excel_file_lab_idx" class="form-label small fw-bold text-dark">
-                            <i class="fas fa-cloud-arrow-up me-1 text-primary"></i> اختر ملف الإكسل المحدث:
+                            <i class="fas fa-cloud-arrow-up me-1 text-primary"></i> {{ __("اختر ملف الإكسل المحدث:") }}
                         </label>
                         <input type="file" name="excel_file" id="excel_file_lab_idx" class="form-control rounded-3" accept=".xlsx,.xls,.csv" required>
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2 rounded-bottom-4">
-                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">{{ __("إلغاء") }}</button>
                     <button type="submit" class="btn btn-info text-white btn-sm fw-bold rounded-pill px-4 shadow-sm">
-                        <i class="fas fa-upload me-1"></i> بدء الاستيراد والتحديث
+                        <i class="fas fa-upload me-1"></i> {{ __("بدء الاستيراد والتحديث") }}
                     </button>
                 </div>
             </div>
@@ -529,7 +528,7 @@
         <div class="d-flex">
             <div class="toast-body d-flex align-items-center gap-2" id="toastMessage">
                 <i class="fas fa-check-circle text-success fs-5"></i>
-                <span>تم التحديث بنجاح</span>
+                <span>{{ __("تم التحديث بنجاح") }}</span>
             </div>
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
         </div>
@@ -588,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (field === 'is_active') {
                         if (badge) {
                             badge.className = `badge status-badge mt-1 ${data.is_active ? 'bg-success' : 'bg-danger'}`;
-                            badge.textContent = data.is_active ? 'نشط بالمحطات' : 'معطل ومحجوب';
+                            badge.textContent = data.is_active ? '{{ __("نشط بالمحطات") }}' : '{{ __("معطل ومحجوب") }}';
                         }
                         if (row) {
                             if (data.is_active) {
@@ -600,19 +599,19 @@ document.addEventListener('DOMContentLoaded', function () {
                     } else if (field === 'is_hi_active') {
                         if (badge) {
                             badge.className = `badge hi-badge mt-1 ${data.is_hi_active ? 'bg-info' : 'bg-secondary'}`;
-                            badge.textContent = data.is_hi_active ? 'مشمول بالضمان' : 'خارج الضمان';
+                            badge.textContent = data.is_hi_active ? '{{ __("مشمول بالضمان") }}' : '{{ __("خارج الضمان") }}';
                         }
                     }
                 } else {
                     // تراجع
                     this.checked = !isChecked;
-                    showToast(data.message || 'حدث خطأ أثناء التحديث', false);
+                    showToast(data.message || '{{ __("حدث خطأ أثناء التحديث") }}', false);
                 }
             })
             .catch(err => {
                 this.disabled = false;
                 this.checked = !isChecked;
-                showToast('تعذر الاتصال بالخادم', false);
+                showToast('{{ __("تعذر الاتصال بالخادم") }}', false);
             });
         });
     });
@@ -630,7 +629,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (count > 0) {
             floatingBar.style.display = 'block';
-            selectedBadge.textContent = `${count} فحص محدد`;
+            selectedBadge.textContent = document.documentElement.lang === 'en' ? `${count} tests selected` : `${count} فحص محدد`;
         } else {
             floatingBar.style.display = 'none';
         }
@@ -676,12 +675,13 @@ document.addEventListener('DOMContentLoaded', function () {
             const ids = checkedBoxes.map(cb => cb.value);
 
             if (ids.length === 0) {
-                showToast('يرجى اختيار فحص واحد على الأقل', false);
+                showToast('{{ __("يرجى اختيار فحص واحد على الأقل") }}', false);
                 return;
             }
 
             const actionLabel = this.textContent.trim();
-            if (!confirm(`هل أنت متأكد من (${actionLabel}) لـ ${ids.length} فحص محدد؟`)) {
+            const confirmMsg = document.documentElement.lang === 'en' ? `Are you sure you want to (${actionLabel}) for ${ids.length} selected tests?` : `هل أنت متأكد من (${actionLabel}) لـ ${ids.length} فحص محدد؟`;
+            if (!confirm(confirmMsg)) {
                 return;
             }
 
@@ -717,7 +717,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             if (sw) sw.checked = isActive;
                             if (badge) {
                                 badge.className = `badge status-badge mt-1 ${isActive ? 'bg-success' : 'bg-danger'}`;
-                                badge.textContent = isActive ? 'نشط بالمحطات' : 'معطل ومحجوب';
+                                badge.textContent = isActive ? '{{ __("نشط بالمحطات") }}' : '{{ __("معطل ومحجوب") }}';
                             }
                             if (row) {
                                 if (isActive) row.classList.remove('table-light', 'opacity-75');
@@ -729,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             if (sw) sw.checked = isActive;
                             if (badge) {
                                 badge.className = `badge hi-badge mt-1 ${isActive ? 'bg-info' : 'bg-secondary'}`;
-                                badge.textContent = isActive ? 'مشمول بالضمان' : 'خارج الضمان';
+                                badge.textContent = isActive ? '{{ __("مشمول بالضمان") }}' : '{{ __("خارج الضمان") }}';
                             }
                         }
                     });
@@ -739,12 +739,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (selectAllCheckbox) selectAllCheckbox.checked = false;
                     updateFloatingBar();
                 } else {
-                    showToast(data.message || 'فشلت العملية', false);
+                    showToast(data.message || '{{ __("فشلت العملية") }}', false);
                 }
             })
             .catch(err => {
                 bulkApplyBtns.forEach(b => b.disabled = false);
-                showToast('تعذر الاتصال بالخادم', false);
+                showToast('{{ __("تعذر الاتصال بالخادم") }}', false);
             });
         });
     });

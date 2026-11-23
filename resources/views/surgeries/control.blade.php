@@ -7,7 +7,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <h2>
                     <i class="fas fa-cogs me-2"></i>
-                    لوحة تحكم العمليات الجراحية
+                    {{ __('لوحة تحكم العمليات الجراحية') }}
                 </h2>
             </div>
         </div>
@@ -25,18 +25,18 @@
         <div class="col-lg-8 mb-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-warning text-dark">
-                    <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>قائمة الانتظار</h5>
+                    <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>{{ __('قائمة الانتظار') }}</h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>المريض</th>
-                                    <th>العملية</th>
-                                    <th>التاريخ</th>
-                                    <th>الوقت</th>
-                                    <th>الإجراء</th>
+                                    <th>{{ __('المريض') }}</th>
+                                    <th>{{ __('العملية') }}</th>
+                                    <th>{{ __('التاريخ') }}</th>
+                                    <th>{{ __('الوقت') }}</th>
+                                    <th>{{ __('الإجراء') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -46,11 +46,11 @@
                                         <div class="fw-bold">{{ $surgery->patient->user->name }}</div>
                                         <small class="text-muted">
                                             @if($surgery->doctor && $surgery->doctor->user)
-                                                د. {{ $surgery->doctor->user->name }}
+                                                {{ __('د.') }} {{ $surgery->doctor->user->name }}
                                             @elseif($surgery->surgeon_name)
-                                                {{ $surgery->surgeon_name }} (خارجي)
+                                                {{ $surgery->surgeon_name }} ({{ __('خارجي') }})
                                             @else
-                                                غير محدد
+                                                {{ __('غير محدد') }}
                                             @endif
                                         </small>
                                     </td>
@@ -62,14 +62,14 @@
                                             <form action="{{ route('surgeries.check-in', $surgery) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn btn-sm btn-primary">
-                                                    <i class="fas fa-check me-1"></i>دخول
+                                                    <i class="fas fa-check me-1"></i>{{ __('دخول') }}
                                                 </button>
                                             </form>
                                         @else
                                             <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit" class="btn btn-sm btn-success">
-                                                    <i class="fas fa-play me-1"></i>بدء
+                                                    <i class="fas fa-play me-1"></i>{{ __('بدء') }}
                                                 </button>
                                             </form>
                                         @endif
@@ -78,7 +78,7 @@
                                 @empty
                                 <tr>
                                     <td colspan="5" class="text-center py-4 text-muted">
-                                        لا توجد عمليات في الانتظار
+                                        {{ __('لا توجد عمليات في الانتظار') }}
                                     </td>
                                 </tr>
                                 @endforelse
@@ -93,21 +93,21 @@
         <div class="col-lg-4 mb-4">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>عرض العمليات</h5>
+                    <h5 class="mb-0"><i class="fas fa-procedures me-2"></i>{{ __('عرض العمليات') }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
                         <a href="{{ route('surgeries.index') }}" class="btn btn-outline-primary">
-                            <i class="fas fa-list me-2"></i>جميع العمليات
+                            <i class="fas fa-list me-2"></i>{{ __('جميع العمليات') }}
                         </a>
                         <a href="{{ route('surgeries.create') }}" class="btn btn-outline-success">
-                            <i class="fas fa-plus me-2"></i>إضافة عملية جديدة
+                            <i class="fas fa-plus me-2"></i>{{ __('إضافة عملية جديدة') }}
                         </a>
                         <a href="{{ route('surgical-operations.index') }}" class="btn btn-outline-info">
-                            <i class="fas fa-cogs me-2"></i>إدارة أنواع العمليات
+                            <i class="fas fa-cogs me-2"></i>{{ __('إدارة أنواع العمليات') }}
                         </a>
                         <a href="{{ route('rooms.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-bed me-2"></i>إدارة الغرف
+                            <i class="fas fa-bed me-2"></i>{{ __('إدارة الغرف') }}
                         </a>
                     </div>
                 </div>

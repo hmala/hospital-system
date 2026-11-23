@@ -5,11 +5,11 @@
     <div class="row mb-4">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
-                <h2><i class="fas fa-baby me-2 text-info"></i>الحركات المالية لقسم الخدج والحاضنات</h2>
-                <p class="text-muted mb-0">سجل المقبوضات، الأمانات، الدفعات تحت الحساب، والتسويات والمبالغ المستردة لحالات الحواضن.</p>
+                <h2><i class="fas fa-baby me-2 text-info"></i>{{ __('الحركات المالية لقسم الخدج والحاضنات') }}</h2>
+                <p class="text-muted mb-0">{{ __('سجل المقبوضات، الأمانات، الدفعات تحت الحساب، والتسويات والمبالغ المستردة لحالات الحواضن.') }}</p>
             </div>
             <a href="{{ route('cashier.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>العودة إلى الكاشير الرئيسية
+                <i class="fas fa-arrow-left me-2"></i>{{ __('العودة إلى الكاشير الرئيسية') }}
             </a>
         </div>
     </div>
@@ -21,37 +21,37 @@
                 <div class="card-body">
                     <form method="GET" action="{{ route('cashier.nicu.financial-movements') }}" class="row g-3 align-items-end">
                         <div class="col-md-3">
-                            <label for="from_date" class="form-label">من تاريخ</label>
+                            <label for="from_date" class="form-label">{{ __('من تاريخ') }}</label>
                             <input type="date" id="from_date" name="from_date" class="form-control" value="{{ old('from_date', $fromDate) }}">
                         </div>
                         <div class="col-md-3">
-                            <label for="to_date" class="form-label">إلى تاريخ</label>
+                            <label for="to_date" class="form-label">{{ __('إلى تاريخ') }}</label>
                             <input type="date" id="to_date" name="to_date" class="form-control" value="{{ old('to_date', $toDate) }}">
                         </div>
                         <div class="col-md-3">
-                            <label for="payment_type" class="form-label">نوع الحركة</label>
+                            <label for="payment_type" class="form-label">{{ __('نوع الحركة') }}</label>
                             <select id="payment_type" name="payment_type" class="form-select">
-                                <option value="">كل الحركات</option>
-                                <option value="deposit" {{ $paymentType === 'deposit' ? 'selected' : '' }}>أمانات وسلفة دخول</option>
-                                <option value="interim" {{ $paymentType === 'interim' ? 'selected' : '' }}>دفعة تحت الحساب</option>
-                                <option value="final_settlement" {{ $paymentType === 'final_settlement' ? 'selected' : '' }}>تسوية نهائية عند التخريج</option>
-                                <option value="refund" {{ $paymentType === 'refund' ? 'selected' : '' }}>استرجاع فائض أمانات</option>
+                                <option value="">{{ __('كل الحركات') }}</option>
+                                <option value="deposit" {{ $paymentType === 'deposit' ? 'selected' : '' }}>{{ __('أمانات وسلفة دخول') }}</option>
+                                <option value="interim" {{ $paymentType === 'interim' ? 'selected' : '' }}>{{ __('دفعة تحت الحساب') }}</option>
+                                <option value="final_settlement" {{ $paymentType === 'final_settlement' ? 'selected' : '' }}>{{ __('تسوية نهائية عند التخريج') }}</option>
+                                <option value="refund" {{ $paymentType === 'refund' ? 'selected' : '' }}>{{ __('استرجاع فائض أمانات') }}</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label for="payment_method" class="form-label">طريقة الدفع</label>
+                            <label for="payment_method" class="form-label">{{ __('طريقة الدفع') }}</label>
                             <select id="payment_method" name="payment_method" class="form-select">
-                                <option value="">كل الطرق</option>
-                                <option value="cash" {{ $paymentMethod === 'cash' ? 'selected' : '' }}>نقدي (كاش)</option>
-                                <option value="card" {{ $paymentMethod === 'card' ? 'selected' : '' }}>بطاقة إلكترونية</option>
+                                <option value="">{{ __('كل الطرق') }}</option>
+                                <option value="cash" {{ $paymentMethod === 'cash' ? 'selected' : '' }}>{{ __('نقدي (كاش)') }}</option>
+                                <option value="card" {{ $paymentMethod === 'card' ? 'selected' : '' }}>{{ __('بطاقة إلكترونية') }}</option>
                             </select>
                         </div>
                         <div class="col-12 d-flex gap-2 justify-content-end">
                             <button type="submit" class="btn btn-info text-white px-4">
-                                <i class="fas fa-filter me-2"></i>تصفية
+                                <i class="fas fa-filter me-2"></i>{{ __('تصفية') }}
                             </button>
                             <a href="{{ route('cashier.nicu.financial-movements') }}" class="btn btn-outline-secondary px-3">
-                                <i class="fas fa-redo me-2"></i>مسح
+                                <i class="fas fa-redo me-2"></i>{{ __('مسح') }}
                             </a>
                         </div>
                     </form>
@@ -67,8 +67,8 @@
                         <div class="card-body py-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1" style="font-size: 0.85rem;">المستلم والأمانات (الخدج)</h6>
-                                    <p class="fs-5 mb-0 fw-bold">{{ number_format($totalReceived, 0) }} د.ع</p>
+                                    <h6 class="mb-1" style="font-size: 0.85rem;">{{ __('المستلم والأمانات (الخدج)') }}</h6>
+                                    <p class="fs-5 mb-0 fw-bold">{{ number_format($totalReceived, 0) }} {{ __('د.ع') }}</p>
                                 </div>
                                 <i class="fas fa-hand-holding-usd fa-2x opacity-50"></i>
                             </div>
@@ -80,8 +80,8 @@
                         <div class="card-body py-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1" style="font-size: 0.85rem;">المسترجع وفائض الأمانات</h6>
-                                    <p class="fs-5 mb-0 fw-bold">{{ number_format($totalRefunded, 0) }} د.ع</p>
+                                    <h6 class="mb-1" style="font-size: 0.85rem;">{{ __('المسترجع وفائض الأمانات') }}</h6>
+                                    <p class="fs-5 mb-0 fw-bold">{{ number_format($totalRefunded, 0) }} {{ __('د.ع') }}</p>
                                 </div>
                                 <i class="fas fa-undo-alt fa-2x opacity-50"></i>
                             </div>
@@ -93,8 +93,8 @@
                         <div class="card-body py-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h6 class="mb-1" style="font-size: 0.85rem;">الصافي الفعلي المحصل</h6>
-                                    <p class="fs-5 mb-0 fw-bold">{{ number_format($netTotal, 0) }} د.ع</p>
+                                    <h6 class="mb-1" style="font-size: 0.85rem;">{{ __('الصافي الفعلي المحصل') }}</h6>
+                                    <p class="fs-5 mb-0 fw-bold">{{ number_format($netTotal, 0) }} {{ __('د.ع') }}</p>
                                 </div>
                                 <i class="fas fa-calculator fa-2x opacity-50"></i>
                             </div>
@@ -115,15 +115,15 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>التاريخ والوقت</th>
-                                        <th>المولود / الحاضنة</th>
-                                        <th>نوع الحركة</th>
-                                        <th>المبلغ</th>
-                                        <th>طريقة الدفع</th>
-                                        <th>رقم الإيصال</th>
-                                        <th>أمين الصندوق</th>
-                                        <th>البيان والملاحظات</th>
-                                        <th>الإجراءات</th>
+                                        <th>{{ __('التاريخ والوقت') }}</th>
+                                        <th>{{ __('المولود / الحاضنة') }}</th>
+                                        <th>{{ __('نوع الحركة') }}</th>
+                                        <th>{{ __('المبلغ') }}</th>
+                                        <th>{{ __('طريقة الدفع') }}</th>
+                                        <th>{{ __('رقم الإيصال') }}</th>
+                                        <th>{{ __('أمين الصندوق') }}</th>
+                                        <th>{{ __('البيان والملاحظات') }}</th>
+                                        <th>{{ __('الإجراءات') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -133,12 +133,12 @@
                                             <td>{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i') : '-' }}</td>
                                             <td>
                                                 <div class="fw-bold text-dark">
-                                                    {{ $payment->reservation?->baby_title ?? 'طفل غير محدد' }}
+                                                    {{ $payment->reservation?->baby_title ?? __('طفل غير محدد') }}
                                                 </div>
                                                 <small class="text-muted">
-                                                    الأم: {{ optional(optional($payment->reservation)->patient?->user)->name ?? 'غير مسجل' }}
+                                                    {{ __('الأم:') }} {{ optional(optional($payment->reservation)->patient?->user)->name ?? __('غير مسجل') }}
                                                     @if($payment->reservation?->incubator)
-                                                        <span class="badge bg-light text-dark border ms-1">حاضنة {{ $payment->reservation->incubator->incubator_number }}</span>
+                                                        <span class="badge bg-light text-dark border ms-1">{{ __('حاضنة') }} {{ $payment->reservation->incubator->incubator_number }}</span>
                                                     @endif
                                                 </small>
                                             </td>
@@ -146,7 +146,7 @@
                                                 {!! $payment->payment_type_badge !!}
                                             </td>
                                             <td class="fw-bold {{ $payment->payment_type === \App\Models\NicuPayment::TYPE_REFUND ? 'text-danger' : 'text-success' }}">
-                                                {{ $payment->payment_type === \App\Models\NicuPayment::TYPE_REFUND ? '-' : '+' }}{{ number_format($payment->amount, 0) }} د.ع
+                                                {{ $payment->payment_type === \App\Models\NicuPayment::TYPE_REFUND ? '-' : '+' }}{{ number_format($payment->amount, 0) }} {{ __('د.ع') }}
                                             </td>
                                             <td>
                                                 <span class="badge bg-light text-dark border">
@@ -158,14 +158,14 @@
                                             <td><span class="small text-muted">{{ $payment->notes ?? '—' }}</span></td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <a href="{{ route('cashier.nicu.receipt', $payment) }}" class="btn btn-outline-info" title="عرض السند">
-                                                        <i class="fas fa-eye me-1"></i>السند
+                                                    <a href="{{ route('cashier.nicu.receipt', $payment) }}" class="btn btn-outline-info" title="{{ __('عرض السند') }}">
+                                                        <i class="fas fa-eye me-1"></i>{{ __('السند') }}
                                                     </a>
-                                                    <a href="{{ route('cashier.nicu.receipt.print', $payment) }}" target="_blank" class="btn btn-outline-secondary" title="طباعة حرارية">
+                                                    <a href="{{ route('cashier.nicu.receipt.print', $payment) }}" target="_blank" class="btn btn-outline-secondary" title="{{ __('طباعة حرارية') }}">
                                                         <i class="fas fa-print"></i>
                                                     </a>
                                                     @if($payment->incubator_reservation_id)
-                                                        <a href="{{ route('nicu.statement', $payment->incubator_reservation_id) }}" class="btn btn-outline-primary" title="كشف حساب الطفل">
+                                                        <a href="{{ route('nicu.statement', $payment->incubator_reservation_id) }}" class="btn btn-outline-primary" title="{{ __('كشف حساب الطفل') }}">
                                                             <i class="fas fa-file-invoice"></i>
                                                         </a>
                                                     @endif
@@ -182,7 +182,7 @@
                     @else
                         <div class="text-center py-5">
                             <i class="fas fa-baby fa-3x text-muted mb-3 opacity-50"></i>
-                            <p class="text-muted">لا توجد حركات مالية مسجلة لقسم الخدج ضمن الفترة المحددة.</p>
+                            <p class="text-muted">{{ __('لا توجد حركات مالية مسجلة لقسم الخدج ضمن الفترة المحددة.') }}</p>
                         </div>
                     @endif
                 </div>

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\NicuMilkType;
 use App\Models\NicuService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,9 +28,8 @@ class NicuServiceController extends Controller
         $this->authorizeManage();
 
         $services = NicuService::withCount('reservations')->orderBy('id')->get();
-        $milkTypes = NicuMilkType::orderBy('sort_order')->orderBy('name')->get();
 
-        return view('nicu.services.index', compact('services', 'milkTypes'));
+        return view('nicu.services.index', compact('services'));
     }
 
     /**

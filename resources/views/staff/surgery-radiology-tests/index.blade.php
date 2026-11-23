@@ -8,25 +8,25 @@
                 <div>
                     <h2>
                         <i class="fas fa-x-ray me-2"></i>
-                        طلبات الأشعة للعمليات الجراحية
+                        {{ __("طلبات الأشعة للعمليات الجراحية") }}
                     </h2>
                     <a href="{{ route('staff.surgery-radiology-tests.selection') }}" class="btn btn-outline-light btn-sm mt-2">
                         <i class="fas fa-list me-1"></i>
-                        العمليات التي تحتاج اختيار أشعة
+                        {{ __("العمليات التي تحتاج اختيار أشعة") }}
                     </a>
                 </div>
                 <div class="stats-summary">
                     <span class="badge bg-info me-2">
                         <i class="fas fa-clock me-1"></i>
-                        {{ $radiologyTests->where('status', 'pending')->count() }} في الانتظار
+                        {{ $radiologyTests->where('status', 'pending')->count() }} {{ __('في الانتظار') }}
                     </span>
                     <span class="badge bg-success me-2">
                         <i class="fas fa-check-circle me-1"></i>
-                        {{ $radiologyTests->where('status', 'completed')->count() }} مكتمل
+                        {{ $radiologyTests->where('status', 'completed')->count() }} {{ __('مكتمل') }}
                     </span>
                     <span class="badge bg-danger">
                         <i class="fas fa-times-circle me-1"></i>
-                        {{ $radiologyTests->where('status', 'cancelled')->count() }} ملغي
+                        {{ $radiologyTests->where('status', 'cancelled')->count() }} {{ __('ملغي') }}
                     </span>
                 </div>
             </div>
@@ -45,46 +45,46 @@
         <div class="card-header bg-light">
             <h6 class="mb-0">
                 <i class="fas fa-search me-2"></i>
-                البحث والتصفية
+                {{ __("البحث والتصفية") }}
             </h6>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('staff.surgery-radiology-tests.index') }}" class="row g-3">
                 <div class="col-md-4">
-                    <label for="search" class="form-label">البحث</label>
+                    <label for="search" class="form-label">{{ __("البحث") }}</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="ابحث بالمريض أو نوع العملية أو التصوير...">
+                        <input type="text" class="form-control" id="search" name="search" value="{{ request('search') }}" placeholder="{{ __("ابحث بالمريض أو نوع العملية أو التصوير...") }}">
                     </div>
                 </div>
 
                 <div class="col-md-2">
-                    <label for="status_filter" class="form-label">الحالة</label>
+                    <label for="status_filter" class="form-label">{{ __("الحالة") }}</label>
                     <select class="form-select" id="status_filter" name="status">
-                        <option value="">جميع الحالات</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>في الانتظار</option>
-                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>مكتمل</option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>ملغي</option>
+                        <option value="">{{ __("جميع الحالات") }}</option>
+                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>{{ __("في الانتظار") }}</option>
+                        <option value="completed" {{ request('status') == 'completed' ? 'selected' : '' }}>{{ __("مكتمل") }}</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>{{ __("ملغي") }}</option>
                     </select>
                 </div>
 
                 <div class="col-md-2">
-                    <label for="date_from" class="form-label">من تاريخ</label>
+                    <label for="date_from" class="form-label">{{ __("من تاريخ") }}</label>
                     <input type="date" class="form-control" id="date_from" name="date_from" value="{{ request('date_from') }}">
                 </div>
 
                 <div class="col-md-2">
-                    <label for="date_to" class="form-label">إلى تاريخ</label>
+                    <label for="date_to" class="form-label">{{ __("إلى تاريخ") }}</label>
                     <input type="date" class="form-control" id="date_to" name="date_to" value="{{ request('date_to') }}">
                 </div>
 
                 <div class="col-md-2 d-flex align-items-end">
                     <div class="d-grid gap-2 d-md-flex">
                         <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search me-1"></i>بحث
+                            <i class="fas fa-search me-1"></i>{{ __("بحث") }}
                         </button>
                         <a href="{{ route('staff.surgery-radiology-tests.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-undo me-1"></i>إعادة تعيين
+                            <i class="fas fa-undo me-1"></i>{{ __("إعادة تعيين") }}
                         </a>
                     </div>
                 </div>
@@ -97,9 +97,9 @@
         <div class="card-header bg-primary text-white">
             <h6 class="mb-0">
                 <i class="fas fa-list me-2"></i>
-                قائمة الطلبات الإشعاعية
+                {{ __("قائمة الطلبات الإشعاعية") }}
                 @if(request('search') || request('status') || request('date_from') || request('date_to'))
-                <small class="text-light ms-2">(تم تطبيق التصفية)</small>
+                <small class="text-light ms-2">({{ __("تم تطبيق التصفية") }})</small>
                 @endif
             </h6>
         </div>
@@ -110,13 +110,13 @@
                     <thead class="table-dark">
                         <tr>
                             <th class="text-center" style="width: 60px;">#</th>
-                            <th>المريض</th>
-                            <th>نوع العملية</th>
-                            <th>تاريخ العملية</th>
-                            <th>نوع التصوير</th>
-                            <th class="text-center">الحالة</th>
-                            <th>تاريخ الطلب</th>
-                            <th class="text-center" style="width: 150px;">الإجراءات</th>
+                            <th>{{ __("المريض") }}</th>
+                            <th>{{ __("نوع العملية") }}</th>
+                            <th>{{ __("تاريخ العملية") }}</th>
+                            <th>{{ __("نوع التصوير") }}</th>
+                            <th class="text-center">{{ __("الحالة") }}</th>
+                            <th>{{ __("تاريخ الطلب") }}</th>
+                            <th class="text-center" style="width: 150px;">{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -131,12 +131,12 @@
                                     <div>
                                         @if($test->surgery && $test->surgery->patient)
                                         <a href="{{ route('patients.show', $test->surgery->patient) }}" class="text-decoration-none fw-bold">
-                                            {{ optional($test->surgery->patient->user)->name ?? 'غير معروف' }}
+                                            {{ optional($test->surgery->patient->user)->name ?? __('غير معروف') }}
                                         </a>
                                         <br>
                                         <small class="text-muted">ID: {{ $test->surgery->patient->id }}</small>
                                         @else
-                                        <span class="text-muted">غير معروف</span>
+                                        <span class="text-muted">{{ __("غير معروف") }}</span>
                                         @endif
                                     </div>
                                 </div>
@@ -146,13 +146,13 @@
                                 <span class="badge bg-info">{{ $test->surgery->surgery_type }}</span>
                                 @if($test->surgery->surgery_fee_paid !== 'paid')
                                 <br>
-                                <span class="badge bg-danger mt-1" title="لا يمكن إجراء الأشعة قبل دفع رسوم العملية">
+                                <span class="badge bg-danger mt-1" title="{{ __("لا يمكن إجراء الأشعة قبل دفع رسوم العملية") }}">
                                     <i class="fas fa-exclamation-triangle me-1"></i>
-                                    غير مدفوعة
+                                    {{ __("غير مدفوعة") }}
                                 </span>
                                 @endif
                                 @else
-                                <span class="badge bg-secondary">غير محدد</span>
+                                <span class="badge bg-secondary">{{ __("غير محدد") }}</span>
                                 @endif
                             </td>
                             <td>
@@ -162,7 +162,7 @@
                                 <br>
                                 <small class="text-muted">{{ $test->surgery->scheduled_time }}</small>
                                 @else
-                                <span class="text-muted">غير محدد</span>
+                                <span class="text-muted">{{ __("غير محدد") }}</span>
                                 @endif
                             </td>
                             <td>
@@ -175,8 +175,8 @@
                                             <br><small class="text-muted">{{ $test->radiologyType->code }}</small>
                                             @endif
                                         @else
-                                            <strong class="text-warning">طلب أشعة عام</strong>
-                                            <br><small class="text-muted">لم يتم تحديد نوع الأشعة بعد</small>
+                                            <strong class="text-warning">{{ __("طلب أشعة عام") }}</strong>
+                                            <br><small class="text-muted">{{ __("لم يتم تحديد نوع الأشعة بعد") }}</small>
                                         @endif
                                     </div>
                                 </div>
@@ -195,17 +195,17 @@
                             </td>
                             <td class="text-center">
                                 <div class="btn-group" role="group">
-                                    <a href="{{ route('staff.surgery-radiology-tests.show', $test) }}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
+                                    <a href="{{ route('staff.surgery-radiology-tests.show', $test) }}" class="btn btn-sm btn-outline-primary" title="{{ __("عرض التفاصيل") }}">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @if($test->status == 'completed')
-                                    <a href="{{ route('staff.surgery-radiology-tests.print', $test) }}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="طباعة الطلب">
+                                    <a href="{{ route('staff.surgery-radiology-tests.print', $test) }}" target="_blank" class="btn btn-sm btn-outline-success me-1" title="{{ __("طباعة الطلب") }}">
                                         <i class="fas fa-print"></i>
                                     </a>
                                     @endif
                                     @if($test->status == 'pending')
                                     <button class="btn btn-sm btn-outline-success" 
-                                            title="{{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? 'يجب دفع رسوم العملية أولاً' : 'تحديث النتائج' }}" 
+                                            title="{{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? __('يجب دفع رسوم العملية أولاً') : __('تحديث النتائج') }}" 
                                             onclick="quickUpdate({{ $test->id }}, 'completed')"
                                             {{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? 'disabled' : '' }}>
                                         <i class="fas fa-check"></i>
@@ -221,7 +221,7 @@
 
             <div class="d-flex justify-content-between align-items-center mt-4">
                 <div class="text-muted">
-                    عرض {{ $radiologyTests->firstItem() }} إلى {{ $radiologyTests->lastItem() }} من أصل {{ $radiologyTests->total() }} طلب
+                    {{ __("عرض") }} {{ $radiologyTests->firstItem() }} {{ __("إلى") }} {{ $radiologyTests->lastItem() }} {{ __("من أصل") }} {{ $radiologyTests->total() }} {{ __("طلب") }}
                 </div>
                 <div>
                     {{ $radiologyTests->appends(request()->query())->links() }}
@@ -230,17 +230,17 @@
             @else
             <div class="text-center py-5">
                 <i class="fas fa-x-ray fa-4x text-muted mb-3"></i>
-                <h4 class="text-muted">لا توجد طلبات إشعاعية للعمليات</h4>
+                <h4 class="text-muted">{{ __("لا توجد طلبات إشعاعية للعمليات") }}</h4>
                 <p class="text-muted">
                     @if(request('search') || request('status') || request('date_from') || request('date_to'))
-                    لا توجد نتائج تطابق معايير البحث المحددة
+                    {{ __("لا توجد نتائج تطابق معايير البحث المحددة") }}
                     @else
-                    جميع الطلبات الإشعاعية للعمليات مكتملة أو لا توجد طلبات حالياً
+                    {{ __("جميع الطلبات الإشعاعية للعمليات مكتملة أو لا توجد طلبات حالياً") }}
                     @endif
                 </p>
                 @if(request('search') || request('status') || request('date_from') || request('date_to'))
                 <a href="{{ route('staff.surgery-radiology-tests.index') }}" class="btn btn-outline-primary">
-                    <i class="fas fa-undo me-1"></i>عرض جميع الطلبات
+                    <i class="fas fa-undo me-1"></i>{{ __("عرض جميع الطلبات") }}
                 </a>
                 @endif
             </div>
@@ -251,7 +251,7 @@
 
 <script>
 function quickUpdate(testId, status) {
-    if (confirm('هل أنت متأكد من تحديث حالة هذا التصوير الإشعاعي؟')) {
+    if (confirm('{{ __("هل أنت متأكد من تحديث حالة هذا التصوير الإشعاعي؟") }}')) {
         // إنشاء نموذج مؤقت للإرسال
         const form = document.createElement('form');
         form.method = 'POST';
@@ -282,7 +282,7 @@ function quickUpdate(testId, status) {
         const resultField = document.createElement('input');
         resultField.type = 'hidden';
         resultField.name = 'result';
-        resultField.value = 'تم التحديث السريع - يرجى إدخال التقرير التفصيلي';
+        resultField.value = '{{ __("تم التحديث السريع - يرجى إدخال التقرير التفصيلي") }}';
         form.appendChild(resultField);
 
         document.body.appendChild(form);

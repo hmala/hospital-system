@@ -1,33 +1,56 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+    .hover-primary:hover {
+        color: #0284c7 !important;
+        text-decoration: underline !important;
+    }
+    .surgery-link-row {
+        transition: background-color 0.15s ease-in-out;
+    }
+    .surgery-link-row:hover {
+        background-color: rgba(2, 132, 199, 0.035) !important;
+    }
+</style>
+
 <div class="container-fluid py-3">
     {{-- Executive Header --}}
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 14px;">
-        <div class="card-body p-4 text-white">
+    <div class="card border-0 shadow-sm mb-3" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius: 14px;">
+        <div class="card-body p-3 p-md-4 text-white">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 54px; height: 54px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(59, 130, 246, 0.4);">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center shadow" style="width: 50px; height: 50px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(59, 130, 246, 0.4);">
                         <i class="fas fa-user-md text-primary fs-3"></i>
                     </div>
                     <div>
-                        <div class="d-flex align-items-center gap-2">
-                            <h4 class="fw-bold mb-0 text-white">محطة الطبيب الجراح</h4>
-                            <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 px-2.5 py-1 rounded-pill small">
-                                Surgeon Station
-                            </span>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <h4 class="fw-bold mb-0 text-white">{{ __('محطة الطبيب الجراح') }}</h4>
+                            @if($isSharedAccount)
+                                <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-2.5 py-1 rounded-pill small">
+                                    <i class="fas fa-hospital me-1"></i> {{ __('صالة العمليات - الحساب الموحد لكافة الجراحين') }}
+                                </span>
+                            @else
+                                <span class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-50 px-2.5 py-1 rounded-pill small">
+                                    <i class="fas fa-user-md me-1"></i> {{ __('د.') }} {{ auth()->user()->name }} ({{ __('حساب خاص') }})
+                                </span>
+                            @endif
                         </div>
                         <p class="text-white-50 mb-0 small mt-1">
-                            متابعة العمليات الجراحية بعد الصالة، توثيق الخطة العلاجية، وإصدار توجيهات المتابعة للمقيمين
+                            @if($isSharedAccount)
+                                {{ __('استعراض كافة عمليات صالة العمليات، تعيين ومتابعة الأطباء الجراحين، وتوثيق القرارات السريرية والتوجيهات للمقيمين') }}
+                            @else
+                                {{ __('متابعة وتوثيق العمليات الجراحية الخاصة بك وتوثيق الخطة العلاجية والتوجيهات السريرية') }}
+                            @endif
                         </p>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-light btn-sm fw-semibold rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-procedures me-1"></i> لوحة الصالات
+                        <i class="fas fa-procedures me-1"></i> {{ __('لوحة الصالات') }}
                     </a>
                     <a href="{{ route('surgeon-station.index') }}" class="btn btn-primary btn-sm fw-bold rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-sync-alt me-1"></i> تحديث فوري
+                        <i class="fas fa-sync-alt me-1"></i> {{ __('تحديث فوري') }}
                     </a>
                 </div>
             </div>
@@ -35,54 +58,104 @@
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
+        <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
             <i class="fas fa-check-circle me-1"></i> {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-4" role="alert">
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm mb-3" role="alert">
             <i class="fas fa-exclamation-circle me-1"></i> {{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
 
-    {{-- KPI Cards --}}
-    @php
-        $totalCount = $surgeries->count();
-        $pendingCount = $surgeries->filter(fn($s) => !$s->surgeonStation || $s->surgeonStation->status === 'pending')->count();
-        $inProgressCount = $surgeries->filter(fn($s) => $s->surgeonStation && $s->surgeonStation->status === 'in_progress')->count();
-        $completedCount = $surgeries->filter(fn($s) => $s->surgeonStation && $s->surgeonStation->status === 'completed')->count();
-    @endphp
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-3 p-3 text-center bg-white h-100">
-                <div class="text-muted small fw-semibold">إجمالي العمليات بالمحطة</div>
-                <div class="fs-3 fw-bolder text-dark my-1">{{ $totalCount }}</div>
-                <div class="text-secondary small">عملية محالة للجراح</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-3 p-3 text-center bg-white h-100 border-start border-4 border-warning">
-                <div class="text-muted small fw-semibold">بانتظار المعاينة</div>
-                <div class="fs-3 fw-bolder text-warning my-1">{{ $pendingCount }}</div>
-                <div class="text-warning small">خرجت من الصالة</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-3 p-3 text-center bg-white h-100 border-start border-4 border-info">
-                <div class="text-muted small fw-semibold">قيد المتابعة</div>
-                <div class="fs-3 fw-bolder text-info my-1">{{ $inProgressCount }}</div>
-                <div class="text-info small">جاري كتابة الخطة</div>
-            </div>
-        </div>
-        <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm rounded-3 p-3 text-center bg-white h-100 border-start border-4 border-success">
-                <div class="text-muted small fw-semibold">مكتملة ومُعتمدة</div>
-                <div class="fs-3 fw-bolder text-success my-1">{{ $completedCount }}</div>
-                <div class="text-success small">حُوّلت للردهة والمقيم</div>
-            </div>
+    {{-- Search & Filter Bar --}}
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+        <div class="card-body p-2.5 p-md-3">
+            <form action="{{ route('surgeon-station.index') }}" method="GET" id="surgeonFilterForm" class="row g-2 align-items-center">
+                {{-- Live Search Box --}}
+                <div class="col-12 col-md-4 col-lg-3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0 text-muted">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" name="search" id="filterSearch" value="{{ request('search') }}"
+                               class="form-control form-control-sm border-start-0 ps-0"
+                               placeholder="{{ __('بحث باسم المريض، رقم الملف، العملية...') }}"
+                               autocomplete="off">
+                        @if(request('search'))
+                            <button type="button" class="btn btn-outline-secondary border-start-0" onclick="clearSearch()" title="{{ __('مسح') }}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        @endif
+                    </div>
+                </div>
+
+                {{-- Surgeon Filter (For Unified Account) or Personal Surgeon Dropdown --}}
+                @if($isSharedAccount)
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <select name="doctor_id" id="filterSurgeon" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">{{ __('كل العمليات بالصالة') }}</option>
+                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>{{ __('بانتظار تعيين طبيب جراح') }}</option>
+                            @foreach($surgeons as $surgeon)
+                                <option value="{{ $surgeon->id }}" {{ request('doctor_id') == $surgeon->id ? 'selected' : '' }}>
+                                    {{ $surgeon->user?->name ?? __('طبيب') . ' #' . $surgeon->id }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @else
+                    <div class="col-6 col-md-3 col-lg-2">
+                        <select name="doctor_id" id="filterSurgeon" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">{{ __('كل العمليات بالصالة') }}</option>
+                            @if(auth()->user()->doctor)
+                                <option value="{{ auth()->user()->doctor->id }}" {{ request('doctor_id') == auth()->user()->doctor->id ? 'selected' : '' }}>
+                                    {{ __('د.') }} {{ auth()->user()->name }} ({{ __('عملياتي') }})
+                                </option>
+                            @endif
+                            <option value="unassigned" {{ request('doctor_id') === 'unassigned' ? 'selected' : '' }}>{{ __('بانتظار تعيين طبيب جراح') }}</option>
+                        </select>
+                    </div>
+                @endif
+
+                {{-- Status Filter --}}
+                <div class="col-6 col-md-3 col-lg-2">
+                    <select name="status" id="filterStatus" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="all">{{ __('كل الحالات') }}</option>
+                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>{{ __('بانتظار المعاينة') }}</option>
+                        <option value="in_progress" {{ request('status') === 'in_progress' ? 'selected' : '' }}>{{ __('قيد المتابعة') }}</option>
+                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>{{ __('مكتملة ومُعتمدة') }}</option>
+                    </select>
+                </div>
+
+                {{-- Date Filter --}}
+                <div class="col-12 col-md-4 col-lg-3">
+                    <div class="input-group input-group-sm">
+                        <input type="date" name="date" id="filterDate" value="{{ request('date') }}"
+                               class="form-control form-control-sm" title="{{ __('تاريخ العملية') }}" onchange="this.form.submit()">
+                        <button type="button" class="btn btn-sm {{ request('date') === 'today' ? 'btn-primary' : 'btn-outline-secondary' }}" onclick="filterQuickDate('today')" title="{{ __('عمليات اليوم') }}">
+                            {{ __('اليوم') }}
+                        </button>
+                        <button type="button" class="btn btn-sm {{ !request('date') || request('date') === 'all' ? 'btn-primary' : 'btn-outline-secondary' }}" onclick="filterQuickDate('all')" title="{{ __('عرض كل التواريخ') }}">
+                            {{ __('الكل') }}
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Action & Reset Buttons --}}
+                <div class="col-12 col-md-auto ms-auto d-flex align-items-center gap-1.5">
+                    <button type="submit" class="btn btn-primary btn-sm fw-bold px-3 shadow-xs">
+                        <i class="fas fa-filter me-1"></i> {{ __('تصفية') }}
+                    </button>
+                    @if(request()->hasAny(['search', 'doctor_id', 'status', 'date']))
+                        <a href="{{ route('surgeon-station.index') }}" class="btn btn-light btn-sm border text-secondary shadow-xs" title="{{ __('إعادة ضبط الفلاتر') }}">
+                            <i class="fas fa-redo me-1"></i> {{ __('ضبط') }}
+                        </a>
+                    @endif
+                </div>
+            </form>
         </div>
     </div>
 
@@ -91,23 +164,23 @@
         <div class="card-header bg-white py-3 px-4 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
             <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
                 <i class="fas fa-list-alt text-primary"></i>
-                قائمة العمليات المحالة لمحطة الجراح
+                {{ __('قائمة العمليات المحالة لمحطة الجراح') }}
             </h5>
-            <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill fw-semibold">
-                عرض {{ $totalCount }} حالة
+            <span class="badge bg-light text-secondary border px-3 py-1.5 rounded-pill fw-semibold" id="casesCountBadge">
+                {{ __('عرض') }} {{ $surgeries->count() }} {{ __('حالة') }}
             </span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" style="font-size: 0.92rem;">
+                <table class="table table-hover align-middle mb-0" id="surgeriesTable" style="font-size: 0.92rem;">
                     <thead class="bg-light text-secondary text-uppercase fw-semibold" style="font-size: 0.8rem; letter-spacing: 0.5px;">
                         <tr>
-                            <th class="ps-4 py-3">المريض</th>
-                            <th class="py-3">العملية الجراحية</th>
-                            <th class="py-3">موعد العملية</th>
-                            <th class="py-3">الطبيب الجراح</th>
-                            <th class="py-3 text-center">حالة المحطة</th>
-                            <th class="pe-4 py-3 text-center">الإجراءات</th>
+                            <th class="ps-4 py-3">{{ __('المريض') }}</th>
+                            <th class="py-3">{{ __('العملية الجراحية') }}</th>
+                            <th class="py-3">{{ __('موعد العملية') }}</th>
+                            <th class="py-3">{{ __('الطبيب الجراح') }}</th>
+                            <th class="py-3 text-center">{{ __('حالة المحطة') }}</th>
+                            <th class="pe-4 py-3 text-center">{{ __('الإجراءات') }}</th>
                         </tr>
                     </thead>
                     <tbody class="border-top-0">
@@ -116,18 +189,32 @@
                                 $stationStatus = $surgery->surgeonStation?->status ?? 'pending';
                                 $isCompleted = ($stationStatus === 'completed');
                                 $isInProgress = ($stationStatus === 'in_progress');
+                                $patientName = $surgery->patient?->user?->name ?? '';
+                                $fileNumber = $surgery->patient?->file_number ?? '';
+                                $surgeryName = $surgery->surgery_name ?? '';
+                                $doctorName = $surgery->doctor?->user?->name ?? '';
+                                $searchString = mb_strtolower(trim("{$patientName} {$fileNumber} {$surgeryName} {$doctorName}"));
                             @endphp
-                            <tr>
+                            <tr class="surgery-row surgery-link-row"
+                                data-search="{{ $searchString }}"
+                                data-surgeon-id="{{ $surgery->doctor_id ?? 'unassigned' }}"
+                                data-status="{{ $stationStatus }}"
+                                data-date="{{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '' }}">
                                 <td class="ps-4 py-3">
                                     <div class="d-flex align-items-center gap-2.5">
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-xs" 
-                                             style="width: 38px; height: 38px; min-width: 38px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 13px;">
-                                            {{ mb_substr($surgery->patient?->user?->name ?? 'م', 0, 1) }}
-                                        </div>
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="text-decoration-none">
+                                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold shadow-xs" 
+                                                 style="width: 38px; height: 38px; min-width: 38px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 13px;">
+                                                {{ mb_substr($patientName ?: 'م', 0, 1) }}
+                                            </div>
+                                        </a>
                                         <div>
-                                            <div class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? '-' }}</div>
+                                            <a href="{{ route('surgeries.show', $surgery) }}" class="fw-bold text-dark text-decoration-none hover-primary d-inline-flex align-items-center gap-1" title="عرض وتعديل تفاصيل العملية">
+                                                <span>{{ $patientName ?: '-' }}</span>
+                                                <i class="fas fa-external-link-alt text-muted" style="font-size: 10px;"></i>
+                                            </a>
                                             <div class="text-muted small">
-                                                <span>ملف: #{{ $surgery->patient?->file_number ?? '-' }}</span>
+                                                <span>ملف: #{{ $fileNumber ?: '-' }}</span>
                                                 @if($surgery->patient?->age)
                                                     <span class="mx-1">•</span>
                                                     <span>{{ $surgery->patient->age }} سنة</span>
@@ -137,7 +224,9 @@
                                     </div>
                                 </td>
                                 <td class="py-3">
-                                    <span class="fw-bold text-dark">{{ $surgery->surgery_name }}</span>
+                                    <a href="{{ route('surgeries.show', $surgery) }}" class="fw-bold text-dark text-decoration-none hover-primary" title="عرض تفاصيل العملية">
+                                        {{ $surgeryName ?: '-' }}
+                                    </a>
                                     @if($surgery->department)
                                         <div class="text-muted small">{{ $surgery->department->name }}</div>
                                     @endif
@@ -153,15 +242,23 @@
                                     </div>
                                 </td>
                                 <td class="py-3">
-                                    <div class="d-flex align-items-center gap-1.5">
-                                        <i class="fas fa-user-md text-primary"></i>
-                                        <span class="fw-semibold text-dark">{{ $surgery->doctor?->user?->name ?? '-' }}</span>
-                                    </div>
+                                    @if($doctorName)
+                                        <div class="d-flex align-items-center gap-1.5">
+                                            <i class="fas fa-user-md text-primary"></i>
+                                            <span class="fw-semibold text-dark">{{ $doctorName }}</span>
+                                        </div>
+                                    @else
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="text-decoration-none" title="انقر لتعيين الطبيب الجراح وتفاصيل العملية">
+                                            <span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-50 rounded-pill px-2.5 py-1 fw-bold">
+                                                <i class="fas fa-user-plus me-1"></i> بانتظار التعيين
+                                            </span>
+                                        </a>
+                                    @endif
                                 </td>
                                 <td class="py-3 text-center">
                                     @if($isCompleted)
                                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill px-3 py-1.5 fw-bold">
-                                            <i class="fas fa-check-circle me-1"></i> مكتملة
+                                            <i class="fas fa-check-circle me-1"></i> مكتملة ومُعتمدة
                                         </span>
                                     @elseif($isInProgress)
                                         <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 rounded-pill px-3 py-1.5 fw-bold">
@@ -181,27 +278,94 @@
                                         <a href="{{ route('surgeon-station.resident-follow-ups', $surgery) }}" class="btn btn-sm btn-outline-info fw-semibold px-2.5 py-1.5 shadow-sm rounded-pill" title="سجل متابعات المقيم">
                                             <i class="fas fa-notes-medical me-1"></i> متابعات المقيم
                                         </a>
-                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-secondary fw-semibold px-2.5 py-1.5 shadow-sm rounded-pill" title="عرض السجل العام للعملية">
+                                        <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-secondary fw-semibold px-2.5 py-1.5 shadow-sm rounded-pill" title="عرض وتعديل تفاصيل العملية">
                                             <i class="fas fa-eye"></i>
                                         </a>
                                     </div>
                                 </td>
                             </tr>
                         @empty
-                            <tr>
+                            <tr id="emptyRow">
                                 <td colspan="6" class="text-center py-5 text-muted">
                                     <div class="py-4">
                                         <i class="fas fa-procedures text-muted fa-3x mb-3 opacity-25"></i>
-                                        <h6 class="fw-bold text-secondary">لا توجد عمليات محالة لمحطة الجراح حالياً</h6>
-                                        <p class="text-muted small mb-0">تظهر هنا تلقائياً العمليات بعد انتهاء وخروج المريض من صالة العمليات</p>
+                                        <h6 class="fw-bold text-secondary">لا توجد عمليات مطابقة للفلاتر المحددة</h6>
+                                        <p class="text-muted small mb-0">تظهر هنا تلقائياً كافة العمليات النشطة والمجدولة في صالة العمليات</p>
                                     </div>
                                 </td>
                             </tr>
                         @endforelse
+                        <tr id="noResultsClientRow" style="display: none;">
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div class="py-4">
+                                    <i class="fas fa-search text-muted fa-3x mb-3 opacity-25"></i>
+                                    <h6 class="fw-bold text-secondary">لا توجد نتائج تطابق البحث اللحظي</h6>
+                                    <p class="text-muted small mb-0">جرّب البحث باسم آخر أو إفراغ خانة البحث</p>
+                                </div>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('filterSearch');
+    const tableRows = document.querySelectorAll('.surgery-row');
+    const countBadge = document.getElementById('casesCountBadge');
+    const noResultsRow = document.getElementById('noResultsClientRow');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function () {
+            const query = this.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            tableRows.forEach(row => {
+                const text = row.getAttribute('data-search') || '';
+                if (!query || text.includes(query)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (countBadge) {
+                countBadge.textContent = 'عرض ' + visibleCount + ' حالة';
+            }
+
+            if (noResultsRow) {
+                noResultsRow.style.display = (visibleCount === 0 && tableRows.length > 0) ? '' : 'none';
+            }
+        });
+    }
+});
+
+function clearSearch() {
+    const searchInput = document.getElementById('filterSearch');
+    if (searchInput) {
+        searchInput.value = '';
+        document.getElementById('surgeonFilterForm').submit();
+    }
+}
+
+function filterQuickDate(dateVal) {
+    const dateInput = document.getElementById('filterDate');
+    if (dateInput) {
+        if (dateVal === 'today') {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            dateInput.value = `${year}-${month}-${day}`;
+        } else {
+            dateInput.value = '';
+        }
+        document.getElementById('surgeonFilterForm').submit();
+    }
+}
+</script>
 @endsection

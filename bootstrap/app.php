@@ -12,13 +12,16 @@ $app = Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\TrackUserActivity::class,
+            \App\Http\Middleware\CheckNurseAvailability::class,
         ]);
 
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'check.nurse.availability' => \App\Http\Middleware\CheckNurseAvailability::class,
         ]);
 
         // استثناء CSRF للـ API routes

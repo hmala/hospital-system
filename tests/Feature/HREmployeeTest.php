@@ -325,4 +325,269 @@ class HREmployeeTest extends TestCase
         $response->assertSee('مروة عبد الكريم');
         $response->assertSee(number_format(950000));
     }
+
+    public function test_can_create_employee_with_custom_or_fulltime_employment_type()
+    {
+        Storage::fake('public');
+        $hospital = Hospital::first();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $department = Department::first() ?? Department::create([
+            'hospital_id' => $hospital->id,
+            'name' => 'قسم الباطنية',
+            'type' => 'surgery',
+            'room_number' => '102',
+            'consultation_fee' => 20000,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '16:00',
+            'max_patients_per_day' => 20,
+        ]);
+
+        $employeeData = [
+            'employee_code' => 'EMP-FULLTIME-01',
+            'full_name' => 'علي حسن محمد',
+            'gender' => 'male',
+            'phone' => '07709876543',
+            'staff_type' => 'administrative',
+            'job_title' => 'محاسب',
+            'department_id' => $department->id,
+            'employment_type' => 'Fulltime',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 800000,
+            'status' => 'active',
+        ];
+
+        $response = $this->actingAs($admin)->post(route('hr.employees.store'), $employeeData);
+        $response->assertSessionHasNoErrors();
+
+        $employee = HrEmployee::where('employee_code', 'EMP-FULLTIME-01')->first();
+        $this->assertNotNull($employee);
+        $this->assertEquals('full_time', $employee->employment_type);
+        $this->assertEquals('دوام كامل', $employee->employment_type_name);
+
+        // اختبار نوع تعاقد مرن مثل gov_contract
+        $employeeDataGov = [
+            'employee_code' => 'EMP-GOV-01',
+            'full_name' => 'فاطمة جواد',
+            'gender' => 'female',
+            'phone' => '07709876544',
+            'staff_type' => 'administrative',
+            'job_title' => 'مدخل بيانات',
+            'department_id' => $department->id,
+            'employment_type' => 'gov_contract',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 700000,
+            'status' => 'active',
+        ];
+
+        $responseGov = $this->actingAs($admin)->post(route('hr.employees.store'), $employeeDataGov);
+        $responseGov->assertSessionHasNoErrors();
+
+        $employeeGov = HrEmployee::where('employee_code', 'EMP-GOV-01')->first();
+        $this->assertNotNull($employeeGov);
+        $this->assertEquals('gov_contract', $employeeGov->employment_type);
+        $this->assertEquals('عقد وزاري / حكومي', $employeeGov->employment_type_name);
+    }
+
+    public function test_can_create_and_update_employee_with_nationality()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $hospital = Hospital::first();
+        $department = Department::create([
+            'hospital_id' => $hospital->id,
+            'name' => 'قسم الباطنية',
+            'type' => 'internal',
+            'room_number' => '102',
+            'consultation_fee' => 20000,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '16:00',
+            'max_patients_per_day' => 30,
+        ]);
+
+        // 1. فحص ظهور حقل الجنسية في شاشة الإنشاء
+        $createResponse = $this->actingAs($admin)->get(route('hr.employees.create'));
+        $createResponse->assertStatus(200);
+        $createResponse->assertSee('الجنسية');
+        $createResponse->assertSee('value="عراقي"', false);
+
+        // 2. إنشاء موظف مع تحديد جنسية مخصصة
+        $employeeData = [
+            'employee_code' => 'EMP-NAT-001',
+            'full_name' => 'د. سمير كمال الشامي',
+            'national_id' => 'SY-998877',
+            'nationality' => 'سوري',
+            'gender' => 'male',
+            'phone' => '07705544332',
+            'staff_type' => 'medical',
+            'job_title' => 'طبيب باطنية',
+            'department_id' => $department->id,
+            'employment_type' => 'contract',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 1500000,
+            'status' => 'active',
+        ];
+
+        $response = $this->actingAs($admin)->post(route('hr.employees.store'), $employeeData);
+        $response->assertSessionHasNoErrors();
+
+        $employee = HrEmployee::where('employee_code', 'EMP-NAT-001')->first();
+        $this->assertNotNull($employee);
+        $this->assertEquals('سوري', $employee->nationality);
+
+        // 3. فحص العرض في شاشة التفاصيل
+        $showResponse = $this->actingAs($admin)->get(route('hr.employees.show', $employee));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('سوري');
+        $showResponse->assertDontSee('طباعة الإضبارة');
+        $showResponse->assertSee('tab-profile');
+        $showResponse->assertSee('tab-payroll');
+        $showResponse->assertSee('tab-attendance');
+        $showResponse->assertSee('tab-actions');
+        $showResponse->assertSee('tab-documents');
+
+        // 4. تعديل جنسية الموظف
+        $updateData = $employeeData;
+        $updateData['nationality'] = 'لبناني';
+
+        $updateResponse = $this->actingAs($admin)->put(route('hr.employees.update', $employee), $updateData);
+        $updateResponse->assertSessionHasNoErrors();
+
+        $employee->refresh();
+        $this->assertEquals('لبناني', $employee->nationality);
+
+        // 5. إنشاء موظف بدون تعبئة الجنسية يتخذ الافتراضي "عراقي"
+        $employeeDefaultData = [
+            'employee_code' => 'EMP-NAT-002',
+            'full_name' => 'محمد حسين العراقي',
+            'gender' => 'male',
+            'phone' => '07705544333',
+            'staff_type' => 'administrative',
+            'job_title' => 'إداري',
+            'department_id' => $department->id,
+            'employment_type' => 'full_time',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 900000,
+            'status' => 'active',
+        ];
+
+        $this->actingAs($admin)->post(route('hr.employees.store'), $employeeDefaultData);
+        $defaultEmployee = HrEmployee::where('employee_code', 'EMP-NAT-002')->first();
+        $this->assertNotNull($defaultEmployee);
+        $this->assertEquals('عراقي', $defaultEmployee->nationality);
+    }
+
+    public function test_can_create_and_manage_employee_with_fixed_and_split_shifts_and_custom_off_days()
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $admin->assignRole('admin');
+
+        $hospital = Hospital::first();
+        $department = Department::create([
+            'hospital_id' => $hospital->id,
+            'name' => 'قسم الحسابات والصناديق',
+            'type' => 'other',
+            'room_number' => 'C-01',
+            'consultation_fee' => 0,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '22:00',
+            'max_patients_per_day' => 100,
+        ]);
+
+        $morningShift = \App\Models\HrShift::create([
+            'name' => 'صباحي قياسي',
+            'start_time' => '08:00:00',
+            'end_time' => '15:00:00',
+            'color_code' => '#0d6efd',
+            'is_active' => true,
+        ]);
+
+        $eveningShift = \App\Models\HrShift::create([
+            'name' => 'مسائي كاشير',
+            'start_time' => '16:00:00',
+            'end_time' => '22:00:00',
+            'color_code' => '#ffc107',
+            'is_active' => true,
+        ]);
+
+        // 1. إنشاء محاسب بنظام الوجبتين (صباحي + مسائي) وعطلة (الجمعة والسبت)
+        $cashierData = [
+            'employee_code' => 'EMP-CSH-001',
+            'full_name' => 'حسين علي المحاسب',
+            'gender' => 'male',
+            'phone' => '07709988771',
+            'staff_type' => 'administrative',
+            'job_title' => 'كاشير رئيسي',
+            'department_id' => $department->id,
+            'employment_type' => 'full_time',
+            'hire_date' => now()->format('Y-m-d'),
+            'basic_salary' => 850000,
+            'status' => 'active',
+            'schedule_type' => 'fixed',
+            'default_shift_id' => $morningShift->id,
+            'is_split_shift' => '1',
+            'second_shift_id' => $eveningShift->id,
+            'custom_start_time' => '08:30',
+            'custom_end_time' => '15:30',
+            'weekly_off_days' => ['friday', 'saturday'],
+        ];
+
+        $response = $this->actingAs($admin)->post(route('hr.employees.store'), $cashierData);
+        $response->assertSessionHasNoErrors();
+
+        $cashier = HrEmployee::where('employee_code', 'EMP-CSH-001')->first();
+        $this->assertNotNull($cashier);
+        $this->assertEquals('fixed', $cashier->schedule_type);
+        $this->assertEquals($morningShift->id, $cashier->default_shift_id);
+        $this->assertTrue($cashier->is_split_shift);
+        $this->assertEquals($eveningShift->id, $cashier->second_shift_id);
+        $this->assertEquals(['friday', 'saturday'], $cashier->weekly_off_days_list);
+        $this->assertStringContainsString('الجمعة', $cashier->weekly_off_days_arabic);
+        $this->assertStringContainsString('السبت', $cashier->weekly_off_days_arabic);
+
+        // فحص دالة فحص العطلة (الجمعة والسبت عطلة، والأحد دوام)
+        $fridayDate = \Carbon\Carbon::parse('next friday');
+        $saturdayDate = \Carbon\Carbon::parse('next saturday');
+        $sundayDate = \Carbon\Carbon::parse('next sunday');
+
+        $this->assertTrue($cashier->isOffOn($fridayDate));
+        $this->assertTrue($cashier->isOffOn($saturdayDate));
+        $this->assertFalse($cashier->isOffOn($sundayDate));
+
+        // 2. فحص العرض في شاشة الإضبارة والتفاصيل
+        $showResponse = $this->actingAs($admin)->get(route('hr.employees.show', $cashier));
+        $showResponse->assertStatus(200);
+        $showResponse->assertSee('صباحي قياسي');
+        $showResponse->assertSee('مسائي كاشير');
+        $showResponse->assertSee('دوام وجبتين');
+        $showResponse->assertSee('الجمعة');
+        $showResponse->assertSee('السبت');
+
+        // 3. تعديل الموظف ليكون عطلته (الخميس فقط) وإلغاء الوجبتين
+        $updateData = $cashierData;
+        $updateData['is_split_shift'] = '0';
+        $updateData['weekly_off_days'] = ['thursday'];
+
+        $updateResponse = $this->actingAs($admin)->put(route('hr.employees.update', $cashier), $updateData);
+        $updateResponse->assertSessionHasNoErrors();
+
+        $cashier->refresh();
+        $this->assertFalse($cashier->is_split_shift);
+        $this->assertNull($cashier->second_shift_id);
+        $this->assertEquals(['thursday'], $cashier->weekly_off_days_list);
+
+        $thursdayDate = \Carbon\Carbon::parse('next thursday');
+        $this->assertTrue($cashier->isOffOn($thursdayDate));
+        $this->assertFalse($cashier->isOffOn($fridayDate));
+
+        // 4. فحص ظهور الموظف الذكي في جدول الدوام العام
+        $scheduleResponse = $this->actingAs($admin)->get(route('hr.schedules.index', [
+            'department_id' => $department->id,
+            'start_date' => now()->startOfWeek(\Carbon\Carbon::SUNDAY)->format('Y-m-d'),
+        ]));
+        $scheduleResponse->assertStatus(200);
+        $scheduleResponse->assertSee($cashier->full_name);
+    }
 }

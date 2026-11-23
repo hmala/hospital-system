@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>استمارة التقرير الطبي الموحد للطوارئ - #{{ $emergency->id }} - {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'مريض' }}</title>
+    <title>{{ __('استمارة التقرير الطبي الموحد للطوارئ') }} - #{{ $emergency->id }} - {{ $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? __('مريض') }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,8 +23,8 @@
         }
 
         body {
-            direction: rtl;
-            text-align: right;
+            direction: {{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }};
+            text-align: {{ app()->getLocale() == 'ar' ? 'right' : 'left' }};
             background-color: #e2e8f0;
             padding: 20px 10px;
             font-size: 11.5px;
@@ -573,11 +573,11 @@
 <body>
 
 @php
-    $patientName = $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? 'غير محدد';
+    $patientName = $emergency->patient?->user?->name ?? $emergency->emergencyPatient?->name ?? __('غير محدد');
     $patientPhone = $emergency->patient?->user?->phone ?? $emergency->emergencyPatient?->phone ?? '-';
     $patientAge = $emergency->patient?->age ?? ($emergency->emergencyPatient?->date_of_birth ? $emergency->emergencyPatient->date_of_birth->age : '-');
     $patientGender = $emergency->patient?->gender ?? $emergency->emergencyPatient?->gender ?? null;
-    $patientAddress = $emergency->patient?->district ? ($emergency->patient->governorate . ' - ' . $emergency->patient->district) : ($emergency->patient?->governorate ?? 'بغداد');
+    $patientAddress = $emergency->patient?->district ? ($emergency->patient->governorate . ' - ' . $emergency->patient->district) : ($emergency->patient?->governorate ?? __('بغداد'));
     if ($emergency->patient?->neighborhood) {
         $patientAddress .= ' / ' . $emergency->patient->neighborhood;
     }
@@ -600,7 +600,7 @@
 
     // Doctor information & signature
     $actualDoctor = $doctor ?? $emergency->doctor;
-    $doctorName = $actualDoctor?->user?->name ?? 'طبيب الطوارئ المناوب';
+    $doctorName = $actualDoctor?->user?->name ?? __('طبيب الطوارئ المناوب');
     $signaturePath = $actualDoctor?->signature;
     $docSigSrc = null;
     if ($signaturePath && file_exists(public_path($signaturePath))) {
@@ -618,46 +618,46 @@
 
     // Triage badge calculation
     $priority = $emergency->priority ?? 'urgent';
-    $triageLabel = 'عاجلة (Urgent - Yellow)';
+    $triageLabel = __('عاجلة (Urgent - Yellow)');
     $triageClass = 'triage-yellow';
     if ($priority === 'critical') {
-        $triageLabel = '(درجة أولى) Critical - Red';
+        $triageLabel = __('(درجة أولى) Critical - Red');
         $triageClass = 'triage-red';
     } elseif ($priority === 'semi_urgent') {
-        $triageLabel = 'شبه عاجلة (Semi-urgent)';
+        $triageLabel = __('شبه عاجلة (Semi-urgent)');
         $triageClass = 'triage-blue';
     } elseif ($priority === 'non_urgent') {
-        $triageLabel = 'غير عاجلة (Non-urgent - Green)';
+        $triageLabel = __('غير عاجلة (Non-urgent - Green)');
         $triageClass = 'triage-green';
     }
 
     // Discharge Destination & Recommendations
-    $dischargeDestination = $emergency->discharge_destination;
+    $dischargeDestination = $emergency->discharge_destination ? __($emergency->discharge_destination) : null;
     if (empty($dischargeDestination)) {
         if ($emergency->discharge_type === 'transferred_to_consultation') {
-            $dischargeDestination = 'تحويل للاستشارية';
+            $dischargeDestination = __('تحويل للاستشارية');
         } elseif ($emergency->discharge_type === 'deceased') {
-            $dischargeDestination = 'خرج متوفي';
+            $dischargeDestination = __('خرج متوفي');
         } elseif ($emergency->requires_surgery || $emergency->status === 'transferred_to_surgery') {
-            $dischargeDestination = 'صالة العمليات الجراحية';
+            $dischargeDestination = __('صالة العمليات الجراحية');
         } elseif ($emergency->requires_admission || $emergency->status === 'transferred_to_admission') {
-            $dischargeDestination = 'الرقود الداخلي';
+            $dischargeDestination = __('الرقود الداخلي');
         } else {
-            $dischargeDestination = 'خروج للمنزل';
+            $dischargeDestination = __('خروج للمنزل');
         }
     }
 
     $dischargeRecommendations = $emergency->discharge_recommendations ?? $emergency->discharge_notes ?? '';
     
-    $dischargeStatusBadge = 'الخروج بحالة مستقرة / مراجعة بعد 3 أيام';
+    $dischargeStatusBadge = __('الخروج بحالة مستقرة / مراجعة بعد 3 أيام');
     if ($emergency->discharge_type === 'against_medical_advice') {
-        $dischargeStatusBadge = 'خروج على مسؤولية المريض أو ذويه';
+        $dischargeStatusBadge = __('خروج على مسؤولية المريض أو ذويه');
     } elseif ($emergency->discharge_type === 'transferred_to_consultation') {
-        $dischargeStatusBadge = 'تحويل رسمي للعيادات الاستشارية';
+        $dischargeStatusBadge = __('تحويل رسمي للعيادات الاستشارية');
     } elseif ($emergency->discharge_type === 'deceased') {
-        $dischargeStatusBadge = 'خرج متوفي (تم تسجيل الوفاة في الطوارئ)';
+        $dischargeStatusBadge = __('خرج متوفي (تم تسجيل الوفاة في الطوارئ)');
     } elseif ($emergency->status !== 'discharged') {
-        $dischargeStatusBadge = 'الحالة تحت المتابعة والعلاج';
+        $dischargeStatusBadge = __('الحالة تحت المتابعة والعلاج');
     }
 
     // Diagnostic summary
@@ -694,27 +694,27 @@
 <div class="no-print">
     <div class="action-group">
         <span class="fw-bold" style="font-weight: 800; color: #005a9c; font-size: 13.5px;">
-            <i class="fas fa-file-medical-alt me-1"></i> استمارة تقرير الطوارئ الرسمي الموحد (ورقة بوجهين)
+            <i class="fas fa-file-medical-alt me-1"></i> {{ __('استمارة تقرير الطوارئ الرسمي الموحد (ورقة بوجهين)') }}
         </span>
         <span style="color: #94a3b8;">|</span>
         <div class="btn-group" role="group">
             <button type="button" class="btn btn-mode active" id="btnModePatient" onclick="switchCopyMode('patient')">
-                <i class="fas fa-user"></i> نسخة المريض (ورقة على وجهين)
+                <i class="fas fa-user"></i> {{ __('نسخة المريض (ورقة على وجهين)') }}
             </button>
             <button type="button" class="btn btn-mode" id="btnModeAdmin" onclick="switchCopyMode('admin')">
-                <i class="fas fa-archive"></i> نسخة الأرشيف (ورقة على وجهين)
+                <i class="fas fa-archive"></i> {{ __('نسخة الأرشيف (ورقة على وجهين)') }}
             </button>
             <button type="button" class="btn btn-mode" id="btnModeBoth" onclick="switchCopyMode('both')">
-                <i class="fas fa-copy"></i> طباعة النسختين معاً (4 أوجه)
+                <i class="fas fa-copy"></i> {{ __('طباعة النسختين معاً (4 أوجه)') }}
             </button>
         </div>
     </div>
     <div class="action-group">
         <button class="btn btn-print" onclick="window.print()">
-            <i class="fas fa-print"></i> طباعة التقرير
+            <i class="fas fa-print"></i> {{ __('طباعة التقرير') }}
         </button>
         <a href="{{ route('emergency.show', $emergency) }}" class="btn btn-back">
-            <i class="fas fa-arrow-right"></i> رجوع لمحطة الكشف
+            <i class="fas fa-arrow-right"></i> {{ __('رجوع لمحطة الكشف') }}
         </a>
     </div>
 </div>
@@ -723,11 +723,11 @@
     $copies = [
         'patient' => [
             'key' => 'patient',
-            'label' => '(نسخة المريض) Patient Copy',
+            'label' => __('(نسخة المريض) Patient Copy'),
         ],
         'admin' => [
             'key' => 'admin',
-            'label' => '(نسخة الإدارة والأرشيف) Archive Copy',
+            'label' => __('(نسخة الإدارة والأرشيف) Archive Copy'),
         ],
     ];
 @endphp
@@ -745,12 +745,12 @@
             <!-- Hospital Header -->
             <div class="report-header">
                 <div class="header-hospital-ar">
-                    <h2>مستشفى الكفاءات الأهلي</h2>
-                    <h4>قسم الطوارئ والعناية الحرجة</h4>
-                    <p>رعاية طبية متخصصة على مدار 24/7</p>
+                    <h2>{{ __('مستشفى الكفاءات الأهلي') }}</h2>
+                    <h4>{{ __('قسم الطوارئ والعناية الحرجة') }}</h4>
+                    <p>{{ __('رعاية طبية متخصصة على مدار 24/7') }}</p>
                 </div>
                 <div class="header-logo">
-                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo">
+                    <img src="{{ asset('images/1.jpg') }}" alt="{{ __('شعار المستشفى') }}">
                 </div>
                 <div class="header-hospital-en">
                     <h2>Al-Kafa'at Private Hospital</h2>
@@ -765,14 +765,14 @@
                 <div class="ribbon-pill-copy">
                     {{ $cMeta['label'] }}
                     @if($cKey === 'patient')
-                        <span style="display:none;">نسخة المريض (Patient Copy)</span>
+                        <span style="display:none;">{{ __('نسخة المريض (Patient Copy)') }}</span>
                     @else
-                        <span style="display:none;">نسخة الإدارة والأرشيف (Administrative &amp; Archive Copy)</span>
+                        <span style="display:none;">{{ __('نسخة الإدارة والأرشيف (Administrative & Archive Copy)') }}</span>
                     @endif
                 </div>
                 <div class="ribbon-title">
-                    EMERGENCY MEDICAL REPORT — التقرير الطبي في قسم الطوارئ
-                    <span style="display:none;">التقرير الطبي لحالة طوارئ</span>
+                    EMERGENCY MEDICAL REPORT — {{ __('التقرير الطبي في قسم الطوارئ') }}
+                    <span style="display:none;">{{ __('التقرير الطبي لحالة طوارئ') }}</span>
                 </div>
             </div>
 
@@ -780,50 +780,50 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-user-circle"></i>
-                    <span>المعلومات الشخصية وتفاصيل الدخول</span>
+                    <span>{{ __('المعلومات الشخصية وتفاصيل الدخول') }}</span>
                 </div>
                 <table class="demographics-table">
                     <tr>
                         <td style="width: 25%;">
-                            <span class="cell-label">اسم المريض الرباعي</span>
+                            <span class="cell-label">{{ __('اسم المريض الرباعي') }}</span>
                             <span class="cell-val" style="color: #005a9c; font-weight: 900; font-size: 11px;" title="{{ $patientName }}">{{ $patientName }}</span>
                         </td>
                         <td style="width: 18%;">
-                            <span class="cell-label">رقم ملف المريض</span>
+                            <span class="cell-label">{{ __('رقم ملف المريض') }}</span>
                             <span class="cell-val font-monospace">{{ $fileNumber }}</span>
                         </td>
                         <td style="width: 18%;">
-                            <span class="cell-label">الجنس / العمر</span>
-                            <span class="cell-val">{{ $patientGender === 'female' ? 'أنثى' : ($patientGender === 'male' ? 'ذكر' : '-') }} / {{ $patientAge }} سنة</span>
+                            <span class="cell-label">{{ __('الجنس / العمر') }}</span>
+                            <span class="cell-val">{{ $patientGender === 'female' ? __('أنثى') : ($patientGender === 'male' ? __('ذكر') : '-') }} / {{ $patientAge }} {{ __('سنة') }}</span>
                         </td>
                         <td style="width: 19%;">
-                            <span class="cell-label">رقم المراجعة</span>
+                            <span class="cell-label">{{ __('رقم المراجعة') }}</span>
                             <span class="cell-val font-monospace">{{ $referenceNumber }}</span>
                         </td>
                         <td style="width: 20%;">
-                            <span class="cell-label">التاريخ والوقت</span>
+                            <span class="cell-label">{{ __('التاريخ والوقت') }}</span>
                             <span class="cell-val">{{ $emergency->created_at->format('d-m-Y H:i') }}</span>
                         </td>
                     </tr>
                     <tr>
                         <td>
-                            <span class="cell-label">الطبيب المناوب</span>
+                            <span class="cell-label">{{ __('الطبيب المناوب') }}</span>
                             <span class="cell-val" style="font-weight: 800;">{{ $doctorName }}</span>
                         </td>
                         <td>
-                            <span class="cell-label">التصنيف الفرزي (Triage)</span>
+                            <span class="cell-label">{{ __('التصنيف الفرزي (Triage)') }}</span>
                             <span class="triage-badge {{ $triageClass }}">{{ $triageLabel }}</span>
                         </td>
                         <td>
-                            <span class="cell-label">طريقة الوصول</span>
-                            <span class="cell-val">{{ $emergency->arrival_mode ?: 'إسعاف المستشفى (الوصول)' }}</span>
+                            <span class="cell-label">{{ __('طريقة الوصول') }}</span>
+                            <span class="cell-val">{{ $emergency->arrival_mode ? __($emergency->arrival_mode) : __('إسعاف المستشفى (الوصول)') }}</span>
                         </td>
                         <td>
-                            <span class="cell-label">الجهة المحولة (إن وجدت)</span>
+                            <span class="cell-label">{{ __('الجهة المحولة (إن وجدت)') }}</span>
                             <span class="cell-val">{{ $emergency->referred_from ?: '-' }}</span>
                         </td>
                         <td>
-                            <span class="cell-label">العنوان / رقم الهاتف</span>
+                            <span class="cell-label">{{ __('العنوان / رقم الهاتف') }}</span>
                             <span class="cell-val">{{ $patientAddress }} / {{ $patientPhone }}</span>
                         </td>
                     </tr>
@@ -834,36 +834,36 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-heartbeat"></i>
-                    <span>العلامات الحيوية عند الاستقبال</span>
+                    <span>{{ __('العلامات الحيوية عند الاستقبال') }}</span>
                 </div>
                 <div class="vitals-row">
                     <div class="vital-box">
-                        <div class="vital-name">مستوى الوعي (GCS)</div>
+                        <div class="vital-name">{{ __('مستوى الوعي (GCS)') }}</div>
                         <div class="vital-number">{{ $gcs }}</div>
                         <div class="vital-unit">Score</div>
                     </div>
                     <div class="vital-box">
-                        <div class="vital-name">تشبع الأكسجين</div>
+                        <div class="vital-name">{{ __('تشبع الأكسجين') }}</div>
                         <div class="vital-number">{{ $spo2 }}</div>
                         <div class="vital-unit">%</div>
                     </div>
                     <div class="vital-box">
-                        <div class="vital-name">درجة الحرارة</div>
+                        <div class="vital-name">{{ __('درجة الحرارة') }}</div>
                         <div class="vital-number">{{ $temp }}</div>
                         <div class="vital-unit">°C</div>
                     </div>
                     <div class="vital-box">
-                        <div class="vital-name">معدل التنفس</div>
+                        <div class="vital-name">{{ __('معدل التنفس') }}</div>
                         <div class="vital-number">{{ $rr }}</div>
                         <div class="vital-unit">/min</div>
                     </div>
                     <div class="vital-box">
-                        <div class="vital-name">معدل النبض</div>
+                        <div class="vital-name">{{ __('معدل النبض') }}</div>
                         <div class="vital-number">{{ $hr }}</div>
                         <div class="vital-unit">/min</div>
                     </div>
                     <div class="vital-box">
-                        <div class="vital-name">ضغط الدم</div>
+                        <div class="vital-name">{{ __('ضغط الدم') }}</div>
                         <div class="vital-number">{{ $bp }}</div>
                         <div class="vital-unit">mmHg</div>
                     </div>
@@ -874,7 +874,7 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-file-alt"></i>
-                    <span>الشكوى الرئيسية</span>
+                    <span>{{ __('الشكوى الرئيسية') }}</span>
                 </div>
                 <div class="textbox-content">
                     {{ $emergency->symptoms ?? '' }}
@@ -885,7 +885,7 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-notes-medical"></i>
-                    <span>تاريخ المريض الحالي History of Present Illness (HPI)</span>
+                    <span>{{ __('تاريخ المريض الحالي History of Present Illness (HPI)') }}</span>
                 </div>
                 <div class="textbox-content" style="min-height: 38px;">
                     {{ $emergency->hpi ?: ($emergency->initial_assessment ?: '') }}
@@ -896,16 +896,17 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-flask"></i>
-                    <span>التحاليل المختبرية والشعاعية</span>
+                    <span>{{ __('التحاليل المختبرية والشعاعية') }}</span>
                 </div>
                 <div class="textbox-content" style="min-height: 28px;">
                     @php
                         $diagItems = [];
+                        $comma = __('، ');
                         if (!empty($allLabTests)) {
-                            $diagItems[] = 'مختبر: ' . implode('، ', array_unique($allLabTests));
+                            $diagItems[] = __('مختبر:') . ' ' . implode($comma, array_unique($allLabTests));
                         }
                         if (!empty($allRadTests)) {
-                            $diagItems[] = 'أشعة وتصوير: ' . implode('، ', array_unique($allRadTests));
+                            $diagItems[] = __('أشعة وتصوير:') . ' ' . implode($comma, array_unique($allRadTests));
                         }
                     @endphp
                     @if(!empty($diagItems))
@@ -918,7 +919,7 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-pills"></i>
-                    <span>العلاج</span>
+                    <span>{{ __('العلاج') }}</span>
                 </div>
                 <div class="textbox-content" style="min-height: 28px;">
                     @if(!empty($treatmentsList))
@@ -931,16 +932,16 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-stethoscope"></i>
-                    <span>التشخيص السريري والخدمات العلاجية المقدمة</span>
+                    <span>{{ __('التشخيص السريري والخدمات العلاجية المقدمة') }}</span>
                 </div>
                 <table class="actions-table">
                     <thead>
                         <tr>
-                            <th style="width: 14%;">التاريخ</th>
-                            <th style="width: 10%;">الوقت</th>
-                            <th style="width: 32%;">الإجراء / العلاج</th>
-                            <th style="width: 26%;">التفاصيل والملاحظات</th>
-                            <th style="width: 18%;">اسم الطبيب</th>
+                            <th style="width: 14%;">{{ __('التاريخ') }}</th>
+                            <th style="width: 10%;">{{ __('الوقت') }}</th>
+                            <th style="width: 32%;">{{ __('الإجراء / العلاج') }}</th>
+                            <th style="width: 26%;">{{ __('التفاصيل والملاحظات') }}</th>
+                            <th style="width: 18%;">{{ __('اسم الطبيب') }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -995,12 +996,12 @@
             <!-- Hospital Header (Repeated on Page 2 for official authenticity) -->
             <div class="report-header">
                 <div class="header-hospital-ar">
-                    <h2>مستشفى الكفاءات الأهلي</h2>
-                    <h4>قسم الطوارئ والعناية الحرجة</h4>
-                    <p>رعاية طبية متخصصة على مدار 24/7</p>
+                    <h2>{{ __('مستشفى الكفاءات الأهلي') }}</h2>
+                    <h4>{{ __('قسم الطوارئ والعناية الحرجة') }}</h4>
+                    <p>{{ __('رعاية طبية متخصصة على مدار 24/7') }}</p>
                 </div>
                 <div class="header-logo">
-                    <img src="{{ asset('images/1.jpg') }}" alt="Hospital Logo">
+                    <img src="{{ asset('images/1.jpg') }}" alt="{{ __('شعار المستشفى') }}">
                 </div>
                 <div class="header-hospital-en">
                     <h2>Al-Kafa'at Private Hospital</h2>
@@ -1015,30 +1016,30 @@
                 <div class="ribbon-pill-copy">
                     {{ $cMeta['label'] }}
                     @if($cKey === 'patient')
-                        <span style="display:none;">نسخة المريض (Patient Copy)</span>
+                        <span style="display:none;">{{ __('نسخة المريض (Patient Copy)') }}</span>
                     @else
-                        <span style="display:none;">نسخة الإدارة والأرشيف (Administrative &amp; Archive Copy)</span>
+                        <span style="display:none;">{{ __('نسخة الإدارة والأرشيف (Administrative & Archive Copy)') }}</span>
                     @endif
                 </div>
                 <div class="ribbon-title">
-                    EMERGENCY MEDICAL REPORT — التقرير الطبي في قسم الطوارئ
-                    <span style="display:none;">التقرير الطبي لحالة طوارئ</span>
+                    EMERGENCY MEDICAL REPORT — {{ __('التقرير الطبي في قسم الطوارئ') }}
+                    <span style="display:none;">{{ __('التقرير الطبي لحالة طوارئ') }}</span>
                 </div>
             </div>
 
             <!-- Page 2 Patient Mini-Header -->
             <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px; padding: 3px 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 700;">
-                <div><span style="color: #64748b;">اسم المريض:</span> <strong style="color: #005a9c; font-size: 11px;">{{ $patientName }}</strong></div>
-                <div><span style="color: #64748b;">رقم الملف (MRN):</span> <span style="font-family: monospace;">{{ $fileNumber }}</span></div>
-                <div><span style="color: #64748b;">العمر / الجنس:</span> {{ $patientAge }} سنة / {{ $patientGender === 'female' ? 'أنثى' : ($patientGender === 'male' ? 'ذكر' : '-') }}</div>
-                <div><span style="color: #64748b;">الطبيب المعالج:</span> {{ $doctorName }}</div>
+                <div><span style="color: #64748b;">{{ __('اسم المريض:') }}</span> <strong style="color: #005a9c; font-size: 11px;">{{ $patientName }}</strong></div>
+                <div><span style="color: #64748b;">{{ __('رقم الملف (MRN):') }}</span> <span style="font-family: monospace;">{{ $fileNumber }}</span></div>
+                <div><span style="color: #64748b;">{{ __('العمر / الجنس:') }}</span> {{ $patientAge }} {{ __('سنة') }} / {{ $patientGender === 'female' ? __('أنثى') : ($patientGender === 'male' ? __('ذكر') : '-') }}</div>
+                <div><span style="color: #64748b;">{{ __('الطبيب المعالج:') }}</span> {{ $doctorName }}</div>
             </div>
 
             <!-- Section 1: Medico-Legal Notes -->
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-balance-scale"></i>
-                    <span>الملاحظات الطبية - العدلية</span>
+                    <span>{{ __('الملاحظات الطبية - العدلية') }}</span>
                 </div>
                 <div class="large-notes-box">
 {{ $emergency->medico_legal_notes ?? '' }}
@@ -1049,7 +1050,7 @@
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-file-medical"></i>
-                    <span>ملاحظات إضافية</span>
+                    <span>{{ __('ملاحظات إضافية') }}</span>
                 </div>
                 <div class="large-notes-box">
 {{ $emergency->notes ?? '' }}
@@ -1061,20 +1062,20 @@
                 <!-- 1. Doctor Signature Box -->
                 <div class="auth-cell">
                     <div class="auth-cell-header">
-                        <i class="fas fa-pen-nib me-1"></i> اسم وتوقيع الطبيب المعالج
+                        <i class="fas fa-pen-nib me-1"></i> {{ __('اسم وتوقيع الطبيب المعالج') }}
                     </div>
                     <div class="sig-image-box">
                         @if($docSigSrc)
-                            <img src="{{ $docSigSrc }}" alt="توقيع {{ $doctorName }}">
+                            <img src="{{ $docSigSrc }}" alt="{{ __('توقيع :name', ['name' => $doctorName]) }}">
                         @else
                             <div style="font-size: 11px; font-weight: 700; color: #64748b; border-bottom: 1px dashed #cbd5e1; width: 80%; text-align: center; padding-bottom: 4px;">
-                                (التوقيع اليدوي)
+                                {{ __('(التوقيع اليدوي)') }}
                             </div>
                         @endif
                     </div>
                     <div class="sig-meta-row">
-                        <span><strong>التاريخ:</strong> {{ now()->format('d-m-Y') }}</span>
-                        <span><strong>الاسم:</strong> {{ $doctorName }}</span>
+                        <span><strong>{{ __('التاريخ:') }}</strong> {{ now()->format('d-m-Y') }}</span>
+                        <span><strong>{{ __('الاسم:') }}</strong> {{ $doctorName }}</span>
                     </div>
                 </div>
 
@@ -1082,16 +1083,16 @@
                 <div class="auth-cell">
                     <div class="stamp-circle-box">
                         <div style="font-size: 8px; font-weight: 700;">★ ★ ★</div>
-                        <div style="font-size: 10px; font-weight: 900; line-height: 1.2;">مستشفى الكفاءات الأهلي</div>
-                        <div style="font-size: 9px; font-weight: 800; color: #0284c7;">قسم الطوارئ</div>
-                        <div style="font-size: 8px; color: #b91c1c; font-weight: 900; margin-top: 1px;">مُعتمَــد</div>
+                        <div style="font-size: 10px; font-weight: 900; line-height: 1.2;">{{ __('مستشفى الكفاءات الأهلي') }}</div>
+                        <div style="font-size: 9px; font-weight: 800; color: #0284c7;">{{ __('قسم الطوارئ') }}</div>
+                        <div style="font-size: 8px; color: #b91c1c; font-weight: 900; margin-top: 1px;">{{ __('مُعتمَــد') }}</div>
                     </div>
                 </div>
 
                 <!-- 3. Electronic QR Code -->
                 <div class="auth-cell">
                     <div class="auth-cell-header">
-                        <i class="fas fa-qrcode me-1"></i> الرمز الإلكتروني لتقرير الطوارئ
+                        <i class="fas fa-qrcode me-1"></i> {{ __('الرمز الإلكتروني لتقرير الطوارئ') }}
                     </div>
                     <div class="qr-render-box">
                         <div class="qr-box-target" id="qr-{{ $cKey }}" data-url="{{ $verifyUrl }}" style="width: 75px; height: 75px; margin: 0 auto;">
@@ -1105,22 +1106,48 @@
             </div>
 
             <!-- Section 4: Final Disposition & Follow-up Recommendations -->
+            @if($emergency->discharge_type === 'deceased')
+                <div class="section-card" style="border: 2px solid #0f172a; margin-bottom: 6px;">
+                    <div class="section-banner" style="background: #0f172a; color: #ffffff;">
+                        <i class="fas fa-heart-broken" style="color: #ef4444;"></i>
+                        <span>{{ __('توثيق واقعة الوفاة في قسم الطوارئ (Emergency Death Documentation)') }}</span>
+                    </div>
+                    <div style="padding: 8px 12px; font-size: 10px; line-height: 1.6;">
+                        <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px; margin-bottom: 6px;">
+                            <span><strong>{{ __('تاريخ وساعة الوفاة المثبتة:') }}</strong> {{ $emergency->discharge_time ? $emergency->discharge_time->format('Y-m-d H:i') : __('غير محدد') }}</span>
+                            <span><strong>{{ __('جهة تسليم الجثمان:') }}</strong> {{ $emergency->discharge_destination ? __($emergency->discharge_destination) : __('ذوي المتوفي') }}</span>
+                        </div>
+                        <div style="margin-bottom: 4px;">
+                            <strong style="color: #b91c1c;">{{ __('سبب الوفاة والتقرير السريري:') }}</strong>
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 6px; margin-top: 2px; font-size: 11px; font-weight: 700; color: #0f172a;">
+                                {{ $emergency->discharge_notes ?: __('لم تسجل تفاصيل إضافية') }}
+                            </div>
+                        </div>
+                        @if($emergency->discharge_recommendations)
+                            <div style="font-size: 9.5px; color: #475569; margin-top: 4px;">
+                                <strong>{{ __('الإجراءات الرسمية والتوصيات:') }}</strong> {{ $emergency->discharge_recommendations }}
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
             <div class="section-card">
                 <div class="section-banner">
                     <i class="fas fa-clipboard-check"></i>
-                    <span>القرار الطبي النهائي عند الخروج وتوصيات المتابعة</span>
+                    <span>{{ __('القرار الطبي النهائي عند الخروج وتوصيات المتابعة') }}</span>
                 </div>
                 <div class="discharge-grid">
                     <div class="discharge-col">
-                        <div class="discharge-col-title">التوصيات والمتابعة</div>
+                        <div class="discharge-col-title">{{ __('التوصيات والمتابعة') }}</div>
                         <div class="discharge-col-val">{{ $dischargeRecommendations }}</div>
                     </div>
                     <div class="discharge-col">
-                        <div class="discharge-col-title">الوجهة النهائية</div>
+                        <div class="discharge-col-title">{{ __('الوجهة النهائية') }}</div>
                         <div class="discharge-col-val">{{ $dischargeDestination }}</div>
                     </div>
                     <div class="discharge-col">
-                        <div class="discharge-col-title">الحالة عند الخروج / التوصيات</div>
+                        <div class="discharge-col-title">{{ __('الحالة عند الخروج / التوصيات') }}</div>
                         <div class="discharge-highlight-badge">{{ $dischargeStatusBadge }}</div>
                     </div>
                 </div>

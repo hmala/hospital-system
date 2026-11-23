@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\HrLookupOption;
 use App\Models\HrFieldRequirement;
+use App\Models\HrLookupOption;
+use Illuminate\Database\Seeder;
 
 class HrSettingsSeeder extends Seeder
 {
@@ -102,19 +102,39 @@ class HrSettingsSeeder extends Seeder
             );
         }
 
-        // 7. تعريف وتحديث جميع حقول النظام مع أنواعها وفئاتها وقفلها
+        // 7. الجنسيات الشائعة
+        $nationalities = [
+            ['name' => 'عراقي', 'code' => 'iq', 'sort_order' => 1],
+            ['name' => 'سوري', 'code' => 'sy', 'sort_order' => 2],
+            ['name' => 'لبناني', 'code' => 'lb', 'sort_order' => 3],
+            ['name' => 'مصري', 'code' => 'eg', 'sort_order' => 4],
+            ['name' => 'أردني', 'code' => 'jo', 'sort_order' => 5],
+            ['name' => 'هندي', 'code' => 'in', 'sort_order' => 6],
+            ['name' => 'باكستاني', 'code' => 'pk', 'sort_order' => 7],
+            ['name' => 'فلبيني', 'code' => 'ph', 'sort_order' => 8],
+            ['name' => 'أخرى', 'code' => 'other', 'sort_order' => 9],
+        ];
+        foreach ($nationalities as $nat) {
+            HrLookupOption::updateOrCreate(
+                ['category' => 'nationality', 'name' => $nat['name']],
+                ['code' => $nat['code'], 'is_active' => true, 'sort_order' => $nat['sort_order']]
+            );
+        }
+
+        // 8. تعريف وتحديث جميع حقول النظام مع أنواعها وفئاتها وقفلها
         $fields = [
             // أ. البيانات الشخصية
             ['field_key' => 'full_name', 'field_name_ar' => 'الاسم الكامل', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => true, 'is_locked' => true, 'sort_order' => 1],
             ['field_key' => 'national_id', 'field_name_ar' => 'رقم البطاقة الموحدة / الهوية', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 2],
-            ['field_key' => 'gender', 'field_name_ar' => 'الجنس', 'field_type' => 'select', 'lookup_category' => 'gender', 'group_name' => 'personal', 'is_required' => true, 'is_locked' => false, 'sort_order' => 3],
-            ['field_key' => 'date_of_birth', 'field_name_ar' => 'تاريخ الميلاد', 'field_type' => 'date', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 4],
-            ['field_key' => 'blood_group', 'field_name_ar' => 'فصيلة الدم', 'field_type' => 'select', 'lookup_category' => 'blood_group', 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 5],
-            ['field_key' => 'phone', 'field_name_ar' => 'رقم الهاتف الأساسي', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => true, 'is_locked' => false, 'sort_order' => 6],
-            ['field_key' => 'emergency_phone', 'field_name_ar' => 'هاتف الطوارئ (شخص قريب)', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 7],
-            ['field_key' => 'email', 'field_name_ar' => 'البريد الإلكتروني', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 8],
-            ['field_key' => 'address', 'field_name_ar' => 'عنوان السكن الكامل', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 9],
-            ['field_key' => 'profile_photo', 'field_name_ar' => 'الصورة الشخصية', 'field_type' => 'file', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 10],
+            ['field_key' => 'nationality', 'field_name_ar' => 'الجنسية', 'field_type' => 'text', 'lookup_category' => 'nationality', 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 3],
+            ['field_key' => 'gender', 'field_name_ar' => 'الجنس', 'field_type' => 'select', 'lookup_category' => 'gender', 'group_name' => 'personal', 'is_required' => true, 'is_locked' => false, 'sort_order' => 4],
+            ['field_key' => 'date_of_birth', 'field_name_ar' => 'تاريخ الميلاد', 'field_type' => 'date', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 5],
+            ['field_key' => 'blood_group', 'field_name_ar' => 'فصيلة الدم', 'field_type' => 'select', 'lookup_category' => 'blood_group', 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 6],
+            ['field_key' => 'phone', 'field_name_ar' => 'رقم الهاتف الأساسي', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => true, 'is_locked' => false, 'sort_order' => 7],
+            ['field_key' => 'emergency_phone', 'field_name_ar' => 'هاتف الطوارئ (شخص قريب)', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 8],
+            ['field_key' => 'email', 'field_name_ar' => 'البريد الإلكتروني', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 9],
+            ['field_key' => 'address', 'field_name_ar' => 'عنوان السكن الكامل', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 10],
+            ['field_key' => 'profile_photo', 'field_name_ar' => 'الصورة الشخصية', 'field_type' => 'file', 'lookup_category' => null, 'group_name' => 'personal', 'is_required' => false, 'is_locked' => false, 'sort_order' => 11],
 
             // ب. البيانات الوظيفية
             ['field_key' => 'employee_code', 'field_name_ar' => 'الرقم الوظيفي (كود الباجة)', 'field_type' => 'text', 'lookup_category' => null, 'group_name' => 'job', 'is_required' => true, 'is_locked' => true, 'sort_order' => 11],

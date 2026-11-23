@@ -166,7 +166,7 @@
 
     <div class="header">
         <div>
-            <div class="hospital-title">مستشفى النور التخصصي</div>
+            <div class="hospital-title">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
             <div class="center-subtitle">مركز طب وجراحة العيون والبصريات | قسم فحص الانكسار</div>
         </div>
         <div class="rx-badge">℞</div>

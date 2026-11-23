@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إيصال دفع - {{ $payment->receipt_number }}</title>
+    <title>{{ __('إيصال دفع') }} - {{ $payment->receipt_number }}</title>
     <!-- Google Fonts Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,8 +18,8 @@
         }
 
         body {
-            direction: rtl;
-            text-align: right;
+            direction: {{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }};
+            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
             background-color: #f3f4f6;
             padding: 20px 10px;
             font-size: 13px;
@@ -165,7 +165,7 @@
         }
 
         .items-table .col-service {
-            text-align: right;
+            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
             font-weight: 800;
         }
 
@@ -213,7 +213,7 @@
         }
 
         .footer-amount-box .box-label {
-            text-align: right;
+            text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }};
             width: 60%;
         }
 
@@ -267,8 +267,8 @@
 </head>
 <body>
     <div class="no-print">
-        <button type="button" class="btn-print" onclick="doPrint()">🖨️ طباعة الإيصال</button>
-        <button type="button" class="btn-back" onclick="window.close(); if(!window.closed) window.history.back();">⬅️ إغلاق / عودة</button>
+        <button type="button" class="btn-print" onclick="doPrint()">{{ __('🖨️ طباعة الإيصال') }}</button>
+        <button type="button" class="btn-back" onclick="window.close(); if(!window.closed) window.history.back();">{{ __('⬅️ إغلاق / عودة') }}</button>
     </div>
 
     <div class="thermal-ticket">
@@ -276,15 +276,15 @@
         <div class="header-box">
             <img src="{{ asset('images/hospital-logo.svg') }}" class="header-logo" alt="Logo" onerror="this.style.display='none';">
             <div class="header-titles">
-                <div class="ar-title">مستشفى الكفاءات الاهلي</div>
-                <div class="en-title">Al-Kafaat Hospital</div>
+                <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? __('مستشفى الكفاءات الأهلي') }}</div>
+                <div class="en-title">{{ \App\Models\Hospital::first()?->en_name ?? 'Al-Kafaat Hospital' }}</div>
             </div>
             <div style="width: 36px;"></div>
         </div>
 
         @if((float)$payment->amount < 0)
             <div style="text-align: center; background: #000; color: #fff; padding: 4px; font-weight: 900; font-size: 13px; margin: 6px 0; border-radius: 3px;">
-                ⚠️ سند استرجاع مالي (REFUND)
+                {{ __('⚠️ سند استرجاع مالي (REFUND)') }}
             </div>
         @endif
 
@@ -296,7 +296,7 @@
             // Patient Name
             $patientName = '-';
             if ($payment->incubatorReservation) {
-                $patientName = $payment->incubatorReservation->baby_name ?: ('طفل ' . ($payment->incubatorReservation->patient?->name ?? 'غير محدد'));
+                $patientName = $payment->incubatorReservation->baby_name ?: (__('طفل') . ' ' . ($payment->incubatorReservation->patient?->name ?? __('غير محدد')));
             } elseif ($payment->patient && $payment->patient->user) {
                 $patientName = $payment->patient->user->name;
             } elseif ($payment->appointment && $payment->appointment->patient && $payment->appointment->patient->user) {
@@ -344,7 +344,7 @@
                     $consultFee = (float)($payment->patient_share ?: round((float)$consultFee * ((float)($payment->copay_percentage ?? 0) / 100)));
                 }
                 
-                $serviceTitle = 'اجور كشف استشارية';
+                $serviceTitle = __('اجور كشف استشارية');
                 $scanType = null;
                 if ($payment->appointment && $payment->appointment->visit) {
                     $medReq = \App\Models\Request::where('visit_id', $payment->appointment->visit->id)->where('type', 'radiology')->first();
@@ -358,7 +358,7 @@
                 }
 
                 if ($scanType) {
-                    $serviceTitle = 'فحص سونار: ' . $scanType->name;
+                    $serviceTitle = __('فحص سونار:') . ' ' . $scanType->name;
                 } elseif (preg_match('/دفع رسوم\s+(.+)/u', $payment->description, $m) && !str_contains($m[1], 'موعد #')) {
                     $serviceTitle = trim($m[1]);
                 } elseif ($payment->appointment && !empty($payment->appointment->reason) && $payment->appointment->reason !== 'كشف طبي عام') {
@@ -397,22 +397,22 @@
                             } else {
                                 $price = $surgery->surgery_fee ?? 0;
                             }
-                            $serviceName = 'رسوم العملية: ' . $surgery->surgery_type;
+                            $serviceName = __('رسوم العملية:') . ' ' . $surgery->surgery_type;
                         } elseif (str_contains($line, 'أجور الغرفة')) {
                             if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
                                 $price = (float)str_replace(',', '', $pm[1]);
                             } else {
                                 $price = $surgery->room_fee ?? 0;
                             }
-                            $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - رقم ' . $surgery->room->room_number . ')') : '';
-                            $serviceName = 'أجور الغرفة' . $roomInfo;
+                            $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - ' . __('رقم') . ' ' . $surgery->room->room_number . ')') : '';
+                            $serviceName = __('أجور الغرفة') . $roomInfo;
                         } elseif (str_contains($line, 'تحليل:')) {
                             if (preg_match('/تحليل:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $lm)) {
-                                $serviceName = 'تحليل: ' . trim($lm[1]);
+                                $serviceName = __('تحليل:') . ' ' . trim($lm[1]);
                                 $price = (float)str_replace(',', '', $lm[2]);
                             } else {
                                 $name = trim(str_replace('تحليل:', '', $line));
-                                $serviceName = 'تحليل: ' . $name;
+                                $serviceName = __('تحليل:') . ' ' . $name;
                                 foreach ($surgery->labTests as $labTest) {
                                     if ($labTest->labTest && (str_contains($name, $labTest->labTest->name) || $labTest->labTest->name === $name)) {
                                         $price = $labTest->labTest->price ?? 0;
@@ -422,11 +422,11 @@
                             }
                         } elseif (str_contains($line, 'أشعة:')) {
                             if (preg_match('/أشعة:\s*(.+?)\s*\(([\d,]+)\s*د\.ع\)/', $line, $rm)) {
-                                $serviceName = 'أشعة: ' . trim($rm[1]);
+                                $serviceName = __('أشعة:') . ' ' . trim($rm[1]);
                                 $price = (float)str_replace(',', '', $rm[2]);
                             } else {
                                 $name = trim(str_replace('أشعة:', '', $line));
-                                $serviceName = 'أشعة: ' . $name;
+                                $serviceName = __('أشعة:') . ' ' . $name;
                                 foreach ($surgery->radiologyTests as $rad) {
                                     if ($rad->radiologyType && (str_contains($name, $rad->radiologyType->name) || $rad->radiologyType->name === $name)) {
                                         $price = $rad->radiologyType->base_price ?? 0;
@@ -458,7 +458,7 @@
                     $pkg = $packageId ? \App\Models\Package::find($packageId) : null;
 
                     if ($pkg) {
-                        $pkgName = 'باقة: ' . $pkg->name . ' (' . count($pkg->labTests()->pluck('lab_tests.id')->toArray()) . ' تحاليل مشمولة)';
+                        $pkgName = __('باقة:') . ' ' . $pkg->name . ' (' . count($pkg->labTests()->pluck('lab_tests.id')->toArray()) . ' ' . __('تحاليل مشمولة') . ')';
                         if (!in_array($pkgName, array_column($lineItems, 'name'))) {
                             $pkgPrice = (float)$pkg->price;
                             if ($payment->insurance_type && $payment->insurance_type !== 'none') {
@@ -473,7 +473,7 @@
                         foreach ($extraTestIds as $testId) {
                             $test = \App\Models\LabTest::find($testId);
                             if ($test && $test->is_active) {
-                                $itemName = 'تحليل إضافي: ' . trim($test->name);
+                                $itemName = __('تحليل إضافي:') . ' ' . trim($test->name);
                                 if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $test->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
@@ -491,7 +491,7 @@
                             foreach ($testIds as $testId) {
                                 $test = \App\Models\LabTest::find($testId);
                                 if ($test && $test->is_active) {
-                                    $itemName = 'تحليل: ' . trim($test->name);
+                                    $itemName = __('تحليل:') . ' ' . trim($test->name);
                                     if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                     $foundTestIds[] = $test->id;
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
@@ -511,7 +511,7 @@
                                     })
                                     ->first();
                                 if ($test && !in_array($test->id, $foundTestIds)) {
-                                    $itemName = 'تحليل: ' . trim($test->name);
+                                    $itemName = __('تحليل:') . ' ' . trim($test->name);
                                     if (in_array(mb_strtolower($itemName), array_map('mb_strtolower', array_column($lineItems, 'name')))) continue;
                                     $foundTestIds[] = $test->id;
                                     $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
@@ -519,8 +519,8 @@
                                         : null;
                                     $price = $pricing ? (float)$pricing['patient_share'] : ($test->price ?? 0);
                                     $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => $price];
-                                } elseif (!$test && !in_array(mb_strtolower('تحليل: ' . trim($tName)), array_map('mb_strtolower', array_column($lineItems, 'name')))) {
-                                    $lineItems[] = ['name' => 'تحليل: ' . trim($tName), 'qty' => 1, 'price' => 0];
+                                } elseif (!$test && !in_array(mb_strtolower(__('تحليل:') . ' ' . trim($tName)), array_map('mb_strtolower', array_column($lineItems, 'name')))) {
+                                    $lineItems[] = ['name' => __('تحليل:') . ' ' . trim($tName), 'qty' => 1, 'price' => 0];
                                 }
                             }
                         }
@@ -532,7 +532,7 @@
                             $type = \App\Models\RadiologyType::find($typeId);
                             if ($type) {
                                 $targetName = $details['radiology_targets'][$typeId] ?? null;
-                                $displayName = $targetName ? "أشعة: {$type->name} [العضو: {$targetName}]" : "أشعة: {$type->name}";
+                                $displayName = $targetName ? (__('أشعة:') . " {$type->name} [" . __('العضو:') . " {$targetName}]") : (__('أشعة:') . " {$type->name}");
                                 if (in_array($displayName, array_column($lineItems, 'name'))) continue;
                                 $pricing = $payment->insurance_type && $payment->insurance_type !== 'none'
                                     ? $type->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
@@ -547,7 +547,7 @@
                 } elseif ($reqItem->type === 'pharmacy') {
                     if (isset($details['tests']) && is_array($details['tests'])) {
                         foreach ($details['tests'] as $drugName) {
-                            $itemName = 'صيدلية: ' . $drugName;
+                            $itemName = __('صيدلية:') . ' ' . $drugName;
                             if (in_array($itemName, array_column($lineItems, 'name'))) continue;
                             $lineItems[] = ['name' => $itemName, 'qty' => 1, 'price' => 0];
                         }
@@ -562,7 +562,7 @@
                                     ? $nSvc->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                                     : null;
                                 $price = $pricing ? (float)$pricing['patient_share'] : ($nSvc->price ?? 0);
-                                $lineItems[] = ['name' => 'تمريض: ' . $nSvc->name, 'qty' => 1, 'price' => $price];
+                                $lineItems[] = ['name' => __('تمريض:') . ' ' . $nSvc->name, 'qty' => 1, 'price' => $price];
                             }
                         }
                     } else {
@@ -585,7 +585,7 @@
                                 $price = round($price * ((float)($payment->copay_percentage ?? 0) / 100));
                             }
                         }
-                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? 'فحص تخطيط قلب (ECG)' : ($reqItem->description ?: 'خدمة تمريضية');
+                        $cleanTitle = (str_contains($reqItem->description ?? '', 'تخطيط') || str_contains($reqItem->description ?? '', 'تحطيط')) ? __('فحص تخطيط قلب (ECG)') : ($reqItem->description ?: __('خدمة تمريضية'));
                         $lineItems[] = ['name' => $cleanTitle, 'qty' => 1, 'price' => $price];
                     }
                 }
@@ -603,7 +603,7 @@
             }
             foreach ($paidVisitExtraServices as $extraSvc) {
                 $lineItems[] = [
-                    'name' => 'خدمة إضافية: ' . $extraSvc->name . ($extraSvc->notes ? ' (' . $extraSvc->notes . ')' : ''),
+                    'name' => __('خدمة إضافية:') . ' ' . $extraSvc->name . ($extraSvc->notes ? ' (' . $extraSvc->notes . ')' : ''),
                     'qty' => $extraSvc->quantity ?: 1,
                     'price' => (float)$extraSvc->total_amount,
                 ];
@@ -611,12 +611,21 @@
 
             // 4. Emergency
             if ($payment->emergency) {
+                // استشارات الطوارئ للأطباء الاستشاريين
+                $emergencyAppointments = $payment->emergency->appointments()
+                    ->where('status', '!=', 'cancelled')
+                    ->with('doctor.user')
+                    ->get();
+
                 $paidServices = \DB::table('emergency_emergency_service')
                     ->join('emergency_services', 'emergency_emergency_service.emergency_service_id', '=', 'emergency_services.id')
                     ->where('emergency_emergency_service.payment_id', $payment->id)
                     ->select('emergency_services.*', 'emergency_emergency_service.quantity')
                     ->get();
                 foreach ($paidServices as $svc) {
+                    if ($emergencyAppointments->isNotEmpty() && (str_contains($svc->name, 'استشارة') || $svc->id == 115)) {
+                        continue;
+                    }
                     $qty = max(1, (int) ($svc->quantity ?? 1));
                     $esModel = \App\Models\EmergencyService::find($svc->id);
                     $pricing = $esModel && $payment->insurance_type && $payment->insurance_type !== 'none'
@@ -624,23 +633,15 @@
                         : null;
                     $unitPrice = $pricing ? (float) $pricing['patient_share'] : ($svc->price ?? 0);
                     $price = $unitPrice * $qty;
-                    $lineItems[] = ['name' => 'خدمة طوارئ: ' . $svc->name, 'qty' => $qty, 'price' => $price];
+                    $lineItems[] = ['name' => __('خدمة طوارئ:') . ' ' . $svc->name, 'qty' => $qty, 'price' => $price];
                 }
 
-                // استشارات الطوارئ للأطباء الاستشاريين
-                $emergencyAppointments = $payment->emergency->appointments()
-                    ->where('status', '!=', 'cancelled')
-                    ->with('doctor.user')
-                    ->get();
-
                 foreach ($emergencyAppointments as $apt) {
-                    $docTitle = $apt->doctor?->user?->name ? ('د. ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : 'الاستشاري';
-                    $fee = (float)($apt->consultation_fee > 0 ? $apt->consultation_fee : 50000);
-                    if ($payment->insurance_type && $payment->insurance_type !== 'none') {
-                        $fee = round($fee * ((float)($payment->copay_percentage ?? 0) / 100));
-                    }
+                    $docTitle = $apt->doctor?->user?->name ? (__('د.') . ' ' . preg_replace('/^د[\.\s]+/u', '', $apt->doctor->user->name)) : __('الاستشاري');
+                    $fee = (float)($apt->consultation_fee ?? 0);
+                    if ($fee <= 0) continue;
                     $lineItems[] = [
-                        'name' => 'استشارة طبية طوارئ: ' . $docTitle,
+                        'name' => __('استشارة طبية طوارئ:') . ' ' . $docTitle,
                         'qty' => 1,
                         'price' => $fee,
                     ];
@@ -654,7 +655,7 @@
                             ? $lt->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                             : null;
                         $price = $pricing ? (float)$pricing['patient_share'] : ($lt->price ?? 0);
-                        $lineItems[] = ['name' => 'تحليل طوارئ: ' . $lt->name, 'qty' => 1, 'price' => $price];
+                        $lineItems[] = ['name' => __('تحليل طوارئ:') . ' ' . $lt->name, 'qty' => 1, 'price' => $price];
                     }
                 }
 
@@ -665,21 +666,21 @@
                             ? $rt->calculateInsurancePricing($payment->insurance_type, $payment->copay_percentage)
                             : null;
                         $price = $pricing ? (float)$pricing['patient_share'] : ($rt->base_price ?? 0);
-                        $lineItems[] = ['name' => 'أشعة طوارئ: ' . $rt->name, 'qty' => 1, 'price' => $price];
+                        $lineItems[] = ['name' => __('أشعة طوارئ:') . ' ' . $rt->name, 'qty' => 1, 'price' => $price];
                     }
                 }
 
                 if ($payment->emergency->follow_up_payment_id === $payment->id && $payment->emergency->doctor_follow_up_fee > 0) {
-                    $lineItems[] = ['name' => 'رسوم متابعة طبيب الطوارئ', 'qty' => 1, 'price' => $payment->emergency->doctor_follow_up_fee];
+                    $lineItems[] = ['name' => __('رسوم متابعة طبيب الطوارئ'), 'qty' => 1, 'price' => $payment->emergency->doctor_follow_up_fee];
                 }
             }
 
             // 5. Incubator / NICU
             if ($payment->incubatorReservation || $payment->payment_type === 'incubator') {
                 $res = $payment->incubatorReservation;
-                $babyTitle = $res ? ($res->baby_name ?: ('طفل ' . ($res->patient?->name ?? ''))) : 'الخديج';
+                $babyTitle = $res ? ($res->baby_name ?: (__('طفل') . ' ' . ($res->patient?->name ?? ''))) : __('الخديج');
                 $lineItems[] = [
-                    'name' => $payment->description ?: ("دفعة / أمانات حاضنة الخدج ({$babyTitle})"),
+                    'name' => $payment->description ?: (__('دفعة / أمانات حاضنة الخدج') . " ({$babyTitle})"),
                     'qty' => 1,
                     'price' => (float)$payment->amount,
                 ];
@@ -688,10 +689,10 @@
             // Fallback if no item matched or refund
             if ((float)$payment->amount < 0) {
                 $lineItems = [
-                    ['name' => $payment->description ?: 'استرجاع مالي للمريض: إلغاء فحص خارجي', 'qty' => 1, 'price' => abs((float)$payment->amount)]
+                    ['name' => $payment->description ?: __('استرجاع مالي للمريض: إلغاء فحص خارجي'), 'qty' => 1, 'price' => abs((float)$payment->amount)]
                 ];
             } elseif (empty($lineItems)) {
-                $lineItems[] = ['name' => $payment->description ?: 'خدمات طبية', 'qty' => 1, 'price' => $payment->total_amount ?: $payment->amount];
+                $lineItems[] = ['name' => $payment->description ?: __('خدمات طبية'), 'qty' => 1, 'price' => $payment->total_amount ?: $payment->amount];
             }
         @endphp
 
@@ -699,26 +700,26 @@
         <div class="meta-group">
             <div class="meta-row">
                 <span class="meta-val-number">{{ $receiptNum }}</span>
-                <span class="meta-label">الرقم</span>
+                <span class="meta-label">{{ __('الرقم') }}</span>
             </div>
             <div class="meta-row">
                 <span class="meta-val-date">{{ $dateFormatted }}</span>
-                <span class="meta-label">التاريخ</span>
+                <span class="meta-label">{{ __('التاريخ') }}</span>
             </div>
         </div>
 
         <!-- Patient and Doctor Line -->
         <div class="patient-doctor-row">
-            اسم المريض: <strong>{{ $patientName }}</strong>
+            {{ __('اسم المريض:') }} <strong>{{ $patientName }}</strong>
             @if($payment->incubatorReservation)
-                <br>الحاضنة: <span>#{{ $payment->incubatorReservation->incubator?->incubator_number ?? ($payment->incubatorReservation->incubator?->name ?? $payment->incubatorReservation->incubator_id) }}</span>
+                <br>{{ __('الحاضنة:') }} <span>#{{ $payment->incubatorReservation->incubator?->incubator_number ?? ($payment->incubatorReservation->incubator?->name ?? $payment->incubatorReservation->incubator_id) }}</span>
             @endif
             @if($doctorName)
-                <br>الطبيب: <span>د. {{ $doctorName }}</span>
+                <br>{{ __('الطبيب:') }} <span>{{ __('د.') }} {{ $doctorName }}</span>
             @endif
             @if($payment->insurance_type && $payment->insurance_type !== 'none')
                 <div style="font-size: 11px; font-weight: 700; color: #000; margin-top: 2px;">
-                    التغطية: {{ $payment->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن' }}
+                    {{ __('التغطية:') }} {{ $payment->insurance_type === 'hi' ? __('الضمان الصحي الوطني') : __('ضمان قوى الأمن') }}
                 </div>
             @endif
         </div>
@@ -727,9 +728,9 @@
         <table class="items-table">
             <thead>
                 <tr>
-                    <th class="col-service">الخدمة الطبية</th>
-                    <th class="col-qty">عدد</th>
-                    <th class="col-price">المبلغ</th>
+                    <th class="col-service">{{ __('الخدمة الطبية') }}</th>
+                    <th class="col-qty">{{ __('عدد') }}</th>
+                    <th class="col-price">{{ __('المبلغ') }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -750,7 +751,7 @@
                 @if($payment->discount_amount > 0)
                     <tr>
                         <td colspan="2" class="col-service" style="color: #000; font-weight: 800;">
-                            خصم خاص ({{ (float)$payment->discount_percentage }}%)
+                            {{ __('خصم خاص (:pct%)', ['pct' => (float)$payment->discount_percentage]) }}
                             @if($payment->discount_reason)
                                 <span style="font-size: 10px; font-weight: normal;"> - {{ $payment->discount_reason }}</span>
                             @endif
@@ -760,7 +761,7 @@
                 @endif
 
                 <tr class="total-row">
-                    <td colspan="2" class="total-label">{{ (float)$payment->amount < 0 ? 'المبلغ المسترجع للمريض' : 'المبلغ المدفوع' }}</td>
+                    <td colspan="2" class="total-label">{{ (float)$payment->amount < 0 ? __('المبلغ المسترجع للمريض') : __('المبلغ المدفوع') }}</td>
                     <td class="total-val">{{ number_format(abs((float)$payment->amount), 0) }}</td>
                 </tr>
             </tbody>
@@ -769,13 +770,13 @@
         <!-- Bottom Payment Box -->
         <table class="footer-amount-box">
             <tr>
-                <td class="box-label">{{ (float)$payment->amount < 0 ? 'طريقة الاسترجاع:' : 'طريقة الدفع:' }} 
+                <td class="box-label">{{ (float)$payment->amount < 0 ? __('طريقة الاسترجاع:') : __('طريقة الدفع:') }} 
                     @if($payment->payment_method === 'split')
-                        دفع مركب (كاش: {{ number_format((float)($payment->cash_amount ?? 0), 0) }} | بطاقة: {{ number_format((float)($payment->card_amount ?? 0), 0) }})
+                        {{ __('دفع مركب (كاش: :cash | بطاقة: :card)', ['cash' => number_format((float)($payment->cash_amount ?? 0), 0), 'card' => number_format((float)($payment->card_amount ?? 0), 0)]) }}
                     @elseif($payment->payment_method === 'card')
-                        دفع إلكتروني (POS)
+                        {{ __('دفع إلكتروني (POS)') }}
                     @else
-                        نقدي (Cash)
+                        {{ __('نقدي (Cash)') }}
                     @endif
                 </td>
                 <td class="box-val">{{ number_format(abs((float)$payment->amount), 0) }} IQD</td>
@@ -791,9 +792,9 @@
             <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #000; text-align: center;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                     <img src="{{ $qrUrl }}" alt="QR" style="width: 60px; height: 60px; border: 1px solid #000;" onerror="this.closest('.qr-box')?.remove();">
-                    <div style="text-align: right; font-size: 10px; font-weight: 800; line-height: 1.3;">
-                        <span>📱 امسح الرمز بهاتفك</span><br>
-                        <span style="color: #0088cc;">لمتابعة الدور واستلام نداء التيليجرام</span><br>
+                    <div style="text-align: {{ app()->getLocale() === 'ar' ? 'right' : 'left' }}; font-size: 10px; font-weight: 800; line-height: 1.3;">
+                        <span>{{ __('📱 امسح الرمز بهاتفك') }}</span><br>
+                        <span style="color: #0088cc;">{{ __('لمتابعة الدور واستلام نداء التيليجرام') }}</span><br>
                         <small style="color: #555;">@Kafathospitalbot</small>
                     </div>
                 </div>
@@ -802,12 +803,12 @@
 
         @if($payment->notes)
             <div style="font-size: 11px; margin-top: 5px; padding: 3px; border: 1px dashed #ccc;">
-                <strong>ملاحظة:</strong> {{ $payment->notes }}
+                <strong>{{ __('ملاحظة:') }}</strong> {{ $payment->notes }}
             </div>
         @endif
 
         <div class="footer-meta">
-            <span>الكاشير: {{ $payment->cashier->name ?? 'النظام' }}</span>
+            <span>{{ __('الكاشير:') }} {{ $payment->cashier->name ?? __('النظام') }}</span>
             <span style="margin-right: 15px;">{{ ($payment->paid_at ?? now())->format('H:i') }}</span>
         </div>
     </div>

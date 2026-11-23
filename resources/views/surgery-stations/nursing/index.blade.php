@@ -11,23 +11,23 @@
                             <i class="fas fa-user-nurse fs-5"></i>
                         </div>
                         <div>
-                            <h5 class="mb-0 fw-bold">محطة التمريض والرقود</h5>
-                            <small class="text-white-50">متابعة المرضى، إعطاء العلاجات، وسحب مستلزمات عهدة الطابق</small>
+                            <h5 class="mb-0 fw-bold">{{ __('محطة التمريض والرقود') }}</h5>
+                            <small class="text-white-50">{{ __('متابعة المرضى، إعطاء العلاجات، وسحب مستلزمات عهدة الطابق') }}</small>
                         </div>
                     </div>
 
                     {{-- شارات الطابق والعهدة المعتمدة --}}
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="badge bg-white bg-opacity-20 text-white border border-white border-opacity-25 rounded-pill px-3 py-2 fs-6">
-                            <i class="fas fa-warehouse text-warning me-1"></i> {{ $currentLocation?->name ?? 'مخزن الطابق' }}
+                            <i class="fas fa-warehouse text-warning me-1"></i> {{ $currentLocation?->name ?? __('مخزن الطابق') }}
                         </span>
                         @if($isFloorCustodian)
                             <span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-bold shadow-xs">
-                                <i class="fas fa-key me-1"></i> مسؤولة عهدة المخزن
+                                <i class="fas fa-key me-1"></i> {{ __('مسؤولة عهدة المخزن') }}
                             </span>
                         @else
                             <span class="badge bg-info bg-opacity-25 text-white border border-info border-opacity-50 rounded-pill px-3 py-2 fw-medium">
-                                <i class="fas fa-user-check me-1"></i> سحب وصرف تمريضي
+                                <i class="fas fa-user-check me-1"></i> {{ __('سحب وصرف تمريضي') }}
                             </span>
                         @endif
                     </div>
@@ -40,54 +40,94 @@
                         </div>
                     @endif
 
-                    <!-- Floor Filter Bar (شريط تصفية الطوابق السريع) -->
+                    <!-- Floor Filter Bar & Search (شريط تصفية الطوابق والبحث السريع) -->
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2.5 bg-light rounded-4 border">
                         <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                            <span class="small fw-bold text-muted ms-1"><i class="fas fa-building text-primary me-1"></i> الطابق:</span>
-                            <a href="{{ route('nursing-station.index', ['floor' => 'all']) }}" 
+                            <span class="small fw-bold text-muted ms-1"><i class="fas fa-building text-primary me-1"></i> {{ __('الطابق:') }}</span>
+                            <a href="{{ route('nursing-station.index', array_filter(['floor' => 'all', 'search' => $search])) }}" 
                                class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ empty($selectedFloor) ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
-                                كافة الطوابق
+                                {{ __('كافة الطوابق') }}
                             </a>
                             @foreach($availableFloors as $floorName)
-                                <a href="{{ route('nursing-station.index', ['floor' => $floorName]) }}" 
+                                <a href="{{ route('nursing-station.index', array_filter(['floor' => $floorName, 'search' => $search])) }}" 
                                    class="btn btn-sm rounded-pill px-3 py-1 fw-bold {{ $selectedFloor === $floorName ? 'btn-primary text-white shadow-xs' : 'btn-outline-secondary' }}">
                                     {{ $floorName }}
                                     @if($currentLocation && (str_contains($currentLocation->name, $floorName) || str_contains($floorName, $currentLocation->name)))
-                                        <span class="badge bg-warning text-dark ms-1 rounded-pill" style="font-size: 0.7rem;">طابقك</span>
+                                        <span class="badge bg-warning text-dark ms-1 rounded-pill" style="font-size: 0.7rem;">{{ __('طابقك') }}</span>
                                     @endif
                                 </a>
                             @endforeach
                         </div>
-                        @if($selectedFloor)
-                            <div class="text-muted small">
-                                <i class="fas fa-filter text-primary me-1"></i> يتم عرض مرضى <strong>{{ $selectedFloor }}</strong> حالياً
-                            </div>
-                        @endif
+
+                        <!-- Modern Integrated Search Box (بحث مدمج أنيق وفوري) -->
+                        <div class="d-flex align-items-center ms-auto">
+                            <form action="{{ route('nursing-station.index') }}" method="GET" class="m-0">
+                                @if($selectedFloor)
+                                    <input type="hidden" name="floor" value="{{ $selectedFloor }}">
+                                @endif
+                                <div class="position-relative" style="min-width: 250px; max-width: 320px;">
+                                    <input type="text" name="search" id="nursingPatientSearchInput" value="{{ $search ?? '' }}" 
+                                           class="form-control form-control-sm rounded-pill ps-4 bg-white border border-secondary-subtle shadow-xs" 
+                                           style="padding-right: 34px !important; height: 34px; font-size: 0.85rem;"
+                                           placeholder="{{ __('بحث بالمريض، الملف، الغرفة...') }}"
+                                           autocomplete="off">
+                                    <button type="submit" class="btn btn-link position-absolute top-50 translate-middle-y text-primary p-0 border-0 text-decoration-none" style="right: 12px;" title="{{ __('بحث') }}">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                    @if(!empty($search))
+                                        <a href="{{ route('nursing-station.index', array_filter(['floor' => $selectedFloor])) }}" 
+                                           class="position-absolute top-50 translate-middle-y text-danger text-decoration-none" 
+                                           style="left: 11px;" title="{{ __('إلغاء وتفريغ البحث') }}">
+                                            <i class="fas fa-times-circle"></i>
+                                        </a>
+                                    @endif
+                                </div>
+                            </form>
+                        </div>
                     </div>
+                    @if($selectedFloor || !empty($search))
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 px-1 small text-muted">
+                            <div class="d-flex align-items-center gap-2">
+                                @if($selectedFloor)
+                                    <span><i class="fas fa-filter text-primary me-1"></i> {{ __('الطابق النشط:') }} <strong>{{ $selectedFloor }}</strong></span>
+                                @endif
+                                @if(!empty($search))
+                                    <span class="badge bg-primary-subtle text-primary border rounded-pill px-2.5 py-1">
+                                        <i class="fas fa-search me-1"></i> {{ __('البحث عن:') }} {{ $search }}
+                                    </span>
+                                @endif
+                            </div>
+                            @if(!empty($search) || $selectedFloor)
+                                <a href="{{ route('nursing-station.index') }}" class="text-danger text-decoration-none fw-semibold">
+                                    <i class="fas fa-redo-alt me-1"></i> {{ __('إعادة ضبط الفلاتر') }}
+                                </a>
+                            @endif
+                        </div>
+                    @endif
 
                     <!-- Tabs Switcher -->
                     <ul class="nav nav-pills mb-4 gap-2 bg-light p-1.5 rounded-pill shadow-sm overflow-auto flex-nowrap" id="nursingTabs" role="tablist" style="width: fit-content; max-width: 100%;">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active rounded-pill fw-bold px-4 py-2 text-nowrap" id="pre-op-patients-tab" data-bs-toggle="tab" data-bs-target="#pre-op-patients" type="button" role="tab" aria-selected="true">
-                                <i class="fas fa-notes-medical me-1 text-primary"></i> حالات التهيئة قبل الصالة
+                                <i class="fas fa-notes-medical me-1 text-primary"></i> {{ __('حالات التهيئة قبل الصالة') }}
                                 <span class="badge bg-primary text-white rounded-pill ms-1.5">{{ $preOpSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="post-op-patients-tab" data-bs-toggle="tab" data-bs-target="#post-op-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-procedures me-1 text-info"></i> حالات المتابعة بعد الصالة
+                                <i class="fas fa-procedures me-1 text-info"></i> {{ __('حالات المتابعة بعد الصالة') }}
                                 <span class="badge bg-info text-white rounded-pill ms-1.5">{{ $postOpSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="completed-patients-tab" data-bs-toggle="tab" data-bs-target="#completed-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-archive me-1 text-success"></i> أرشيف الحالات المكتملة
+                                <i class="fas fa-archive me-1 text-success"></i> {{ __('أرشيف الحالات المكتملة') }}
                                 <span class="badge bg-success text-white rounded-pill ms-1.5">{{ $completedSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="floor-store-tab" data-bs-toggle="tab" data-bs-target="#floor-store" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-boxes me-1 text-warning"></i> مخزن وعُهدة الطابق
+                                <i class="fas fa-boxes me-1 text-warning"></i> {{ __('مخزن وعُهدة الطابق') }}
                                 <span class="badge bg-warning text-dark rounded-pill ms-1.5">{{ $stockBatches->count() }}</span>
                             </button>
                         </li>
@@ -100,13 +140,13 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="py-3">رقم الملف</th>
-                                            <th class="py-3">اسم المريض</th>
-                                            <th class="py-3">العملية</th>
-                                            <th class="py-3">التاريخ والوقت المحدد</th>
-                                            <th class="py-3">الممرض/ة المسؤول</th>
-                                            <th class="py-3">حالة المحطة</th>
-                                            <th class="py-3 text-center">الإجراءات</th>
+                                            <th class="py-3">{{ __('رقم الملف') }}</th>
+                                            <th class="py-3">{{ __('اسم المريض') }}</th>
+                                            <th class="py-3">{{ __('العملية') }}</th>
+                                            <th class="py-3">{{ __('التاريخ والوقت المحدد') }}</th>
+                                            <th class="py-3">{{ __('الممرض/ة المسؤول') }}</th>
+                                            <th class="py-3">{{ __('حالة المحطة') }}</th>
+                                            <th class="py-3 text-center">{{ __('الإجراءات') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -451,8 +491,8 @@
                                     <div class="card border-0 rounded-4 shadow-sm h-100 bg-white">
                                         <div class="card-header bg-white py-3 px-3 border-bottom d-flex align-items-center justify-content-between flex-wrap gap-2">
                                             <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-pills text-primary fs-5"></i>
-                                                <h6 class="mb-0 fw-bold text-dark">المواد والوجبات المتوفرة في عهدة الطابق</h6>
+                                                <i class="fas fa-boxes text-primary fs-5"></i>
+                                                <h6 class="mb-0 fw-bold text-dark">المستلزمات والمواد المتوفرة في عهدة الطابق</h6>
                                             </div>
                                             <div class="d-flex align-items-center gap-2">
                                                 <span class="badge bg-primary text-white rounded-pill px-3 py-1.5" id="stockItemsCountBadge">{{ $stockBatches->count() }} مادة</span>
@@ -474,7 +514,6 @@
                                                 <div class="col-md-6 d-flex align-items-center gap-1.5 flex-wrap justify-content-md-end">
                                                     <span class="text-muted small me-1">تصفية:</span>
                                                     <button type="button" class="btn btn-xs btn-dark rounded-pill px-2.5 py-1 stock-filter-btn active" data-filter="all">الكل</button>
-                                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="medicine">💊 أدوية</button>
                                                     <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="supplies">🩹 مستلزمات</button>
                                                     <button type="button" class="btn btn-xs btn-outline-warning rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="low">⚠️ نفاد</button>
                                                     <button type="button" class="btn btn-xs btn-outline-danger rounded-pill px-2.5 py-1 stock-filter-btn" data-filter="expiring">⏳ قريبة</button>
@@ -487,7 +526,7 @@
                                                 <table class="table table-hover align-middle mb-0" id="floorStockTable">
                                                     <thead class="table-light">
                                                         <tr>
-                                                            <th class="py-2.5 px-3">المادة / الدواء</th>
+                                                            <th class="py-2.5 px-3">المستلزم / المادة</th>
                                                             <th class="py-2.5 text-center">الرصيد الحالي</th>
                                                             <th class="py-2.5 text-center">تاريخ الصلاحية</th>
                                                             <th class="py-2.5 text-center">رقم الوجبة</th>
@@ -501,8 +540,8 @@
                                                                 $isExpiringSoon = $batch->expiry_date && $batch->expiry_date->diffInDays(now()) <= 60;
                                                                 $isLowStock = $batch->current_qty <= ($batch->product?->alert_quantity ?? 5);
                                                                 $categoryRaw = mb_strtolower($batch->product?->category ?? '');
-                                                                $isMedicine = str_contains($categoryRaw, 'أدوية') || str_contains($categoryRaw, 'دواء') || str_contains($categoryRaw, 'pharma') || str_contains($categoryRaw, 'med');
-                                                                $isSupply = str_contains($categoryRaw, 'مستلزم') || str_contains($categoryRaw, 'supply') || str_contains($categoryRaw, 'جراح');
+                                                                $isMedicine = $batch->product?->isMedication() ?? false;
+                                                                $isSupply = $batch->product?->isSupply() ?? false;
                                                             @endphp
                                                             <tr class="stock-row"
                                                                 data-name="{{ mb_strtolower($batch->product?->name ?? '') }}"
@@ -634,6 +673,21 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const patientSearchInput = document.getElementById('nursingPatientSearchInput');
+        if (patientSearchInput) {
+            patientSearchInput.addEventListener('input', function() {
+                const query = this.value.trim().toLowerCase();
+                const activePane = document.querySelector('#nursingTabsContent .tab-pane.active');
+                if (!activePane) return;
+                const rows = activePane.querySelectorAll('tbody tr');
+                rows.forEach(row => {
+                    if (row.querySelector('.text-muted.py-5') || row.children.length === 1) return;
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(query) ? '' : 'none';
+                });
+            });
+        }
+
         const searchInput = document.getElementById('floorStockSearchInput');
         const clearBtn = document.getElementById('clearFloorStockSearch');
         const filterBtns = document.querySelectorAll('.stock-filter-btn');
@@ -662,9 +716,7 @@
                 const matchesText = !query || name.includes(query) || barcode.includes(query);
 
                 let matchesCategory = true;
-                if (currentFilter === 'medicine') {
-                    matchesCategory = isMedicine;
-                } else if (currentFilter === 'supplies') {
+                if (currentFilter === 'supplies') {
                     matchesCategory = isSupply;
                 } else if (currentFilter === 'low') {
                     matchesCategory = isLow;

@@ -2808,7 +2808,7 @@
                                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                                     <label class="form-label small fw-bold mb-0">نوع الرضاعة / التغذية:</label>
                                                     @canany(['manage nicu services', 'manage nicu care plans'])
-                                                        <a href="{{ route('nicu.services.index') }}#milk-types-tab" target="_blank" class="small text-decoration-none text-muted" title="إدارة وإضافة أنواع الحليب">
+                                                        <a href="{{ route('nicu.milk-types.index') }}" target="_blank" class="small text-decoration-none text-muted" title="إدارة وإضافة أنواع الحليب">
                                                             <i class="fas fa-cog text-warning"></i> <span class="text-xs">إدارة أنواع الحليب</span>
                                                         </a>
                                                     @endcanany

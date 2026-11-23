@@ -115,13 +115,14 @@ class SurgeryWaitingListFlightBoardTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('جدول وقائمة انتظار العمليات الجراحية');
-        $response->assertSee('اختر اليوم من الأسبوع');
         $response->assertSee('Laparoscopic Cholecystectomy');
         $response->assertSee('Dr. Surgeon Test');
         $response->assertSee('Patient Waiting Test');
-        $response->assertSee('الصالة المخصصة');
-        $response->assertSee('الوقت');
-        $response->assertSee('حالة المسار');
+        $response->assertSee('حالة المريض في الصالة');
+        $response->assertSee('المريض');
+        $response->assertSee('نوع العملية');
+        $response->assertSee('الطبيب الجراح');
+        $response->assertSee('رقم الغرفة');
     }
 
     public function test_waiting_list_shows_scheduled_waiting_and_in_progress_statuses(): void
@@ -143,9 +144,8 @@ class SurgeryWaitingListFlightBoardTest extends TestCase
         $response = $this->actingAs($staff)->get(route('surgeries.waiting'));
 
         $response->assertStatus(200);
-        $response->assertSee('مجدولة');
-        $response->assertSee('بالانتظار');
-        $response->assertSee('داخل الصالة');
+        $response->assertSee('Pre-Op');
+        $response->assertSee('Intra-Op');
     }
 
     public function test_check_in_transitions_surgery_from_scheduled_to_waiting(): void
@@ -285,6 +285,39 @@ class SurgeryWaitingListFlightBoardTest extends TestCase
         $this->assertDatabaseHas('surgeries', [
             'id' => $surgery->id,
             'operation_theater_id' => $theater->id,
+        ]);
+    }
+
+    public function test_return_to_waiting_transitions_in_progress_surgery_and_ot_station_back_to_waiting(): void
+    {
+        $setup = $this->createSurgerySetup('in_progress');
+        $surgery = $setup['surgery'];
+        $surgery->started_at = now();
+        $surgery->save();
+
+        $otStation = $surgery->operationTheaterStation()->create([
+            'status' => 'in_progress',
+            'started_at' => now(),
+        ]);
+
+        $admin = User::create([
+            'name' => 'OR Coordinator Return',
+            'email' => 'coord_return@example.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+        ]);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->post(route('surgeries.return-to-waiting', $surgery));
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('surgeries', [
+            'id' => $surgery->id,
+            'status' => 'waiting',
+        ]);
+        $this->assertDatabaseHas('operation_theater_stations', [
+            'id' => $otStation->id,
+            'status' => 'pending',
         ]);
     }
 }

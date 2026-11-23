@@ -201,4 +201,52 @@ class SurgeonStationAccessAndWorkflowTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_surgeon_and_surgeon_shared_account_are_redirected_to_surgeon_station_as_home(): void
+    {
+        // 1. الطبيب الجراح يتم توجيهه إلى محطة الجراح من / ومن /dashboard
+        $this->actingAs($this->surgeonUser)
+            ->get('/')
+            ->assertRedirect(route('surgeon-station.index'));
+
+        $this->actingAs($this->surgeonUser)
+            ->get('/dashboard')
+            ->assertRedirect(route('surgeon-station.index'));
+
+        // 2. مستخدم "حساب الجراحين" يتم توجيهه أيضاً إلى محطة الجراح
+        $sharedAccount = User::factory()->create([
+            'name' => 'حساب الجراحين',
+            'email' => 'gh@hospital.com',
+        ]);
+        $sharedAccount->assignRole('الجراح');
+
+        $this->actingAs($sharedAccount)
+            ->get('/')
+            ->assertRedirect(route('surgeon-station.index'));
+
+        $this->actingAs($sharedAccount)
+            ->get('/dashboard')
+            ->assertRedirect(route('surgeon-station.index'));
+    }
+
+    public function test_surgeon_can_view_resident_follow_ups_even_without_resident_stations(): void
+    {
+        $surgery = Surgery::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->surgeonDoctor->id,
+            'department_id' => $this->department->id,
+            'surgery_type' => 'عملية تنظير بطن',
+            'status' => 'completed',
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+        ]);
+
+        $response = $this->actingAs($this->surgeonUser)
+            ->get(route('surgeon-station.resident-follow-ups', $surgery));
+
+        $response->assertStatus(200);
+        $response->assertSee('متابعات الطبيب المقيم');
+        $response->assertSee('لا توجد قراءات علامات حيوية مسجلة حتى الآن لهذا المريض');
+        $response->assertSee('لا توجد متابعات مسجلة حتى الآن من الطبيب المقيم');
+    }
 }

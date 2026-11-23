@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\Appointment;
 use App\Models\ConsultationRevenue;
 use App\Models\Doctor;
-use App\Models\DoctorFinancialAccount;
 use App\Models\DoctorDue;
+use App\Models\DoctorFinancialAccount;
 use App\Models\Emergency;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -21,8 +21,11 @@ class EmergencyConsultationPaymentTest extends TestCase
     use RefreshDatabase;
 
     protected $admin;
+
     protected $consultantDoctor;
+
     protected $patient;
+
     protected $emergency;
 
     protected function setUp(): void
@@ -40,7 +43,7 @@ class EmergencyConsultationPaymentTest extends TestCase
             'owner_name' => 'د. حسام',
             'phone' => '07700000000',
             'address' => 'بغداد',
-            'license_number' => 'HOSP-LIC-' . uniqid(),
+            'license_number' => 'HOSP-LIC-'.uniqid(),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -66,7 +69,7 @@ class EmergencyConsultationPaymentTest extends TestCase
             'phone' => '07712345678',
             'specialization' => 'أخصائي باطنية وقلبية',
             'qualification' => 'بورد عربي',
-            'license_number' => 'DOC-LIC-' . uniqid(),
+            'license_number' => 'DOC-LIC-'.uniqid(),
             'consultation_fee' => 50000,
             'is_active' => true,
             'type' => 'consultant',
@@ -78,7 +81,7 @@ class EmergencyConsultationPaymentTest extends TestCase
         $patUser = User::factory()->create(['name' => 'علي محمد حسن']);
         $this->patient = Patient::create([
             'user_id' => $patUser->id,
-            'medical_number' => 'MED-ER-' . rand(1000, 9999),
+            'medical_number' => 'MED-ER-'.rand(1000, 9999),
             'blood_group' => 'O+',
         ]);
 
@@ -94,7 +97,7 @@ class EmergencyConsultationPaymentTest extends TestCase
         ]);
     }
 
-    public function test_paying_emergency_consultation_allocates_40k_to_doctor_and_10k_to_hospital(): void
+    public function test_paying_emergency_consultation_allocates_100_percent_to_doctor(): void
     {
         $appointment = Appointment::create([
             'patient_id' => $this->patient->id,
@@ -133,32 +136,32 @@ class EmergencyConsultationPaymentTest extends TestCase
             'notes' => 'تسديد استشارة الطوارئ',
         ]);
 
-        $response->assertRedirect(route('cashier.index'));
+        $response->assertRedirect(route('cashier.receipt', $payment->id));
 
         // 1. Verify Appointment is paid
         $appointment->refresh();
         $this->assertEquals('paid', $appointment->payment_status);
         $this->assertEquals($payment->id, $appointment->payment_id);
 
-        // 2. Verify ConsultationRevenue is created with 40k doctor and 10k hospital
+        // 2. Verify ConsultationRevenue is created with 100% doctor share and 0 hospital share
         $revenue = ConsultationRevenue::where('appointment_id', $appointment->id)->first();
         $this->assertNotNull($revenue);
-        $this->assertEquals(50000, (float)$revenue->total_amount);
-        $this->assertEquals(40000, (float)$revenue->doctor_share);
-        $this->assertEquals(10000, (float)$revenue->hospital_share);
-        $this->assertEquals(80.0, (float)$revenue->doctor_percentage);
+        $this->assertEquals(50000, (float) $revenue->total_amount);
+        $this->assertEquals(50000, (float) $revenue->doctor_share);
+        $this->assertEquals(0, (float) $revenue->hospital_share);
+        $this->assertEquals(100.0, (float) $revenue->doctor_percentage);
         $this->assertEquals($this->consultantDoctor->id, $revenue->doctor_id);
 
-        // 3. Verify DoctorDue is created with 40,000 IQD
+        // 3. Verify DoctorDue is created with full 50,000 IQD for doctor
         $due = DoctorDue::where('doctor_id', $this->consultantDoctor->id)->where('payment_id', $payment->id)->first();
         $this->assertNotNull($due);
-        $this->assertEquals(40000, (float)$due->amount);
+        $this->assertEquals(50000, (float) $due->amount);
         $this->assertEquals('pending', $due->status);
 
-        // 4. Verify DoctorAccount balance is increased by 40,000
+        // 4. Verify DoctorAccount balance is increased by 50,000
         $docAccount = DoctorFinancialAccount::where('doctor_id', $this->consultantDoctor->id)->first();
         $this->assertNotNull($docAccount);
-        $this->assertEquals(40000, (float)$docAccount->balance);
+        $this->assertEquals(50000, (float) $docAccount->balance);
 
         // 5. Verify Receipt print contains doctor name and service description
         $receiptResponse = $this->actingAs($this->admin)->get(route('cashier.receipt.print', $payment));
@@ -166,5 +169,229 @@ class EmergencyConsultationPaymentTest extends TestCase
         $receiptResponse->assertSee('د. قمر سعد');
         $receiptResponse->assertSee('استشارة طبية طوارئ');
         $receiptResponse->assertSee('50,000');
+    }
+
+    public function test_cashier_payment_is_strictly_blocked_if_consultation_is_unpriced(): void
+    {
+        $appointment = Appointment::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->consultantDoctor->id,
+            'department_id' => $this->consultantDoctor->department_id,
+            'emergency_id' => $this->emergency->id,
+            'appointment_date' => now(),
+            'reason' => 'استشارة طوارئ غير مسعرة',
+            'consultation_fee' => 0.0,
+            'duration' => 30,
+            'status' => 'confirmed',
+            'type' => 'emergency_consultation',
+            'payment_status' => 'pending',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $payment = Payment::create([
+            'emergency_id' => $this->emergency->id,
+            'patient_id' => $this->patient->id,
+            'amount' => 0,
+            'total_amount' => 0,
+            'patient_share' => 0,
+            'insurance_share' => 0,
+            'insurance_type' => 'none',
+            'payment_type' => 'emergency',
+            'payment_method' => 'cash',
+            'receipt_number' => Payment::generateReceiptNumber(),
+            'paid_at' => null,
+        ]);
+
+        $response = $this->actingAs($this->admin)->post(route('cashier.emergency.payment.process', $payment), [
+            'payment_method' => 'cash',
+            'amount' => 0,
+        ]);
+
+        $response->assertSessionHas('error');
+        $this->assertStringContainsString('غير مسعرة', session('error'));
+        $this->assertNull($payment->fresh()->paid_at);
+        $this->assertEquals('pending', $appointment->fresh()->payment_status);
+    }
+
+    public function test_requesting_consultation_creates_emergency_payment_even_without_prior_services(): void
+    {
+        $newEmergency = Emergency::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->consultantDoctor->id,
+            'admission_time' => now(),
+            'priority' => 'yellow',
+            'emergency_type' => 'medical',
+            'symptoms' => 'حالة جديدة بدون خدمات سابقة',
+            'status' => 'in_progress',
+            'payment_status' => 'pending',
+        ]);
+
+        $this->consultantDoctor->update(['direct_consultation_fee' => 35000]);
+
+        $response = $this->actingAs($this->admin)->post(route('emergency.create-consultation', $newEmergency), [
+            'doctor_id' => $this->consultantDoctor->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => now()->format('H:i'),
+            'notes' => 'طلب استشارة عاجلة',
+        ]);
+
+        $response->assertSessionHas('success');
+
+        $payment = Payment::where('emergency_id', $newEmergency->id)->first();
+        $this->assertNotNull($payment, 'Payment must be created for emergency so cashier can see it');
+        $this->assertEquals(35000, (float) $payment->total_amount);
+        $this->assertEquals(35000, (float) $payment->amount);
+        $this->assertNull($payment->paid_at);
+
+        // Verify it appears in cashier pending emergency list
+        $cashierResponse = $this->actingAs($this->admin)->get(route('cashier.index'));
+        $cashierResponse->assertStatus(200);
+        $cashierResponse->assertSee((string) $newEmergency->id);
+    }
+
+    public function test_updating_doctor_direct_fee_syncs_pending_unpriced_consultations(): void
+    {
+        $this->consultantDoctor->update(['direct_consultation_fee' => null]);
+
+        $unpricedEmergency = Emergency::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->consultantDoctor->id,
+            'admission_time' => now(),
+            'priority' => 'yellow',
+            'emergency_type' => 'medical',
+            'symptoms' => 'حالة غير مسعرة مبدئياً',
+            'status' => 'in_progress',
+            'payment_status' => 'pending',
+        ]);
+
+        $this->actingAs($this->admin)->post(route('emergency.create-consultation', $unpricedEmergency), [
+            'doctor_id' => $this->consultantDoctor->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => now()->format('H:i'),
+            'notes' => 'استشارة غير مسعرة',
+        ]);
+
+        $appointment = Appointment::where('emergency_id', $unpricedEmergency->id)->first();
+        $this->assertEquals(0, (float) $appointment->consultation_fee);
+
+        // Now doctor is priced via DoctorController or update
+        $this->consultantDoctor->update(['direct_consultation_fee' => 40000]);
+
+        // When cashier opens payment form or upsert runs, it syncs
+        $payment = Payment::where('emergency_id', $unpricedEmergency->id)->first();
+        $response = $this->actingAs($this->admin)->get(route('cashier.emergency.payment.form', $payment));
+        $response->assertStatus(200);
+
+        $appointment->refresh();
+        $this->assertEquals(40000, (float) $appointment->consultation_fee);
+
+        $payment->refresh();
+        $this->assertEquals(40000, (float) $payment->total_amount);
+    }
+
+    public function test_emergency_cashier_can_postpone_and_cancel_items_and_override_prices()
+    {
+        $service1 = \App\Models\EmergencyService::create([
+            'name' => 'تضميد جرح',
+            'code' => 'EM-WOUND',
+            'price' => 15000,
+            'is_active' => true,
+        ]);
+
+        $service2 = \App\Models\EmergencyService::create([
+            'name' => 'جبيرة يد',
+            'code' => 'EM-CAST',
+            'price' => 25000,
+            'is_active' => true,
+        ]);
+
+        $emergency = Emergency::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->consultantDoctor->id,
+            'emergency_type' => 'medical',
+            'symptoms' => 'ألم حاد',
+            'status' => 'admitted',
+            'priority' => 'yellow',
+            'arrival_mode' => 'walking',
+            'admission_time' => now(),
+            'payment_status' => 'pending',
+            'is_insured' => false,
+            'insurance_type' => 'none',
+        ]);
+
+        $emergency->services()->attach($service1->id, ['quantity' => 1]);
+        $emergency->services()->attach($service2->id, ['quantity' => 1]);
+
+        $appointment = Appointment::create([
+            'patient_id' => $this->patient->id,
+            'doctor_id' => $this->consultantDoctor->id,
+            'department_id' => $this->consultantDoctor->department_id,
+            'emergency_id' => $emergency->id,
+            'appointment_date' => now()->toDateString(),
+            'appointment_time' => now()->format('H:i'),
+            'status' => 'confirmed',
+            'payment_status' => 'pending',
+            'consultation_fee' => 30000,
+            'appointment_type' => 'emergency',
+            'created_by' => $this->admin->id,
+        ]);
+
+        $payment = app(\App\Http\Controllers\EmergencyController::class)->upsertUnifiedEmergencyPayment($emergency);
+
+        // Submit with:
+        // service 1: postpone
+        // service 2: cancel
+        // appointment: pay with custom price 45000
+        $response = $this->actingAs($this->admin)->post(route('cashier.emergency.payment.process', $payment), [
+            'payment_method' => 'cash',
+            'amount' => 45000,
+            'item_actions' => [
+                'service_'.$service1->id => 'postpone',
+                'service_'.$service2->id => 'cancel',
+                'appointment_'.$appointment->id => 'pay',
+            ],
+            'item_custom_prices' => [
+                'service_'.$service1->id => 15000,
+                'service_'.$service2->id => 25000,
+                'appointment_'.$appointment->id => 45000,
+            ],
+            'notes' => 'تسديد مخصص وتأجيل وإلغاء',
+        ]);
+
+        $response->assertRedirect(route('cashier.receipt', $payment));
+
+        // 1. Service 2 must be deleted from pivot
+        $this->assertDatabaseMissing('emergency_emergency_service', [
+            'emergency_id' => $emergency->id,
+            'emergency_service_id' => $service2->id,
+        ]);
+
+        // 2. Service 1 must be postponed (payment_id null or new payment)
+        $this->assertDatabaseHas('emergency_emergency_service', [
+            'emergency_id' => $emergency->id,
+            'emergency_service_id' => $service1->id,
+        ]);
+
+        // 3. Appointment paid with custom price 45,000
+        $appointment->refresh();
+        $this->assertEquals('paid', $appointment->payment_status);
+        $this->assertEquals(45000, (float) $appointment->consultation_fee);
+        $payment = $payment->fresh();
+        $this->assertEquals($payment->id, $appointment->payment_id);
+
+        // 4. Payment must have amount 45,000
+        $this->assertEquals(45000, (float) $payment->amount);
+        $this->assertNotNull($payment->paid_at);
+
+        // 5. Emergency has remaining postponed service, so payment_status must still be pending
+        $emergency->refresh();
+        $this->assertEquals('pending', $emergency->payment_status);
+
+        // 6. A fresh pending payment exists for the postponed service 1
+        $pendingPayment = Payment::where('emergency_id', $emergency->id)
+            ->whereNull('paid_at')
+            ->first();
+        $this->assertNotNull($pendingPayment);
+        $this->assertEquals(15000, (float) $pendingPayment->amount);
     }
 }

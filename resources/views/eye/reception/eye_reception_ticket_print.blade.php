@@ -206,7 +206,7 @@
 <div class="ticket-wrapper">
     <!-- الترويسة -->
     <div class="hospital-header">
-        <div class="hospital-name">{{ config('app.name', 'مستشفى الجامعة التعليمي') }}</div>
+        <div class="hospital-name">{{ \App\Models\Hospital::first()?->name ?? 'مستشفى الكفاءات الأهلي' }}</div>
         <div class="center-title">
             <span>👁️</span>
             <span>مركز وجراحة العيون التخصصي</span>

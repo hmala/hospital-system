@@ -49,4 +49,9 @@ class ResidentStationReading extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function drains()
+    {
+        return $this->hasMany(ResidentStationReadingDrain::class, 'resident_station_reading_id')->orderBy('drain_number');
+    }
 }

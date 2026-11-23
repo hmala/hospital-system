@@ -10,45 +10,120 @@ use Illuminate\Support\Facades\Auth;
 
 class SurgeonStationController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
+        $isSharedAccount = (
+            in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام', 'حساب أطباء الجراحة', 'حساب الجراحة'])
+            || $user->email === 'gh@hospital.com'
+            || $user->hasRole(['admin', 'receptionist', 'surgery_staff'])
+            || ($user->hasRole(['الجراح', 'جراح', 'surgeon']) && ! $user->doctor)
+        );
 
-        // جلب العمليات التي في محطة الجراح (بعد صالة العمليات)
-        $query = Surgery::with(['patient.user', 'doctor.user', 'surgeonStation'])
-            ->whereHas('operationTheaterStation', function ($q) {
-                $q->where('status', 'completed');
-            })
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
-            ->orderBy('scheduled_date')
-            ->orderBy('scheduled_time');
+        // جلب العمليات لمحطة الجراح (كافة العمليات النشطة في صالة العمليات مثل محطة التخدير)
+        $query = Surgery::with([
+            'patient.user',
+            'doctor.user',
+            'surgeonStation.surgeon.user',
+            'department',
+        ])->where('status', '!=', 'cancelled');
 
-        // إذا كان المستخدم طبيباً جراحاً (وليس مشرفاً أو موظف استقبال/عمليات)، نعرض له عملياته فقط
-        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+        // فلترة الطبيب الجراح (إذا تم اختياره من القائمة المنسدلة)
+        if ($request->filled('doctor_id')) {
+            if ($request->doctor_id === 'unassigned') {
+                $query->whereNull('doctor_id')
+                    ->where(function ($q) {
+                        $q->whereDoesntHave('surgeonStation')
+                            ->orWhereHas('surgeonStation', fn ($sq) => $sq->whereNull('surgeon_id'));
+                    });
+            } else {
+                $selectedDocId = $request->doctor_id;
+                $query->where(function ($q) use ($selectedDocId) {
+                    $q->where('doctor_id', $selectedDocId)
+                        ->orWhereHas('surgeonStation', function ($sq) use ($selectedDocId) {
+                            $sq->where('surgeon_id', $selectedDocId);
+                        });
+                });
+            }
+        } elseif (! $isSharedAccount && $user->doctor && ! $user->can('view surgeon station')) {
+            // إذا كان طبيباً عادياً لا يحمل صلاحية محطة الجراح العامة
             $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
-            $query->whereIn('doctor_id', $surgeonDoctorIds);
+            $query->where(function ($q) use ($surgeonDoctorIds) {
+                $q->whereIn('doctor_id', $surgeonDoctorIds)
+                    ->orWhereHas('surgeonStation', function ($sq) use ($surgeonDoctorIds) {
+                        $sq->whereIn('surgeon_id', $surgeonDoctorIds);
+                    });
+            });
         }
 
-        $surgeries = $query->get();
+        // فلترة التاريخ
+        if ($request->filled('date')) {
+            if ($request->date === 'today') {
+                $query->whereDate('scheduled_date', today());
+            } elseif ($request->date !== 'all') {
+                $query->whereDate('scheduled_date', $request->date);
+            }
+        }
 
-        return view('surgery-stations.surgeon.index', compact('surgeries'));
+        // فلترة حالة محطة الجراح
+        if ($request->filled('status') && $request->status !== 'all') {
+            if ($request->status === 'pending') {
+                $query->where(function ($q) {
+                    $q->whereDoesntHave('surgeonStation')
+                        ->orWhereHas('surgeonStation', fn ($sq) => $sq->where('status', 'pending'));
+                });
+            } else {
+                $query->whereHas('surgeonStation', function ($q) use ($request) {
+                    $q->where('status', $request->status);
+                });
+            }
+        }
+
+        // فلترة البحث النصي بالاسم، رقم الملف، اسم العملية، واسم الطبيب الجراح
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('surgery_name', 'like', "%{$search}%")
+                    ->orWhere('surgery_type', 'like', "%{$search}%")
+                    ->orWhereHas('patient.user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('patient', function ($pq) use ($search) {
+                        $pq->where('file_number', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('doctor.user', function ($dq) use ($search) {
+                        $dq->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $surgeries = $query->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
+            ->get();
+
+        // قائمة الجراحين للاختيار منها في الفلتر
+        $surgeons = Doctor::where('type', 'surgeon')
+            ->where('is_active', true)
+            ->with('user')
+            ->get()
+            ->sortBy(fn ($d) => $d->user?->name ?? '');
+
+        return view('surgery-stations.surgeon.index', compact('surgeries', 'isSharedAccount', 'surgeons'));
     }
 
     public function show(Surgery $surgery)
     {
         $this->authorizeSurgeon($surgery);
 
-        // التحقق من أن صالة العمليات مكتملة
-        if (! $surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed') {
-            return redirect()->route('operation-theater-station.show', $surgery)
-                ->with('error', 'يجب إتمام مرحلة صالة العمليات أولاً');
-        }
-
-        // إنشاء محطة إذا لم تكن موجودة
+        // إنشاء محطة إذا لم تكن موجودة ومزامنة الجراح
         if (! $surgery->surgeonStation) {
             $surgery->surgeonStation()->create([
                 'surgeon_id' => $surgery->doctor_id,
                 'status' => 'pending',
+            ]);
+        } elseif (! $surgery->surgeonStation->surgeon_id && $surgery->doctor_id) {
+            $surgery->surgeonStation()->update([
+                'surgeon_id' => $surgery->doctor_id,
             ]);
         }
 
@@ -72,7 +147,24 @@ class SurgeonStationController extends Controller
             'residentStationFollowUps',
         ]);
 
-        return view('surgery-stations.surgeon.follow-ups', compact('surgery'));
+        $combinedReadings = collect();
+        if ($surgery->preOpResidentStation) {
+            $combinedReadings = $combinedReadings->concat($surgery->preOpResidentStation->readings->map(function ($reading) {
+                $reading->phase_label = 'قبل دخول الصالة';
+
+                return $reading;
+            }));
+        }
+        if ($surgery->postOpResidentStation) {
+            $combinedReadings = $combinedReadings->concat($surgery->postOpResidentStation->readings->map(function ($reading) {
+                $reading->phase_label = 'بعد العملية';
+
+                return $reading;
+            }));
+        }
+        $combinedReadings = $combinedReadings->sortByDesc('created_at');
+
+        return view('surgery-stations.surgeon.follow-ups', compact('surgery', 'combinedReadings'));
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -117,12 +209,16 @@ class SurgeonStationController extends Controller
         // حفظ العلاجات المهيكلة في جدول surgery_treatments
         $prescribedMedications = $request->input('prescribed_medications');
         if ($prescribedMedications && isset($prescribedMedications['surgery_treatments'][$surgery->id])) {
-            $surgery->surgeryTreatments()->delete();
+            $surgery->surgeryTreatments()
+                ->where('item_type', SurgeryTreatment::TYPE_MEDICATION)
+                ->whereNull('batch_id')
+                ->delete();
             $treatments = $prescribedMedications['surgery_treatments'][$surgery->id];
             foreach ($treatments as $index => $treatment) {
                 if (! empty($treatment['description'])) {
                     SurgeryTreatment::create([
                         'surgery_id' => $surgery->id,
+                        'item_type' => SurgeryTreatment::TYPE_MEDICATION,
                         'description' => $treatment['description'],
                         'dosage' => $treatment['dosage'] ?? null,
                         'timing' => $treatment['timing'] ?? null,
@@ -164,10 +260,27 @@ class SurgeonStationController extends Controller
     private function authorizeSurgeon(Surgery $surgery)
     {
         $user = auth()->user();
-        if ($user->doctor && ! $user->hasRole(['admin', 'receptionist', 'surgery_staff'])) {
+        if (! $user) {
+            abort(401);
+        }
+
+        // الحساب الموحد لصالة العمليات أو الإدارة لديهم صلاحية كاملة على كل العمليات
+        $isShared = (
+            in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام', 'حساب أطباء الجراحة', 'حساب الجراحة'])
+            || $user->email === 'gh@hospital.com'
+            || $user->hasRole(['admin', 'receptionist', 'surgery_staff'])
+            || ($user->hasRole(['الجراح', 'جراح', 'surgeon']) && ! $user->doctor)
+        );
+
+        if ($isShared) {
+            return;
+        }
+
+        if ($user->doctor) {
             $surgeonDoctorIds = $this->getSurgeonDoctorIds($user);
-            if (! in_array($surgery->doctor_id, $surgeonDoctorIds)) {
-                abort(403, 'غير مصرح لك بالوصول إلى هذه العملية الجراحية');
+            $surgeryDoctorIds = array_filter([$surgery->doctor_id, $surgery->surgeonStation?->surgeon_id]);
+            if (empty(array_intersect($surgeryDoctorIds, $surgeonDoctorIds))) {
+                abort(403, 'غير مصرح لك بالوصول إلى هذه العملية الجراحية المسندة لجراح آخر');
             }
         }
     }

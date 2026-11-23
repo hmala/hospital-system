@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ app()->getLocale() }}" dir="{{ app()->getLocale() === 'en' ? 'ltr' : 'rtl' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول | MEDIX ERP - Hospital Management System</title>
+    <title>{{ __('تسجيل الدخول') }} | MEDIX ERP - Hospital Management System</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -723,6 +723,44 @@
         }
         .eye-btn:hover { color: #ffffff; }
 
+        html[dir="ltr"] .field-icon { right: auto; left: 1.1rem; }
+        html[dir="ltr"] .field-input { padding: 0.88rem 2.8rem 0.88rem 3rem; }
+        html[dir="ltr"] .eye-btn { left: auto; right: 1rem; }
+
+        .lang-switch-pill {
+            position: absolute;
+            top: 1.8rem;
+            left: 1.8rem;
+            z-index: 10;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.85rem;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 9999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #ffffff;
+            text-decoration: none;
+            backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+        .lang-switch-pill:hover {
+            background: rgba(255,255,255,0.24);
+            transform: translateY(-1px);
+            color: #ffffff;
+        }
+        html[dir="ltr"] .lang-switch-pill { left: auto; right: 1.8rem; }
+        .lang-switch-pill .flag-icon {
+            width: 19px;
+            height: 13px;
+            object-fit: cover;
+            border-radius: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+            display: inline-block;
+        }
+
         .error-msg {
             margin-top: 0.35rem;
             display: flex;
@@ -885,6 +923,22 @@
         $doctorAvatarSrc = file_exists($doctorAvatarFile)
             ? 'data:image/png;base64,' . base64_encode(file_get_contents($doctorAvatarFile))
             : asset('images/doctor_avatar.png');
+
+        $iqFlagFile = public_path('images/flags/iq.svg');
+        if (!file_exists($iqFlagFile)) {
+            $iqFlagFile = base_path('images/flags/iq.svg');
+        }
+        $iqFlagSrc = file_exists($iqFlagFile)
+            ? 'data:image/svg+xml;base64,' . base64_encode(file_get_contents($iqFlagFile))
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MDAgNjAwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjYwMCI+CiAgPHJlY3Qgd2lkdGg9IjkwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNjZTExMjYiLz4KICA8cmVjdCB5PSIyMDAiIHdpZHRoPSI5MDAiIGhlaWdodD0iMjAwIiBmaWxsPSIjZmZmZmZmIi8+CiAgPHJlY3QgeT0iNDAwIiB3aWR0aD0iOTAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iIzAwMDAwMCIvPgogIDx0ZXh0IHg9IjQ1MCIgeT0iMzQ4IiBmb250LWZhbWlseT0iJ0FtaXJpJywgJ1RyYWRpdGlvbmFsIEFyYWJpYycsICdTZWdvZSBVSScsIFRhaG9tYSwgQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSI5MDAiIGZvbnQtc2l6ZT0iMTI0IiBmaWxsPSIjMDA3YTNkIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkaXJlY3Rpb249InJ0bCI+2KfZhNmE2Ycg2KPZg9io2LE8L3RleHQ+Cjwvc3ZnPg==';
+
+        $gbFlagFile = public_path('images/flags/gb.svg');
+        if (!file_exists($gbFlagFile)) {
+            $gbFlagFile = base_path('images/flags/gb.svg');
+        }
+        $gbFlagSrc = file_exists($gbFlagFile)
+            ? 'data:image/svg+xml;base64,' . base64_encode(file_get_contents($gbFlagFile))
+            : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2MCAzMCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjMwIj4KICA8Y2xpcFBhdGggaWQ9InMiPgogICAgPHBhdGggZD0iTTAsMCB2MzAgaDYwIHYtMzAgeiIvPgogIDwvY2xpcFBhdGg+CiAgPGNsaXBQYXRoIGlkPSJ0Ij4KICAgIDxwYXRoIGQ9Ik0zMCwxNSBoMzAgdjE1IHogdjE1IGgtMzAgeiBoLTMwIHYtMTUgeiB2LTE1IGgzMCB6Ii8+CiAgPC9jbGlwUGF0aD4KICA8ZyBjbGlwLXBhdGg9InVybCgjcykiPgogICAgPHBhdGggZD0iTTAsMCB2MzAgaDYwIHYtMzAgeiIgZmlsbD0iIzAxMjE2OSIvPgogICAgPHBhdGggZD0iTTAsMCBMNjAsMzAgTTYwLDAgTDAsMzAiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSI2Ii8+CiAgICA8cGF0aCBkPSJNMCwwIEw2MCwzMCBNNjAsMCBMMCwzMCIgY2xpcC1wYXRoPSJ1cmwodHQpIiBzdHJva2U9IiNDODEwMkUiIHN0cm9rZS13aWR0aD0iNCIvPgogICAgPHBhdGggZD0iTTMwLDAgdjMwIE0wLDE1IGg2MCIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjEwIi8+CiAgICA8cGF0aCBkPSJNMzAsMCB2MzAgTTAsMTUgaDYwIiBzdHJva2U9IiNDODEwMkUiIHN0cm9rZS13aWR0aD0iNiIvPgogIDwvZz4KPC9zdmc+';
     @endphp
 
     <div class="page-wrap">
@@ -930,7 +984,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-stethoscope"></i>
                         </div>
-                        <span class="feature-chip-title">العيادات الاستشارية</span>
+                        <span class="feature-chip-title">{{ __('العيادات الاستشارية') }}</span>
                         <span class="feature-chip-sub">Clinics</span>
                     </div>
 
@@ -938,7 +992,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-truck-medical"></i>
                         </div>
-                        <span class="feature-chip-title">طوارئ وحوادث 24/7</span>
+                        <span class="feature-chip-title">{{ __('طوارئ وحوادث 24/7') }}</span>
                         <span class="feature-chip-sub">Emergency</span>
                     </div>
 
@@ -946,7 +1000,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-procedures"></i>
                         </div>
-                        <span class="feature-chip-title">العمليات الجراحية</span>
+                        <span class="feature-chip-title">{{ __('العمليات الجراحية') }}</span>
                         <span class="feature-chip-sub">Surgeries</span>
                     </div>
 
@@ -954,7 +1008,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-flask-vial"></i>
                         </div>
-                        <span class="feature-chip-title">المختبر والتحاليل</span>
+                        <span class="feature-chip-title">{{ __('المختبر والتحاليل') }}</span>
                         <span class="feature-chip-sub">Laboratory</span>
                     </div>
 
@@ -962,7 +1016,7 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-x-ray"></i>
                         </div>
-                        <span class="feature-chip-title">الأشعة والسونار</span>
+                        <span class="feature-chip-title">{{ __('الأشعة والسونار') }}</span>
                         <span class="feature-chip-sub">Radiology</span>
                     </div>
 
@@ -970,12 +1024,12 @@
                         <div class="feature-chip-icon">
                             <i class="fas fa-cash-register"></i>
                         </div>
-                        <span class="feature-chip-title">الصندوق والمالية</span>
+                        <span class="feature-chip-title">{{ __('الصندوق والمالية') }}</span>
                         <span class="feature-chip-sub">Cashier & Treasury</span>
                     </div>
                 </div>
 
-                <div class="bottom-tagline">منظومة ذكية متكاملة لإدارة المستشفيات والمراكز التخصصية</div>
+                <div class="bottom-tagline">{{ __('منظومة ذكية متكاملة لإدارة المستشفيات والمراكز التخصصية') }}</div>
             </div>
         </div>
 
@@ -1014,10 +1068,21 @@
                 <div class="white-sparkle-node node-5"></div>
             </div>
 
+            <!-- Language Switcher -->
+            <a href="{{ route('lang.switch', app()->getLocale() === 'en' ? 'ar' : 'en') }}" class="lang-switch-pill" title="{{ app()->getLocale() === 'en' ? 'التحويل للعربية' : 'Switch to English' }}">
+                @if(app()->getLocale() === 'en')
+                    <img src="{{ $iqFlagSrc }}" data-src="{{ asset('images/flags/iq.svg') }}" alt="العراق" class="flag-icon">
+                    <span>العربية</span>
+                @else
+                    <img src="{{ $gbFlagSrc }}" data-src="{{ asset('images/flags/gb.svg') }}" alt="UK" class="flag-icon">
+                    <span>English</span>
+                @endif
+            </a>
+
             <!-- Live pill -->
             <div class="live-pill">
                 <span class="dot"></span>
-                <span>النظام يعمل · Healthcare. Simplified.</span>
+                <span>{{ __('النظام يعمل · Healthcare. Simplified.') }}</span>
             </div>
 
             <div class="login-box">
@@ -1039,8 +1104,8 @@
                                   fill="url(#fingerprintGrad)"/>
                         </svg>
                     </div>
-                    <h1 class="card-title">تسجيل الدخول</h1>
-                    <p class="card-subtitle">بوابة النفاذ السريرية والمالية الموحدة</p>
+                    <h1 class="card-title">{{ __('تسجيل الدخول') }}</h1>
+                    <p class="card-subtitle">{{ __('بوابة النفاذ السريرية والمالية الموحدة') }}</p>
                 </div>
 
                 <form method="POST" action="{{ route('login') }}" autocomplete="on" id="login-form">
@@ -1057,7 +1122,7 @@
                                    required
                                    autocomplete="email"
                                    autofocus
-                                   placeholder="البريد الإلكتروني أو اسم المستخدم">
+                                   placeholder="{{ __('البريد الإلكتروني أو اسم المستخدم') }}">
                             <i class="fas fa-at field-icon"></i>
                         </div>
                         @error('email')
@@ -1077,9 +1142,9 @@
                                    name="password"
                                    required
                                    autocomplete="current-password"
-                                   placeholder="كلمة المرور">
+                                   placeholder="{{ __('كلمة المرور') }}">
                             <i class="fas fa-lock field-icon"></i>
-                            <button type="button" class="eye-btn" onclick="togglePwd()" title="إظهار/إخفاء">
+                            <button type="button" class="eye-btn" onclick="togglePwd()" title="{{ __('إظهار/إخفاء') }}">
                                 <i class="fas fa-eye" id="pwd-icon"></i>
                             </button>
                         </div>
@@ -1096,22 +1161,22 @@
                         <label class="remember-label">
                             <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
                             <span class="chk"><i class="fas fa-check"></i></span>
-                            <span>تذكرني</span>
+                            <span>{{ __('تذكرني') }}</span>
                         </label>
                         @if (Route::has('password.request'))
-                            <a class="forgot-link" href="{{ route('password.request') }}">نسيت كلمة المرور؟</a>
+                            <a class="forgot-link" href="{{ route('password.request') }}">{{ __('نسيت كلمة المرور؟') }}</a>
                         @endif
                     </div>
 
                     <!-- Submit -->
                     <button type="submit" class="btn-login" id="btn-submit">
-                        <span>دخول إلى المنظومة</span>
-                        <i class="fas fa-arrow-left"></i>
+                        <span>{{ __('دخول إلى المنظومة') }}</span>
+                        <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }}"></i>
                     </button>
                 </form>
 
                 <a href="mailto:support@medixerp.com" class="help-link">
-                    هل تواجه صعوبة في الدخول؟ تواصل مع الدعم الفني
+                    {{ __('هل تواجه صعوبة في الدخول؟ تواصل مع الدعم الفني') }}
                 </a>
 
                 <div class="right-tagline">Technology for a Healthier Tomorrow</div>
@@ -1131,7 +1196,7 @@
         </div>
         <div class="loader-text-wrapper">
             <div class="loader-text">
-                جاري التحقق والدخول للمنظومة<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
+                {{ __('جاري التحقق والدخول للمنظومة') }}<span class="loader-dots"><span>.</span><span>.</span><span>.</span></span>
             </div>
         </div>
     </div>

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'إعدادات وتخصيص أنماط إدخال نتائج الفحوصات المختبرية')
+@section('title', __('إعدادات وتخصيص أنماط إدخال نتائج الفحوصات المختبرية'))
 
 @section('content')
 <div class="container-fluid py-3">
@@ -12,18 +12,18 @@
                 <i class="fas fa-sliders-h fs-4"></i>
             </div>
             <div>
-                <h4 class="mb-1 fw-bold text-dark">إعدادات أنماط إدخال نتائج الفحوصات المختبرية</h4>
+                <h4 class="mb-1 fw-bold text-dark">{{ __("إعدادات أنماط إدخال نتائج الفحوصات المختبرية") }}</h4>
                 <p class="text-muted mb-0 small">
-                    تحديد آلية إدخال النتائج لكل فحص (قيمة رقمية مباشرة، قيم فرعية مفصلة، مرفق تقرير الجهاز، أو كلاهما معاً) على مستوى النظام
+                    {{ __("تحديد آلية إدخال النتائج لكل فحص (قيمة رقمية مباشرة، قيم فرعية مفصلة، مرفق تقرير الجهاز، أو كلاهما معاً) على مستوى النظام") }}
                 </p>
             </div>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('lab-tests.pricing-settings.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-tags me-1"></i> إعدادات الأسعار
+                <i class="fas fa-tags me-1"></i> {{ __("إعدادات الأسعار") }}
             </a>
             <a href="{{ route('lab-tests.index') }}" class="btn btn-outline-primary">
-                <i class="fas fa-arrow-left me-1"></i> قائمة الفحوصات
+                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} me-1"></i> {{ __("قائمة الفحوصات") }}
             </a>
         </div>
     </div>
@@ -33,9 +33,9 @@
         <div class="col-xl-2 col-md-4 col-sm-6">
             <div class="card border-0 shadow-sm h-100 bg-white">
                 <div class="card-body p-3 text-center">
-                    <span class="text-muted d-block small mb-1 fw-semibold">إجمالي الفحوصات</span>
+                    <span class="text-muted d-block small mb-1 fw-semibold">{{ __("إجمالي الفحوصات") }}</span>
                     <h3 class="fw-bold text-dark mb-0 font-monospace">{{ number_format($stats['total']) }}</h3>
-                    <small class="text-muted" style="font-size: 0.72rem;">فحص نشط بالنظام</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">{{ __("فحص نشط بالنظام") }}</small>
                 </div>
             </div>
         </div>
@@ -43,10 +43,9 @@
             <div class="card border-0 shadow-sm h-100 bg-primary bg-opacity-10 border-start border-primary border-3">
                 <div class="card-body p-3 text-center">
                     <span class="text-primary d-block small mb-1 fw-bold">
-                        <i class="fas fa-keyboard me-1"></i> قيمة مباشرة مفردة
-                    </span>
+                        <i class="fas fa-keyboard me-1"></i>{{ __("قيمة مباشرة مفردة") }}</span>
                     <h3 class="fw-bold text-primary mb-0 font-monospace">{{ number_format($stats['single_value']) }}</h3>
-                    <small class="text-muted" style="font-size: 0.72rem;">إدخال قيمة ورقم مباشرة</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">{{ __("إدخال قيمة ورقم مباشرة") }}</small>
                 </div>
             </div>
         </div>
@@ -54,10 +53,9 @@
             <div class="card border-0 shadow-sm h-100 bg-purple bg-opacity-10 border-start border-3" style="border-color: #6f42c1 !important; background-color: rgba(111, 66, 193, 0.08);">
                 <div class="card-body p-3 text-center">
                     <span class="d-block small mb-1 fw-bold" style="color: #6f42c1;">
-                        <i class="fas fa-list-ol me-1"></i> قيم فرعية مفصلة
-                    </span>
+                        <i class="fas fa-list-ol me-1"></i>{{ __("قيم فرعية مفصلة") }}</span>
                     <h3 class="fw-bold mb-0 font-monospace" style="color: #6f42c1;">{{ number_format($stats['sub_tests']) }}</h3>
-                    <small class="text-muted" style="font-size: 0.72rem;">معاملات وباراميترات فرعية</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">{{ __("معاملات وباراميترات فرعية") }}</small>
                 </div>
             </div>
         </div>
@@ -65,10 +63,9 @@
             <div class="card border-0 shadow-sm h-100 bg-warning bg-opacity-10 border-start border-warning border-3">
                 <div class="card-body p-3 text-center">
                     <span class="text-warning-emphasis d-block small mb-1 fw-bold">
-                        <i class="fas fa-file-medical-alt me-1"></i> مرفق تقرير جهاز
-                    </span>
+                        <i class="fas fa-file-medical-alt me-1"></i>{{ __("مرفق تقرير جهاز") }}</span>
                     <h3 class="fw-bold text-dark mb-0 font-monospace">{{ number_format($stats['attachment_only']) }}</h3>
-                    <small class="text-muted" style="font-size: 0.72rem;">رفع مستند / تقرير PDF/صورة</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">{{ __("رفع مستند / تقرير PDF/صورة") }}</small>
                 </div>
             </div>
         </div>
@@ -76,10 +73,9 @@
             <div class="card border-0 shadow-sm h-100 bg-success bg-opacity-10 border-start border-success border-3">
                 <div class="card-body p-3 text-center">
                     <span class="text-success d-block small mb-1 fw-bold">
-                        <i class="fas fa-random me-1"></i> كلاهما (مرن)
-                    </span>
+                        <i class="fas fa-random me-1"></i>{{ __("كلاهما (مرن)") }}</span>
                     <h3 class="fw-bold text-success mb-0 font-monospace">{{ number_format($stats['flexible']) }}</h3>
-                    <small class="text-muted" style="font-size: 0.72rem;">قيم فرعية + إرفاق تقرير</small>
+                    <small class="text-muted" style="font-size: 0.72rem;">{{ __("قيم فرعية + إرفاق تقرير") }}</small>
                 </div>
             </div>
         </div>
@@ -87,7 +83,7 @@
             <div class="card border-0 shadow-sm h-100 bg-info bg-opacity-10 border-start border-info border-3">
                 <div class="card-body p-3 text-center">
                     <span class="text-info d-block small mb-1 fw-bold">
-                        <i class="fas fa-layer-group me-1"></i> تحاليل لها قيم فرعية
+                        <i class="fas fa-layer-group me-1"></i> {{ __("تحاليل لها قيم فرعية") }}
                     </span>
                     <h3 class="fw-bold text-info mb-0 font-monospace">{{ number_format($stats['with_subtests_count']) }}</h3>
                     <small class="text-muted" style="font-size: 0.72rem;">(CBC, ABG, GUE, GSE, Semen)</small>
@@ -110,12 +106,12 @@
                 <div class="col-md-3">
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" name="q" class="form-control" placeholder="ابحث باسم الفحص أو الكود..." value="{{ request('q') }}">
+                        <input type="text" name="q" class="form-control" placeholder="{{ __("ابحث باسم الفحص أو الكود...") }}" value="{{ request('q') }}">
                     </div>
                 </div>
                 <div class="col-md-2">
                     <select name="category" class="form-select form-select-sm">
-                        <option value="">جميع التصنيفات الفرعية</option>
+                        <option value="">{{ __("جميع التصنيفات الفرعية") }}</option>
                         @foreach($categories as $cat)
                             <option value="{{ $cat }}" {{ request('category') == $cat ? 'selected' : '' }}>{{ $cat }}</option>
                         @endforeach
@@ -123,22 +119,22 @@
                 </div>
                 <div class="col-md-2">
                     <select name="entry_type" class="form-select form-select-sm">
-                        <option value="">جميع أنماط الإدخال</option>
-                        <option value="single_value" {{ request('entry_type') == 'single_value' ? 'selected' : '' }}>قيمة مباشرة مفردة</option>
-                        <option value="sub_tests" {{ request('entry_type') == 'sub_tests' ? 'selected' : '' }}>قيم فرعية مفصلة</option>
-                        <option value="attachment_only" {{ request('entry_type') == 'attachment_only' ? 'selected' : '' }}>مرفق تقرير جهاز</option>
-                        <option value="flexible" {{ request('entry_type') == 'flexible' ? 'selected' : '' }}>كلاهما (مرن)</option>
+                        <option value="">{{ __("جميع أنماط الإدخال") }}</option>
+                        <option value="single_value" {{ request('entry_type') == 'single_value' ? 'selected' : '' }}>{{ __("قيمة مباشرة مفردة") }}</option>
+                        <option value="sub_tests" {{ request('entry_type') == 'sub_tests' ? 'selected' : '' }}>{{ __("قيم فرعية مفصلة") }}</option>
+                        <option value="attachment_only" {{ request('entry_type') == 'attachment_only' ? 'selected' : '' }}>{{ __("مرفق تقرير جهاز") }}</option>
+                        <option value="flexible" {{ request('entry_type') == 'flexible' ? 'selected' : '' }}>{{ __("كلاهما (مرن)") }}</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <select name="sub_tests_only" class="form-select form-select-sm">
-                        <option value="">القيم الفرعية (الكل)</option>
-                        <option value="yes" {{ request('sub_tests_only') == 'yes' ? 'selected' : '' }}>يحتوي قيم فرعية فقط</option>
-                        <option value="no" {{ request('sub_tests_only') == 'no' ? 'selected' : '' }}>لا يحتوي قيم فرعية</option>
+                        <option value="">{{ __("القيم الفرعية (الكل)") }}</option>
+                        <option value="yes" {{ request('sub_tests_only') == 'yes' ? 'selected' : '' }}>{{ __("يحتوي قيم فرعية فقط") }}</option>
+                        <option value="no" {{ request('sub_tests_only') == 'no' ? 'selected' : '' }}>{{ __("لا يحتوي قيم فرعية") }}</option>
                     </select>
                 </div>
                 <div class="col-md-1">
-                    <select name="per_page" class="form-select form-select-sm" title="عدد العناصر في الصفحة">
+                    <select name="per_page" class="form-select form-select-sm" title="{{ __("عدد العناصر في الصفحة") }}">
                         <option value="25" {{ request('per_page') == '25' ? 'selected' : '' }}>25</option>
                         <option value="50" {{ request('per_page', '50') == '50' ? 'selected' : '' }}>50</option>
                         <option value="100" {{ request('per_page') == '100' ? 'selected' : '' }}>100</option>
@@ -148,10 +144,10 @@
                 </div>
                 <div class="col-md-2 d-flex gap-1">
                     <button type="submit" class="btn btn-sm btn-primary flex-grow-1">
-                        <i class="fas fa-filter me-1"></i> تصفية
+                        <i class="fas fa-filter me-1"></i> {{ __("تصفية") }}
                     </button>
                     @if(request()->anyFilled(['q', 'category', 'entry_type', 'sub_tests_only', 'per_page']))
-                        <a href="{{ route('lab-tests.entry-settings') }}" class="btn btn-sm btn-outline-secondary" title="إعادة تعيين الفلاتر">
+                        <a href="{{ route('lab-tests.entry-settings') }}" class="btn btn-sm btn-outline-secondary" title="{{ __("إعادة تعيين الفلاتر") }}">
                             <i class="fas fa-times"></i>
                         </a>
                     @endif
@@ -168,24 +164,23 @@
                     <div class="form-check mb-0">
                         <input class="form-check-input" type="checkbox" id="selectAllCheckbox" style="cursor: pointer;">
                         <label class="form-check-label fw-bold small text-dark" for="selectAllCheckbox" style="cursor: pointer;">
-                            تحديد الكل في هذه الصفحة (<span id="selectedCount">0</span> محدد)
+                            {{ __("تحديد الكل في هذه الصفحة") }} (<span id="selectedCount">0</span> {{ __("محدد") }})
                         </label>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2">
-                    <span class="small text-muted fw-semibold">تطبيق نمط موحد على المحدد:</span>
+                    <span class="small text-muted fw-semibold">{{ __("تطبيق نمط موحد على المحدد:") }}</span>
                     <button type="button" class="btn btn-xs btn-outline-primary fw-bold py-1 px-2" onclick="applyBulkEntryType('single_value')">
-                        <i class="fas fa-keyboard me-1"></i> قيمة مباشرة
+                        <i class="fas fa-keyboard me-1"></i> {{ __("قيمة مباشرة") }}
                     </button>
                     <button type="button" class="btn btn-xs fw-bold py-1 px-2 text-white" style="background-color: #6f42c1;" onclick="applyBulkEntryType('sub_tests')">
-                        <i class="fas fa-list-ol me-1"></i> قيم فرعية
+                        <i class="fas fa-list-ol me-1"></i> {{ __("قيم فرعية") }}
                     </button>
                     <button type="button" class="btn btn-xs btn-outline-warning fw-bold py-1 px-2" onclick="applyBulkEntryType('attachment_only')">
-                        <i class="fas fa-file-medical-alt me-1"></i> مرفق جهاز
+                        <i class="fas fa-file-medical-alt me-1"></i> {{ __("مرفق جهاز") }}
                     </button>
                     <button type="button" class="btn btn-xs btn-outline-success fw-bold py-1 px-2" onclick="applyBulkEntryType('flexible')">
-                        <i class="fas fa-random me-1"></i> كلاهما (مرن)
-                    </button>
+                        <i class="fas fa-random me-1"></i>{{ __("كلاهما (مرن)") }}</button>
                 </div>
             </div>
         </div>
@@ -202,35 +197,35 @@
                                 <i class="fas fa-check-square text-muted"></i>
                             </th>
                             <th class="text-center" style="width: 50px;">#</th>
-                            <th style="min-width: 240px;">اسم الفحص الطبي</th>
-                            <th style="width: 130px;">التصنيف الفرعي</th>
-                            <th style="width: 100px;" class="text-center">القيم الفرعية</th>
+                            <th style="min-width: 240px;">{{ __("اسم الفحص الطبي") }}</th>
+                            <th style="width: 130px;">{{ __("التصنيف الفرعي") }}</th>
+                            <th style="width: 100px;" class="text-center">{{ __("القيم الفرعية") }}</th>
                             <!-- الأعمدة الأربعة للخيارات حسب طلب المستخدم -->
                             <th class="text-center bg-primary bg-opacity-10" style="width: 145px;">
                                 <div class="fw-bold text-primary small">
-                                    <i class="fas fa-keyboard me-1"></i> 1. قيمة مباشرة
+                                    <i class="fas fa-keyboard me-1"></i> {{ __("1. قيمة مباشرة") }}
                                 </div>
                                 <span class="badge bg-primary-subtle text-primary" style="font-size: 0.68rem;">Single Value</span>
                             </th>
                             <th class="text-center" style="width: 145px; background-color: rgba(111, 66, 193, 0.08);">
                                 <div class="fw-bold small" style="color: #6f42c1;">
-                                    <i class="fas fa-list-ol me-1"></i> 2. قيم فرعية
+                                    <i class="fas fa-list-ol me-1"></i> {{ __("2. قيم فرعية") }}
                                 </div>
                                 <span class="badge" style="background-color: rgba(111, 66, 193, 0.15); color: #6f42c1; font-size: 0.68rem;">Sub-Tests</span>
                             </th>
                             <th class="text-center bg-warning bg-opacity-10" style="width: 145px;">
                                 <div class="fw-bold text-warning-emphasis small">
-                                    <i class="fas fa-file-medical-alt me-1"></i> 3. مرفق جهاز
+                                    <i class="fas fa-file-medical-alt me-1"></i> {{ __("3. مرفق جهاز") }}
                                 </div>
                                 <span class="badge bg-warning-subtle text-dark" style="font-size: 0.68rem;">Attachment</span>
                             </th>
                             <th class="text-center bg-success bg-opacity-10" style="width: 145px;">
                                 <div class="fw-bold text-success small">
-                                    <i class="fas fa-random me-1"></i> 4. كلاهما (مرن)
+                                    <i class="fas fa-random me-1"></i> {{ __("4. كلاهما (مرن)") }}
                                 </div>
                                 <span class="badge bg-success-subtle text-success" style="font-size: 0.68rem;">Flexible</span>
                             </th>
-                            <th class="text-center" style="width: 80px;">الحالة</th>
+                            <th class="text-center" style="width: 80px;">{{ __("الحالة") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -261,13 +256,13 @@
                                                         {{ $test->code }}
                                                     </span>
                                                 @endif
-                                                <small class="text-muted" style="font-size: 0.74rem;">{{ $test->unit ?: 'بدون وحدة' }}</small>
+                                                <small class="text-muted" style="font-size: 0.74rem;">{{ $test->unit ?: __("بدون وحدة") }}</small>
                                             </div>
                                         </div>
                                         <!-- مؤشر الحفظ الآني -->
                                         <div class="save-indicator ms-2 d-none" id="save-indicator-{{ $test->id }}">
                                             <span class="badge bg-success rounded-pill px-2 py-1 shadow-xs" style="font-size: 0.7rem;">
-                                                <i class="fas fa-check me-1"></i> تم الحفظ
+                                                <i class="fas fa-check me-1"></i> {{ __("تم الحفظ") }}
                                             </span>
                                         </div>
                                     </div>
@@ -276,15 +271,15 @@
                                 <!-- التصنيف الفرعي -->
                                 <td>
                                     <span class="badge bg-light text-dark border fw-normal" style="font-size: 0.75rem;">
-                                        {{ $test->subcategory ?: 'غير محدد' }}
+                                        {{ $test->subcategory ?: __('غير محدد') }}
                                     </span>
                                 </td>
 
                                 <!-- عدد القيم الفرعية -->
                                 <td class="text-center">
                                     @if($hasSub)
-                                        <span class="badge bg-info-subtle text-info border border-info-subtle fw-bold" title="{{ $test->sub_tests_count }} باراميتر فرعي مسجل">
-                                            <i class="fas fa-layer-group me-1"></i> {{ $test->sub_tests_count }} فرعي
+                                        <span class="badge bg-info-subtle text-info border border-info-subtle fw-bold" title="{{ $test->sub_tests_count }} {{ __("باراميتر فرعي مسجل") }}">
+                                            <i class="fas fa-layer-group me-1"></i> {{ $test->sub_tests_count }} {{ __("فرعي") }}
                                         </span>
                                     @else
                                         <span class="text-muted small">—</span>
@@ -346,14 +341,14 @@
                                 <!-- حالة الفحص -->
                                 <td class="text-center">
                                     <span class="badge {{ $test->is_active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }} rounded-pill" style="font-size: 0.72rem;">
-                                        {{ $test->is_active ? 'مفعل' : 'معطل' }}
+                                        {{ $test->is_active ? __("مفعل") : __("معطل") }}
                                     </span>
                                 </td>
                             </tr>
                         @empty
                             <tr>
                                 <td colspan="10" class="text-center py-4 text-muted">
-                                    <i class="fas fa-search me-1"></i> لم يتم العثور على أي فحوصات تطابق خيارات البحث الحالية.
+                                    <i class="fas fa-search me-1"></i> {{ __("لم يتم العثور على أي فحوصات تطابق خيارات البحث الحالية.") }}
                                 </td>
                             </tr>
                         @endforelse
@@ -366,7 +361,7 @@
             <div class="card-footer bg-white border-top py-3">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <small class="text-muted">
-                        عرض الفحوصات من {{ $labTests->firstItem() }} إلى {{ $labTests->lastItem() }} من إجمالي {{ $labTests->total() }} فحص
+                        {{ __("عرض الفحوصات من :first إلى :last من إجمالي :total فحص", ["first" => $labTests->firstItem(), "last" => $labTests->lastItem(), "total" => $labTests->total()]) }}
                     </small>
                     <div>
                         {{ $labTests->links() }}
@@ -383,20 +378,20 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold"><i class="fas fa-layer-group me-2"></i>تأكيد تطبيق النمط الجماعي</h5>
+                <h5 class="modal-title fw-bold"><i class="fas fa-layer-group me-2"></i>{{ __("تأكيد تطبيق النمط الجماعي") }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-2">هل أنت متأكد من تطبيق النمط التالي:</p>
+                <p class="mb-2">{{ __("هل أنت متأكد من تطبيق النمط التالي:") }}</p>
                 <div class="alert alert-info py-2 px-3 fw-bold" id="bulkTargetLabel"></div>
                 <p class="mb-0 text-muted small">
-                    على عدد (<strong id="bulkTargetCount" class="text-danger">0</strong>) فحص مختبري محدد؟
+                    {{ __("على عدد") }} (<strong id="bulkTargetCount" class="text-danger">0</strong>) {{ __("فحص مختبري محدد؟") }}
                 </p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __("إلغاء") }}</button>
                 <button type="button" class="btn btn-primary fw-bold" id="confirmBulkSubmitBtn" onclick="executeBulkUpdate()">
-                    <i class="fas fa-check me-1"></i> نعم، تطبيق التغيير الآن
+                    <i class="fas fa-check me-1"></i> {{ __("نعم، تطبيق التغيير الآن") }}
                 </button>
             </div>
         </div>
@@ -494,12 +489,12 @@
             if (data.success) {
                 showSaveIndicator(testId);
             } else {
-                alert('تعذر تحديث نمط الإدخال: ' + (data.message || 'خطأ غير معروف'));
+                alert('{{ __('تعذر تحديث نمط الإدخال:') }} ' + (data.message || '{{ __('خطأ غير معروف') }}'));
             }
         })
         .catch(err => {
             console.error(err);
-            alert('حدث خطأ في الاتصال بالخادم.');
+            alert('{{ __('حدث خطأ في الاتصال بالخادم.') }}');
         });
     }
 
@@ -547,16 +542,16 @@
     function applyBulkEntryType(type) {
         const checked = Array.from(document.querySelectorAll('.bulk-test-checkbox:checked')).map(cb => cb.value);
         if (checked.length === 0) {
-            alert('يرجى تحديد فحص واحد على الأقل من الجدول لتطبيق الإجراء الجماعي.');
+            alert('{{ __("يرجى تحديد فحص واحد على الأقل من الجدول لتطبيق الإجراء الجماعي.") }}');
             return;
         }
 
         targetBulkType = type;
         const labels = {
-            'single_value': 'قيمة مباشرة مفردة (Single Value)',
-            'sub_tests': 'قيم فرعية مفصلة (Sub-Tests)',
-            'attachment_only': 'مرفق تقرير جهاز (Attachment Only)',
-            'flexible': 'كلاهما (مرن - Flexible)'
+            'single_value': '{{ __("قيمة مباشرة مفردة (Single Value)") }}',
+            'sub_tests': '{{ __("قيم فرعية مفصلة (Sub-Tests)") }}',
+            'attachment_only': '{{ __("مرفق تقرير جهاز (Attachment Only)") }}',
+            'flexible': '{{ __("كلاهما (مرن - Flexible)") }}'
         };
 
         document.getElementById('bulkTargetLabel').textContent = labels[type] || type;
@@ -572,7 +567,7 @@
 
         const btn = document.getElementById('confirmBulkSubmitBtn');
         btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري الحفظ...';
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> {{ __("جاري الحفظ...") }}';
 
         fetch("{{ route('lab-tests.entry-settings.bulk-update') }}", {
             method: 'POST',
@@ -610,18 +605,18 @@
 
                 bootstrap.Modal.getInstance(document.getElementById('bulkConfirmModal')).hide();
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check me-1"></i> نعم، تطبيق التغيير الآن';
+                btn.innerHTML = '<i class="fas fa-check me-1"></i> {{ __("نعم، تطبيق التغيير الآن") }}';
             } else {
-                alert('فشل التحديث الجماعي: ' + (data.message || 'خطأ'));
+                alert('{{ __("فشل التحديث الجماعي:") }} ' + (data.message || '{{ __("خطأ") }}'));
                 btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-check me-1"></i> نعم، تطبيق التغيير الآن';
+                btn.innerHTML = '<i class="fas fa-check me-1"></i> {{ __("نعم، تطبيق التغيير الآن") }}';
             }
         })
         .catch(err => {
             console.error(err);
-            alert('حدث خطأ بالاتصال أثناء التحديث الجماعي.');
+            alert('{{ __("حدث خطأ بالاتصال أثناء التحديث الجماعي.") }}');
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check me-1"></i> نعم، تطبيق التغيير الآن';
+            btn.innerHTML = '<i class="fas fa-check me-1"></i> {{ __("نعم، تطبيق التغيير الآن") }}';
         });
     }
 </script>

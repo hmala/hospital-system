@@ -545,7 +545,7 @@
 @push('scripts')
 <script>
 function sendBabyCamLink(reservationId, phone) {
-    fetch(`/nicu/reservations/${reservationId}/cam-token`, {
+    fetch(`{{ url('nicu/reservations') }}/${reservationId}/cam-token`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',

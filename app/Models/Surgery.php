@@ -48,6 +48,7 @@ class Surgery extends Model
         'anesthesiologist_id',
         'anesthesiologist_2_id',
         'surgical_assistant_name',
+        'anesthesia_assistant_name',
         'start_time',
         'end_time',
         'referring_physician',
@@ -82,6 +83,44 @@ class Surgery extends Model
         'is_room_package_included' => 'boolean',
         'status' => 'string',
     ];
+
+    protected static function booted(): void
+    {
+        static::created(function (Surgery $surgery) {
+            // Clean up any stale ghost records in station tables from previous deleted surgeries with the same ID
+            OperationTheaterStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            NursingStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            ResidentStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            ResidentStationFollowUp::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            AnesthesiaStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+            SurgeonStation::where('surgery_id', $surgery->id)
+                ->where('created_at', '<', $surgery->created_at ?? now())
+                ->delete();
+        });
+
+        static::deleting(function (Surgery $surgery) {
+            // Cascade delete child station and related records when a surgery is deleted to prevent orphan ghosts
+            $surgery->operationTheaterStation()?->delete();
+            $surgery->nursingStation()?->delete();
+            $surgery->residentStations()->delete();
+            $surgery->residentStationFollowUps()->delete();
+            $surgery->anesthesiaStation()?->delete();
+            $surgery->surgeonStation()?->delete();
+            $surgery->additionalOperations()->delete();
+            $surgery->extraServices()->delete();
+            $surgery->surgeryTreatments()->delete();
+        });
+    }
 
     public function patient()
     {
@@ -156,6 +195,11 @@ class Surgery extends Model
     public function radiologyTests()
     {
         return $this->hasMany(SurgeryRadiologyTest::class);
+    }
+
+    public function consultations()
+    {
+        return $this->hasMany(SurgeryConsultation::class);
     }
 
     public function extraServices()
@@ -470,6 +514,80 @@ class Surgery extends Model
         };
     }
 
+    public static function isOperationLocationName(?string $name): bool
+    {
+        if (! $name) {
+            return false;
+        }
+
+        $normalized = str_replace(' ', '', mb_strtolower($name));
+
+        return str_contains($normalized, 'عمليات')
+            || str_contains($normalized, 'صالة')
+            || str_contains($normalized, 'operation')
+            || str_contains($normalized, 'theater');
+    }
+
+    /**
+     * جلب جميع المخازن الفرعية التابعة للعمليات
+     */
+    public static function resolveOperationSubStores()
+    {
+        return Location::where('type', 'sub')
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (Location $loc) => self::isOperationLocationName($loc->name))
+            ->values();
+    }
+
+    /**
+     * استنتاج مخزن وعُهدة العمليات الفرعي (الأولوية لعهدة المستخدم المعينة ثم مخزن عمليات رئيسي ثم صالات العمليات)
+     */
+    public function getOperationSubStoreLocation(?User $user = null): ?Location
+    {
+        if ($user?->location_id) {
+            $userLoc = Location::find($user->location_id);
+            if ($userLoc && $userLoc->type === 'sub' && self::isOperationLocationName($userLoc->name)) {
+                return $userLoc;
+            }
+        }
+
+        $subLocations = Location::where('type', 'sub')->orderBy('id')->get();
+
+        foreach (['مخزنعملياترئيسي', 'مخزنالعملياتالرئيسي', 'مخزنعمليات', 'مخزنالعمليات', 'عمليات'] as $priorityName) {
+            $matched = $subLocations->first(function (Location $loc) use ($priorityName) {
+                return str_replace(' ', '', mb_strtolower($loc->name)) === $priorityName;
+            });
+            if ($matched) {
+                return $matched;
+            }
+        }
+
+        $explicitOrStore = $subLocations->first(function (Location $loc) {
+            $lower = mb_strtolower($loc->name);
+
+            return str_contains($lower, 'مخزن') && str_contains($lower, 'عمليات');
+        });
+        if ($explicitOrStore) {
+            return $explicitOrStore;
+        }
+
+        if ($this->location_id) {
+            $loc = Location::find($this->location_id);
+            if ($loc && $loc->type === 'sub' && self::isOperationLocationName($loc->name)) {
+                return $loc;
+            }
+        }
+
+        foreach ($subLocations as $loc) {
+            if (str_contains(mb_strtolower($loc->name), 'عمليات')) {
+                return $loc;
+            }
+        }
+
+        return $subLocations->first(fn (Location $loc) => self::isOperationLocationName($loc->name));
+    }
+
     /**
      * استنتاج مخزن عهدة الطابق المرتبط بغرفة المريض تلقائياً
      */
@@ -477,7 +595,7 @@ class Surgery extends Model
     {
         if ($this->location_id) {
             $loc = Location::find($this->location_id);
-            if ($loc) {
+            if ($loc && ! self::isOperationLocationName($loc->name)) {
                 return $loc;
             }
         }

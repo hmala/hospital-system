@@ -270,21 +270,21 @@ body {
     <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
         <h1 class="h5 mb-0 text-dark fw-bold">
             <i class="fas fa-edit text-warning me-2"></i>
-            تعديل حجز العملية الجراحية #{{ $surgery->id }}
+            {{ __('تعديل حجز العملية الجراحية') }} #{{ $surgery->id }}
         </h1>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-xs btn-outline-secondary py-1 px-2" id="toggleAllSectionsBtn" style="font-size:0.8rem;">
-                <i class="fas fa-layer-group me-1"></i> طي / توسيع
+                <i class="fas fa-layer-group me-1"></i> {{ __('طي / توسيع') }}
             </button>
             <a href="{{ route('surgeries.index') }}" class="btn btn-xs btn-outline-secondary py-1 px-2" style="font-size:0.8rem;">
-                <i class="fas fa-arrow-left me-1"></i> العمليات
+                <i class="fas fa-arrow-left me-1"></i> {{ __('العمليات') }}
             </a>
         </div>
     </div>
 
     @if ($errors->any())
         <div class="alert alert-danger alert-dismissible fade show mb-2 py-2" role="alert">
-            <div class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i> تعذر تحديث العملية بسبب الأخطاء التالية:</div>
+            <div class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i> {{ __('تعذر تحديث العملية بسبب الأخطاء التالية:') }}</div>
             <ul class="mb-0 ps-3 small">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
@@ -329,7 +329,7 @@ body {
                                 {{ optional(optional($surgery->patient)->user)->name ?? 'المريض' }}
                             </h5>
                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1" style="font-size: 0.75rem;">
-                                <i class="fas fa-folder-open me-1"></i> ملف #<span id="bannerPatientId">{{ optional($surgery->patient)->id ?? '-' }}</span>
+                                <i class="fas fa-folder-open me-1"></i> {{ __('ملف #') }}<span id="bannerPatientId">{{ optional($surgery->patient)->id ?? '-' }}</span>
                             </span>
                             <span id="bannerInsuranceBadge" class="badge {{ $pInsType !== 'none' ? 'bg-success text-white' : 'bg-secondary text-white' }} rounded-pill px-2 py-1" style="font-size: 0.75rem;">
                                 <i class="fas fa-shield-alt me-1"></i>
@@ -337,22 +337,22 @@ body {
                             </span>
                         </div>
                         <div class="d-flex align-items-center gap-3 mt-1 text-muted small flex-wrap" style="font-size: 0.82rem;">
-                            <span><i class="fas fa-birthday-cake text-secondary me-1"></i>العمر: <strong id="bannerPatientAge" class="text-dark">{{ optional($surgery->patient)->age ?? '-' }} سنة</strong></span>
-                            <span><i class="fas fa-venus-mars text-secondary me-1"></i>الجنس: <strong id="bannerPatientGender" class="text-dark">{{ optional($surgery->patient)->gender ?? '-' }}</strong></span>
-                            <span><i class="fas fa-phone text-secondary me-1"></i>الهاتف: <strong id="bannerPatientPhone" class="text-dark" dir="ltr">{{ optional(optional($surgery->patient)->user)->phone ?? '-' }}</strong></span>
-                            <span id="bannerCardSpan" style="{{ $pCardNo ? '' : 'display: none;' }}"><i class="fas fa-id-card text-primary me-1"></i>رقم الهوية/الدفتر: <strong id="bannerCardNo" class="text-dark">{{ $pCardNo ?: '-' }}</strong></span>
+                            <span><i class="fas fa-birthday-cake text-secondary me-1"></i>{{ __('العمر:') }} <strong id="bannerPatientAge" class="text-dark">{{ optional($surgery->patient)->age ?? '-' }} {{ __('سنة') }}</strong></span>
+                            <span><i class="fas fa-venus-mars text-secondary me-1"></i>{{ __('الجنس:') }} <strong id="bannerPatientGender" class="text-dark">{{ optional($surgery->patient)->gender ?? '-' }}</strong></span>
+                            <span><i class="fas fa-phone text-secondary me-1"></i>{{ __('الهاتف:') }} <strong id="bannerPatientPhone" class="text-dark" dir="ltr">{{ optional(optional($surgery->patient)->user)->phone ?? '-' }}</strong></span>
+                            <span id="bannerCardSpan" style="{{ $pCardNo ? '' : 'display: none;' }}"><i class="fas fa-id-card text-primary me-1"></i>{{ __('رقم الهوية/الدفتر:') }} <strong id="bannerCardNo" class="text-dark">{{ $pCardNo ?: '-' }}</strong></span>
                         </div>
                     </div>
                 </div>
                 <div class="d-flex align-items-center gap-2 flex-wrap" id="bannerActionsContainer">
                     <a href="{{ $surgery->patient ? route('inquiry.patients.history', $surgery->patient->id) : '#' }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 shadow-xs" id="bannerHistoryBtn" style="font-size: 0.82rem; {{ $surgery->patient ? '' : 'display: none;' }}">
-                        <i class="fas fa-notes-medical me-1"></i> السجل الطبي الشامل
+                        <i class="fas fa-notes-medical me-1"></i> {{ __('السجل الطبي الشامل') }}
                     </a>
                     <a href="{{ $surgery->patient ? route('inquiry.patients.dossier.print', $surgery->patient->id) : '#' }}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 shadow-xs" id="bannerDossierBtn" style="font-size: 0.82rem; {{ $surgery->patient ? '' : 'display: none;' }}">
-                        <i class="fas fa-print me-1"></i> طباعة الإضبارة
+                        <i class="fas fa-print me-1"></i> {{ __('طباعة الإضبارة') }}
                     </a>
                     <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill" style="font-size: 0.8rem;">
-                        <i class="fas fa-edit me-1"></i> محطة تعديل العملية #{{ $surgery->id }}
+                        <i class="fas fa-edit me-1"></i> {{ __('محطة تعديل العملية') }} #{{ $surgery->id }}
                     </span>
                 </div>
             </div>
@@ -368,7 +368,7 @@ body {
                             <span class="badge bg-primary rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">1</span>
                             <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
                                 <i class="fas fa-notes-medical text-primary me-1"></i>
-                                بيانات المريض، الفريق الطبي، والمسار
+                                {{ __('بيانات المريض، الفريق الطبي، والمسار') }}
                             </h6>
                         </div>
                         <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
@@ -384,14 +384,14 @@ body {
                                             <span id="patientInsuranceBadgeLabel">المريض مسجل بالضمان: {{ $hasInsurance ? ($editPatient->insurance_type === 'hi' ? 'الضمان الصحي الوطني' : 'ضمان قوى الأمن') : '' }}</span>
                                         </span>
                                         <span class="text-muted small" id="patientInsuranceCardSpan" style="{{ $hasInsurance && ($editPatient->insurance_card_no ?: $editPatient->insurance_booklet_number) ? '' : 'display: none;' }}">
-                                            <i class="fas fa-id-card me-1 text-primary"></i> رقم الهوية/الدفتر: <b id="patientInsuranceCardNo">{{ $editPatient ? ($editPatient->insurance_card_no ?: $editPatient->insurance_booklet_number ?: '-') : '-' }}</b>
+                                            <i class="fas fa-id-card me-1 text-primary"></i> {{ __('رقم الهوية/الدفتر:') }} <b id="patientInsuranceCardNo">{{ $editPatient ? ($editPatient->insurance_card_no ?: $editPatient->insurance_booklet_number ?: '-') : '-' }}</b>
                                         </span>
                                     </div>
                                     
                                     <div class="mb-2">
                                         <span class="fw-bold text-dark small d-block mb-1">
                                             <i class="fas fa-sliders-h text-primary me-1"></i>
-                                            تحديد مسار حجز هذه العملية:
+                                            {{ __('تحديد مسار حجز هذه العملية:') }}
                                         </span>
                                         <div class="d-flex flex-column gap-2 p-2 bg-white rounded border">
                                             <div class="form-check m-0">
@@ -399,7 +399,7 @@ body {
                                                        {{ old('apply_insurance', $currentSurgeryIsInsurance ? '1' : '0') == '1' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-success cursor-pointer" for="surgery_apply_insurance_yes">
                                                     <i class="fas fa-check-circle me-1"></i>
-                                                    🛡️ حجز تحت مظلة الضمان الصحي
+                                                    {{ __('🛡️ حجز تحت مظلة الضمان الصحي') }}
                                                 </label>
                                             </div>
                                             <div class="form-check m-0">
@@ -407,7 +407,7 @@ body {
                                                        {{ old('apply_insurance', $currentSurgeryIsInsurance ? '1' : '0') == '0' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-secondary cursor-pointer" for="surgery_apply_insurance_no">
                                                     <i class="fas fa-money-bill-wave me-1"></i>
-                                                    💵 حجز نقدي خاص (كاش كامل خارج الضمان)
+                                                    {{ __('💵 حجز نقدي خاص (كاش كامل خارج الضمان)') }}
                                                 </label>
                                             </div>
                                         </div>
@@ -418,18 +418,18 @@ body {
                             <!-- المريض -->
                             <div class="mb-3">
                                 <label for="patient_id" class="form-label">
-                                    المريض <span class="text-danger">*</span>
+                                    {{ __('المريض') }} <span class="text-danger">*</span>
                                 </label>
                                 <select name="patient_id" id="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required style="width: 100%;">
-                                    <option value="">اختر المريض</option>
+                                    <option value="">{{ __('اختر المريض') }}</option>
                                     @foreach($patients as $patient)
                                         @php 
-                                            $patientName = optional($patient->user)->name ?? 'غير معروف';
+                                            $patientName = optional($patient->user)->name ?? __('غير معروف');
                                             $patientAge = optional($patient)->age ?? '-';
                                             $patientGender = optional($patient)->gender ?? '-';
                                             $patientPhone = optional($patient->user)->phone ?? '-';
                                             $patientInsuranceType = $patient->insurance_type ?? 'none';
-                                            $patientInsuranceLabel = $patientInsuranceType === 'moi' ? 'ضمان قوى الأمن الداخلي (وزارة الداخلية)' : ($patientInsuranceType === 'hi' ? 'هيئة الضمان الصحي الوطني' : 'بدون ضمان');
+                                            $patientInsuranceLabel = $patientInsuranceType === 'moi' ? __('ضمان قوى الأمن الداخلي (وزارة الداخلية)') : ($patientInsuranceType === 'hi' ? __('هيئة الضمان الصحي الوطني') : __('بدون ضمان'));
                                             $patientCardNo = $patient->insurance_card_no ?: $patient->insurance_booklet_number ?: '';
                                             $patientData = [
                                                 'id' => $patient->id,
@@ -447,7 +447,7 @@ body {
                                         <option value="{{ $patient->id }}" 
                                                 data-patient='@json($patientData)'
                                                 {{ (old('patient_id', $surgery->patient_id) == $patient->id) ? 'selected' : '' }}>
-                                            {{ $patientName }} ({{ $patientAge }} سنة)
+                                            {{ $patientName }} ({{ $patientAge }} {{ __('سنة') }})
                                         </option>
                                     @endforeach
                                 </select>
@@ -457,12 +457,12 @@ body {
                             <!-- الطبيب الجراح -->
                             <div class="mb-3">
                                 <label for="doctor_id" class="form-label">
-                                    الطبيب الجراح <span class="text-danger">*</span>
+                                    {{ __('الطبيب الجراح') }} <span class="text-danger">*</span>
                                 </label>
                                 <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
-                                    <option value="">اختر الجراح</option>
+                                    <option value="">{{ __('اختر الجراح') }}</option>
                                     @foreach($doctors as $doctor)
-                                        @php $doctorName = optional($doctor->user)->name ?? 'غير معروف'; @endphp
+                                        @php $doctorName = optional($doctor->user)->name ?? __('غير معروف'); @endphp
                                         <option value="{{ $doctor->id }}" {{ (old('doctor_id', $surgery->doctor_id) == $doctor->id) ? 'selected' : '' }}>
                                             د. {{ $doctorName }}
                                         </option>
@@ -474,11 +474,11 @@ body {
                             <!-- الطبيب المرسل -->
                             <div class="mb-3">
                                 <label class="form-label">
-                                    الطبيب المرسل <span class="text-danger">*</span>
+                                    {{ __('الطبيب المرسل') }} <span class="text-danger">*</span>
                                 </label>
                                 <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
-                                    <option value="">اختر الطبيب المرسل أو اكتب اسماً جديداً</option>
-                                    <optgroup label="أطباء المستشفى">
+                                    <option value="">{{ __('اختر الطبيب المرسل أو اكتب اسماً جديداً') }}</option>
+                                    <optgroup label="{{ __('أطباء المستشفى') }}">
                                         @foreach($doctors as $doctor)
                                             @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
                                             <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', $surgery->referring_doctor_name) == $referringDoctorName) ? 'selected' : '' }}>
@@ -498,7 +498,7 @@ body {
                                             ->sort();
                                     @endphp
                                     @if($externalDoctors->isNotEmpty())
-                                        <optgroup label="أطباء خارجيين سابقين">
+                                        <optgroup label="{{ __('أطباء خارجيين سابقين') }}">
                                             @foreach($externalDoctors as $externalDoctor)
                                                 <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', $surgery->referring_doctor_name) == $externalDoctor) ? 'selected' : '' }}>
                                                     {{ $externalDoctor }}
@@ -516,7 +516,7 @@ body {
                             <!-- تاريخ العملية -->
                             <div class="mb-3">
                                 <label for="scheduled_date" class="form-label">
-                                    تاريخ العملية <span class="text-danger">*</span>
+                                    {{ __('تاريخ العملية') }} <span class="text-danger">*</span>
                                 </label>
                                 <input type="date" name="scheduled_date" id="scheduled_date" 
                                        class="form-control @error('scheduled_date') is-invalid @enderror" 
@@ -526,13 +526,13 @@ body {
 
                             <!-- ورقة التحويل الطبي بالسكانر -->
                             <div class="mb-2">
-                                <label class="form-label text-muted">ورقة التحويل الطبي (سكانر / رفع ملف)</label>
+                                <label class="form-label text-muted">{{ __('ورقة التحويل الطبي (سكانر / رفع ملف)') }}</label>
                                 <div class="d-flex gap-1" id="referral_letter_container">
                                     <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
-                                        <i class="fas fa-print me-1"></i> مسح بالسكانر
+                                        <i class="fas fa-print me-1"></i> {{ __('مسح بالسكانر') }}
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:34px;">
-                                        <i class="fas fa-upload me-1"></i> رفع ملف
+                                        <i class="fas fa-upload me-1"></i> {{ __('رفع ملف') }}
                                     </button>
                                     <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
                                     <textarea id="scan_data_receiver" name="scanned_referral_letter" style="display:none;"></textarea>
@@ -543,14 +543,14 @@ body {
                                             <i class="fas fa-check-circle me-1"></i> 
                                             @if($surgery->referral_letter_path)
                                                 <a href="{{ asset('storage/' . $surgery->referral_letter_path) }}" target="_blank" class="text-success fw-bold text-decoration-underline">
-                                                    عرض ورقة التحويل الحالية
+                                                    {{ __('عرض ورقة التحويل الحالية') }}
                                                 </a>
                                             @else
-                                                تم مسح/رفع ورقة التحويل بنجاح
+                                                {{ __('تم مسح/رفع ورقة التحويل بنجاح') }}
                                             @endif
                                         </span>
                                         <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
-                                            <i class="fas fa-times me-1"></i> إلغاء
+                                            <i class="fas fa-times me-1"></i> {{ __('إلغاء') }}
                                         </button>
                                     </div>
                                 </div>
@@ -562,16 +562,16 @@ body {
                 <!-- أزرار الحفظ والإجراءات المباشرة -->
                 <div class="d-flex flex-column gap-2 mb-3">
                     <button type="submit" class="btn btn-warning btn-lg w-100 fw-bold shadow-sm" id="submitBtn" style="font-size: 1rem; border-radius: 8px;">
-                        <i class="fas fa-save me-1"></i> حفظ وتحديث حجز العملية الجراحية
+                        <i class="fas fa-save me-1"></i> {{ __('حفظ وتحديث حجز العملية الجراحية') }}
                     </button>
                     <a href="{{ route('surgeries.index') }}" class="btn btn-outline-danger w-100 btn-sm" style="border-radius: 6px;">
-                        <i class="fas fa-times me-1"></i> إلغاء والعودة لقائمة العمليات
+                        <i class="fas fa-times me-1"></i> {{ __('إلغاء والعودة لقائمة العمليات') }}
                     </a>
                 </div>
 
                 <div class="alert alert-info py-2 px-3 small border-0 rounded-3 shadow-2xs mb-0" style="font-size: 0.8rem; background: #e0f2fe; color: #0369a1;">
                     <i class="fas fa-info-circle me-1"></i>
-                    <strong>تنبيه النظام:</strong> سيتم تحديث الجداول المرتبطة بالصالات ومحطة التمريض والمقيم تلقائياً.
+                    <strong>{{ __('تنبيه النظام:') }}</strong> {{ __('سيتم تحديث الجداول المرتبطة بالصالات ومحطة التمريض والمقيم تلقائياً.') }}
                 </div>
             </div>
 
@@ -584,12 +584,12 @@ body {
                             <span class="badge bg-primary rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">2</span>
                             <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
                                 <i class="fas fa-procedures text-primary me-1"></i>
-                                جدول العمليات الجراحية المطلوبة
+                                {{ __('جدول العمليات الجراحية المطلوبة') }}
                             </h6>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="text-muted small">عدد العمليات: <strong id="totalOpsCount" class="text-primary">1</strong></span>
-                            <span id="summaryTotalFee" class="badge bg-success px-3 py-1 fs-7">0 د.ع</span>
+                            <span class="text-muted small">{{ __('عدد العمليات:') }} <strong id="totalOpsCount" class="text-primary">1</strong></span>
+                            <span id="summaryTotalFee" class="badge bg-success px-3 py-1 fs-7">0 {{ __('د.ع') }}</span>
                             <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
                         </div>
                     </div>
@@ -599,23 +599,23 @@ body {
                                 <table class="table table-bordered table-hover align-middle mb-0" id="surgicalOperationsTable" style="min-width: 600px;">
                                     <thead>
                                         <tr class="text-secondary text-center small">
-                                            <th style="width: 85px;">العملية</th>
-                                            <th style="width: 26%;">صنف العملية <span class="text-danger">*</span></th>
-                                            <th style="width: 28%;">نوع العملية <span class="text-danger">*</span></th>
-                                            <th style="width: 140px;">السعر (د.ع) <span class="text-danger">*</span></th>
-                                            <th>ملاحظات</th>
-                                            <th style="width: 65px;">إجراء</th>
+                                            <th style="width: 85px;">{{ __('العملية') }}</th>
+                                            <th style="width: 26%;">{{ __('صنف العملية') }} <span class="text-danger">*</span></th>
+                                            <th style="width: 28%;">{{ __('نوع العملية') }} <span class="text-danger">*</span></th>
+                                            <th style="width: 140px;">{{ __('السعر (د.ع)') }} <span class="text-danger">*</span></th>
+                                            <th>{{ __('ملاحظات') }}</th>
+                                            <th style="width: 65px;">{{ __('إجراء') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="operationsTableBody">
                                         <!-- العملية (1) - العملية الأولى الأساسية -->
                                         <tr id="op_row_primary" class="align-middle bg-white">
                                             <td class="text-center bg-light">
-                                                <span class="badge bg-primary text-white px-2 py-1" style="font-size: 0.8rem;">العملية (1)</span>
+                                                <span class="badge bg-primary text-white px-2 py-1" style="font-size: 0.8rem;">{{ __('العملية (1)') }}</span>
                                             </td>
                                             <td>
                                                 <select name="surgery_category" id="surgery_category" class="form-select form-select-sm op-category-select @error('surgery_category') is-invalid @enderror" required style="width: 100%;">
-                                                    <option value="">-- اختر الصنف --</option>
+                                                    <option value="">{{ __('-- اختر الصنف --') }}</option>
                                                     @foreach($categoriesList as $category)
                                                         <option value="{{ $category }}" {{ $selectedCategory == $category ? 'selected' : '' }}>
                                                             {{ $category }}
@@ -626,7 +626,7 @@ body {
                                             </td>
                                             <td>
                                                 <select name="surgical_operation_id" id="surgical_operation_id" class="form-select form-select-sm op-name-select @error('surgical_operation_id') is-invalid @enderror" required style="width: 100%;">
-                                                    <option value="">-- اختر العملية --</option>
+                                                    <option value="">{{ __('-- اختر العملية --') }}</option>
                                                     @foreach($surgicalOperations as $operation)
                                                         <option value="{{ $operation->id }}" 
                                                                 data-category="{{ $operation->category }}"
@@ -648,7 +648,7 @@ body {
                                                            placeholder="0"
                                                            inputmode="numeric"
                                                            required>
-                                                    <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">د.ع</span>
+                                                    <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">{{ __('د.ع') }}</span>
                                                 </div>
                                                 @error('custom_surgery_fee') <div class="invalid-feedback">{{ $message }}</div> @enderror
                                             </td>
@@ -662,7 +662,7 @@ body {
                                             </td>
                                             <td class="text-center">
                                                 <span class="badge bg-secondary-subtle text-secondary border px-2 py-1" title="العملية (1) أساسية مطلوبة">
-                                                    <i class="fas fa-lock me-1"></i> أساسية
+                                                    <i class="fas fa-lock me-1"></i> {{ __('أساسية') }}
                                                 </span>
                                             </td>
                                         </tr>
@@ -673,13 +673,13 @@ body {
                             <!-- زر الإضافة المباشر أسفل الجدول مع الملخص المالي -->
                             <div class="p-2 px-3 bg-light border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1 shadow-xs" id="addAnotherOpBtn">
-                                    <i class="fas fa-plus-circle me-1"></i> ➕ إضافة عملية أخرى
+                                    <i class="fas fa-plus-circle me-1"></i> {{ __('➕ إضافة عملية أخرى') }}
                                 </button>
                                 <div class="d-flex align-items-center gap-3">
-                                    <span class="text-muted small">عدد العمليات: <strong id="totalOpsCountBottom" class="text-primary">1</strong></span>
+                                    <span class="text-muted small">{{ __('عدد العمليات:') }} <strong id="totalOpsCountBottom" class="text-primary">1</strong></span>
                                     <div class="d-flex align-items-center">
-                                        <span class="text-dark small me-2 fw-bold">إجمالي سعر العمليات:</span>
-                                        <span id="summaryTotalFeeBottom" class="badge bg-success fs-7 px-3 py-1">0 د.ع</span>
+                                        <span class="text-dark small me-2 fw-bold">{{ __('إجمالي سعر العمليات:') }}</span>
+                                        <span id="summaryTotalFeeBottom" class="badge bg-success fs-7 px-3 py-1">0 {{ __('د.ع') }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -694,12 +694,12 @@ body {
                             <span class="badge bg-warning text-dark rounded-circle p-1 me-2" style="width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;">3</span>
                             <h6 class="mb-0 fw-bold text-dark" style="font-size:0.9rem;">
                                 <i class="fas fa-door-open text-warning me-1"></i>
-                                اختيار الغرفة والإقامة السريرية <span class="text-danger">*</span>
+                                {{ __('اختيار الغرفة والإقامة السريرية') }} <span class="text-danger">*</span>
                             </h6>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <span id="header_room_badge" class="badge {{ $currentRoom ? 'bg-success text-white' : 'bg-light text-muted border' }}" style="font-size:0.75rem;">
-                                {{ $currentRoom ? 'غرفة ' . $currentRoom->room_number : 'لم يتم الاختيار' }}
+                                {{ $currentRoom ? __('غرفة') . ' ' . $currentRoom->room_number : __('لم يتم الاختيار') }}
                             </span>
                             <i class="fas fa-chevron-down text-muted accordion-toggle-icon"></i>
                         </div>
@@ -711,34 +711,34 @@ body {
                                 <div class="col-md-9">
                                     <div class="px-3 py-2 bg-light rounded border d-flex justify-content-between align-items-center small flex-wrap gap-2">
                                         <div>
-                                            <span class="text-muted">الغرفة:</span> <b id="selected_room_name" class="text-dark">{{ $currentRoom ? 'غرفة ' . $currentRoom->room_number . ($currentRoom->room_type === 'vvip' ? ' (💎 VVIP)' : ($currentRoom->room_type === 'vip' ? ' (⭐ VIP)' : ' (عادية)')) : 'لم يتم الاختيار' }}</b>
+                                            <span class="text-muted">{{ __('الغرفة:') }}</span> <b id="selected_room_name" class="text-dark">{{ $currentRoom ? __('غرفة') . ' ' . $currentRoom->room_number . ($currentRoom->room_type === 'vvip' ? ' (💎 VVIP)' : ($currentRoom->room_type === 'vip' ? ' (⭐ VIP)' : ' (' . __('عادية') . ')')) : __('لم يتم الاختيار') }}</b>
                                             <span class="mx-2 text-muted">|</span>
-                                            <span class="text-muted">الحالة:</span> <b id="selected_room_status" class="text-success">{{ $currentRoom ? 'محددة' : '-' }}</b>
+                                            <span class="text-muted">{{ __('الحالة:') }}</span> <b id="selected_room_status" class="text-success">{{ $currentRoom ? __('محددة') : '-' }}</b>
                                         </div>
                                         <div>
-                                            <span class="text-muted">أجرة الليلة الأولى:</span> 
+                                            <span class="text-muted">{{ __('أجرة الليلة الأولى:') }}</span> 
                                             <b id="room_total_fee" class="badge {{ $currentRoom && $currentRoom->room_type === 'vvip' ? 'bg-dark text-white' : ($currentRoom && $currentRoom->room_type === 'vip' ? 'bg-warning text-dark' : 'bg-success text-white') }} fs-6 ms-1">
-                                                {{ $currentRoom && $currentRoom->room_type === 'vvip' ? '200,000 د.ع (VVIP)' : ($currentRoom && $currentRoom->room_type === 'vip' ? '100,000 د.ع (VIP)' : '0 د.ع (مجانية أول ليلة)') }}
+                                                {{ $currentRoom && $currentRoom->room_type === 'vvip' ? '200,000 ' . __('د.ع') . ' (VVIP)' : ($currentRoom && $currentRoom->room_type === 'vip' ? '100,000 ' . __('د.ع') . ' (VIP)' : '0 ' . __('د.ع') . ' (' . __('مجانية أول ليلة') . ')') }}
                                             </b>
                                         </div>
                                     </div>
                                     <div class="mt-1 text-muted small" style="font-size: 0.76rem;">
                                         <i class="fas fa-info-circle text-primary me-1"></i>
-                                        <strong>النظام الفندقي:</strong> الليلة الأولى تغطي حتى <strong>12:00 ظهراً</strong> من اليوم التالي. أي ليالٍ إضافية تُحسب تلقائياً عند إجراء الخروج (عادية: مجانية أول ليلة | VIP: 100,000 د.ع | VVIP: 200,000 د.ع).
+                                        <strong>{{ __('النظام الفندقي:') }}</strong> {{ __('الليلة الأولى تغطي حتى') }} <strong>{{ __('12:00 ظهراً') }}</strong> {{ __('من اليوم التالي. أي ليالٍ إضافية تُحسب تلقائياً عند إجراء الخروج (عادية: مجانية أول ليلة | VIP: 100,000 د.ع | VVIP: 200,000 د.ع).') }}
                                     </div>
                                 </div>
                                 <div class="col-md-3 text-end" id="clear_room_section" style="{{ $currentRoom ? '' : 'display: none;' }}">
                                     <button type="button" class="btn btn-sm btn-outline-danger w-100" id="clear_room_btn" style="height:38px;">
-                                        <i class="fas fa-times me-1"></i> إلغاء اختيار الغرفة
+                                        <i class="fas fa-times me-1"></i> {{ __('إلغاء') }} اختيار الغرفة
                                     </button>
                                 </div>
                             </div>
 
                             <!-- دليل ألوان مدمج -->
                             <div class="d-flex gap-3 py-1 mb-2 small text-muted border-top border-bottom" style="font-size:0.75rem;">
-                                <div><span class="badge bg-success me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> متاحة</div>
-                                <div><span class="badge bg-danger me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> محجوزة</div>
-                                <div><span class="badge bg-warning me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> صيانة</div>
+                                <div><span class="badge bg-success me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> {{ __('متاحة') }}</div>
+                                <div><span class="badge bg-danger me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> {{ __('محجوزة') }}</div>
+                                <div><span class="badge bg-warning me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> {{ __('صيانة') }}</div>
                                 <div><span class="badge bg-warning text-dark me-1" style="width:7px;height:7px;display:inline-block;padding:0;"></span> VIP</div>
                             </div>
 
@@ -746,7 +746,7 @@ body {
 
                             <!-- رسالة خطأ عند عدم اختيار غرفة -->
                             <div id="room_validation_error" class="alert alert-danger py-1 mb-2 d-none fw-bold" style="border-right: 4px solid #dc3545; font-size:0.82rem;">
-                                <i class="fas fa-exclamation-triangle me-1"></i> يرجى النقر على إحدى الغرف المتاحة (باللون الأخضر) لاختيارها للمريض قبل الحجز.
+                                <i class="fas fa-exclamation-triangle me-1"></i> {{ __('يرجى النقر على إحدى الغرف المتاحة (باللون الأخضر) لاختيارها للمريض قبل الحجز.') }}
                             </div>
 
                             <!-- تبويبات الطوابق المدمجة لاختيار الغرفة بأقل مساحة -->
@@ -825,7 +825,7 @@ body {
                                 @endforeach
                             </div>
                             @else
-                            <div class="alert alert-info py-1 small text-center mb-0">لا توجد غرف متاحة</div>
+                            <div class="alert alert-info py-1 small text-center mb-0">{{ __('لا توجد غرف متاحة') }}</div>
                             @endif
                         </div>
                     </div>
@@ -841,34 +841,34 @@ body {
         <div class="modal-content">
             <div class="modal-header bg-primary text-white py-2">
                 <h6 class="modal-title mb-0 fw-bold" id="addDoctorModalLabel" style="font-size:0.9rem;">
-                    <i class="fas fa-user-plus me-1"></i> إضافة طبيب مرسل جديد
+                    <i class="fas fa-user-plus me-1"></i> {{ __('إضافة طبيب مرسل جديد') }}
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-3">
                 <form id="addDoctorForm">
                     <div class="mb-2">
-                        <label for="new_doctor_name" class="form-label">اسم الطبيب <span class="text-danger">*</span></label>
+                        <label for="new_doctor_name" class="form-label">{{ __('اسم الطبيب') }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="new_doctor_name" required>
                     </div>
                     <div class="mb-2">
-                        <label for="new_doctor_specialization" class="form-label">التخصص <span class="text-danger">*</span></label>
+                        <label for="new_doctor_specialization" class="form-label">{{ __('التخصص') }} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="new_doctor_specialization" placeholder="مثال: جراحة عامة" required>
                     </div>
                     <div class="mb-2">
-                        <label for="new_doctor_phone" class="form-label">رقم الهاتف</label>
+                        <label for="new_doctor_phone" class="form-label">{{ __('رقم الهاتف') }}</label>
                         <input type="text" class="form-control" id="new_doctor_phone" placeholder="اختياري">
                     </div>
                     <div class="mb-0">
-                        <label for="new_doctor_notes" class="form-label">ملاحظات</label>
+                        <label for="new_doctor_notes" class="form-label">{{ __('ملاحظات') }}</label>
                         <textarea class="form-control" id="new_doctor_notes" rows="2" placeholder="اختياري"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer py-1">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
                 <button type="button" class="btn btn-sm btn-primary" id="saveDoctorBtn">
-                    <i class="fas fa-save me-1"></i> <span id="saveDoctorBtnText">حفظ وإضافة</span>
+                    <i class="fas fa-save me-1"></i> <span id="saveDoctorBtnText">{{ __('حفظ وإضافة') }}</span>
                 </button>
             </div>
         </div>
@@ -1210,13 +1210,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (found) selectedCategory = found.category;
         }
 
-        let catOptions = '<option value="">-- كل الأصناف --</option>';
+        let catOptions = '<option value="">' + @json(__('-- كل الأصناف --')) + '</option>';
         allCategories.forEach(function(cat) {
             const isCatSelected = selectedCategory && selectedCategory === cat ? 'selected' : '';
             catOptions += `<option value="${cat}" ${isCatSelected}>${cat}</option>`;
         });
 
-        let opOptions = '<option value="">-- اختر العملية --</option>';
+        let opOptions = '<option value="">{{ __('-- اختر العملية --') }}</option>';
         allOperations.forEach(function(op) {
             if (!selectedCategory || op.category === selectedCategory) {
                 const isSelected = selectedOpId && String(op.id) === String(selectedOpId) ? 'selected' : '';
@@ -1249,15 +1249,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>
                     <div class="input-group input-group-sm">
                         <input type="text" name="additional_operations[${idx}][fee]" class="form-control form-control-sm add-op-fee text-end fw-bold" value="${feeValue}" placeholder="0" inputmode="numeric" required>
-                        <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">د.ع</span>
+                        <span class="input-group-text small px-1 bg-light text-muted" style="font-size: 0.72rem;">{{ __('د.ع') }}</span>
                     </div>
                 </td>
                 <td>
                     <input type="text" name="additional_operations[${idx}][notes]" class="form-control form-control-sm" value="${initialNotes || ''}" placeholder="تكميلية، جهة يسرى...">
                 </td>
                 <td class="text-center">
-                    <button type="button" class="btn btn-sm btn-outline-danger remove-add-op-btn py-1 px-2" title="حذف هذه العملية">
-                        <i class="fas fa-trash-alt me-1"></i> حذف
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-add-op-btn py-1 px-2" title="{{ __('حذف هذه العملية') }}">
+                        <i class="fas fa-trash-alt me-1"></i> {{ __('حذف') }}
                     </button>
                 </td>
             </tr>
@@ -1284,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         $catSelect.on('change', function() {
             const cat = $(this).val();
-            let newOpOptions = '<option value="">-- اختر العملية --</option>';
+            let newOpOptions = '<option value="">{{ __('-- اختر العملية --') }}</option>';
             allOperations.forEach(function(op) {
                 if (!cat || op.category === cat) {
                     newOpOptions += `<option value="${op.id}" data-category="${op.category || ''}" data-fee="${op.fee || 0}">${op.text}</option>`;

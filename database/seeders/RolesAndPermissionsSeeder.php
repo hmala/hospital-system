@@ -143,6 +143,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view surgeon station',
             'view anesthesia station',
             'view nursing station',
+            'manage nurse availability',
             'manage medical devices',
             'view medical devices',
 
@@ -558,6 +559,25 @@ class RolesAndPermissionsSeeder extends Seeder
             'view nursing station',
         ]);
 
+        // دور مدير قسم التمريض (Head Nurse)
+        $headNurseRole = Role::firstOrCreate(['name' => 'head_nurse']);
+        $headNurseRole->givePermissionTo([
+            'view patients',
+            'view visits',
+            'view emergencies',
+            'create emergencies',
+            'edit emergencies',
+            'manage emergency vitals',
+            'view lab tests',
+            'create lab tests',
+            'view radiology',
+            'create radiology',
+            'view packages',
+            'view nursing station',
+            'manage nurse availability',
+            'view resident station',
+        ]);
+
         // دور الطبيب المقيم (Resident)
         $residentRole = Role::firstOrCreate(['name' => 'resident']);
         $residentRole->givePermissionTo([
@@ -741,6 +761,23 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage hr settings',
             'view departments',
         ]);
+
+        // دور طبيب / مقيم التخدير (Anesthesiologist)
+        $anesthesiaPermissions = [
+            'view patients',
+            'view surgeries',
+            'edit surgeries',
+            'control surgeries',
+            'view anesthesia station',
+            'view resident station',
+            'view lab tests',
+            'view radiology',
+            'view medical devices',
+        ];
+        $anesthesiaRole = Role::firstOrCreate(['name' => 'التخدير']);
+        $anesthesiaRole->givePermissionTo($anesthesiaPermissions);
+        $anesthesiaEnRole = Role::firstOrCreate(['name' => 'anesthesia']);
+        $anesthesiaEnRole->givePermissionTo($anesthesiaPermissions);
 
         // تعيين الأدوار للمستخدمين الحاليين بناءً على حقل role
         $users = User::all();

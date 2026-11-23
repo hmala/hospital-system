@@ -76,20 +76,19 @@
                     <div class="d-flex justify-content-between align-items-center flex-column flex-md-row gap-3">
                         <div>
                             <h2 class="mb-1 fw-bold">
-                                <i class="fas fa-x-ray me-3"></i>دليل وتسعير أنواع الأشعة والتصوير
+                                <i class="fas fa-x-ray me-3"></i>{{ __("دليل وتسعير أنواع الأشعة والتصوير") }}
                             </h2>
-                            <p class="mb-0 opacity-75">إدارة فحوصات الأشعة والسونار والمفراس والرنين مع التحكم الفوري بشمولية الضمان الصحي والداخلية والتعديل الجماعي السريع</p>
+                            <p class="mb-0 opacity-75">{{ __("إدارة فحوصات الأشعة والسونار والمفراس والرنين مع التحكم الفوري بشمولية الضمان الصحي والداخلية والتعديل الجماعي السريع") }}</p>
                         </div>
                         <div class="d-flex gap-2">
                             <a href="{{ route('radiology.types.export', request()->query()) }}" class="btn btn-light text-success fw-bold px-4 py-2 rounded-pill shadow-sm">
-                                <i class="fas fa-file-excel me-2"></i>تصدير إكسل
-                            </a>
+                                <i class="fas fa-file-excel me-2"></i>{{ __("تصدير إكسل") }}</a>
                             @can('manage radiology types')
                             <button type="button" class="btn btn-light text-info fw-bold px-4 py-2 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#importRadiologyTypesModal">
-                                <i class="fas fa-file-import me-2"></i>استيراد إكسل
+                                <i class="fas fa-file-import me-2"></i>{{ __("استيراد إكسل") }}
                             </button>
                             <button type="button" class="btn btn-light text-primary fw-bold px-4 py-2 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createRadiologyTypeModal">
-                                <i class="fas fa-plus me-2"></i>إضافة فحص جديد
+                                <i class="fas fa-plus me-2"></i>{{ __("إضافة فحص جديد") }}
                             </button>
                             @endcan
                         </div>
@@ -108,7 +107,7 @@
                         <i class="fas fa-x-ray fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">إجمالي الفحوصات</div>
+                        <div class="text-muted small fw-bold">{{ __("إجمالي الفحوصات") }}</div>
                         <div class="fs-4 fw-bold text-dark">{{ $stats['total'] ?? $types->total() }}</div>
                     </div>
                 </div>
@@ -121,7 +120,7 @@
                         <i class="fas fa-shield-alt fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">مشمولة بالضمان (HI)</div>
+                        <div class="text-muted small fw-bold">{{ __("مشمولة بالضمان (HI)") }}</div>
                         <div class="fs-4 fw-bold text-success">{{ $stats['hi_active'] ?? 0 }}</div>
                     </div>
                 </div>
@@ -134,7 +133,7 @@
                         <i class="fas fa-money-bill-wave fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">خارج الضمان (كاش فقط)</div>
+                        <div class="text-muted small fw-bold">{{ __("خارج الضمان (كاش فقط)") }}</div>
                         <div class="fs-4 fw-bold text-warning">{{ $stats['hi_inactive'] ?? 0 }}</div>
                     </div>
                 </div>
@@ -147,7 +146,7 @@
                         <i class="fas fa-check-circle fa-2x"></i>
                     </div>
                     <div>
-                        <div class="text-muted small fw-bold">الفحوصات المفعلة</div>
+                        <div class="text-muted small fw-bold">{{ __("الفحوصات المفعلة") }}</div>
                         <div class="fs-4 fw-bold text-info">{{ $stats['active'] ?? 0 }}</div>
                     </div>
                 </div>
@@ -182,12 +181,12 @@
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" name="search" class="form-control bg-light border-0" placeholder="بحث باسم الفحص أو الكود..." value="{{ request('search') }}">
+                        <input type="text" name="search" class="form-control bg-light border-0" placeholder="{{ __("بحث باسم الفحص أو الكود...") }}" value="{{ request('search') }}">
                     </div>
                 </div>
                 <div class="col-md-2">
                     <select name="subcategory" class="form-select bg-light border-0">
-                        <option value="">كل الأقسام</option>
+                        <option value="">{{ __("كل الأقسام") }}</option>
                         @foreach(['أشعة', 'سونار', 'مفراس', 'الرنين', 'إيكو'] as $sub)
                             <option value="{{ $sub }}" {{ request('subcategory') == $sub ? 'selected' : '' }}>{{ $sub }}</option>
                         @endforeach
@@ -195,26 +194,26 @@
                 </div>
                 <div class="col-md-3">
                     <select name="insurance_filter" class="form-select bg-light border-0 fw-semibold text-primary">
-                        <option value="">🛡️ كل تغطيات الضمان</option>
-                        <option value="hi_active" {{ request('insurance_filter') === 'hi_active' ? 'selected' : '' }}>💚 مشمولة بالضمان الصحي (HI)</option>
-                        <option value="none_active" {{ request('insurance_filter') === 'none_active' ? 'selected' : '' }}>🚫 غير مشمولة بالضمان (كاش فقط)</option>
-                        <option value="moi_active" {{ request('insurance_filter') === 'moi_active' ? 'selected' : '' }}>👮 مشمولة بضمان الداخلية (MOI)</option>
-                        <option value="both_active" {{ request('insurance_filter') === 'both_active' ? 'selected' : '' }}>⭐ مشمولة بالضمانين معاً</option>
+                        <option value="">{{ __("🛡️ كل تغطيات الضمان") }}</option>
+                        <option value="hi_active" {{ request('insurance_filter') === 'hi_active' ? 'selected' : '' }}>{{ __("💚 مشمولة بالضمان الصحي (HI)") }}</option>
+                        <option value="none_active" {{ request('insurance_filter') === 'none_active' ? 'selected' : '' }}>{{ __("🚫 غير مشمولة بالضمان (كاش فقط)") }}</option>
+                        <option value="moi_active" {{ request('insurance_filter') === 'moi_active' ? 'selected' : '' }}>{{ __("👮 مشمولة بضمان الداخلية (MOI)") }}</option>
+                        <option value="both_active" {{ request('insurance_filter') === 'both_active' ? 'selected' : '' }}>{{ __("⭐ مشمولة بالضمانين معاً") }}</option>
                     </select>
                 </div>
                 <div class="col-md-2">
                     <select name="is_active" class="form-select bg-light border-0">
-                        <option value="">كل الحالات</option>
-                        <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>مفعلة</option>
-                        <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>معطلة</option>
+                        <option value="">{{ __("كل الحالات") }}</option>
+                        <option value="1" {{ request('is_active') === '1' ? 'selected' : '' }}>{{ __("مفعلة") }}</option>
+                        <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>{{ __("معطلة") }}</option>
                     </select>
                 </div>
                 <div class="col-md-1 d-flex gap-1">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold" title="فلترة">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold" title="{{ __("فلترة") }}">
                         <i class="fas fa-filter"></i>
                     </button>
                     @if(request()->hasAny(['search', 'subcategory', 'is_active', 'insurance_filter']))
-                        <a href="{{ route('radiology.types.index') }}" class="btn btn-outline-secondary rounded-pill" title="إعادة تعيين">
+                        <a href="{{ route('radiology.types.index') }}" class="btn btn-outline-secondary rounded-pill" title="{{ __("إعادة تعيين") }}">
                             <i class="fas fa-undo"></i>
                         </a>
                     @endif
@@ -233,37 +232,36 @@
                         <i class="fas fa-bolt fa-lg"></i>
                     </div>
                     <div>
-                        <div class="fw-bold text-dark fs-6">التحكم السريع الشامل (تفعيل / إطفاء الكل لكل قسم)</div>
-                        <div class="text-muted small">تطبيق تفعيل أو استبعاد الضمان بنقرة واحدة لقسم محدد (أشعة، سونار، رنين، مفراس) أو لكافة الفحوصات</div>
+                        <div class="fw-bold text-dark fs-6">{{ __("التحكم السريع الشامل (تفعيل / إطفاء الكل لكل قسم)") }}</div>
+                        <div class="text-muted small">{{ __("تطبيق تفعيل أو استبعاد الضمان بنقرة واحدة لقسم محدد (أشعة، سونار، رنين، مفراس) أو لكافة الفحوصات") }}</div>
                     </div>
                 </div>
 
                 <!-- Global Toggle Action Form -->
-                <form action="{{ route('radiology.types.global-toggle') }}" method="POST" class="d-flex flex-wrap align-items-center gap-2 m-0" onsubmit="return confirm('هل أنت متأكد من تنفيذ هذا التعديل الشامل؟');">
+                <form action="{{ route('radiology.types.global-toggle') }}" method="POST" class="d-flex flex-wrap align-items-center gap-2 m-0" onsubmit="return confirm('{{ __('هل أنت متأكد من تنفيذ هذا التعديل الشامل؟') }}');">
                     @csrf
                     <!-- Subcategory Selector -->
                     <select name="subcategory" class="form-select form-select-sm rounded-pill border bg-light" style="width: auto; min-width: 170px;">
-                        <option value="">⚡ كافة الأقسام (الكل)</option>
+                        <option value="">{{ __("⚡ كافة الأقسام (الكل)") }}</option>
                         @foreach(['أشعة', 'سونار', 'مفراس', 'الرنين', 'إيكو'] as $sub)
-                            <option value="{{ $sub }}" {{ request('subcategory') == $sub ? 'selected' : '' }}>قسم: {{ $sub }}</option>
+                            <option value="{{ $sub }}" {{ request('subcategory') == $sub ? 'selected' : '' }}>{{ __('قسم:') }} {{ $sub }}</option>
                         @endforeach
                     </select>
 
                     <!-- HI Dropdown -->
                     <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-outline-success dropdown-toggle rounded-pill px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-shield-alt me-1"></i> هيئة الضمان (HI)
-                        </button>
+                            <i class="fas fa-shield-alt me-1"></i>{{ __("هيئة الضمان (HI)") }}</button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
                             <li>
                                 <button type="submit" name="field" value="is_hi_active" class="dropdown-item text-success fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='1'">
-                                    <i class="fas fa-check-circle me-2"></i> تفعيل الضمان (HI) للقسم المحدد
+                                    <i class="fas fa-check-circle me-2"></i> {{ __("تفعيل الضمان (HI) للقسم المحدد") }}
                                 </button>
                             </li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <button type="submit" name="field" value="is_hi_active" class="dropdown-item text-danger fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='0'">
-                                    <i class="fas fa-ban me-2"></i> إطفاء / استبعاد من الضمان (كاش فقط)
+                                    <i class="fas fa-ban me-2"></i> {{ __("إطفاء / استبعاد من الضمان (كاش فقط)") }}
                                 </button>
                             </li>
                         </ul>
@@ -272,18 +270,17 @@
                     <!-- MOI Dropdown -->
                     <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle rounded-pill px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-id-badge me-1"></i> ضمان الداخلية (MOI)
-                        </button>
+                            <i class="fas fa-id-badge me-1"></i>{{ __("ضمان الداخلية (MOI)") }}</button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
                             <li>
                                 <button type="submit" name="field" value="is_moi_active" class="dropdown-item text-primary fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='1'">
-                                    <i class="fas fa-check-circle me-2"></i> تفعيل ضمان الداخلية للقسم
+                                    <i class="fas fa-check-circle me-2"></i> {{ __("تفعيل ضمان الداخلية للقسم") }}
                                 </button>
                             </li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <button type="submit" name="field" value="is_moi_active" class="dropdown-item text-danger fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='0'">
-                                    <i class="fas fa-times-circle me-2"></i> إطفاء ضمان الداخلية للقسم
+                                    <i class="fas fa-times-circle me-2"></i> {{ __("إطفاء ضمان الداخلية للقسم") }}
                                 </button>
                             </li>
                         </ul>
@@ -292,18 +289,18 @@
                     <!-- Status Dropdown -->
                     <div class="btn-group">
                         <button type="button" class="btn btn-sm btn-outline-dark dropdown-toggle rounded-pill px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-toggle-on me-1"></i> حالة الفحوصات
+                            <i class="fas fa-toggle-on me-1"></i> {{ __("حالة الفحوصات") }}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3">
                             <li>
                                 <button type="submit" name="field" value="is_active" class="dropdown-item text-primary fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='1'">
-                                    <i class="fas fa-play me-2"></i> تفعيل كل الفحوصات للقسم
+                                    <i class="fas fa-play me-2"></i> {{ __("تفعيل كل الفحوصات للقسم") }}
                                 </button>
                             </li>
                             <li><hr class="dropdown-divider my-1"></li>
                             <li>
                                 <button type="submit" name="field" value="is_active" class="dropdown-item text-secondary fw-bold py-2" onclick="this.form.querySelector('input[name=state]').value='0'">
-                                    <i class="fas fa-pause me-2"></i> تعطيل كل الفحوصات للقسم
+                                    <i class="fas fa-pause me-2"></i> {{ __("تعطيل كل الفحوصات للقسم") }}
                                 </button>
                             </li>
                         </ul>
@@ -325,37 +322,36 @@
 
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                 <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill fw-bold" id="selectedCountBadge">0 فحوصات مختارة</span>
-                    <span class="text-white-50 small">اختر الإجراء الجماعي لتطبيقه على الفحوصات المحددة:</span>
+                    <span class="badge bg-primary fs-6 px-3 py-2 rounded-pill fw-bold" id="selectedCountBadge">{{ __("0 فحوصات مختارة") }}</span>
+                    <span class="text-white-50 small">{{ __("اختر الإجراء الجماعي لتطبيقه على الفحوصات المحددة:") }}</span>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <!-- HI Actions -->
                     <button type="button" class="btn btn-sm btn-success rounded-pill fw-bold px-3 shadow-sm" onclick="submitBulkAction('hi_enable')">
-                        <i class="fas fa-shield-alt me-1"></i> تفعيل في الضمان الصحي (HI)
+                        <i class="fas fa-shield-alt me-1"></i> {{ __("تفعيل في الضمان الصحي (HI)") }}
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-warning text-white rounded-pill fw-bold px-3 shadow-sm" onclick="submitBulkAction('hi_disable')">
-                        <i class="fas fa-ban me-1"></i> استبعاد من الضمان (كاش فقط)
+                        <i class="fas fa-ban me-1"></i> {{ __("استبعاد من الضمان (كاش فقط)") }}
                     </button>
 
                     <!-- MOI Actions -->
                     <button type="button" class="btn btn-sm btn-info text-dark rounded-pill fw-bold px-3 shadow-sm" onclick="submitBulkAction('moi_enable')">
-                        <i class="fas fa-id-badge me-1"></i> تفعيل الداخلية
+                        <i class="fas fa-id-badge me-1"></i> {{ __("تفعيل الداخلية") }}
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-light rounded-pill fw-bold px-3 shadow-sm" onclick="submitBulkAction('moi_disable')">
-                        <i class="fas fa-times me-1"></i> استبعاد الداخلية
+                        <i class="fas fa-times me-1"></i> {{ __("استبعاد الداخلية") }}
                     </button>
 
                     <!-- Status Actions -->
                     <button type="button" class="btn btn-sm btn-primary rounded-pill fw-bold px-3 shadow-sm" onclick="submitBulkAction('activate')">
-                        <i class="fas fa-check me-1"></i> تفعيل الفحص
-                    </button>
+                        <i class="fas fa-check me-1"></i>{{ __("تفعيل الفحص") }}</button>
                     <button type="button" class="btn btn-sm btn-secondary rounded-pill fw-bold px-3 shadow-sm" onclick="submitBulkAction('deactivate')">
-                        <i class="fas fa-pause me-1"></i> تعطيل الفحص
+                        <i class="fas fa-pause me-1"></i> {{ __("تعطيل الفحص") }}
                     </button>
 
                     <!-- Delete Action -->
-                    <button type="button" class="btn btn-sm btn-outline-danger text-white rounded-pill fw-bold px-3 shadow-sm" onclick="if(confirm('هل أنت متأكد من حذف الفحوصات المحددة غير المستخدمة؟')) submitBulkAction('delete');">
-                        <i class="fas fa-trash-alt me-1"></i> حذف المحدد
+                    <button type="button" class="btn btn-sm btn-outline-danger text-white rounded-pill fw-bold px-3 shadow-sm" onclick="if(confirm('{{ __('هل أنت متأكد من حذف الفحوصات المحددة غير المستخدمة؟') }}')) submitBulkAction('delete');">
+                        <i class="fas fa-trash-alt me-1"></i> {{ __("حذف المحدد") }}
                     </button>
                 </div>
             </div>
@@ -367,21 +363,21 @@
         <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
                 <h5 class="mb-0 text-dark fw-bold">
-                    <i class="fas fa-list me-2 text-primary"></i>قائمة فحوصات الأشعة والتصوير
+                    <i class="fas fa-list me-2 text-primary"></i>{{ __("قائمة فحوصات الأشعة والتصوير") }}
                 </h5>
                 <span class="badge bg-light text-dark border px-3 py-2 rounded-pill fw-bold">
-                    {{ $types->total() }} فحص
+                    {{ $types->total() }} {{ __("فحص") }}
                 </span>
                 @if(request('subcategory'))
                     <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold">
-                        قسم: {{ request('subcategory') }}
+                        {{ __("قسم:") }} {{ request('subcategory') }}
                     </span>
                 @endif
             </div>
             <div class="d-flex align-items-center gap-2">
                 @can('manage radiology types')
                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="toggleSelectAll()">
-                    <i class="fas fa-check-double me-1"></i> <span id="selectAllBtnText">تحديد كل الصفحة</span>
+                    <i class="fas fa-check-double me-1"></i> <span id="selectAllBtnText">{{ __("تحديد كل الصفحة") }}</span>
                 </button>
                 @endcan
             </div>
@@ -398,23 +394,23 @@
                             </th>
                             @endcan
                             <th style="width: 50px;">#</th>
-                            <th>اسم الفحص والكود</th>
-                            <th>القسم</th>
-                            <th>سعر الكاش (د.ع)</th>
+                            <th>{{ __("اسم الفحص والكود") }}</th>
+                            <th>{{ __("القسم") }}</th>
+                            <th>{{ __("سعر الكاش (د.ع)") }}</th>
                             <th class="text-center" style="width: 190px;">
                                 <div class="d-flex align-items-center justify-content-center gap-1">
                                     <i class="fas fa-shield-alt text-success"></i>
-                                    <span>هيئة الضمان (HI)</span>
+                                    <span>{{ __("هيئة الضمان (HI)") }}</span>
                                 </div>
                             </th>
                             <th class="text-center" style="width: 180px;">
                                 <div class="d-flex align-items-center justify-content-center gap-1">
                                     <i class="fas fa-id-badge text-primary"></i>
-                                    <span>ضمان الداخلية (MOI)</span>
+                                    <span>{{ __("ضمان الداخلية (MOI)") }}</span>
                                 </div>
                             </th>
-                            <th class="text-center" style="width: 110px;">الحالة</th>
-                            <th class="text-center" style="width: 120px;">الإجراءات</th>
+                            <th class="text-center" style="width: 110px;">{{ __("الحالة") }}</th>
+                            <th class="text-center" style="width: 120px;">{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -431,7 +427,7 @@
                                 <div class="d-flex align-items-center gap-2 mt-1">
                                     <span class="badge bg-light text-muted border px-1 py-0 font-monospace" style="font-size: 0.7rem;">{{ $type->code }}</span>
                                     @if($type->requires_contrast)
-                                        <span class="badge bg-warning-subtle text-danger border border-warning-subtle" style="font-size: 0.62rem;">مع صبغة</span>
+                                        <span class="badge bg-warning-subtle text-danger border border-warning-subtle" style="font-size: 0.62rem;">{{ __("مع صبغة") }}</span>
                                     @endif
                                 </div>
                             </td>
@@ -446,11 +442,11 @@
                                         default => 'bg-light text-secondary border'
                                     };
                                 @endphp
-                                <span class="badge {{ $subBadgeColor }} rounded-pill px-2 py-1 fw-bold">{{ $type->subcategory ?: 'عام' }}</span>
+                                <span class="badge {{ $subBadgeColor }} rounded-pill px-2 py-1 fw-bold">{{ $type->subcategory ?: __('عام') }}</span>
                             </td>
                             <td>
                                 <div class="fw-bold text-dark">
-                                    {{ number_format($type->base_price, 0) }} د.ع
+                                    {{ number_format($type->base_price, 0) }} {{ __('د.ع') }}
                                 </div>
                             </td>
 
@@ -466,7 +462,7 @@
                                     </div>
                                     @endcan
                                     <span id="badgeHi{{ $type->id }}" class="badge {{ $type->is_hi_active ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' }} px-2 py-1" style="font-size: 0.72rem;">
-                                        {{ $type->is_hi_active ? ($type->hi_price ? number_format($type->hi_price, 0).' د.ع' : 'مشمول (سعر الكاش)') : 'غير مشمول (كاش)' }}
+                                        {{ $type->is_hi_active ? ($type->hi_price ? number_format($type->hi_price, 0).' '.__('د.ع') : __('مشمول (سعر الكاش)')) : __('غير مشمول (كاش)') }}
                                     </span>
                                 </div>
                             </td>
@@ -483,7 +479,7 @@
                                     </div>
                                     @endcan
                                     <span id="badgeMoi{{ $type->id }}" class="badge {{ $type->is_moi_active ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle' }} px-2 py-1" style="font-size: 0.72rem;">
-                                        {{ $type->is_moi_active ? ($type->moi_price ? number_format($type->moi_price, 0).' د.ع' : 'مشمول') : 'غير مشمول' }}
+                                        {{ $type->is_moi_active ? ($type->moi_price ? number_format($type->moi_price, 0).' '.__('د.ع') : __('مشمول')) : __('غير مشمول') }}
                                     </span>
                                 </div>
                             </td>
@@ -499,7 +495,7 @@
                                 </div>
                                 @else
                                 <span class="{{ $type->is_active ? 'status-badge-active' : 'status-badge-inactive' }}">
-                                    {{ $type->is_active ? 'مفعل' : 'معطل' }}
+                                    {{ $type->is_active ? __('مفعل') : __('معطل') }}
                                 </span>
                                 @endcan
                             </td>
@@ -507,27 +503,27 @@
                             {{-- أزرار الإجراءات --}}
                             <td class="text-center">
                                 <div class="d-flex gap-1 justify-content-center align-items-center">
-                                    <a href="{{ route('radiology.types.show', $type) }}" class="btn btn-sm btn-outline-info px-2" title="عرض التفاصيل">
+                                    <a href="{{ route('radiology.types.show', $type) }}" class="btn btn-sm btn-outline-info px-2" title="{{ __("عرض التفاصيل") }}">
                                         <i class="fas fa-eye"></i>
                                     </a>
 
                                     @can('manage radiology types')
                                     <!-- Edit Button -->
-                                    <button type="button" class="btn btn-sm btn-outline-warning text-dark px-2" title="تعديل تفاصيل وأسعار الفحص" data-bs-toggle="modal" data-bs-target="#editRadiologyTypeModal{{ $type->id }}">
+                                    <button type="button" class="btn btn-sm btn-outline-warning text-dark px-2" title="{{ __("تعديل تفاصيل وأسعار الفحص") }}" data-bs-toggle="modal" data-bs-target="#editRadiologyTypeModal{{ $type->id }}">
                                         <i class="fas fa-edit text-warning"></i>
                                     </button>
 
                                     <!-- Delete Button -->
                                     @if($type->requests_count == 0)
-                                    <form action="{{ route('radiology.types.destroy', $type) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من حذف فحص {{ $type->name }}؟');">
+                                    <form action="{{ route('radiology.types.destroy', $type) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('هل أنت متأكد من حذف هذا الفحص؟') }}');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger px-2" title="حذف الفحص">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger px-2" title="{{ __("حذف الفحص") }}">
                                             <i class="fas fa-trash-alt"></i>
                                         </button>
                                     </form>
                                     @else
-                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 opacity-50" title="لا يمكن الحذف لارتباطه بـ {{ $type->requests_count }} طلب سابق" disabled>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary px-2 opacity-50" title="{{ __("لا يمكن الحذف لارتباطه بطلبات سابقة") }}" disabled>
                                         <i class="fas fa-lock"></i>
                                     </button>
                                     @endif
@@ -551,8 +547,8 @@
                 <div class="rounded-circle bg-light d-inline-flex p-4 mb-3 text-muted">
                     <i class="fas fa-x-ray fa-3x"></i>
                 </div>
-                <h5 class="text-muted fw-bold">لا توجد فحوصات أشعة مطابقة</h5>
-                <p class="text-muted small">يمكنك إضافة فحوصات جديدة باستخدام زر الإضافة بالأعلى أو إعادة ضبط الفلاتر</p>
+                <h5 class="text-muted fw-bold">{{ __("لا توجد فحوصات أشعة مطابقة") }}</h5>
+                <p class="text-muted small">{{ __("يمكنك إضافة فحوصات جديدة باستخدام زر الإضافة بالأعلى أو إعادة ضبط الفلاتر") }}</p>
             </div>
             @endif
         </div>
@@ -603,23 +599,23 @@
                     const badge = document.getElementById(`badgeHi${typeId}`);
                     if (badge) {
                         badge.className = `badge ${isChecked ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'} px-2 py-1`;
-                        badge.textContent = isChecked ? 'مشمول' : 'غير مشمول (كاش)';
+                        badge.textContent = isChecked ? '{{ __("مشمول") }}' : '{{ __("غير مشمول (كاش)") }}';
                     }
                 } else if (field === 'is_moi_active') {
                     const badge = document.getElementById(`badgeMoi${typeId}`);
                     if (badge) {
                         badge.className = `badge ${isChecked ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-secondary-subtle text-secondary border border-secondary-subtle'} px-2 py-1`;
-                        badge.textContent = isChecked ? 'مشمول' : 'غير مشمول';
+                        badge.textContent = isChecked ? '{{ __("مشمول") }}' : '{{ __("غير مشمول") }}';
                     }
                 }
             } else {
                 inputElem.checked = !isChecked;
-                showToast(data.message || 'حدث خطأ أثناء الحفظ', false);
+                showToast(data.message || '{{ __('حدث خطأ أثناء الحفظ') }}', false);
             }
         })
         .catch(err => {
             inputElem.checked = !isChecked;
-            showToast('فشل الاتصال بالخادم، يرجى المحاولة ثانية', false);
+            showToast('{{ __('فشل الاتصال بالخادم، يرجى المحاولة ثانية') }}', false);
         });
     }
 
@@ -677,7 +673,7 @@
 
         if (checked.length > 0) {
             bar.style.display = 'block';
-            badge.textContent = `${checked.length} فحوصات مختارة`;
+            badge.textContent = `${checked.length} {{ __("فحوصات مختارة") }}`;
             
             container.innerHTML = '';
             checked.forEach(cb => {
@@ -712,33 +708,33 @@
                 @csrf
                 <div class="modal-header bg-primary text-white border-0 py-3 px-4 rounded-top-4">
                     <h5 class="modal-title fw-bold" id="createRadiologyTypeModalLabel">
-                        <i class="fas fa-plus-circle me-2"></i>إضافة فحص أشعة / سونار جديد
+                        <i class="fas fa-plus-circle me-2"></i>{{ __("إضافة فحص أشعة / سونار جديد") }}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-md-7">
-                            <label class="form-label fw-semibold">اسم الفحص <span class="text-danger">*</span></label>
-                            <input type="text" name="name" class="form-control rounded-3" placeholder="مثال: سونار بطن وحوض، أشعة صدر X-Ray..." required>
+                            <label class="form-label fw-semibold">{{ __("اسم الفحص") }}<span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control rounded-3" placeholder="{{ __("مثال: سونار بطن وحوض، أشعة صدر X-Ray...") }}" required>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold">القسم والتصنيف <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">{{ __("القسم والتصنيف") }}<span class="text-danger">*</span></label>
                             <select name="subcategory" class="form-select rounded-3" required>
-                                <option value="أشعة">أشعة سينية (X-Ray)</option>
-                                <option value="سونار">سونار ودوبلر (Ultrasound)</option>
-                                <option value="مفراس">مفراس حلزوني (CT Scan)</option>
-                                <option value="الرنين">رنين مغناطيسي (MRI)</option>
-                                <option value="إيكو">إيكو قلب (Echo)</option>
+                                <option value="أشعة">{{ __("أشعة سينية (X-Ray)") }}</option>
+                                <option value="سونار">{{ __("سونار ودوبلر (Ultrasound)") }}</option>
+                                <option value="مفراس">{{ __("مفراس حلزوني (CT Scan)") }}</option>
+                                <option value="الرنين">{{ __("رنين مغناطيسي (MRI)") }}</option>
+                                <option value="إيكو">{{ __("إيكو قلب (Echo)") }}</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">كود الفحص (اختياري)</label>
-                            <input type="text" name="code" class="form-control rounded-3" placeholder="مثال: US-ABD-01 (سيتم توليده تلقائياً إن ترك فارغاً)">
+                            <label class="form-label fw-semibold">{{ __("كود الفحص (اختياري)") }}</label>
+                            <input type="text" name="code" class="form-control rounded-3" placeholder="{{ __("مثال: US-ABD-01 (سيتم توليده تلقائياً إن ترك فارغاً)") }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">سعر الكاش العادي (د.ع) <span class="text-danger">*</span></label>
-                            <input type="number" step="500" name="base_price" class="form-control rounded-3" placeholder="مثال: 25000" required>
+                            <label class="form-label fw-semibold">{{ __("سعر الكاش العادي (د.ع)") }}<span class="text-danger">*</span></label>
+                            <input type="number" step="500" name="base_price" class="form-control rounded-3" placeholder="{{ __("مثال: 25000") }}" required>
                         </div>
 
                         <!-- قسم تسعير الضمان الصحي وضمان الداخلية -->
@@ -746,7 +742,7 @@
                             <div class="card border-primary border-opacity-25 bg-light bg-opacity-50 rounded-3">
                                 <div class="card-header bg-primary bg-opacity-10 py-2">
                                     <h6 class="mb-0 text-primary fw-bold small">
-                                        <i class="fas fa-shield-alt me-1"></i> تسعير وتغطية الضمان الصحي وضمان الداخلية
+                                        <i class="fas fa-shield-alt me-1"></i> {{ __("تسعير وتغطية الضمان الصحي وضمان الداخلية") }}
                                     </h6>
                                 </div>
                                 <div class="card-body p-3">
@@ -754,24 +750,24 @@
                                         {{-- ضمان الداخلية --}}
                                         <div class="col-md-6 border-start">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-id-badge text-primary me-1"></i>ضمان الداخلية (MOI)</label>
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-id-badge text-primary me-1"></i>{{ __("ضمان الداخلية (MOI)") }}</label>
                                                 <div class="form-check form-switch mb-0">
                                                     <input class="form-check-input" type="checkbox" name="is_moi_active" value="1" id="createIsMoiActive" checked>
-                                                    <label class="form-check-label small" for="createIsMoiActive">مشمول</label>
+                                                    <label class="form-check-label small" for="createIsMoiActive">{{ __("مشمول") }}</label>
                                                 </div>
                                             </div>
-                                            <input type="number" step="500" name="moi_price" class="form-control form-control-sm rounded-2" placeholder="سعر الداخلية (اتركه فارغاً لاعتماد الكاش)">
+                                            <input type="number" step="500" name="moi_price" class="form-control form-control-sm rounded-2" placeholder="{{ __("سعر الداخلية (اتركه فارغاً لاعتماد الكاش)") }}">
                                         </div>
                                         {{-- هيئة الضمان --}}
                                         <div class="col-md-6">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-shield-alt text-success me-1"></i>هيئة الضمان (HI)</label>
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-shield-alt text-success me-1"></i>{{ __("هيئة الضمان (HI)") }}</label>
                                                 <div class="form-check form-switch mb-0">
                                                     <input class="form-check-input" type="checkbox" name="is_hi_active" value="1" id="createIsHiActive" checked>
-                                                    <label class="form-check-label small" for="createIsHiActive">مشمول</label>
+                                                    <label class="form-check-label small" for="createIsHiActive">{{ __("مشمول") }}</label>
                                                 </div>
                                             </div>
-                                            <input type="number" step="500" name="hi_price" class="form-control form-control-sm rounded-2" placeholder="سعر هيئة الضمان (اتركه فارغاً لاعتماد الكاش)">
+                                            <input type="number" step="500" name="hi_price" class="form-control form-control-sm rounded-2" placeholder="{{ __("سعر هيئة الضمان (اتركه فارغاً لاعتماد الكاش)") }}">
                                         </div>
                                     </div>
                                 </div>
@@ -779,26 +775,26 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">المدة التقديرية (بالدقائق)</label>
+                            <label class="form-label fw-semibold">{{ __("المدة التقديرية (بالدقائق)") }}</label>
                             <input type="number" name="estimated_duration" class="form-control rounded-3" value="15" min="1" max="480">
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" name="requires_contrast" value="1" id="createContrast">
-                                <label class="form-check-label fw-semibold" for="createContrast">يتطلب مادة تباين (صبغة)</label>
+                                <label class="form-check-label fw-semibold" for="createContrast">{{ __("يتطلب مادة تباين (صبغة)") }}</label>
                             </div>
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="createIsActiveSwitch" checked>
-                                <label class="form-check-label fw-semibold" for="createIsActiveSwitch">تفعيل الفحص فوراً</label>
+                                <label class="form-check-label fw-semibold" for="createIsActiveSwitch">{{ __("تفعيل الفحص فوراً") }}</label>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">إضافة الفحص</button>
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">{{ __("إلغاء") }}</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">{{ __("إضافة الفحص") }}</button>
                 </div>
             </form>
         </div>
@@ -815,32 +811,32 @@
                 @method('PUT')
                 <div class="modal-header bg-warning text-dark border-0 py-3 px-4 rounded-top-4">
                     <h5 class="modal-title fw-bold" id="editRadiologyTypeModalLabel{{ $type->id }}">
-                        <i class="fas fa-edit me-2"></i>تعديل فحص الأشعة / السونار
+                        <i class="fas fa-edit me-2"></i>{{ __("تعديل فحص الأشعة / السونار") }}
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="row g-3">
                         <div class="col-md-7">
-                            <label class="form-label fw-semibold">اسم الفحص <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">{{ __("اسم الفحص") }}<span class="text-danger">*</span></label>
                             <input type="text" name="name" class="form-control rounded-3" value="{{ $type->name }}" required>
                         </div>
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold">القسم والتصنيف <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">{{ __("القسم والتصنيف") }}<span class="text-danger">*</span></label>
                             <select name="subcategory" class="form-select rounded-3" required>
-                                <option value="أشعة" {{ $type->subcategory === 'أشعة' ? 'selected' : '' }}>أشعة سينية (X-Ray)</option>
-                                <option value="سونار" {{ $type->subcategory === 'سونار' ? 'selected' : '' }}>سونار ودوبلر (Ultrasound)</option>
-                                <option value="مفراس" {{ $type->subcategory === 'مفراس' ? 'selected' : '' }}>مفراس حلزوني (CT Scan)</option>
-                                <option value="الرنين" {{ $type->subcategory === 'الرنين' ? 'selected' : '' }}>رنين مغناطيسي (MRI)</option>
-                                <option value="إيكو" {{ $type->subcategory === 'إيكو' ? 'selected' : '' }}>إيكو قلب (Echo)</option>
+                                <option value="أشعة" {{ $type->subcategory === 'أشعة' ? 'selected' : '' }}>{{ __("أشعة سينية (X-Ray)") }}</option>
+                                <option value="سونار" {{ $type->subcategory === 'سونار' ? 'selected' : '' }}>{{ __("سونار ودوبلر (Ultrasound)") }}</option>
+                                <option value="مفراس" {{ $type->subcategory === 'مفراس' ? 'selected' : '' }}>{{ __("مفراس حلزوني (CT Scan)") }}</option>
+                                <option value="الرنين" {{ $type->subcategory === 'الرنين' ? 'selected' : '' }}>{{ __("رنين مغناطيسي (MRI)") }}</option>
+                                <option value="إيكو" {{ $type->subcategory === 'إيكو' ? 'selected' : '' }}>{{ __("إيكو قلب (Echo)") }}</option>
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">كود الفحص</label>
+                            <label class="form-label fw-semibold">{{ __("كود الفحص") }}</label>
                             <input type="text" name="code" class="form-control rounded-3" value="{{ $type->code }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">سعر الكاش العادي (د.ع) <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">{{ __("سعر الكاش العادي (د.ع)") }}<span class="text-danger">*</span></label>
                             <input type="number" step="500" name="base_price" class="form-control rounded-3" value="{{ (int)$type->base_price }}" required>
                         </div>
 
@@ -849,7 +845,7 @@
                             <div class="card border-primary border-opacity-25 bg-light bg-opacity-50 rounded-3">
                                 <div class="card-header bg-primary bg-opacity-10 py-2">
                                     <h6 class="mb-0 text-primary fw-bold small">
-                                        <i class="fas fa-shield-alt me-1"></i> تسعير وتغطية الضمان الصحي وضمان الداخلية
+                                        <i class="fas fa-shield-alt me-1"></i> {{ __("تسعير وتغطية الضمان الصحي وضمان الداخلية") }}
                                     </h6>
                                 </div>
                                 <div class="card-body p-3">
@@ -857,24 +853,24 @@
                                         {{-- ضمان الداخلية --}}
                                         <div class="col-md-6 border-start">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-id-badge text-primary me-1"></i>ضمان الداخلية (MOI)</label>
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-id-badge text-primary me-1"></i>{{ __("ضمان الداخلية (MOI)") }}</label>
                                                 <div class="form-check form-switch mb-0">
                                                     <input class="form-check-input" type="checkbox" name="is_moi_active" value="1" id="editIsMoiActive{{ $type->id }}" {{ $type->is_moi_active ? 'checked' : '' }}>
-                                                    <label class="form-check-label small" for="editIsMoiActive{{ $type->id }}">مشمول</label>
+                                                    <label class="form-check-label small" for="editIsMoiActive{{ $type->id }}">{{ __("مشمول") }}</label>
                                                 </div>
                                             </div>
-                                            <input type="number" step="500" name="moi_price" class="form-control form-control-sm rounded-2" value="{{ $type->moi_price ? (int)$type->moi_price : '' }}" placeholder="سعر الداخلية (اتركه فارغاً لاعتماد الكاش)">
+                                            <input type="number" step="500" name="moi_price" class="form-control form-control-sm rounded-2" value="{{ $type->moi_price ? (int)$type->moi_price : '' }}" placeholder="{{ __("سعر الداخلية (اتركه فارغاً لاعتماد الكاش)") }}">
                                         </div>
                                         {{-- هيئة الضمان --}}
                                         <div class="col-md-6">
                                             <div class="d-flex justify-content-between align-items-center mb-1">
-                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-shield-alt text-success me-1"></i>هيئة الضمان (HI)</label>
+                                                <label class="form-label fw-bold small mb-0"><i class="fas fa-shield-alt text-success me-1"></i>{{ __("هيئة الضمان (HI)") }}</label>
                                                 <div class="form-check form-switch mb-0">
                                                     <input class="form-check-input" type="checkbox" name="is_hi_active" value="1" id="editIsHiActive{{ $type->id }}" {{ $type->is_hi_active ? 'checked' : '' }}>
-                                                    <label class="form-check-label small" for="editIsHiActive{{ $type->id }}">مشمول</label>
+                                                    <label class="form-check-label small" for="editIsHiActive{{ $type->id }}">{{ __("مشمول") }}</label>
                                                 </div>
                                             </div>
-                                            <input type="number" step="500" name="hi_price" class="form-control form-control-sm rounded-2" value="{{ $type->hi_price ? (int)$type->hi_price : '' }}" placeholder="سعر هيئة الضمان (اتركه فارغاً لاعتماد الكاش)">
+                                            <input type="number" step="500" name="hi_price" class="form-control form-control-sm rounded-2" value="{{ $type->hi_price ? (int)$type->hi_price : '' }}" placeholder="{{ __("سعر هيئة الضمان (اتركه فارغاً لاعتماد الكاش)") }}">
                                         </div>
                                     </div>
                                 </div>
@@ -882,26 +878,26 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">المدة التقديرية (بالدقائق)</label>
+                            <label class="form-label fw-semibold">{{ __("المدة التقديرية (بالدقائق)") }}</label>
                             <input type="number" name="estimated_duration" class="form-control rounded-3" value="{{ $type->estimated_duration ?: 15 }}" min="1" max="480">
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" name="requires_contrast" value="1" id="editContrast{{ $type->id }}" {{ $type->requires_contrast ? 'checked' : '' }}>
-                                <label class="form-check-label fw-semibold" for="editContrast{{ $type->id }}">يتطلب مادة تباين (صبغة)</label>
+                                <label class="form-check-label fw-semibold" for="editContrast{{ $type->id }}">{{ __("يتطلب مادة تباين (صبغة)") }}</label>
                             </div>
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="isActiveSwitch{{ $type->id }}" {{ $type->is_active ? 'checked' : '' }}>
-                                <label class="form-check-label fw-semibold" for="isActiveSwitch{{ $type->id }}">تفعيل الفحص</label>
+                                <label class="form-check-label fw-semibold" for="isActiveSwitch{{ $type->id }}">{{ __("تفعيل الفحص") }}</label>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">حفظ التعديلات</button>
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">{{ __("إلغاء") }}</button>
+                    <button type="submit" class="btn btn-warning rounded-pill px-4 fw-bold">{{ __("حفظ التعديلات") }}</button>
                 </div>
             </form>
         </div>
@@ -917,24 +913,24 @@
             <div class="modal-content shadow-lg border-0 rounded-4">
                 <div class="modal-header bg-success text-white py-3 rounded-top-4">
                     <h5 class="modal-title fs-6 fw-bold" id="importRadiologyTypesModalLabel">
-                        <i class="fas fa-file-excel me-2"></i> استيراد وتحديث أسعار خدمات الأشعة من ملف إكسل
+                        <i class="fas fa-file-excel me-2"></i> {{ __("استيراد وتحديث أسعار خدمات الأشعة من ملف إكسل") }}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="alert alert-light border border-success-subtle small mb-3 rounded-3">
-                        <div class="fw-bold mb-1 text-success"><i class="fas fa-info-circle me-1"></i> آلية المطابقة والتحديث الذكي:</div>
+                        <div class="fw-bold mb-1 text-success"><i class="fas fa-info-circle me-1"></i>{{ __("آلية المطابقة والتحديث الذكي:") }}</div>
                         <ul class="mb-0 ps-3 text-muted">
-                            <li>يمكنك تصدير الجدول الحالي أولاً عبر زر <strong>تصدير إكسل</strong> وتعديل الأسعار فيه ثم إعادة رفعه هنا.</li>
-                            <li>يقوم النظام بمطابقة خدمات الأشعة تلقائياً برقم <strong>المعرف (# ID)</strong> أو <strong>الرمز الطبي (Code)</strong> أو الاسم.</li>
-                            <li>يتم تحديث: سعر الكاش، سعر الضمان الصحي (فئة ب)، شمول الضمان، الحاجة لمادة ملونة، وحالة التفعيل (نشط/معطل).</li>
-                            <li>الصيغ المدعومة: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code> (الحد الأقصى: 10 ميغابايت).</li>
+                            <li>{{ __("يمكنك تصدير الجدول الحالي أولاً عبر زر") }}<strong>{{ __("تصدير إكسل") }}</strong>{{ __("وتعديل الأسعار فيه ثم إعادة رفعه هنا.") }}</li>
+                            <li>{{ __("يقوم النظام بمطابقة خدمات الأشعة تلقائياً برقم") }}<strong>{{ __("المعرف (# ID)") }}</strong>{{ __("أو") }}<strong>{{ __("الرمز الطبي (Code)") }}</strong>{{ __("أو الاسم.") }}</li>
+                            <li>{{ __("يتم تحديث: سعر الكاش، سعر الضمان الصحي (فئة ب)، شمول الضمان، الحاجة لمادة ملونة، وحالة التفعيل (نشط/معطل).") }}</li>
+                            <li>{{ __("الصيغ المدعومة:") }}<code>.xlsx</code>, <code>.xls</code>, <code>.csv</code>{{ __("(الحد الأقصى: 10 ميغابايت).") }}</li>
                         </ul>
                     </div>
 
                     <div class="mb-3">
                         <label for="excel_file_rad" class="form-label small fw-bold text-dark">
-                            <i class="fas fa-cloud-arrow-up me-1 text-success"></i> اختر ملف الإكسل المراد استيراده:
+                            <i class="fas fa-cloud-arrow-up me-1 text-success"></i> {{ __("اختر ملف الإكسل المراد استيراده:") }}
                         </label>
                         <input type="file" name="excel_file" id="excel_file_rad" class="form-control rounded-3" accept=".xlsx,.xls,.csv" required>
                     </div>
@@ -942,17 +938,17 @@
                     <div class="form-check form-switch p-3 bg-danger bg-opacity-10 border border-danger-subtle rounded-3 mb-2">
                         <input class="form-check-input ms-0 me-2" type="checkbox" name="replace_all" value="1" id="replace_all_rad" checked>
                         <label class="form-check-label fw-bold small text-danger" for="replace_all_rad">
-                            <i class="fas fa-trash-alt me-1"></i> استبدال محتويات الجدول بالكامل بمحتويات ملف الإكسل (حذف الخدمات غير الموجودة في الإكسل)
+                            <i class="fas fa-trash-alt me-1"></i> {{ __("استبدال محتويات الجدول بالكامل بمحتويات ملف الإكسل (حذف الخدمات غير الموجودة في الإكسل)") }}
                         </label>
                         <div class="text-muted" style="font-size: 0.72rem; margin-right: 2.2rem;">
-                            عند تفعيل هذا الخيار سيتم تنظيف الجدول وحذف أي خدمات قديمة لا تظهر في ملف الإكسل، وتثبيت خدمات الإكسل فقط.
+                            {{ __("عند تفعيل هذا الخيار سيتم تنظيف الجدول وحذف أي خدمات قديمة لا تظهر في ملف الإكسل، وتثبيت خدمات الإكسل فقط.") }}
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer bg-light py-2 rounded-bottom-4">
-                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">{{ __("إلغاء") }}</button>
                     <button type="submit" class="btn btn-success text-white btn-sm fw-bold rounded-pill px-4 shadow-sm">
-                        <i class="fas fa-upload me-1"></i> بدء الاستيراد والتحديث
+                        <i class="fas fa-upload me-1"></i> {{ __("بدء الاستيراد والتحديث") }}
                     </button>
                 </div>
             </div>

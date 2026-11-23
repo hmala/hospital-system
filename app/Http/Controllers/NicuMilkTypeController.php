@@ -16,9 +16,45 @@ class NicuMilkTypeController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('manage nicu services') && ! $user->can('manage nicu care plans')))) {
+        if (! $isAdmin && (! $user || (! $user->can('manage nicu services') && ! $user->can('manage nicu care plans') && ! $user->can('manage incubator reservations')))) {
             abort(403, 'غير مصرح لك بإدارة قائمة أنواع الحليب وتغذية الخدج');
         }
+    }
+
+    /**
+     * عرض وإدارة قائمة وتصنيفات أنواع حليب وتغذية الخدج
+     */
+    public function index(Request $request)
+    {
+        $this->authorizeManage();
+
+        $query = NicuMilkType::query();
+
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+
+        if ($request->filled('status')) {
+            if ($request->status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($request->status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        $milkTypes = $query->orderBy('sort_order')->orderBy('name')->get();
+        $categories = NicuMilkType::whereNotNull('category')->where('category', '!=', '')->distinct()->pluck('category');
+
+        return view('nicu.milk-types.index', compact('milkTypes', 'categories'));
     }
 
     /**

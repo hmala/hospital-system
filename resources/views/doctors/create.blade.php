@@ -175,11 +175,25 @@
                                 </label>
                                 <div class="input-group input-group-lg">
                                     <input type="number" class="form-control fw-bold text-success @error('consultation_fee') is-invalid @enderror"
-                                           id="consultation_fee" name="consultation_fee" value="{{ old('consultation_fee', 50000) }}" min="0" step="1000" required>
+                                           id="consultation_fee" name="consultation_fee" value="{{ old('consultation_fee', 25000) }}" min="0" step="1000" required>
                                     <span class="input-group-text bg-light fw-bold text-muted">د.ع</span>
                                 </div>
-                                <div class="form-text small text-muted">المبلغ الافتراضي الذي يسدده المريض عند شباك الكاشير.</div>
+                                <div class="form-text small text-muted">كشفية العيادة الاستشارية الخارجية بشباك الاستقبال.</div>
                                 @error('consultation_fee')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="direct_consultation_fee" class="form-label fw-bold text-dark d-flex align-items-center justify-content-between">
+                                    <span>أجر الكشفية المباشرة (استشارة طوارئ ورُقود)</span>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle small px-2">100% للطبيب</span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <input type="number" class="form-control fw-bold text-primary @error('direct_consultation_fee') is-invalid @enderror"
+                                           id="direct_consultation_fee" name="direct_consultation_fee" value="{{ old('direct_consultation_fee') }}" min="0" step="1000" placeholder="مثال: 30000 أو 50000">
+                                    <span class="input-group-text bg-light fw-bold text-muted">د.ع</span>
+                                </div>
+                                <div class="form-text small text-muted">يُعتمد لاستدعاء الطبيب في الطوارئ والرقود، وإن تُرِك فارغاً يُمنع التسديد بالكاشير لنقص التسعيرة.</div>
+                                @error('direct_consultation_fee')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                             </div>
                         </div>
 

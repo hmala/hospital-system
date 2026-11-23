@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>كشف خدمات الخدج التفصيلي - #{{ $reservation->id }}</title>
+    <title>{{ __('كشف خدمات الخدج التفصيلي') }} - #{{ $reservation->id }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -203,48 +203,48 @@
 <body>
 
     <div class="no-print">
-        <button onclick="window.print()" class="btn-print">🖨️ طباعة الكشف التفصيلي</button>
-        <button onclick="window.close()" class="btn-back">✕ إغلاق النافذة</button>
+        <button onclick="window.print()" class="btn-print">{{ __('🖨️ طباعة الكشف التفصيلي') }}</button>
+        <button onclick="window.close()" class="btn-back">{{ __('✕ إغلاق النافذة') }}</button>
     </div>
 
     @php
-        $babyTitle = $reservation->baby_name ?: ('طفل ' . ($reservation->patient?->name ?? 'غير مسجل'));
-        $incName = $reservation->incubator?->name ?? ('حاضنة #' . $reservation->incubator_id);
-        $docName = $reservation->doctor?->user?->name ? ('د. ' . $reservation->doctor->user->name) : 'طبيب الخدج';
+        $babyTitle = $reservation->baby_name ?: (__('طفل') . ' ' . ($reservation->patient?->name ?? __('غير مسجل')));
+        $incName = $reservation->incubator?->name ?? (__('حاضنة') . ' #' . $reservation->incubator_id);
+        $docName = $reservation->doctor?->user?->name ? (__('د.') . ' ' . $reservation->doctor->user->name) : __('طبيب الخدج');
         $labs = $stayDetails['medical_orders']->where('order_type', 'lab');
         $rads = $stayDetails['medical_orders']->where('order_type', 'radiology');
     @endphp
 
     <div class="thermal-ticket">
         <div class="header-box">
-            <div class="ar-title">مستشفى الكفاءات التخصصي</div>
+            <div class="ar-title">{{ \App\Models\Hospital::first()?->name ?? __('مستشفى الكفاءات الأهلي') }}</div>
             <div class="en-title">AL-KAFAAT SPECIALIZED HOSPITAL</div>
-            <div class="sub-title">كشف حساب وخدمات تفصيلي - الخدج والحاضنات</div>
+            <div class="sub-title">{{ __('كشف حساب وخدمات تفصيلي - الخدج والحاضنات') }}</div>
         </div>
 
         <div class="ticket-info">
-            <span>رقم الإقامة: <strong>#{{ $reservation->id }}</strong></span>
-            <span>التاريخ: {{ now()->format('Y/m/d H:i') }}</span>
+            <span>{{ __('رقم الإقامة:') }} <strong>#{{ $reservation->id }}</strong></span>
+            <span>{{ __('التاريخ:') }} {{ now()->format('Y/m/d H:i') }}</span>
         </div>
 
         <div class="patient-box">
-            <div>الطفل: <strong>{{ $babyTitle }}</strong> ({{ $incName }})</div>
-            <div>الطبيب: <strong>{{ $docName }}</strong></div>
-            <div>ولي الأمر: {{ $reservation->patient?->name ?? '-' }} ({{ $reservation->patient?->phone ?? '-' }})</div>
+            <div>{{ __('الطفل:') }} <strong>{{ $babyTitle }}</strong> ({{ $incName }})</div>
+            <div>{{ __('الطبيب:') }} <strong>{{ $docName }}</strong></div>
+            <div>{{ __('ولي الأمر:') }} {{ $reservation->patient?->name ?? '-' }} ({{ $reservation->patient?->phone ?? '-' }})</div>
         </div>
 
         <!-- 1. أجور الحاضنة والإقامة -->
-        <div class="section-header">1. أجور الحاضنة والإقامة ({{ $stayDetails['calculated_days'] }} يوم):</div>
+        <div class="section-header">{{ __('1. أجور الحاضنة والإقامة') }} ({{ $stayDetails['calculated_days'] }} {{ __('يوم') }}):</div>
         @foreach($stayDetails['service_breakdown'] as $sb)
             <div class="item-row">
-                <span class="item-name">{{ $sb['service_name'] }} ({{ $sb['days'] }} يوم)</span>
-                <span class="item-price">{{ number_format($sb['total']) }} د.ع</span>
+                <span class="item-name">{{ $sb['service_name'] }} ({{ $sb['days'] }} {{ __('يوم') }})</span>
+                <span class="item-price">{{ number_format($sb['total']) }} {{ __('د.ع') }}</span>
             </div>
         @endforeach
 
         <!-- 2. التحاليل المخبرية التفصيلية -->
         @if($labs->isNotEmpty())
-            <div class="section-header">2. التحاليل المخبرية ({{ $labs->count() }} فحص):</div>
+            <div class="section-header">{{ __('2. التحاليل المخبرية') }} ({{ $labs->count() }} {{ __('فحص') }}):</div>
             @foreach($labs as $lab)
                 <div class="item-row">
                     <span class="item-name">
@@ -255,24 +255,24 @@
                             <small style="font-size: 9.5px; color: #475569; display: block;">(غير مشمول - كاش 100%)</small>
                         @endif
                     </span>
-                    <span class="item-price">{{ number_format($lab->price) }} د.ع</span>
+                    <span class="item-price">{{ number_format($lab->price) }} {{ __('د.ع') }}</span>
                 </div>
             @endforeach
             <div class="item-row" style="font-weight: 800; font-size: 11px; margin-top: 2px;">
-                <span>مجموع المختبر:</span>
-                <span>{{ number_format($labs->sum('price')) }} د.ع</span>
+                <span>{{ __('مجموع المختبر:') }}</span>
+                <span>{{ number_format($labs->sum('price')) }} {{ __('د.ع') }}</span>
             </div>
             @if($stayDetails['is_insured'] && ($stayDetails['total_lab_cost'] ?? 0) > 0)
                 <div class="item-row" style="font-size: 10px; color: #166534;">
-                    <span>حصة الضمان بالمختبر:</span>
-                    <span>{{ number_format($stayDetails['insurance_lab_share'] ?? 0) }} د.ع</span>
+                    <span>{{ __('حصة الضمان بالمختبر:') }}</span>
+                    <span>{{ number_format($stayDetails['insurance_lab_share'] ?? 0) }} {{ __('د.ع') }}</span>
                 </div>
             @endif
         @endif
 
         <!-- 3. الفحوصات الإشعاعية والسونار -->
         @if($rads->isNotEmpty())
-            <div class="section-header">3. الأشعة والسونار والإيكو ({{ $rads->count() }} فحص):</div>
+            <div class="section-header">{{ __('3. الأشعة والسونار والإيكو') }} ({{ $rads->count() }} {{ __('فحص') }}):</div>
             @foreach($rads as $rad)
                 <div class="item-row">
                     <span class="item-name">
@@ -283,24 +283,24 @@
                             <small style="font-size: 9.5px; color: #475569; display: block;">(غير مشمول - كاش 100%)</small>
                         @endif
                     </span>
-                    <span class="item-price">{{ number_format($rad->price) }} د.ع</span>
+                    <span class="item-price">{{ number_format($rad->price) }} {{ __('د.ع') }}</span>
                 </div>
             @endforeach
             <div class="item-row" style="font-weight: 800; font-size: 11px; margin-top: 2px;">
-                <span>مجموع الأشعة والسونار:</span>
-                <span>{{ number_format($rads->sum('price')) }} د.ع</span>
+                <span>{{ __('مجموع الأشعة والسونار:') }}</span>
+                <span>{{ number_format($rads->sum('price')) }} {{ __('د.ع') }}</span>
             </div>
             @if($stayDetails['is_insured'] && ($stayDetails['total_radiology_cost'] ?? 0) > 0)
                 <div class="item-row" style="font-size: 10px; color: #0284c7;">
-                    <span>حصة الضمان بالأشعة:</span>
-                    <span>{{ number_format($stayDetails['insurance_radiology_share'] ?? 0) }} د.ع</span>
+                    <span>{{ __('حصة الضمان بالأشعة:') }}</span>
+                    <span>{{ number_format($stayDetails['insurance_radiology_share'] ?? 0) }} {{ __('د.ع') }}</span>
                 </div>
             @endif
         @endif
 
         <!-- 4. الاستشارات إن وجدت -->
         @if($stayDetails['consultations']->isNotEmpty())
-            <div class="section-header">4. استشارات الأطباء:</div>
+            <div class="section-header">{{ __('4. استشارات الأطباء:') }}</div>
             @foreach($stayDetails['consultations'] as $con)
                 <div class="item-row">
                     <span class="item-name">
@@ -311,18 +311,18 @@
                             <small style="font-size: 9.5px; color: #475569; display: block;">(خارجية - كاش 100%)</small>
                         @endif
                     </span>
-                    <span class="item-price">{{ number_format($con->fee) }} د.ع</span>
+                    <span class="item-price">{{ number_format($con->fee) }} {{ __('د.ع') }}</span>
                 </div>
             @endforeach
         @endif
 
         <!-- 5. الدفعات المسددة -->
         @if($stayDetails['payments']->isNotEmpty())
-            <div class="section-header">5. الدفعات والوصولات النقدية المسددة:</div>
+            <div class="section-header">{{ __('5. الدفعات والوصولات النقدية المسددة:') }}</div>
             @foreach($stayDetails['payments'] as $pmt)
                 <div class="item-row">
-                    <span class="item-name">وصل #{{ $pmt->receipt_number }} ({{ $pmt->paid_at ? $pmt->paid_at->format('m/d') : '' }})</span>
-                    <span class="item-price text-success">-{{ number_format($pmt->amount) }} د.ع</span>
+                    <span class="item-name">{{ __('وصل') }} #{{ $pmt->receipt_number }} ({{ $pmt->paid_at ? $pmt->paid_at->format('m/d') : '' }})</span>
+                    <span class="item-price text-success">-{{ number_format($pmt->amount) }} {{ __('د.ع') }}</span>
                 </div>
             @endforeach
         @endif
@@ -330,39 +330,39 @@
         <!-- صندوق الموقف المالي الختامي -->
         <div class="total-box">
             <div class="total-row">
-                <span>إجمالي الفاتورة الكاملة:</span>
-                <span style="font-weight: 900;">{{ number_format($stayDetails['grand_total']) }} د.ع</span>
+                <span>{{ __('إجمالي الفاتورة الكاملة:') }}</span>
+                <span style="font-weight: 900;">{{ number_format($stayDetails['grand_total']) }} {{ __('د.ع') }}</span>
             </div>
             @if($stayDetails['is_insured'])
                 <div class="total-row" style="color: #166534; font-weight: 800;">
-                    <span>مطالبة هيئة الضمان الصحي:</span>
-                    <span>{{ number_format($stayDetails['insurance_grand_total']) }} د.ع</span>
+                    <span>{{ __('مطالبة هيئة الضمان الصحي:') }}</span>
+                    <span>{{ number_format($stayDetails['insurance_grand_total']) }} {{ __('د.ع') }}</span>
                 </div>
                 <div class="total-row" style="color: #1d4ed8; font-weight: 800;">
-                    <span>حصة المريض المستحقة:</span>
-                    <span>{{ number_format($stayDetails['patient_grand_total']) }} د.ع</span>
+                    <span>{{ __('حصة المريض المستحقة:') }}</span>
+                    <span>{{ number_format($stayDetails['patient_grand_total']) }} {{ __('د.ع') }}</span>
                 </div>
             @endif
             <div class="total-row">
-                <span>مجموع المبالغ المسددة:</span>
-                <span style="font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} د.ع</span>
+                <span>{{ __('مجموع المبالغ المسددة:') }}</span>
+                <span style="font-weight: 900;">{{ number_format($stayDetails['total_paid']) }} {{ __('د.ع') }}</span>
             </div>
             <div class="total-row grand">
-                <span>الرصيد المتبقي للدفع:</span>
-                <span style="font-size: 14px;">{{ number_format($stayDetails['net_balance']) }} د.ع</span>
+                <span>{{ __('الرصيد المتبقي للدفع:') }}</span>
+                <span style="font-size: 14px;">{{ number_format($stayDetails['net_balance']) }} {{ __('د.ع') }}</span>
             </div>
             @if($stayDetails['excess_deposit'] > 0)
                 <div class="total-row" style="color: #0284c7; font-weight: 800; margin-top: 2px;">
-                    <span>فائض رسوم مستحق للأهل (إرجاع):</span>
-                    <span>+{{ number_format($stayDetails['excess_deposit']) }} د.ع</span>
+                    <span>{{ __('فائض رسوم مستحق للأهل (إرجاع):') }}</span>
+                    <span>+{{ number_format($stayDetails['excess_deposit']) }} {{ __('د.ع') }}</span>
                 </div>
             @endif
         </div>
 
         <div class="dotted-divider"></div>
         <div class="footer">
-            <div>كشف رسمي بحسابات وخدمات الخديج — مستشفى الكفاءات</div>
-            <div style="font-size: 9.5px; margin-top: 2px;">تم التوليد آلياً من نظام إدارة المستشفى</div>
+            <div>{{ __('كشف رسمي بحسابات وخدمات الخديج — مستشفى الكفاءات') }}</div>
+            <div style="font-size: 9.5px; margin-top: 2px;">{{ __('تم التوليد آلياً من نظام إدارة المستشفى') }}</div>
         </div>
     </div>
 
