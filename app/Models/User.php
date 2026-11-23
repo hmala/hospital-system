@@ -101,6 +101,10 @@ class User extends Authenticatable
 
     public function isNurseAvailableToday(): bool
     {
+        if ($this->hasAnyRole(['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
+            return true;
+        }
+
         if (! $this->hasAnyRole(['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض']) && ($this->role ?? '') !== 'nurse') {
             return true;
         }

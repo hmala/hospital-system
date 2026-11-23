@@ -268,9 +268,6 @@
                                             @else
                                                 <span><i class="fas fa-envelope fa-xs text-secondary me-1"></i>{{ $nurse->email }}</span>
                                             @endif
-                                            @if($nurse->hasRole('head_nurse'))
-                                                <span class="badge bg-purple text-white px-2 py-0.5 rounded-pill" style="font-size: 0.7rem; background-color: #7c3aed;">مشرف تمريض</span>
-                                            @endif
                                         </div>
                                     </div>
                                 </div>

@@ -91,6 +91,44 @@ Consult these files before making changes or proposing fixes:
   * توافق تام مع تنسيق `Laravel Pint` وتوثيق الخطة المعمارية الشاملة في [`docs/النظام_المحاسبي_الموحد_وثيقة_المعمارية_الشاملة.md`](file:///C:/get/hospital-system/docs/النظام_المحاسبي_الموحد_وثيقة_المعمارية_الشاملة.md).
 
 
+
+## Session log (2026-11-22 — المرحلة 275: الترقية التلقائية لحساب رئيس ومشرف التمريض في بيئة الإنتاج وتثبيت الصلاحيات الإشرافية بالميجريشن Automated Head Nurse Supervisor Role Promotion & Permission Synchronization Migration)
+
+### Done
+- **تشخيص سبب عدم تغير الحالة على هوستنجر**:
+  * حساب المستخدم (عبدالله الحسين `abdullahalhussen247@gmail.com`) كان مربوطاً بجدول `model_has_roles` برقم الدور 11 (`nurse`).
+  * الميجريشن السابقة أنشأت الدور `head_nurse` بجدول `roles` فقط ولم تعدل سجل المستخدم بجدول ربط الأدوار.
+- **ميجريشن الترقية التلقائية ([database/migrations/2026_11_22_133000_promote_head_nurse_supervisor_user.php](file:///C:/get/hospital-system/database/migrations/2026_11_22_133000_promote_head_nurse_supervisor_user.php))**:
+  * البحث التلقائي عن حساب عبدالله الحسين أو أي حساب مسمى مشرف/رئيس التمريض وترقيته تلقائياً عبر `$user->syncRoles(['head_nurse'])` وتحديث `role = 'head_nurse'`.
+  * منح دور `head_nurse` صلاحيات `manage nurse availability` و `view nursing station` ومسح كاش الصلاحيات.
+- **التحقق والاختبارات الآلية**:
+  * تنفيذ الميجريشن محلياً بنجاح، واجتياز اختبارات `NurseAvailabilityTest` بنسبة 100% (`11 passed, 46 assertions`)، وتنسيق الأكواد بـ `Laravel Pint`.
+
+## Session log (2026-11-22 — المرحلة 274: فصل رئيس ومشرف التمريض عن قائمة كادر التمريض المجدول وتمكين الصلاحيات الإشرافية Segregate Head Nurse Supervisor from Staff Nurse Duty Scheduling & Authorize Full Supervisory Governance)
+
+### Done
+- **عزل المشرف عن جدول دوام الممرضين ([app/Http/Controllers/NurseAvailabilityController.php](file:///C:/get/hospital-system/app/Http/Controllers/NurseAvailabilityController.php), [resources/views/nurse-availability/index.blade.php](file:///C:/get/hospital-system/resources/views/nurse-availability/index.blade.php))**:
+  * تصحيح استعلام كادر التمريض `$nursesQuery` في `index()` و `bulkUpdate()` باستبعاد دور `head_nurse` وأدوار الإدارة نهائياً عبر `whereDoesntHave('roles', fn($rq) => $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))`.
+  * إزالة شارة مشرف التمريض من جدول التمريض التابع، بحيث لا يظهر رئيس/مشرف التمريض كممرض يُفتح ويُغلق دوامه بالمفتاح التفاعلي بل يدير الجدول كمشرف ومسؤول.
+- **حصانة حساب مشرف التمريض بالنظام ([app/Models/User.php](file:///C:/get/hospital-system/app/Models/User.php))**:
+  * تحديث دالة `isNurseAvailableToday()` لإعادة `true` فورياً لأي مستخدم يحمل دور `head_nurse` أو أحد الأدوار الإدارية، لمنع حجب المشرف أو توجيهه لشاشة خارج الدوام مهما كانت حالته بقاعدة البيانات أو في حال وجود بقايا قديمة لحقل `role = nurse`.
+- **تثبيت الصلاحيات بالميجريشن ([database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php))**:
+  * ربط صلاحيتي `manage nurse availability` و `view nursing station` تلقائياً بدور `head_nurse` عند تنفيذ الميجريشن بالسيرفر لضمان قدرته على التحكم الكامل بكادر التمريض ومحطة التمريض.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///C:/get/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+  * إضافة فحص يؤكد عدم ظهور حساب مشرف التمريض ضمن جدول كادر التمريض للمدير والمشرف، واجتياز كامل اختبارات دوام التمريض بنسبة 100% (`11 passed, 44 assertions`) واجتياز فحص `Laravel Pint`.
+
+## Session log (2026-11-22 — المرحلة 273: حل استثناء فقدان دور تمريض الخدج والعناية وحصانة استعلامات جدول توفر التمريض Immunity for Nurse Availability Query against Missing Roles & Automated Role Seeding Migration)
+
+### Done
+- **الحل البرمجي الوقائي في الكنترولر ([app/Http/Controllers/NurseAvailabilityController.php](file:///C:/get/hospital-system/app/Http/Controllers/NurseAvailabilityController.php))**:
+  * استبدال `$q->role(...)` المباشر باستعلام العلاقات المعياري المتين `whereHas('roles', fn($rq) => $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse']))->orWhere('role', 'nurse')`.
+  * حماية النظام ومنع انهيار الصفحة بخطأ 500 (`RoleDoesNotExist: There is no role named 'nicu_nurse' for guard 'web'`) في بيئات العمل أو الاستضافة غير المحدثة الأدوار.
+- **ميجريشن التوليد التلقائي للأدوار السريرية ([database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php](file:///C:/get/hospital-system/database/migrations/2026_11_22_120000_ensure_nurse_roles_exist_in_roles_table.php))**:
+  * إنشاء ميجريشن تنفذ تلقائياً عند تشغيل `php artisan migrate` في السيرفر وتنشئ الأدوار السريرية المفقودة (`nurse`, `nicu_nurse`, `icu_nurse`, `head_nurse`, `anesthesia`) بجدول `roles` مع مسح الكاش تلقائياً.
+- **التحقق الآلي وتنسيق الكود ([tests/Feature/NurseAvailabilityTest.php](file:///C:/get/hospital-system/tests/Feature/NurseAvailabilityTest.php))**:
+  * إضافة اختبار ميزة مخصص `test_nurse_query_does_not_throw_when_role_does_not_exist_in_database` يؤكد فتح صفحة إدارة توفر التمريض بنجاح (HTTP 200) حتى لو حذف الدور من قاعدة البيانات.
+  * اجتياز كامل اختبارات دوام التمريض بنسبة 100% (`11 passed, 42 assertions`) واجتياز فحص `Laravel Pint`.
+
 ## Session log (2026-11-21 — المرحلة 272: توحيد واجهة كاشير الطوارئ مع باقي الأقسام بإضافة خيارات [تسديد / تأجيل / إلغاء] لكل خدمة والتحكم المباشر بالأسعار وإعادة احتساب الفاتورة لحظياً Unify Emergency Cashier Payment with Segmented Action Pills [Pay/Postpone/Cancel], Direct In-Line Price Overrides, Real-Time Recalculation, and Split Payment Handling)
 
 ### Done

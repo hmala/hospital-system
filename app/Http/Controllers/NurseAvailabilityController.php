@@ -58,9 +58,18 @@ class NurseAvailabilityController extends Controller
         $statusFilter = $request->query('status', 'all');
 
         $nursesQuery = User::where(function ($q) {
-            $q->role(['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse'])
-                ->orWhere('role', 'nurse');
+            $q->whereHas('roles', function ($rq) {
+                $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض']);
+            })->orWhere(function ($oq) {
+                $oq->where('role', 'nurse')
+                    ->whereDoesntHave('roles', function ($rq) {
+                        $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+                    });
+            });
         })
+            ->whereDoesntHave('roles', function ($rq) {
+                $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+            })
             ->where('is_active', true)
             ->with(['nurseAvailabilities' => function ($q) use ($selectedDate) {
                 $q->whereDate('date', $selectedDate);
@@ -222,7 +231,7 @@ class NurseAvailabilityController extends Controller
             'success' => true,
             'nurse_id' => $nurse->id,
             'assigned_floor' => $floor,
-            'message' => "تم تعيين طابق الممرض {$nurse->name} إلى: " . ($floor ?: 'غير محدد'),
+            'message' => "تم تعيين طابق الممرض {$nurse->name} إلى: ".($floor ?: 'غير محدد'),
         ]);
     }
 
@@ -288,9 +297,19 @@ class NurseAvailabilityController extends Controller
         $isAvailable = ($action === 'set_all_available');
 
         $nursesQuery = User::where(function ($q) {
-            $q->role(['nurse', 'nicu_nurse', 'icu_nurse', 'head_nurse'])
-                ->orWhere('role', 'nurse');
-        })->where('is_active', true);
+            $q->whereHas('roles', function ($rq) {
+                $rq->whereIn('name', ['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض']);
+            })->orWhere(function ($oq) {
+                $oq->where('role', 'nurse')
+                    ->whereDoesntHave('roles', function ($rq) {
+                        $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+                    });
+            });
+        })
+            ->whereDoesntHave('roles', function ($rq) {
+                $rq->whereIn('name', ['head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+            })
+            ->where('is_active', true);
 
         $nurses = $nursesQuery->get();
 

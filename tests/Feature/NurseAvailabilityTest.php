@@ -16,8 +16,11 @@ class NurseAvailabilityTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected User $headNurse;
+
     protected User $nurse1;
+
     protected User $nurse2;
 
     protected function setUp(): void
@@ -54,11 +57,15 @@ class NurseAvailabilityTest extends TestCase
         $responseAdmin->assertSee('جدول توفر ودوام التمريض اليومي');
         $responseAdmin->assertSee('ممرض أحمد');
         $responseAdmin->assertSee('ممرضة فاطمة');
+        $responseAdmin->assertDontSee('data-nurse-id="'.$this->headNurse->id.'"', false);
+        $responseAdmin->assertDontSee('data-nurse-id="' . $this->headNurse->id . '"', false);
 
         // Head Nurse
         $responseHeadNurse = $this->actingAs($this->headNurse)->get(route('nurse-availability.index'));
         $responseHeadNurse->assertStatus(200);
         $responseHeadNurse->assertSee('جدول توفر ودوام التمريض اليومي');
+        $responseHeadNurse->assertDontSee('data-nurse-id="'.$this->headNurse->id.'"', false);
+        $responseHeadNurse->assertDontSee('data-nurse-id="' . $this->headNurse->id . '"', false);
     }
 
     public function test_regular_nurse_without_permission_cannot_access_index(): void
@@ -248,5 +255,14 @@ class NurseAvailabilityTest extends TestCase
 
         $response->assertRedirect();
         $this->assertAuthenticatedAs($this->admin);
+    }
+
+    public function test_nurse_query_does_not_throw_when_role_does_not_exist_in_database(): void
+    {
+        \Spatie\Permission\Models\Role::where('name', 'nicu_nurse')->delete();
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $response = $this->actingAs($this->admin)->get(route('nurse-availability.index'));
+        $response->assertOk();
     }
 }
