@@ -1158,7 +1158,8 @@
                                                 request()->routeIs('cashier.ccu.*');
                             $isSurgeryAccountsActive = request()->routeIs('cashier.surgeries.doctor-accounts*');
                             $isTreasuryActive = request()->routeIs('treasury.*');
-                            $isAccountingSectionActive = $isTreasuryActive || $isSurgeryReviewActive || $isSurgeryAccountsActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive || $isCcuAccountsActive;
+                            $isAccountingModuleActive = request()->routeIs('accounting.*');
+                            $isAccountingSectionActive = $isTreasuryActive || $isAccountingModuleActive || $isSurgeryReviewActive || $isSurgeryAccountsActive || $isInsuranceActive || $isConsultantAccountsActive || $isEmergencyAccountsActive || $isDiagnosticsAccountsActive || $isNicuAccountsActive || $isCcuAccountsActive;
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAccountingSectionActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#unifiedAccountingSection" aria-expanded="{{ $isAccountingSectionActive ? 'true' : 'false' }}">
@@ -1166,6 +1167,11 @@
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isAccountingSectionActive ? 'show' : '' }}" id="unifiedAccountingSection">
+                        <li class="nav-item">
+                            <a class="nav-link {{ $isAccountingModuleActive ? 'active' : '' }}" href="{{ route('accounting.chart.index') }}">
+                                <i class="fas fa-balance-scale text-primary"></i><span class="fw-bold"> المنظومة المالية (MedFinance IFRS)</span>
+                            </a>
+                        </li>
                         @can('view account statements')
                         <li class="nav-item">
                             <a class="nav-link {{ $isTreasuryActive ? 'active' : '' }}" href="{{ route('treasury.index') }}">

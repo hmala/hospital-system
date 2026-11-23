@@ -74,6 +74,10 @@
                 <i class="fas fa-file-excel"></i>
                 <span>تصدير Excel</span>
             </a>
+            <a href="{{ route('accounting.chart.index') }}" class="btn btn-primary d-flex align-items-center gap-1.5 shadow-sm rounded-pill px-3 py-1.5">
+                <i class="fas fa-balance-scale"></i>
+                <span class="fw-bold">المنظومة المالية (MedFinance IFRS)</span>
+            </a>
         </div>
     </div>
 

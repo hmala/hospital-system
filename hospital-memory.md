@@ -78,6 +78,39 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 191 (2026-11-23 — فرع `hr`) — واجهات شجرة الحسابات التفاعلية Split-View، شجرة مراكز التكلفة، محرك التفقيط بالدينار العراقي، ونظام السندات والطباعة الرسمية A4 (Phase 2: Interactive Chart & Cost Centers Tree UI, Tafqeet Engine, Vouchers & Official A4 Printing)**:
+  * **واجهة شجرة الحسابات التفاعلية Split-View ([resources/views/accounting/chart/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/chart/index.blade.php))**:
+    - بناء شجرة هرمية تفاعلية قابلة للطي والتوسيع مع تمييز لوني واضح بين الحسابات التجميعية الرقابية (المستويات 1-4 📁) والحسابات التحليلية المقبولة للتقييد (المستويين 5-6 🟢).
+    - لوحة تفاصيل الحساب اللحظية (Split-View) تعرض الكود، الاسم، الرتبة، الطبيعة، الأب، والرصيد الفعلي، مع جدول أحدث الحركات دون إعادة تحميل الصفحة.
+    - نافذة منبثقة ذكية (Modal) لإضافة حساب فرعي جديد مع محرك اقتراح الكود التالي آلياً (`suggestCode`) وفرض قواعد التقييد.
+  * **واجهة شجرة مراكز التكلفة الميدانية ([resources/views/accounting/cost-centers/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/cost-centers/index.blade.php))**:
+    - استعراض الأقسام وصالات العمليات وردهات الرقود والمختبر والأشعة والمخازن والإدارة عبر 5 عناقيد رئيسية، مع نافذة إضافة مركز تكلفة فرعي.
+  * **محرك التفقيط بالدينار العراقي ([app/Services/Accounting/TafqeetService.php](file:///C:/get/hospital-system/app/Services/Accounting/TafqeetService.php))**:
+    - تحويل الأرقام المالية إلى نصوص عربية رسمية معتمدة بالدينار العراقي والفلس حتى خانة المليارات لحظياً عبر AJAX.
+  * **نظام السندات والقيود والطباعة الرسمية A4 ([app/Http/Controllers/Accounting/VoucherController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/VoucherController.php), [resources/views/accounting/vouchers/](file:///C:/get/hospital-system/resources/views/accounting/vouchers/))**:
+    - شاشات متكاملة لإصدار سند قبض (`RV`)، سند صرف (`PV`)، وقيد تسوية عام (`JV`) مع التحقق اللحظي من التوازن ومنع التقييد على الحسابات التجميعية.
+    - دعم الأرشفة الضوئية برفع صورة الوصل أو الفاتورة الورقية مع القيد.
+    - نموذج طباعة رسمي A4 مخصص يتضمن ترويسة المستشفى، التفقيط التلقائي، والمربعات الثلاثية للتوقيعات (مُنظم السند، التدقيق، والآمر بالصرف/المستلم).
+    - محرك عكس القيد الرقابي التلقائي (`reverse`) مع توثيق سبب العكس في سجل التدقيق.
+  * **التحقق الآلي وضمان الجودة**:
+    - بناء واجتياز حزمة الاختبارات الشاملة [`tests/Feature/AccountingVoucherAndChartTest.php`](file:///C:/get/hospital-system/tests/Feature/AccountingVoucherAndChartTest.php) بنجاح 100% (`11 passed, 36 assertions`)، بالإضافة لاجتياز [`tests/Feature/AccountingCoreTest.php`](file:///C:/get/hospital-system/tests/Feature/AccountingCoreTest.php) (`4 passed, 29 assertions`)، مع توافق كامل لتنسيق `Laravel Pint`.
+
+- **المرحلة 190 (2026-11-23 — فرع `hr`) — تأسيس البنية التحتية للنظام المحاسبي الموحد العراقي المحدث (IFRS)، شجرة الحسابات، مراكز التكلفة، محرك العملات، والقيود المحاسبية المعزولة (Phase 1: Iraqi Unified Accounting System Infrastructure, Modular Schema, 1160 Accounts Tree, Cost Centers & Test Suite)**:
+  * **معمارية الجداول المعزولة ببادئة `acc_` (`database/migrations/2026_11_23_100000_create_accounting_core_tables.php`)**:
+    - بناء 8 جداول مستقلة تماماً وقابلة للانسلاخ والبيع كـ SaaS أو On-Premise: `acc_currencies`, `acc_cost_centers`, `acc_accounts`, `acc_fiscal_years`, `acc_fiscal_periods`, `acc_journal_entries`, `acc_journal_entry_lines`, `acc_audit_logs`.
+    - دعم حقل تعدد الشركات (`company_id`) في جميع الجداول لعزل المستأجرين مستقبلاً.
+  * **النماذج البرمجية المستقلة (`app/Models/Accounting/`)**:
+    - بناء 8 نماذج Eloquent وفق معايير Laravel 12: [`Currency`](file:///C:/get/hospital-system/app/Models/Accounting/Currency.php), [`CostCenter`](file:///C:/get/hospital-system/app/Models/Accounting/CostCenter.php), [`Account`](file:///C:/get/hospital-system/app/Models/Accounting/Account.php), [`FiscalYear`](file:///C:/get/hospital-system/app/Models/Accounting/FiscalYear.php), [`FiscalPeriod`](file:///C:/get/hospital-system/app/Models/Accounting/FiscalPeriod.php), [`JournalEntry`](file:///C:/get/hospital-system/app/Models/Accounting/JournalEntry.php), [`JournalEntryLine`](file:///C:/get/hospital-system/app/Models/Accounting/JournalEntryLine.php), [`AuditLog`](file:///C:/get/hospital-system/app/Models/Accounting/AuditLog.php).
+    - دعم التحقق الآلي من توازن القيد (`isBalanced`), إنشاء أرقام القيود التسلسلية (`generateEntryNumber`), وعكس القيود الرقابي مع سجل التدقيق (`reverse`).
+  * **مزودات البيانات وشجرة الحسابات العراقية ومراكز التكلفة (`database/seeders/`)**:
+    - تغذية شجرة الدليل المحاسبي الموحد العراقي بالكامل (1,160 حساباً هرمياً) عبر [`AccChartOfAccountsSeeder.php`](file:///C:/get/hospital-system/database/seeders/AccChartOfAccountsSeeder.php) مع فرض قاعدة التقييد الصارمة: المستويات 1 إلى 4 حسابات تجميعية غير قابلة للتقييد (638 حساباً)، والمستويان 5 و 6 فقط يقبلان القيود (522 حساباً تحليلياً).
+    - تغذية العملات الرسمية عبر [`AccCurrencySeeder.php`](file:///C:/get/hospital-system/database/seeders/AccCurrencySeeder.php): الدينار العراقي كعملة افتراضية أساسية (1.0000)، والدولار الأمريكي بالسعر الرسمي القابل للتعديل (1320.0000).
+    - تغذية شجرة مراكز التكلفة (32 مركزاً عبر 5 عناقيد رئيسية تطابق صالات العمليات، الرقود، الطوارئ، الخدج، العيادات، المختبر، الأشعة، والمخازن) عبر [`AccCostCenterSeeder.php`](file:///C:/get/hospital-system/database/seeders/AccCostCenterSeeder.php).
+    - تغذية السنة المالية 2026 بـ 12 فترة شهرية لإقفال الفترات عبر [`AccFiscalYearSeeder.php`](file:///C:/get/hospital-system/database/seeders/AccFiscalYearSeeder.php).
+  * **التحقق الآلي والاختبارات الشاملة**:
+    - بناء واجتياز حزمة الاختبارات الآلية [`tests/Feature/AccountingCoreTest.php`](file:///C:/get/hospital-system/tests/Feature/AccountingCoreTest.php) بنجاح 100% (`4 passed, 29 assertions`).
+    - توافق تام مع تنسيق `Laravel Pint` وتوثيق الخطة المعمارية الشاملة في [`docs/النظام_المحاسبي_الموحد_وثيقة_المعمارية_الشاملة.md`](file:///C:/get/hospital-system/docs/النظام_المحاسبي_الموحد_وثيقة_المعمارية_الشاملة.md).
+
 - **مزامنة `origin/main` على فرع `hr` (2026-11-12) — دمج خيار خروج الطوارئ «خرج متوفي» (`deceased`) مع حفظ قواعد `C:\get\hospital-system`:**
   * **الدمج الآمن من `origin/main` (`4cecb86`, `bf16ef7`)**: سحب تحديثات الطوارئ عبر `--no-ff` مع الإبقاء التام على مسار العمل الرسمي `C:\get\hospital-system` وقواعد العمل الحصري على فرع `hr` في [`GEMINI.md`](file:///C:/get/hospital-system/GEMINI.md) و[`.agents/rules/hospital-core.md`](file:///C:/get/hospital-system/.agents/rules/hospital-core.md) و[`AGENTS.md`](file:///C:/get/hospital-system/AGENTS.md).
   * **خيار خروج `خرج متوفي` في الطوارئ**: تحديث [`app/Http/Controllers/EmergencyController.php`](file:///C:/get/hospital-system/app/Http/Controllers/EmergencyController.php) (`discharge()`) وواجهات [`show.blade.php`](file:///C:/get/hospital-system/resources/views/emergency/show.blade.php) و[`index.blade.php`](file:///C:/get/hospital-system/resources/views/emergency/index.blade.php) و[`medical-report.blade.php`](file:///C:/get/hospital-system/resources/views/emergency/medical-report.blade.php) و[`verify-report.blade.php`](file:///C:/get/hospital-system/resources/views/emergency/verify-report.blade.php) مع الحفاظ على شرط إبراء الذمة المالية قبل الخروج.

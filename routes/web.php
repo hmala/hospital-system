@@ -1223,3 +1223,26 @@ Route::get('/storage/{path}', function (string $path) {
         'Cache-Control' => 'public, max-age=86400',
     ]);
 })->where('path', '.*')->name('storage.file.serve');
+
+// ==========================================
+// النظام المحاسبي الموحد العراقي (Accounting Module)
+// ==========================================
+Route::prefix('accounting')->name('accounting.')->middleware(['auth'])->group(function () {
+    // شجرة الحسابات
+    Route::get('/chart-of-accounts', [\App\Http\Controllers\Accounting\ChartOfAccountsController::class, 'index'])->name('chart.index');
+    Route::get('/chart-of-accounts/details/{account}', [\App\Http\Controllers\Accounting\ChartOfAccountsController::class, 'getDetails'])->name('chart.details');
+    Route::get('/chart-of-accounts/suggest-code', [\App\Http\Controllers\Accounting\ChartOfAccountsController::class, 'suggestCode'])->name('chart.suggest-code');
+    Route::post('/chart-of-accounts', [\App\Http\Controllers\Accounting\ChartOfAccountsController::class, 'store'])->name('chart.store');
+
+    // مراكز التكلفة
+    Route::get('/cost-centers', [\App\Http\Controllers\Accounting\CostCenterController::class, 'index'])->name('cost-centers.index');
+    Route::post('/cost-centers', [\App\Http\Controllers\Accounting\CostCenterController::class, 'store'])->name('cost-centers.store');
+
+    // السندات والقيود
+    Route::get('/vouchers', [\App\Http\Controllers\Accounting\VoucherController::class, 'index'])->name('vouchers.index');
+    Route::get('/vouchers/create/{type?}', [\App\Http\Controllers\Accounting\VoucherController::class, 'create'])->name('vouchers.create');
+    Route::post('/vouchers', [\App\Http\Controllers\Accounting\VoucherController::class, 'store'])->name('vouchers.store');
+    Route::get('/vouchers/{entry}/print', [\App\Http\Controllers\Accounting\VoucherController::class, 'print'])->name('vouchers.print');
+    Route::post('/vouchers/{entry}/reverse', [\App\Http\Controllers\Accounting\VoucherController::class, 'reverse'])->name('vouchers.reverse');
+    Route::get('/vouchers/tafqeet/words', [\App\Http\Controllers\Accounting\VoucherController::class, 'tafqeet'])->name('vouchers.tafqeet');
+});
