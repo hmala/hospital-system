@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\Auth;
 
 class DoctorVisitController extends Controller
 {
-    public function index()
+    public function index(HttpRequest $request)
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
@@ -39,24 +39,55 @@ class DoctorVisitController extends Controller
             return view('doctors.visits.index', compact('todayVisits', 'upcomingVisits', 'appointments', 'inpatientConsultations'))->with('error', 'بيانات الطبيب غير مكتملة');
         }
 
-        // جميع الزيارات (الحالية والسابقة) - مرتبة حسب الأولوية
-        $allVisits = Visit::where('doctor_id', $doctor->id)
+        $baseDoctorVisits = Visit::where('doctor_id', $doctor->id)
             ->with(['patient.user', 'appointment.emergency'])
-            ->orderByRaw("CASE 
-                WHEN status != 'completed' AND status != 'cancelled' AND DATE(visit_date) < CURRENT_DATE THEN 1
-                WHEN DATE(visit_date) = CURRENT_DATE THEN 2
-                WHEN status = 'completed' AND DATE(visit_date) < CURRENT_DATE THEN 3
-                WHEN DATE(visit_date) > CURRENT_DATE THEN 4
-                ELSE 5
-            END")
             ->orderBy('visit_date', 'desc')
-            ->orderBy('visit_time', 'desc')
-            ->limit(200)
-            ->get();
+            ->orderBy('visit_time', 'desc');
 
-        // للتوافق مع View القديمة
+        // استعلام أرشيف الزيارات (حد 500 زيارة لتمكين البحث الفوري اللحظي)
+        $archiveQuery = (clone $baseDoctorVisits);
+
+        if ($request->filled('search')) {
+            $search = trim($request->search);
+            $archiveQuery->where(function ($q) use ($search) {
+                $q->whereHas('patient', function ($pq) use ($search) {
+                    $pq->where('national_id', 'like', "%{$search}%")
+                        ->orWhere('id', $search)
+                        ->orWhereHas('user', function ($uq) use ($search) {
+                            $uq->where('name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        });
+                })
+                    ->orWhere('chief_complaint', 'like', "%{$search}%")
+                    ->orWhere('id', $search);
+            });
+        }
+
+        if ($request->filled('status') && $request->status !== 'all') {
+            if ($request->status === 'incomplete') {
+                $archiveQuery->whereNotIn('status', ['completed', 'cancelled']);
+            } else {
+                $archiveQuery->where('status', $request->status);
+            }
+        }
+
+        if ($request->filled('date_from')) {
+            $archiveQuery->whereDate('visit_date', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $archiveQuery->whereDate('visit_date', '<=', $request->date_to);
+        }
+
+        $allVisits = $archiveQuery->limit(500)->get();
+
+        // تصفية الزيارات للتبويبات الأخرى بتوافق تام عبر Carbon
         $todayVisits = $allVisits->filter(function ($visit) {
             return $visit->visit_date && $visit->visit_date->isToday();
+        });
+
+        $incompleteVisits = $allVisits->filter(function ($visit) {
+            return $visit->status != 'completed' && $visit->status != 'cancelled' && $visit->visit_date && $visit->visit_date->isPast();
         });
 
         $upcomingVisits = $allVisits->filter(function ($visit) {
@@ -65,10 +96,6 @@ class DoctorVisitController extends Controller
 
         $completedVisits = $allVisits->filter(function ($visit) {
             return $visit->status == 'completed' && $visit->visit_date && $visit->visit_date->isPast();
-        });
-
-        $incompleteVisits = $allVisits->filter(function ($visit) {
-            return $visit->status != 'completed' && $visit->status != 'cancelled' && $visit->visit_date && $visit->visit_date->isPast();
         });
 
         // جميع المواعيد المجدولة (لم يتم تحويلها إلى زيارات بعد)

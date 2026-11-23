@@ -108,6 +108,16 @@
                                         <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold">
                                             <i class="fas fa-check-circle me-1"></i> معتمد وتم الصرف
                                         </span>
+                                        @php
+                                            $hasModifiedItems = collect(is_array($req->items) ? $req->items : json_decode($req->items, true))->contains(function($it) {
+                                                return !empty($it['modified_by_admin']) || (isset($it['original_qty']) && $it['original_qty'] != ($it['qty'] ?? 0));
+                                            });
+                                        @endphp
+                                        @if($hasModifiedItems)
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-2 py-0.5 d-inline-block mt-1 small shadow-xs" title="تم تعديل كمية بعض المواد أثناء الصرف من قِبل المخزن الرئيسي">
+                                                <i class="fas fa-pen-fancy me-0.5"></i> تم تعديل الكمية
+                                            </span>
+                                        @endif
                                     @else
                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1.5 fw-bold">
                                             <i class="fas fa-times-circle me-1"></i> مرفوض

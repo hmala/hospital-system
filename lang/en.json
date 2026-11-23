@@ -5042,5 +5042,15 @@
     "القرار الطبي النهائي عند الخروج وتوصيات المتابعة": "Final Discharge Medical Decision & Follow-up Recommendations",
     "التوصيات والمتابعة": "Recommendations & Follow-up",
     "الوجهة النهائية": "Final Destination",
-    "الحالة عند الخروج \/ التوصيات": "Status Upon Discharge \/ Recommendations"
+    "الحالة عند الخروج \/ التوصيات": "Status Upon Discharge \/ Recommendations",
+    "بحث في الأرشيف": "Search in Archive",
+    "اسم المريض، الإضبارة، الهاتف، الشكوى...": "Patient name, file #, phone, complaint...",
+    "غير مكتملة \/ معلقة": "Incomplete \/ Pending",
+    "تصفية المعلقة بالاسم أو الإضبارة...": "Filter pending by name or file #...",
+    "المعروض:": "Showing:",
+    "تتم التصفية فورياً أثناء الكتابة، أو اضغط 'بحث' للبحث الشامل في قاعدة البيانات.": "Filtered instantly as you type, or click 'Search' for a full database search.",
+    "عدد الزيارات:": "Total Visits:",
+    "لا توجد زيارات معلقة تطابق عبارة البحث": "No pending visits match the search query",
+    "لا توجد زيارات تطابق معايير البحث الحالية في هذه الصفحة": "No visits match the current search criteria on this page",
+    "عرض جميع الزيارات": "View All Visits"
 }

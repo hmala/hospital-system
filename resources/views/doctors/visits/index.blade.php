@@ -543,11 +543,23 @@
                     </div>
                     <div class="flex-grow-1 ms-3">
                         <h5 class="alert-heading mb-1 fw-bold">
-                            لديك {{ $incompleteVisits->count() }} زيارة غير مكتملة من أيام سابقة
+                            {{ __("لديك") }} {{ $incompleteVisits->count() }} {{ __("زيارة غير مكتملة من أيام سابقة") }}
                         </h5>
                         <p class="mb-0 small">{{ __("يرجى المتابعة وإنهاء الفحوصات والوصفات الطبية لغلق ملف الزيارة.") }}</p>
                     </div>
                 </div>
+            </div>
+
+            <!-- Incomplete Quick Filter -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="input-group" style="max-width: 320px;">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                    <input type="text" id="incompleteSearchInput" class="form-control form-control-sm border-start-0" 
+                           placeholder="{{ __('تصفية المعلقة بالاسم أو الإضبارة...') }}" autocomplete="off">
+                </div>
+                <span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-3 py-2">
+                    {{ __("المعروض:") }} <strong id="incomplete-visible-count">{{ $incompleteVisits->count() }}</strong> / {{ $incompleteVisits->count() }}
+                </span>
             </div>
             @endif
 
@@ -562,26 +574,41 @@
                             <th><i class="fas fa-cogs me-2"></i>{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="incomplete-table-body">
                         @if(isset($incompleteVisits) && is_countable($incompleteVisits) && $incompleteVisits->count() > 0)
                             @foreach($incompleteVisits as $visit)
-                            <tr class="incomplete-visit" style="background: #fff7ed; border-left: 4px solid #fbbf24;">
+                            @php
+                                $patientName = optional($visit->patient)->user->name ?? 'غير محدد';
+                                $fileNum = optional($visit->patient)->file_number ?? optional($visit->patient)->national_id ?? (optional($visit->patient)->id ? '#' . optional($visit->patient)->id : '');
+                                $phone = optional(optional($visit->patient)->user)->phone ?? '';
+                                $visitDateStr = $visit->visit_date ? $visit->visit_date->format('Y-m-d') : '';
+                                $searchData = mb_strtolower("{$patientName} {$fileNum} {$phone} {$visit->chief_complaint} {$visitDateStr}");
+                            @endphp
+                            <tr class="incomplete-row incomplete-visit" style="background: #fff7ed; border-left: 4px solid #fbbf24;" data-search-text="{{ $searchData }}">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-circle">
-                                            {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
+                                            {{ substr($patientName, 0, 1) }}
                                         </div>
                                         <div class="ms-2">
-                                            <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
+                                            <strong>{{ $patientName }}</strong>
                                             <br>
-                                            <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
+                                            <small class="text-muted">
+                                                @if($fileNum)
+                                                    <span class="badge bg-light text-dark border me-1">#{{ $fileNum }}</span>
+                                                @endif
+                                                {{ $visit->visit_type_text ?? 'زيارة عامة' }}
+                                                @if($phone)
+                                                    <span class="ms-1 text-secondary"><i class="fas fa-phone-alt fa-xs me-1"></i>{{ $phone }}</span>
+                                                @endif
+                                            </small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <span class="text-muted small">
                                         <i class="fas fa-calendar-alt me-1 text-warning"></i>
-                                        {{ $visit->visit_date ? $visit->visit_date->format('Y-m-d') : '-' }}
+                                        {{ $visitDateStr ?: '-' }}
                                     </span>
                                 </td>
                                 <td>
@@ -597,6 +624,11 @@
                                 </td>
                             </tr>
                             @endforeach
+                            <tr id="incomplete-no-matches-row" style="display: none;">
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="fas fa-search me-1"></i> {{ __("لا توجد زيارات معلقة تطابق عبارة البحث") }}
+                                </td>
+                            </tr>
                         @else
                         <tr>
                             <td colspan="5" class="text-center py-5">
@@ -610,8 +642,68 @@
             </div>
         </div>
 
-        <!-- 4. ALL VISITS ARCHIVE TAB (أرشيف الزيارات بالتصميم الأصلي) -->
+        <!-- 4. ALL VISITS ARCHIVE TAB (أرشيف الزيارات مع البحث الفوري) -->
         <div class="tab-pane fade" id="archive-pane" role="tabpanel" aria-labelledby="archive-tab">
+            <!-- Archive Instant Search & Filter Bar (بحث فوري بدون أزرار) -->
+            <div class="card border-0 shadow-sm mb-4 rounded-3 bg-light">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                <i class="fas fa-bolt text-warning me-1"></i>{{ __("بحث فوري لحظي") }}
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                                <input type="text" id="archiveSearchInput" class="form-control border-start-0" 
+                                       placeholder="{{ __('اكتب للبحث الفوري: الاسم، رقم الملف، الهاتف، الشكوى...') }}" autocomplete="off">
+                                <button type="button" class="btn btn-white bg-white border border-start-0 text-muted" id="archiveSearchClear" style="display: none;" title="{{ __('مسح') }}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                <i class="fas fa-tasks me-1 text-info"></i>{{ __("الحالة") }}
+                            </label>
+                            <select id="archiveStatusSelect" class="form-select">
+                                <option value="all">{{ __("جميع الحالات") }}</option>
+                                <option value="completed">{{ __("مكتملة") }}</option>
+                                <option value="incomplete">{{ __("غير مكتملة / معلقة") }}</option>
+                                <option value="in_progress">{{ __("جاري الفحص") }}</option>
+                                <option value="waiting">{{ __("في الانتظار") }}</option>
+                                <option value="cancelled">{{ __("ملغية") }}</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                <i class="fas fa-calendar-alt me-1 text-secondary"></i>{{ __("من تاريخ") }}
+                            </label>
+                            <input type="date" id="archiveDateFrom" class="form-control">
+                        </div>
+                        <div class="col-6 col-md-2">
+                            <label class="form-label small fw-bold text-muted mb-1">
+                                <i class="fas fa-calendar-check me-1 text-secondary"></i>{{ __("إلى تاريخ") }}
+                            </label>
+                            <input type="date" id="archiveDateTo" class="form-control">
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 pt-2 border-top border-secondary-subtle gap-2">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle text-primary me-1"></i>
+                            <span>{{ __("البحث فوري وتفاعلي: تتم تصفية النتائج مباشرة بمجرد الكتابة أو تغيير الحالة والتاريخ دون الحاجة لأي زر.") }}</span>
+                        </small>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" id="archiveResetAllBtn" class="btn btn-sm btn-outline-secondary px-2 py-1" style="display: none;">
+                                <i class="fas fa-undo me-1"></i> {{ __("تفريغ الفلاتر") }}
+                            </button>
+                            <span class="badge bg-white text-dark border shadow-sm px-3 py-1">
+                                {{ __("عدد الزيارات:") }} <strong id="archive-visible-count">{{ isset($allVisits) ? $allVisits->count() : 0 }}</strong> / {{ isset($allVisits) ? $allVisits->count() : 0 }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table unified-table">
                     <thead>
@@ -623,7 +715,7 @@
                             <th><i class="fas fa-cogs me-2"></i>{{ __("الإجراءات") }}</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="archive-table-body">
                         @if(isset($allVisits) && is_countable($allVisits) && $allVisits->count() > 0)
                             @foreach($allVisits as $visit)
                             @php
@@ -631,27 +723,40 @@
                                 $isCancelled = $visit->status == 'cancelled';
                                 $isIncomplete = in_array($visit->status, ['in_progress', 'waiting']);
                                 $rowClass = $isCompleted ? 'completed-visit' : ($isCancelled ? '' : 'incomplete-visit');
+                                $patientName = optional($visit->patient)->user->name ?? 'غير محدد';
+                                $fileNum = optional($visit->patient)->file_number ?? optional($visit->patient)->national_id ?? (optional($visit->patient)->id ? '#' . optional($visit->patient)->id : '');
+                                $phone = optional(optional($visit->patient)->user)->phone ?? '';
+                                $visitDateStr = $visit->visit_date ? $visit->visit_date->format('Y-m-d') : '';
+                                $searchData = mb_strtolower("{$patientName} {$fileNum} {$phone} {$visit->chief_complaint} {$visitDateStr} " . ($visit->visit_type_text ?? ''));
                             @endphp
-                            <tr class="{{ $rowClass }}">
+                            <tr class="archive-row {{ $rowClass }}" data-search-text="{{ $searchData }}" data-status="{{ $visit->status }}" data-date="{{ $visitDateStr }}">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-circle">
-                                            {{ substr(optional($visit->patient)->user->name ?? 'غ', 0, 1) }}
+                                            {{ substr($patientName, 0, 1) }}
                                         </div>
                                         <div class="ms-2">
-                                            <strong>{{ optional($visit->patient)->user->name ?? 'غير محدد' }}</strong>
+                                            <strong>{{ $patientName }}</strong>
                                             @if($visit->appointment && $visit->appointment->emergency_id)
                                                 <span class="badge bg-danger ms-2"><i class="fas fa-ambulance"></i> {{ __("طوارئ") }}</span>
                                             @endif
                                             <br>
-                                            <small class="text-muted">{{ $visit->visit_type_text ?? 'زيارة عامة' }}</small>
+                                            <small class="text-muted">
+                                                @if($fileNum)
+                                                    <span class="badge bg-light text-dark border me-1">#{{ $fileNum }}</span>
+                                                @endif
+                                                {{ $visit->visit_type_text ?? 'زيارة عامة' }}
+                                                @if($phone)
+                                                    <span class="ms-1 text-secondary"><i class="fas fa-phone-alt fa-xs me-1"></i>{{ $phone }}</span>
+                                                @endif
+                                            </small>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <span class="text-muted small">
                                         <i class="fas fa-calendar-alt me-1 text-primary"></i>
-                                        {{ $visit->visit_date ? $visit->visit_date->format('Y-m-d') : '-' }}
+                                        {{ $visitDateStr ?: '-' }}
                                     </span>
                                 </td>
                                 <td>
@@ -673,6 +778,11 @@
                                 </td>
                             </tr>
                             @endforeach
+                            <tr id="archive-no-matches-row" style="display: none;">
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="fas fa-search me-1"></i> {{ __("لا توجد زيارات تطابق معايير البحث الحالية في هذه الصفحة") }}
+                                </td>
+                            </tr>
                         @else
                         <tr>
                             <td colspan="5" class="text-center py-5">
@@ -1532,9 +1642,153 @@
     setInterval(syncDoctorQueue, 4000);
     syncDoctorQueue();
 
-    if (window.location.hash === '#inpatient-pane' || window.location.search.includes('tab=inpatient')) {
+    // Tab synchronization from URL query or hash
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabParam = urlParams.get('tab');
+    const hashParam = window.location.hash;
+
+    if (tabParam === 'archive' || hashParam === '#archive-pane') {
+        const archiveTab = document.getElementById('archive-tab');
+        if (archiveTab) archiveTab.click();
+    } else if (tabParam === 'incomplete' || hashParam === '#incomplete-pane') {
+        const incTab = document.getElementById('incomplete-tab');
+        if (incTab) incTab.click();
+    } else if (tabParam === 'inpatient' || hashParam === '#inpatient-pane') {
         const inpTab = document.getElementById('inpatient-tab');
         if (inpTab) inpTab.click();
+    } else if (tabParam === 'today' || hashParam === '#today-pane') {
+        const todayTab = document.getElementById('today-tab');
+        if (todayTab) todayTab.click();
+    }
+
+    document.querySelectorAll('#doctorTabs button[data-bs-toggle="tab"]').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', (e) => {
+            const target = e.target.getAttribute('data-bs-target');
+            if (target) {
+                history.replaceState(null, null, target);
+            }
+        });
+    });
+
+    // Instant Client-side Live Filtering for Archive (No button required)
+    const archiveSearchInput = document.getElementById('archiveSearchInput');
+    const archiveStatusSelect = document.getElementById('archiveStatusSelect');
+    const archiveDateFrom = document.getElementById('archiveDateFrom');
+    const archiveDateTo = document.getElementById('archiveDateTo');
+    const archiveSearchClear = document.getElementById('archiveSearchClear');
+    const archiveResetAllBtn = document.getElementById('archiveResetAllBtn');
+    const archiveRows = document.querySelectorAll('.archive-row');
+    const archiveCountEl = document.getElementById('archive-visible-count');
+    const archiveNoMatchesRow = document.getElementById('archive-no-matches-row');
+
+    function applyArchiveFilters() {
+        const query = archiveSearchInput ? archiveSearchInput.value.trim().toLowerCase() : '';
+        const status = archiveStatusSelect ? archiveStatusSelect.value : 'all';
+        const dateFrom = archiveDateFrom ? archiveDateFrom.value : '';
+        const dateTo = archiveDateTo ? archiveDateTo.value : '';
+
+        const hasActiveFilters = query || status !== 'all' || dateFrom || dateTo;
+
+        if (archiveSearchClear) {
+            archiveSearchClear.style.display = query ? '' : 'none';
+        }
+        if (archiveResetAllBtn) {
+            archiveResetAllBtn.style.display = hasActiveFilters ? '' : 'none';
+        }
+
+        let visibleCount = 0;
+
+        archiveRows.forEach(row => {
+            const text = row.getAttribute('data-search-text') || '';
+            const rowStatus = row.getAttribute('data-status') || '';
+            const rowDate = row.getAttribute('data-date') || '';
+
+            let matchesQuery = !query || text.includes(query);
+
+            let matchesStatus = true;
+            if (status !== 'all') {
+                if (status === 'incomplete') {
+                    matchesStatus = rowStatus !== 'completed' && rowStatus !== 'cancelled';
+                } else {
+                    matchesStatus = rowStatus === status;
+                }
+            }
+
+            let matchesDate = true;
+            if (dateFrom && rowDate && rowDate < dateFrom) matchesDate = false;
+            if (dateTo && rowDate && rowDate > dateTo) matchesDate = false;
+
+            if (matchesQuery && matchesStatus && matchesDate) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (archiveCountEl) archiveCountEl.textContent = visibleCount;
+        if (archiveNoMatchesRow) {
+            archiveNoMatchesRow.style.display = (visibleCount === 0 && archiveRows.length > 0) ? '' : 'none';
+        }
+    }
+
+    if (archiveSearchInput) {
+        archiveSearchInput.addEventListener('input', applyArchiveFilters);
+    }
+    if (archiveStatusSelect) {
+        archiveStatusSelect.addEventListener('change', applyArchiveFilters);
+    }
+    if (archiveDateFrom) {
+        archiveDateFrom.addEventListener('change', applyArchiveFilters);
+    }
+    if (archiveDateTo) {
+        archiveDateTo.addEventListener('change', applyArchiveFilters);
+    }
+    if (archiveSearchClear) {
+        archiveSearchClear.addEventListener('click', function() {
+            if (archiveSearchInput) {
+                archiveSearchInput.value = '';
+                applyArchiveFilters();
+                archiveSearchInput.focus();
+            }
+        });
+    }
+    if (archiveResetAllBtn) {
+        archiveResetAllBtn.addEventListener('click', function() {
+            if (archiveSearchInput) archiveSearchInput.value = '';
+            if (archiveStatusSelect) archiveStatusSelect.value = 'all';
+            if (archiveDateFrom) archiveDateFrom.value = '';
+            if (archiveDateTo) archiveDateTo.value = '';
+            applyArchiveFilters();
+        });
+    }
+
+    // Instant Client-side Live Filtering for Incomplete Visits
+    const incompleteSearchInput = document.getElementById('incompleteSearchInput');
+    const incompleteRows = document.querySelectorAll('.incomplete-row');
+    const incompleteCountEl = document.getElementById('incomplete-visible-count');
+    const incompleteNoMatchesRow = document.getElementById('incomplete-no-matches-row');
+
+    if (incompleteSearchInput && incompleteRows.length > 0) {
+        incompleteSearchInput.addEventListener('input', function() {
+            const query = this.value.trim().toLowerCase();
+            let visibleCount = 0;
+
+            incompleteRows.forEach(row => {
+                const text = row.getAttribute('data-search-text') || '';
+                if (!query || text.includes(query)) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (incompleteCountEl) incompleteCountEl.textContent = visibleCount;
+            if (incompleteNoMatchesRow) {
+                incompleteNoMatchesRow.style.display = (visibleCount === 0 && query) ? '' : 'none';
+            }
+        });
     }
 </script>
 @endif

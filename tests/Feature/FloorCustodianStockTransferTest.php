@@ -462,4 +462,99 @@ class FloorCustodianStockTransferTest extends TestCase
         $deleteResponse = $this->actingAs($warehouseManager)->delete(route('stock-transfers.requests.destroy', $req));
         $deleteResponse->assertStatus(403);
     }
+
+    public function test_sub_store_can_request_items_exceeding_main_stock_and_main_warehouse_can_adjust_quantity(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor4 = Location::create(['name' => 'ردهة الطابق الرابع', 'type' => 'sub']);
+
+        $nurseAli = User::factory()->create([
+            'name' => 'علي الممرض',
+            'location_id' => $subFloor4->id,
+        ]);
+        $nurseAli->assignRole('nurse');
+
+        $warehouseManager = User::factory()->create([
+            'name' => 'أمين المستودع المركزي',
+        ]);
+        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'manage inventory', 'guard_name' => 'web']);
+        $warehouseManager->givePermissionTo('manage inventory');
+
+        $product = Product::create([
+            'name' => 'محلول ملحي نورمال سلاين',
+            'code' => 'SAL-500',
+            'unit' => 'قنينة',
+        ]);
+
+        // Main warehouse only has 15 bottles
+        StockBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $mainLocation->id,
+            'internal_barcode' => 'BATCH-SAL-001',
+            'cost_price' => 1000,
+            'initial_qty' => 15,
+            'current_qty' => 15,
+            'expiry_date' => now()->addYear(),
+            'received_at' => now(),
+        ]);
+
+        // 1. Nurse requests 40 bottles (exceeds available 15)
+        $storeResponse = $this->actingAs($nurseAli)->post(route('stock-transfers.requests.store'), [
+            'to_location_id' => $subFloor4->id,
+            'items' => [
+                ['product_id' => $product->id, 'qty' => 40],
+            ],
+        ]);
+
+        $storeResponse->assertRedirect(route('stock-transfers.requests.index'));
+        $storeResponse->assertSessionHas('success');
+
+        $transferRequest = StockTransferRequest::first();
+        $this->assertNotNull($transferRequest);
+        $this->assertEquals('pending', $transferRequest->status);
+        $this->assertEquals(40, $transferRequest->items[0]['original_qty']);
+        $this->assertEquals(40, $transferRequest->items[0]['qty']);
+
+        // 2. Warehouse manager views request show page: sees shortage alert and available qty
+        $managerShow = $this->actingAs($warehouseManager)->get(route('stock-transfers.requests.show', $transferRequest));
+        $managerShow->assertStatus(200);
+        $managerShow->assertSee('المطلوب أكثر من المتوفر');
+        $managerShow->assertSee('15'); // Available in main
+
+        // 3. Warehouse manager approves with modified qty = 15
+        $approveResponse = $this->actingAs($warehouseManager)->post(route('stock-transfers.requests.approve', $transferRequest), [
+            'approved_items' => [
+                0 => [
+                    'qty' => 15,
+                    'admin_notes' => 'تم الصرف حسب الرصيد المتوفر بالمخزن الرئيسي',
+                ],
+            ],
+        ]);
+
+        $approveResponse->assertRedirect(route('stock-transfers.requests.show', $transferRequest));
+        $approveResponse->assertSessionHas('success');
+
+        $transferRequest->refresh();
+        $this->assertEquals('approved', $transferRequest->status);
+        $this->assertEquals(40, $transferRequest->items[0]['original_qty']);
+        $this->assertEquals(15, $transferRequest->items[0]['qty']);
+        $this->assertTrue($transferRequest->items[0]['modified_by_admin']);
+        $this->assertEquals('تم الصرف حسب الرصيد المتوفر بالمخزن الرئيسي', $transferRequest->items[0]['admin_notes']);
+
+        // Main warehouse stock is now 0, and sub-location stock is now 15
+        $this->assertEquals(0, StockBatch::where('location_id', $mainLocation->id)->sum('current_qty'));
+        $this->assertEquals(15, StockBatch::where('location_id', $subFloor4->id)->sum('current_qty'));
+
+        // 4. Nurse views request: sees modified banner, original qty, dispensed qty, and note
+        $nurseShow = $this->actingAs($nurseAli)->get(route('stock-transfers.requests.show', $transferRequest));
+        $nurseShow->assertStatus(200);
+        $nurseShow->assertSee('تنبيه: تم تعديل كمية المواد المصروفة من قِبل موظف المخزن الرئيسي');
+        $nurseShow->assertSee('تم تعديل الكمية من المخزن الرئيسي');
+        $nurseShow->assertSee('تم الصرف حسب الرصيد المتوفر بالمخزن الرئيسي');
+
+        // 5. Nurse views index: sees 'تم تعديل الكمية' badge
+        $nurseIndex = $this->actingAs($nurseAli)->get(route('stock-transfers.requests.index'));
+        $nurseIndex->assertStatus(200);
+        $nurseIndex->assertSee('تم تعديل الكمية');
+    }
 }

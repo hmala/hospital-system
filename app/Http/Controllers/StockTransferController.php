@@ -103,35 +103,20 @@ class StockTransferController extends Controller
             return back()->withInput()->withErrors(['to_location_id' => 'يجب اختيار مخزن فرعي صحيح.']);
         }
 
-        $requestedQuantities = [];
+        $itemsPayload = [];
         foreach ($request->items as $item) {
-            $productId = $item['product_id'];
             $qty = (int) $item['qty'];
-            $requestedQuantities[$productId] = ($requestedQuantities[$productId] ?? 0) + $qty;
-        }
-
-        $shortages = [];
-        foreach ($requestedQuantities as $productId => $qtyNeeded) {
-            $availableQty = StockBatch::where('product_id', $productId)
-                ->where('location_id', $mainLocation->id)
-                ->where('current_qty', '>', 0)
-                ->sum('current_qty');
-
-            if ($availableQty < $qtyNeeded) {
-                $productName = Product::find($productId)?->name ?? 'هذه المادة';
-                $shortages[] = "الكمية المطلوبة من {$productName} ({$qtyNeeded}) تتجاوز المتوفر ({$availableQty})";
-            }
-        }
-
-        if (! empty($shortages)) {
-            return back()->withInput()->withErrors(['items' => $shortages]);
+            $itemsPayload[] = array_merge($item, [
+                'qty' => $qty,
+                'original_qty' => $qty,
+            ]);
         }
 
         StockTransferRequest::create([
             'from_location_id' => $mainLocation->id,
             'to_location_id' => $toLocation->id,
             'requested_by' => Auth::id(),
-            'items' => $request->items,
+            'items' => $itemsPayload,
             'status' => 'pending',
         ]);
 
@@ -220,32 +205,17 @@ class StockTransferController extends Controller
             return back()->withInput()->withErrors(['items' => 'لا يوجد مخزن رئيسي متاح للطلب.']);
         }
 
-        $requestedQuantities = [];
+        $itemsPayload = [];
         foreach ($request->items as $item) {
-            $productId = $item['product_id'];
             $qty = (int) $item['qty'];
-            $requestedQuantities[$productId] = ($requestedQuantities[$productId] ?? 0) + $qty;
-        }
-
-        $shortages = [];
-        foreach ($requestedQuantities as $productId => $qtyNeeded) {
-            $availableQty = StockBatch::where('product_id', $productId)
-                ->where('location_id', $mainLocation->id)
-                ->where('current_qty', '>', 0)
-                ->sum('current_qty');
-
-            if ($availableQty < $qtyNeeded) {
-                $productName = Product::find($productId)?->name ?? 'هذه المادة';
-                $shortages[] = "الكمية المطلوبة من {$productName} ({$qtyNeeded}) تتجاوز المتوفر بالمخزن الرئيسي ({$availableQty})";
-            }
-        }
-
-        if (! empty($shortages)) {
-            return back()->withInput()->withErrors(['items' => $shortages]);
+            $itemsPayload[] = array_merge($item, [
+                'qty' => $qty,
+                'original_qty' => $qty,
+            ]);
         }
 
         $stockTransferRequest->update([
-            'items' => array_values($request->items),
+            'items' => $itemsPayload,
         ]);
 
         return redirect()->route('stock-transfers.requests.show', $stockTransferRequest)
@@ -578,15 +548,25 @@ class StockTransferController extends Controller
         }
 
         $request = $stockTransferRequest;
-        $productIds = collect($request->items)->pluck('product_id')->unique();
+        $productIds = collect($request->items)->pluck('product_id')->filter()->unique();
         $subLocationBatches = StockBatch::where('location_id', $request->to_location_id)
             ->whereIn('product_id', $productIds)
             ->fefo()
             ->get();
 
+        $fromLocationBatches = StockBatch::where('location_id', $request->from_location_id)
+            ->whereIn('product_id', $productIds)
+            ->where('current_qty', '>', 0)
+            ->get();
+
+        $fromLocationQuantities = [];
+        foreach ($productIds as $pid) {
+            $fromLocationQuantities[$pid] = (int) $fromLocationBatches->where('product_id', $pid)->sum('current_qty');
+        }
+
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
 
-        return view('stock-transfers.requests.show', compact('stockTransferRequest', 'subLocationBatches', 'products', 'isAdmin'));
+        return view('stock-transfers.requests.show', compact('stockTransferRequest', 'subLocationBatches', 'fromLocationQuantities', 'products', 'isAdmin'));
     }
 
     public function approveRequest(Request $request, StockTransferRequest $stockTransferRequest)
@@ -600,15 +580,30 @@ class StockTransferController extends Controller
             return back()->withErrors(['status' => 'هذا الطلب ليس قيد الانتظار.']);
         }
 
+        $approvedInputItems = $request->input('approved_items', []);
+
         DB::beginTransaction();
 
         try {
             $fromLocationId = $stockTransferRequest->from_location_id;
             $toLocationId = $stockTransferRequest->to_location_id;
+            $updatedItemsPayload = [];
 
-            foreach ($stockTransferRequest->items as $item) {
+            foreach ($stockTransferRequest->items as $index => $item) {
                 $productId = $item['product_id'];
-                $qtyNeeded = $item['qty'];
+                $originalQty = (int) ($item['original_qty'] ?? $item['qty']);
+
+                // تحديد الكمية المعتمدة للصرف (إما القيمة المعدلة من الإدارة أو الأصلية)
+                if (isset($approvedInputItems[$index]['qty'])) {
+                    $qtyNeeded = max(0, (int) $approvedInputItems[$index]['qty']);
+                } else {
+                    $qtyNeeded = (int) $item['qty'];
+                }
+
+                $adminNotes = isset($approvedInputItems[$index]['admin_notes'])
+                    ? trim((string) $approvedInputItems[$index]['admin_notes'])
+                    : ($item['admin_notes'] ?? null);
+
                 $specifiedBatchId = $item['batch_id'] ?? null;
 
                 $batchQuery = StockBatch::where('product_id', $productId)
@@ -621,66 +616,83 @@ class StockTransferController extends Controller
 
                 $batches = $batchQuery->fefo()->get();
 
-                $availableQty = $batches->sum('current_qty');
+                $availableQty = (int) $batches->sum('current_qty');
                 if ($availableQty < $qtyNeeded) {
                     DB::rollBack();
 
-                    return back()->withErrors(['approve' => 'الكمية المطلوبة لا تتوفر في المخزن المصدر.']);
+                    $productName = Product::find($productId)?->name ?? 'المادة';
+
+                    return back()->withErrors(['approve' => "الكمية المعتمدة ({$qtyNeeded}) للمادة '{$productName}' تتجاوز المخزون المتاح في المخزن المصدر ({$availableQty})."]);
                 }
 
-                foreach ($batches as $batch) {
-                    if ($qtyNeeded <= 0) {
-                        break;
-                    }
-
-                    $transferQty = min($batch->current_qty, $qtyNeeded);
-                    $transferTime = now();
-
-                    if ($transferQty === $batch->current_qty) {
-                        if (! $batch->original_received_at) {
-                            $batch->original_received_at = $batch->received_at;
+                $remainingToDeduct = $qtyNeeded;
+                if ($remainingToDeduct > 0) {
+                    foreach ($batches as $batch) {
+                        if ($remainingToDeduct <= 0) {
+                            break;
                         }
-                        if (! $batch->original_barcode) {
-                            $batch->original_barcode = $batch->internal_barcode;
-                        }
-                        $batch->location_id = $toLocationId;
-                        $batch->received_at = $transferTime;
-                        $batch->save();
-                        $newBatch = $batch;
-                    } else {
-                        $batch->current_qty -= $transferQty;
-                        $batch->save();
 
-                        $newBatch = StockBatch::create([
-                            'product_id' => $batch->product_id,
-                            'location_id' => $toLocationId,
-                            'purchase_item_id' => $batch->purchase_item_id,
-                            'internal_barcode' => $this->generateBatchBarcode($batch->product_id),
-                            'original_barcode' => $batch->original_barcode ?: $batch->internal_barcode,
-                            'cost_price' => $batch->cost_price,
-                            'initial_qty' => $transferQty,
-                            'current_qty' => $transferQty,
-                            'expiry_date' => $batch->expiry_date,
-                            'received_at' => $transferTime,
-                            'original_received_at' => $batch->original_received_at ?: $batch->received_at,
-                            'parent_batch_id' => $batch->id,
+                        $transferQty = min($batch->current_qty, $remainingToDeduct);
+                        $transferTime = now();
+
+                        if ($transferQty === $batch->current_qty) {
+                            if (! $batch->original_received_at) {
+                                $batch->original_received_at = $batch->received_at;
+                            }
+                            if (! $batch->original_barcode) {
+                                $batch->original_barcode = $batch->internal_barcode;
+                            }
+                            $batch->location_id = $toLocationId;
+                            $batch->received_at = $transferTime;
+                            $batch->save();
+                            $newBatch = $batch;
+                        } else {
+                            $batch->current_qty -= $transferQty;
+                            $batch->save();
+
+                            $newBatch = StockBatch::create([
+                                'product_id' => $batch->product_id,
+                                'location_id' => $toLocationId,
+                                'purchase_item_id' => $batch->purchase_item_id,
+                                'internal_barcode' => $this->generateBatchBarcode($batch->product_id),
+                                'original_barcode' => $batch->original_barcode ?: $batch->internal_barcode,
+                                'cost_price' => $batch->cost_price,
+                                'initial_qty' => $transferQty,
+                                'current_qty' => $transferQty,
+                                'expiry_date' => $batch->expiry_date,
+                                'received_at' => $transferTime,
+                                'original_received_at' => $batch->original_received_at ?: $batch->received_at,
+                                'parent_batch_id' => $batch->id,
+                            ]);
+                        }
+
+                        StockMovement::create([
+                            'batch_id' => $newBatch->id,
+                            'from_location_id' => $fromLocationId,
+                            'to_location_id' => $toLocationId,
+                            'quantity' => $transferQty,
+                            'type' => 'transfer',
+                            'user_id' => Auth::id(),
                         ]);
+
+                        $remainingToDeduct -= $transferQty;
                     }
-
-                    StockMovement::create([
-                        'batch_id' => $newBatch->id,
-                        'from_location_id' => $fromLocationId,
-                        'to_location_id' => $toLocationId,
-                        'quantity' => $transferQty,
-                        'type' => 'transfer',
-                        'user_id' => Auth::id(),
-                    ]);
-
-                    $qtyNeeded -= $transferQty;
                 }
+
+                $itemUpdated = $item;
+                $itemUpdated['original_qty'] = $originalQty;
+                $itemUpdated['qty'] = $qtyNeeded;
+                if ($qtyNeeded != $originalQty) {
+                    $itemUpdated['modified_by_admin'] = true;
+                }
+                if ($adminNotes) {
+                    $itemUpdated['admin_notes'] = $adminNotes;
+                }
+                $updatedItemsPayload[] = $itemUpdated;
             }
 
             $stockTransferRequest->update([
+                'items' => $updatedItemsPayload,
                 'status' => 'approved',
                 'approved_by' => Auth::id(),
                 'approved_at' => now(),

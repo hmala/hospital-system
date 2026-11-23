@@ -78,7 +78,19 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
-
+- **المرحلة 276 (2026-11-23 — `main`) — البحث الفوري اللحظي والتصفية الذكية في أرشيف جميع زيارات الطبيب والزيارات المعلقة بدون أزرار (Instant Zero-Click Real-Time Search & Multi-Filter for Doctor Visits Archive & Incomplete Visits)**:
+  * **الواجهة التفاعلية الفورية بدون أزرار ([resources/views/doctors/visits/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php))**:
+    - بناء شريط بحث وفلترة لحظي أعلى جدول أرشيف جميع الزيارات: حقل بحث نصي سريع، منسدلة الحالات (مكتملة، غير مكتملة/معلقة، جاري الفحص، بالانتظار، ملغية)، وفلاتر التاريخ (من/إلى)، وزر تفريغ ومسح فوري.
+    - تنفيذ دالة JavaScript لحظية `applyArchiveFilters()` تعمل فورياً على حدثي `input` و `change` لتصفية الصفوف لحظياً بالمتصفح بدون الحاجة لأي زر بحث وبدون إعادة تحميل الصفحة.
+    - إضافة حقل تصفية سريع للزيارات المعلقة في تبويب الزيارات المعلقة `#incomplete-pane`.
+    - ربط بيانات كل صف بـ `data-search-text` و `data-status` و `data-date` مع إظهار عداد النتائج المطابقة لحظياً وإظهار رسالة عند عدم وجود تطابق.
+    - دعم حفظ ومزامنة التبويبات تلقائياً عبر URL Query (`?tab=archive`) وتحديث history state عند التبديل.
+  * **توسيع استعلام الأرشيف بالباك إند ([app/Http/Controllers/DoctorVisitController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DoctorVisitController.php))**:
+    - رفع سقف استعلام الأرشيف إلى 500 زيارة لضمان توفر كافة الزيارات الحديثة والسابقة فورياً بذاكرة المتصفح.
+    - دعم معاملات البحث السيرفرية (`search`, `status`, `date_from`, `date_to`) للبحث في الاسم، الهاتف، الرقم الوطني، رقم الإضبارة/المعرف، والشكوى السريرية.
+  * **القاموس والاختبارات الآلية ([lang/en.json](file:///c:/wamp64/www/hospital-system/lang/en.json), [tests/Feature/DoctorVisitsArchiveSearchTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/DoctorVisitsArchiveSearchTest.php))**:
+    - إضافة وتوثيق 10 مفاتيح ترجمة إنجليزية جديدة بالقواميس.
+    - بناء واجتياز اختبار الميزة `DoctorVisitsArchiveSearchTest` بنسبة 100% (`1 passed, 22 assertions`)، وتنسيق الأكواد بـ `Laravel Pint`.
 
 - **المرحلة 275 (2026-11-22 — `main`) — الترقية التلقائية لحساب رئيس/مشرف التمريض في بيئة الإنتاج ومنح الصلاحيات الإشرافية عبر ميجريشن مخصصة (Automated Head Nurse Supervisor Role Promotion & Permission Synchronization Migration)**:
   * **السبب الجذري للمشكلة في هوستنجر:**
