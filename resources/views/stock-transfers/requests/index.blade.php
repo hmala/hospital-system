@@ -105,8 +105,8 @@
                                             <i class="fas fa-hourglass-half me-1"></i> قيد المراجعة
                                         </span>
                                     @elseif($req->status === 'approved')
-                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold">
-                                            <i class="fas fa-check-circle me-1"></i> معتمد وتم الصرف
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5 fw-bold">
+                                            <i class="fas fa-truck-loading me-1"></i> بانتظار استلام القسم
                                         </span>
                                         @php
                                             $hasModifiedItems = collect(is_array($req->items) ? $req->items : json_decode($req->items, true))->contains(function($it) {
@@ -114,8 +114,22 @@
                                             });
                                         @endphp
                                         @if($hasModifiedItems)
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-2 py-0.5 d-inline-block mt-1 small shadow-xs" title="تم تعديل كمية بعض المواد أثناء الصرف من قِبل المخزن الرئيسي">
+                                            <span class="badge bg-warning text-dark border border-warning rounded-pill px-2 py-0.5 d-inline-block mt-1 small shadow-xs" title="تم تعديل كمية بعض المواد أثناء الصرف من قِبل المخزن الرئيسي">
                                                 <i class="fas fa-pen-fancy me-0.5"></i> تم تعديل الكمية
+                                            </span>
+                                        @endif
+                                    @elseif($req->status === 'completed')
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1.5 fw-bold">
+                                            <i class="fas fa-check-double me-1"></i> مستلم ومودع بالعهدة
+                                        </span>
+                                        @php
+                                            $hasModifiedItems = collect(is_array($req->items) ? $req->items : json_decode($req->items, true))->contains(function($it) {
+                                                return !empty($it['modified_by_admin']) || (isset($it['original_qty']) && $it['original_qty'] != ($it['qty'] ?? 0));
+                                            });
+                                        @endphp
+                                        @if($hasModifiedItems)
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning rounded-pill px-2 py-0.5 d-inline-block mt-1 small shadow-xs" title="تم استلام الشحنة بكميات معدلة">
+                                                <i class="fas fa-pen me-0.5"></i> كميات معدلة
                                             </span>
                                         @endif
                                     @else
@@ -129,6 +143,20 @@
                                         <a href="{{ route('stock-transfers.requests.show', $req) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-medium" title="عرض التفاصيل">
                                             <i class="fas fa-eye me-1"></i> عرض
                                         </a>
+                                        @php
+                                            $canConfirmReceiptThis = $req->status === 'approved' && (
+                                                !empty($isSuperAdmin) ||
+                                                $req->requested_by == auth()->id() ||
+                                                (auth()->user()?->location_id && $req->to_location_id == auth()->user()->location_id) ||
+                                                auth()->user()?->hasRole(['head_nurse', 'nurse', 'nicu_nurse', 'icu_nurse', 'surgery_staff', 'surgery_nurse', 'anesthesia', 'surgeon']) ||
+                                                in_array(auth()->user()?->role, ['nurse', 'head_nurse', 'doctor', 'surgery_staff'])
+                                            );
+                                        @endphp
+                                        @if($canConfirmReceiptThis)
+                                            <a href="{{ route('stock-transfers.requests.show', $req) }}#receiveStockCard" class="btn btn-sm btn-success rounded-pill px-2.5 py-1 text-white fw-bold shadow-xs" title="تأكيد استلام الشحنة وإيداعها في عهدة القسم">
+                                                <i class="fas fa-boxes-packing me-1"></i> استلام
+                                            </a>
+                                        @endif
                                         @php
                                             $canEditOrCancelThis = $req->status === 'pending' && (
                                                 !empty($isSuperAdmin) ||

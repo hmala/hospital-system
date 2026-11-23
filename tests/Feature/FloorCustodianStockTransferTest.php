@@ -21,6 +21,8 @@ class FloorCustodianStockTransferTest extends TestCase
 
         Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
         Role::firstOrCreate(['name' => 'nurse', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'surgery_staff', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'head_nurse', 'guard_name' => 'web']);
     }
 
     public function test_floor_nurse_sees_locked_destination_sub_store_on_create_page(): void
@@ -552,9 +554,86 @@ class FloorCustodianStockTransferTest extends TestCase
         $nurseShow->assertSee('تم تعديل الكمية من المخزن الرئيسي');
         $nurseShow->assertSee('تم الصرف حسب الرصيد المتوفر بالمخزن الرئيسي');
 
-        // 5. Nurse views index: sees 'تم تعديل الكمية' badge
+        // 5. Nurse views index: sees 'تم تعديل الكمية' badge and 'بانتظار استلام القسم'
         $nurseIndex = $this->actingAs($nurseAli)->get(route('stock-transfers.requests.index'));
         $nurseIndex->assertStatus(200);
         $nurseIndex->assertSee('تم تعديل الكمية');
+        $nurseIndex->assertSee('بانتظار استلام القسم');
+
+        // 6. Nurse confirms receipt of modified quantities
+        $receiveResponse = $this->actingAs($nurseAli)->post(route('stock-transfers.requests.receive', $transferRequest), [
+            'received_notes' => 'تم استلام وفحص الـ 15 أمبول في ردهة الطابق الرابع',
+        ]);
+        $receiveResponse->assertRedirect(route('stock-transfers.requests.show', $transferRequest));
+        $receiveResponse->assertSessionHas('success');
+
+        $transferRequest->refresh();
+        $this->assertEquals('completed', $transferRequest->status);
+        $this->assertEquals($nurseAli->id, $transferRequest->received_by);
+        $this->assertNotNull($transferRequest->received_at);
+        $this->assertEquals('تم استلام وفحص الـ 15 أمبول في ردهة الطابق الرابع', $transferRequest->received_notes);
+
+        // 7. Nurse views show and index: sees 'مستلم ومودع بالعهدة'
+        $completedShow = $this->actingAs($nurseAli)->get(route('stock-transfers.requests.show', $transferRequest));
+        $completedShow->assertStatus(200);
+        $completedShow->assertSee('مستلم ومودع بالعهدة');
+        $completedShow->assertSee('تم استلام وفحص الـ 15 أمبول في ردهة الطابق الرابع');
+    }
+
+    public function test_surgery_staff_can_confirm_receipt_and_unrelated_nurse_is_forbidden(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $orLocation = Location::create(['name' => 'صالة العمليات الكبرى', 'type' => 'sub']);
+        $otherFloor = Location::create(['name' => 'ردهة الطابق الأول', 'type' => 'sub']);
+
+        $surgeryNurse = User::factory()->create([
+            'name' => 'ممرض العمليات سامي',
+            'location_id' => $orLocation->id,
+        ]);
+        $surgeryNurse->assignRole('surgery_staff');
+
+        $otherNurse = User::factory()->create([
+            'name' => 'ممرضة ردهة أخرى',
+            'location_id' => $otherFloor->id,
+        ]);
+        $otherNurse->assignRole('nurse');
+
+        $product = Product::create([
+            'name' => 'خيط جراحي معقم',
+            'code' => 'SURG-001',
+            'unit' => 'خيط',
+        ]);
+
+        $transferRequest = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $orLocation->id,
+            'requested_by' => $surgeryNurse->id,
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'original_qty' => 20,
+                    'qty' => 10,
+                    'modified_by_admin' => true,
+                    'admin_notes' => 'صرف 10 خيوط فقط حسب المتاح',
+                ],
+            ],
+            'status' => 'approved',
+            'approved_at' => now(),
+        ]);
+
+        // Unrelated nurse cannot confirm receipt
+        $forbiddenResponse = $this->actingAs($otherNurse)->post(route('stock-transfers.requests.receive', $transferRequest));
+        $forbiddenResponse->assertStatus(403);
+
+        // Surgery nurse confirms receipt
+        $confirmResponse = $this->actingAs($surgeryNurse)->post(route('stock-transfers.requests.receive', $transferRequest), [
+            'received_notes' => 'تم استلام الخيوط الجراحية في صالة العمليات الكبرى',
+        ]);
+        $confirmResponse->assertRedirect(route('stock-transfers.requests.show', $transferRequest));
+
+        $transferRequest->refresh();
+        $this->assertEquals('completed', $transferRequest->status);
+        $this->assertEquals($surgeryNurse->id, $transferRequest->received_by);
+        $this->assertEquals('تم استلام الخيوط الجراحية في صالة العمليات الكبرى', $transferRequest->received_notes);
     }
 }

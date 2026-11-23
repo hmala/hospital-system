@@ -21,7 +21,7 @@ class StockTransferController extends Controller
         $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
             || $user->can('manage inventory'));
 
-        $query = StockTransferRequest::with(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy']);
+        $query = StockTransferRequest::with(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy', 'receivedBy']);
 
         // إذا كان المستخدم كادر تمريضي أو عهدة قسم وليس مديراً عاماً أو أمين مخزن، نحصر الطلبات بما يخص عهدته أو ما رفعه هو
         $userLocation = null;
@@ -547,6 +547,7 @@ class StockTransferController extends Controller
             }
         }
 
+        $stockTransferRequest->loadMissing(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy', 'receivedBy']);
         $request = $stockTransferRequest;
         $productIds = collect($request->items)->pluck('product_id')->filter()->unique();
         $subLocationBatches = StockBatch::where('location_id', $request->to_location_id)
@@ -728,6 +729,48 @@ class StockTransferController extends Controller
 
         return redirect()->route('stock-transfers.requests.show', $stockTransferRequest)
             ->with('success', 'تم رفض طلب المخزون.');
+    }
+
+    public function receiveRequest(Request $request, StockTransferRequest $stockTransferRequest)
+    {
+        $user = Auth::user();
+        if (! $user) {
+            abort(401);
+        }
+
+        $isAdmin = $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory');
+
+        $isRequester = $stockTransferRequest->requested_by == $user->id;
+        $isDestinationStaff = $user->location_id && $stockTransferRequest->to_location_id == $user->location_id;
+        $isWardOrORStaff = $user->hasRole(['head_nurse', 'nurse', 'nicu_nurse', 'icu_nurse', 'surgery_staff', 'surgery_nurse', 'anesthesia', 'surgeon'])
+            || in_array($user->role, ['nurse', 'head_nurse', 'doctor', 'surgery_staff']);
+
+        if (! $isAdmin && ! $isRequester && ! ($isDestinationStaff && $isWardOrORStaff)) {
+            abort(403, 'غير مصرح لك بتأكيد استلام هذا الطلب. الصلاحية مخصصة لكادر التمريض والعمليات بالقسم المستلم أو مقدم الطلب.');
+        }
+
+        if ($stockTransferRequest->status !== 'approved') {
+            if ($stockTransferRequest->status === 'completed') {
+                return back()->with('info', 'تم تأكيد استلام هذا الطلب وإيداعه بالعهدة مسبقاً.');
+            }
+
+            return back()->withErrors(['status' => 'لا يمكن تأكيد استلام الطلب إلا بعد صرفه واعتماده من المخزن الرئيسي.']);
+        }
+
+        $validated = $request->validate([
+            'received_notes' => 'nullable|string|max:1000',
+        ]);
+
+        $stockTransferRequest->update([
+            'status' => 'completed',
+            'received_by' => $user->id,
+            'received_at' => now(),
+            'received_notes' => $validated['received_notes'] ?? null,
+        ]);
+
+        return redirect()->route('stock-transfers.requests.show', $stockTransferRequest)
+            ->with('success', 'تم تأكيد استلام الشحنة وإيداعها في عهدة القسم بنجاح.');
     }
 
     private function generateBatchBarcode($productId)

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -15,14 +14,18 @@ class StockTransferRequest extends Model
         'to_location_id',
         'requested_by',
         'approved_by',
+        'received_by',
         'items',
         'status',
         'approved_at',
+        'received_at',
+        'received_notes',
     ];
 
     protected $casts = [
         'items' => 'array',
         'approved_at' => 'datetime',
+        'received_at' => 'datetime',
     ];
 
     public function fromLocation()
@@ -43,5 +46,10 @@ class StockTransferRequest extends Model
     public function approvedBy()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function receivedBy()
+    {
+        return $this->belongsTo(User::class, 'received_by');
     }
 }

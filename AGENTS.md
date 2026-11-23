@@ -54,6 +54,24 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-23 — المرحلة 277: دورة تأكيد استلام طلبيات المخزن لكادر تمريض الردهات وصالات العمليات وتوثيق الاستلام الرسمي للعهدة Floor & Operation Theater Stock Transfer Receipt Confirmation Workflow & Custody Auditing)
+
+### Done
+- **قاعدة البيانات ونموذج الطلب ([database/migrations/2026_11_23_195000_add_receipt_fields_to_stock_transfer_requests_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_23_195000_add_receipt_fields_to_stock_transfer_requests_table.php), [app/Models/StockTransferRequest.php](file:///c:/wamp64/www/hospital-system/app/Models/StockTransferRequest.php))**:
+  * إضافة حقول `received_by` (ربط مع المستخدمين)، `received_at` (توقيت الاستلام)، و `received_notes` (ملاحظات الاستلام).
+  * ربط علاقة Eloquent المعيارية `receivedBy()` وإضافة الحقول لـ `$fillable` و `$casts`.
+- **التحكم والمسارات وصلاحيات كادر الردهات والعمليات ([app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * مسار `POST stock-transfers/requests/{stockTransferRequest}/receive`.
+  * إضافة دالة `receiveRequest()`: التحقق من الصلاحيات (حصر التأكيد بكادر تمريض الردهات، كادر صالات العمليات `surgery_staff`، مقدم الطلب، أو رئيس التمريض والإدارة).
+  * تحديث الحالة إلى `completed` (مستلم ومودع بالعهدة) وتوثيق اسم المستلم وتاريخ الاستلام والملاحظات.
+- **الواجهات التفاعلية ([resources/views/stock-transfers/requests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/show.blade.php), [resources/views/stock-transfers/requests/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/index.blade.php))**:
+  * بناء بطاقة تفاعلية واضحة `#receiveStockCard` لكادر الردهة والعمليات لتأكيد استلام الشحنة وإيداعها، مع حقل لملاحظات الاستلام وزر تأكيد واضح.
+  * عرض شريط حالة أخضر رسمي عند اكتمال الاستلام مع إظهار اسم المستلم وتوقيت الاستلام وملاحظاته.
+  * إبراز الفروقات والكميات المعدلة من المخزن الرئيسي مع الشارات في جدول تفاصيل الشحنة وسجل الطلبات العام.
+  * إضافة زر استلام سريع `استلام` في جدول الطلبات لكادر التمريض والعمليات.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
+  * بناء واجتياز اختبارات تأكيد الاستلام للردهات وصالات العمليات، ومنع الكوادر غير المخولة، بنسبة 100% (`13 passed, 95 assertions`)، واجتياز `Laravel Pint`.
+
 ## Session log (2026-11-23 — المرحلة 276: البحث الفوري اللحظي والتصفية الذكية في أرشيف جميع زيارات الطبيب والزيارات المعلقة بدون أزرار Instant Zero-Click Real-Time Search & Multi-Filter for Doctor Visits Archive & Incomplete Visits)
 
 ### Done

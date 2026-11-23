@@ -393,6 +393,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/requests/{stockTransferRequest}', [\App\Http\Controllers\StockTransferController::class, 'destroyRequest'])->name('requests.destroy');
         Route::post('/requests/{stockTransferRequest}/approve', [\App\Http\Controllers\StockTransferController::class, 'approveRequest'])->name('requests.approve');
         Route::post('/requests/{stockTransferRequest}/reject', [\App\Http\Controllers\StockTransferController::class, 'rejectRequest'])->name('requests.reject');
+        Route::post('/requests/{stockTransferRequest}/receive', [\App\Http\Controllers\StockTransferController::class, 'receiveRequest'])->name('requests.receive');
         Route::get('/returns/create', [\App\Http\Controllers\StockTransferController::class, 'createReturn'])->name('returns.create');
         Route::post('/returns', [\App\Http\Controllers\StockTransferController::class, 'storeReturn'])->name('returns.store');
     });
