@@ -12,7 +12,23 @@ class Location extends Model
     protected $fillable = [
         'name',
         'type',
+        'custodian_id',
     ];
+
+    public function custodian()
+    {
+        return $this->belongsTo(User::class, 'custodian_id');
+    }
+
+    public function staff()
+    {
+        return $this->hasMany(User::class, 'location_id');
+    }
+
+    public function custodianHistories()
+    {
+        return $this->hasMany(LocationCustodianHistory::class)->latest('assigned_at');
+    }
 
     public function stockMovementsFrom()
     {

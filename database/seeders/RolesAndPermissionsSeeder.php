@@ -144,6 +144,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view anesthesia station',
             'view nursing station',
             'manage nurse availability',
+            'manage nursing sub stores',
             'manage medical devices',
             'view medical devices',
 
@@ -575,6 +576,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view packages',
             'view nursing station',
             'manage nurse availability',
+            'manage nursing sub stores',
             'view resident station',
         ]);
 

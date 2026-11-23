@@ -2666,4 +2666,18 @@
   * **أتمتة مراجعة النتائج ومنع الحجز المكرر لنفس اليوم ([app/Http/Controllers/InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php) & [app/Http/Controllers/AppointmentController.php](file:///C:/get/hospital-system/app/Http/Controllers/AppointmentController.php))**:
     - فحص تلقائي لحظي: إذا دخل مريض ولديه كشفية سابقة في نفس اليوم لدى نفس الطبيب، يتم تحويل الحجز تلقائياً إلى "مراجعة نتائج مجانية" برسم `consultation_fee = 0` و `is_free_recheck = true` وربطه بالزيارة الأصلية دون استيفاء أي مبالغ إضافية من المريض.
     - حماية الكاشير والصندوق من ازدواجية وصولات الكشفية وضمان تطابق أعداد المراجعين الفعليين.
-... [truncated for diff preview]
+- **المرحلة 278:** لوحة القيادة المستقلة لرقابة مخازن وعُهد ردهات التمريض وإدارة أمناء العهد وتتبع صرفيات المرضى (Floor Ward Nursing Sub-Stores & Custody Governance Dashboard):
+  * **تأسيس البنية وقاعدة البيانات ([database/migrations/2026_11_23_210900_create_nursing_sub_stores_governance.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_23_210900_create_nursing_sub_stores_governance.php))**:
+    - إضافة حقل `custodian_id` لجدول `locations` لتعيين أمين العهدة المسؤول عن المخزن الفرعي للردهة.
+    - إنشاء جدول سجل تاريخ تسليم واستلام العهدة `location_custodian_histories` لتوثيق التحويلات، الآمر بالتكليف، التوقيت، والملاحظات.
+    - إنشاء وتثبيت صلاحية `manage nursing sub stores` وربطها برئيس ومشرف التمريض (`head_nurse`) وأدوار الإدارة.
+  * **التحكم والفلترة الدقيقة لردهات التمريض ([app/Http/Controllers/NursingSubStoreController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingSubStoreController.php))**:
+    - حصر شاشة الرقابة حصراً بمخازن ردهات الطوابق السريرية (الطابق الثاني، الثالث، الرابع، الخامس) بالاعتماد على ربط الممرضين بـ `users.location_id` واستبعاد العمليات والخدج والأقسام الإدارية والخدمية.
+    - دالة `assignCustodian()` لتعيين وتبديل مسؤول العهدة وتحديث موقعه وتوثيق الأرشيف الرقابي.
+    - دالة `show()` لعرض الأرصدة المتوفرة، حركات صرفيات المرضى، أرشيف تسليم واستلام العهدة، وطلبيات المخزن.
+  * **الواجهات التفاعلية والتقسيم الذكي لكادر الردهة ([resources/views/nursing-sub-stores/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nursing-sub-stores/index.blade.php), [resources/views/nursing-sub-stores/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nursing-sub-stores/show.blade.php))**:
+    - بطاقات إحصائية (KPIs) في القمة: المخازن النشطة، إجمالي المواد بالعهد، صرفيات المرضى الشهرية، والطلبيات المعلقة.
+    - جدول متكامل لردهات الطوابق مع شارات أمناء العهدة، عداد كادر التمريض، الرصيد، وعدد الحركات.
+    - نافذة Modal لتكليف وتبديل المسؤول مع تصنيف واقتراح ذكي يعرض أولاً كادر تمريض نفس الردهة المقيدين على الطابق بشاشة المستخدمين ثم باقي كادر التمريض بالمستشفى.
+  * **الاختبارات الآلية الحصينة ([tests/Feature/NursingSubStoreGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingSubStoreGovernanceTest.php))**:
+    - اجتياز كامل حزمة الاختبارات الآلية بنسبة 100% (`4 passed, 23 assertions`) واجتياز اختبارات استلام الشحنات `FloorCustodianStockTransferTest` (`13 passed, 95 assertions`)، وتوافق تام مع `Laravel Pint`.

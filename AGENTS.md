@@ -54,6 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-23 — المرحلة 278: لوحة القيادة المستقلة لرقابة مخازن وعُهد ردهات التمريض وإدارة أمناء العهد وتتبع صرفيات المرضى Floor Ward Nursing Sub-Stores & Custody Governance Dashboard)
+
+### Done
+- **قاعدة البيانات ونموذج العهدة ([database/migrations/2026_11_23_210900_create_nursing_sub_stores_governance.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_23_210900_create_nursing_sub_stores_governance.php), [app/Models/Location.php](file:///c:/wamp64/www/hospital-system/app/Models/Location.php), [app/Models/LocationCustodianHistory.php](file:///c:/wamp64/www/hospital-system/app/Models/LocationCustodianHistory.php))**:
+  * إضافة حقل `custodian_id` لجدول `locations` لتعيين أمين العهدة المسؤول وربط علاقة `custodian()` و `custodianHistories()`.
+  * إنشاء جدول الأرشيف الرقابي `location_custodian_histories` لتوثيق التسليم والاستلام والآمر بالصرف والملاحظات.
+  * إنشاء صلاحية `manage nursing sub stores` ومنحها تلقائياً لدور `head_nurse` وأدوار الإدارة.
+- **التحكم والفلترة الدقيقة لردهات التمريض ([app/Http/Controllers/NursingSubStoreController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingSubStoreController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * قصر المخازن الفرعية برمجياً على ردهات وطوابق التمريض السريرية فقط (الطابق الثاني، الثالث، الرابع، الخامس) المرتبطة بكادر التمريض عبر `users.location_id` واستبعاد صالات العمليات والخدج والمخازن الإدارية.
+  * دالة `assignCustodian()` لتكليف وتبديل أمين العهدة وتحديث موقعه، ودالة `show()` لعرض الأرصدة وصرفيات المرضى.
+- **الواجهات التفاعلية والتقسيم الذكي ([resources/views/nursing-sub-stores/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nursing-sub-stores/index.blade.php), [resources/views/nursing-sub-stores/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/nursing-sub-stores/show.blade.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إضافة بطاقات KPIs في القمة، وجدول ردهات الطوابق مع شارات المسؤولية.
+  * في نافذة تكليف المسؤول: تقسيم الممرضين بمجموعتين (`optgroup`): كادر تمريض نفس الردهة أولاً، ثم باقي كادر التمريض بالمستشفى.
+  * صفحة تفاصيل الردهة بـ 4 تبويبات: الأرصدة والوجبات المتوفرة، سجل صرفيات المرضى، أرشيف تسليم واستلام العهدة، وطلبيات المخزن.
+  * إضافة رابط مباشر بالقائمة الجانبية: "رقابة مخازن وعُهد التمريض".
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/NursingSubStoreGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingSubStoreGovernanceTest.php))**:
+  * بناء واجتياز اختبارات الوصول، الصلاحيات، استبعاد المخازن غير التمريضية، تكليف وتبديل المسؤول، واستعراض الصرفيات بنسبة 100% (`4 passed, 23 assertions`).
+  * اجتياز كامل اختبارات `FloorCustodianStockTransferTest` بنسبة 100% (`13 passed, 95 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-23 — المرحلة 277: دورة تأكيد استلام طلبيات المخزن لكادر تمريض الردهات وصالات العمليات وتوثيق الاستلام الرسمي للعهدة Floor & Operation Theater Stock Transfer Receipt Confirmation Workflow & Custody Auditing)
 
 ### Done

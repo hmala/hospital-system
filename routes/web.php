@@ -272,6 +272,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/nurse/off-duty', [\App\Http\Controllers\NurseAvailabilityController::class, 'offDuty'])->name('nurse.off-duty');
     Route::get('/nurse/check-access', [\App\Http\Controllers\NurseAvailabilityController::class, 'checkAccess'])->name('nurse.check-access');
 
+    // رقابة المخازن الفرعية والعهد التمريضية لمشرف التمريض والإدارة
+    Route::prefix('nursing-sub-stores')->name('nursing-sub-stores.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NursingSubStoreController::class, 'index'])->name('index');
+        Route::post('/{location}/assign-custodian', [\App\Http\Controllers\NursingSubStoreController::class, 'assignCustodian'])->name('assign-custodian');
+        Route::get('/{location}', [\App\Http\Controllers\NursingSubStoreController::class, 'show'])->name('show');
+    });
+
     // إدارة المرضى
     Route::get('/patients/insurance-alerts-poll', [PatientController::class, 'insuranceAlertsPoll'])->name('patients.insurance-alerts-poll');
     Route::patch('/patients/{patient}/quick-update', [PatientController::class, 'quickUpdate'])->name('patients.quick-update');

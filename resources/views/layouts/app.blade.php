@@ -1840,6 +1840,14 @@
                         </li>
                         @endif
 
+                        @if(auth()->check() && (auth()->user()->can('manage nursing sub stores') || auth()->user()->hasRole(['admin', 'head_nurse', 'admin-hsop', 'hospital_admin', 'super_admin'])))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('nursing-sub-stores.*') ? 'active' : '' }}" href="{{ route('nursing-sub-stores.index') }}">
+                                <i class="fas fa-boxes-stacked text-warning"></i><span> {{ __('رقابة مخازن وعُهد التمريض') }}</span>
+                            </a>
+                        </li>
+                        @endif
+
                         @can('manage rooms')
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('rooms.*') ? 'active' : '' }}" href="{{ route('rooms.index') }}">
