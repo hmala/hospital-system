@@ -279,6 +279,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{location}', [\App\Http\Controllers\NursingSubStoreController::class, 'show'])->name('show');
     });
 
+    // إدارة ورقابة مخزن وعُهد صالات العمليات لكادر العمليات والإدارة
+    Route::prefix('surgery-store')->name('surgery-store.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\SurgeryStoreController::class, 'index'])->name('index');
+        Route::post('/{location}/assign-custodian', [\App\Http\Controllers\SurgeryStoreController::class, 'assignCustodian'])->name('assign-custodian');
+        Route::get('/{location}', [\App\Http\Controllers\SurgeryStoreController::class, 'show'])->name('show');
+    });
+
     // إدارة المرضى
     Route::get('/patients/insurance-alerts-poll', [PatientController::class, 'insuranceAlertsPoll'])->name('patients.insurance-alerts-poll');
     Route::patch('/patients/{patient}/quick-update', [PatientController::class, 'quickUpdate'])->name('patients.quick-update');

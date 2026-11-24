@@ -630,6 +630,8 @@ class RoleManagementController extends Controller
             'manage surgery waiting list' => ['label' => 'إدارة قائمة انتظار العمليات وجدولتها', 'action' => 'إدارة', 'badge' => 'primary'],
             'view surgical operations' => ['label' => 'عرض دليل أنواع العمليات الجراحية المتاحة', 'action' => 'عرض', 'badge' => 'info'],
             'manage surgical operations' => ['label' => 'إدارة وتسعير أنواع العمليات الجراحية', 'action' => 'إدارة', 'badge' => 'primary'],
+            'view surgical assistants' => ['label' => 'عرض دليل وسجل مساعدي الجراحين والتخدير', 'action' => 'عرض', 'badge' => 'info'],
+            'manage surgical assistants' => ['label' => 'إدارة وإضافة وتعديل وحذف مساعدي الجراحين والتخدير', 'action' => 'إدارة', 'badge' => 'primary'],
             'view resident station' => ['label' => 'دخول محطة الطبيب المقيم', 'action' => 'محطة', 'badge' => 'info'],
             'view operation theater station' => ['label' => 'دخول محطة صالة العمليات الكبرى', 'action' => 'محطة', 'badge' => 'danger'],
             'view surgeon station' => ['label' => 'دخول محطة الطبيب الجراح', 'action' => 'محطة', 'badge' => 'primary'],

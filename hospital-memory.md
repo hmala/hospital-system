@@ -79,6 +79,36 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 280 (2026-11-24 — `main`) — لوحة القيادة المستقلة لرقابة مخازن وعُهد صالات العمليات الجراحية وإدارة أمناء العهد وتتبع صرفيات العمليات (Operation Theaters & Main Surgery Store Governance Dashboard, Custody Tracking & Clinical Consumption Auditing)**:
+  * **الصلاحيات والعهدة الافتراضية بالميجريشن ([database/migrations/2026_11_24_100000_create_surgery_store_governance.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_24_100000_create_surgery_store_governance.php))**:
+    - إنشاء صلاحية `manage surgery store` وربطها تلقائياً بدور كادر العمليات `surgery_staff` وأدوار الإدارة (`admin`, `admin-hsop`, `hospital_admin`, `super_admin`).
+    - تعيين التكليف الأولي التلقائي لعهدة مخزن العمليات الرئيسي (`Location #25`) وصالات العمليات (`Location #3`) لأمين العهدة وموظف العمليات المسؤول (المستخدم 92 `surgery@hospital.com`) وتوثيق الأرشيف الرقابي في `location_custodian_histories`.
+  * **التحكم والمسارات السريرية الجراحية ([app/Http/Controllers/SurgeryStoreController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryStoreController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - حصر المخازن والصالات برمجياً بالمواقع الجراحية (`مخزن عمليات الرئيسي` و `صالات العمليات`) واستبعاد صالات الولادة وردهات التمريض والمخازن الإدارية.
+    - دالة `index()`: إحصائيات علوية KPIs (المخازن والصالات، إجمالي المواد بالرصيد، حركات صرفيات العمليات للشهر الحالي، العمليات الجراحية المجدولة لليوم، وطلبيات التعزيز المعلقة).
+    - دالة `show()`: استعراض تفاصيل الموقع بـ 4 تبويبات تفاعلية (الأرصدة والوجبات المتوفرة، سجل صرفيات العمليات وربطها بالجراح والمريض ونوع العملية، أرشيف تسليم واستلام العهدة، وطلبيات تعزيز المخزن).
+    - دالة `assignCustodian()`: تكليف وتبديل أمين العهدة وتحديث موقعه وتوثيق الأرشيف.
+  * **الواجهات التفاعلية والقائمة الجانبية ([resources/views/surgery-store/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-store/index.blade.php), [resources/views/surgery-store/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-store/show.blade.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - بطاقات KPIs علوية، جدول مخازن وصالات العمليات مع شارات المسؤولية والأرصدة، وجدول تتبع العمليات الجراحية لليوم للتجهيز المسبق للمستلزمات.
+    - نافذة Modal لتكليف وتبديل أمين العهدة مع خيار مزامنة موقع الموظف تلقائياً.
+    - إضافة رابط بالقائمة الجانبية تحت قسم العمليات الجراحية: "مخزن وعُهد صالات العمليات" مرتبط بصلاحية `manage surgery store` ودور `surgery_staff`.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgeryStoreGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryStoreGovernanceTest.php))**:
+    - بناء واجتياز اختبارات الوصول، الصلاحيات، استبعاد المواقع غير الجراحية، تكليف وتبديل المسؤول، وعرض الأرصدة وسجل استهلاك العمليات بنسبة 100% (`4 passed, 21 assertions`).
+    - اجتياز اختبارات `NursingSubStoreGovernanceTest` (`4 passed, 23 assertions`) و `FloorCustodianStockTransferTest` (`13 passed, 95 assertions`)، وتوافق تام مع `Laravel Pint`.
+
+- **المرحلة 279 (2026-11-24 — `main`) — إضافة صلاحيات مستقلة للتحكم بواجهة وإدارة مساعدي الجراحين والتخدير عبر مصفوفة الأدوار والصلاحيات (Independent Granular Permissions for Surgical Assistants Directory & Roles Governance)**:
+  * **الصلاحيات المستقلة والميجريشن ([database/migrations/2026_11_24_100000_add_surgical_assistants_permissions.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_24_100000_add_surgical_assistants_permissions.php), [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php))**:
+    - إنشاء صلاحيتين معتمدتين بـ Spatie: `view surgical assistants` (عرض دليل وسجل مساعدي الجراحين والتخدير) و `manage surgical assistants` (إدارة وإضافة وتعديل وحذف).
+    - منحهما تلقائياً لأدوار الإدارة العليا (`admin`, `hospital_admin`, `admin-hsop`) وكادر العمليات (`surgery_staff`).
+  * **إدارة الأدوار والصلاحيات ([app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php))**:
+    - إدراج الصلاحيتين ضمن تصنيف `surgeries` لتظهرا بمربعات اختيار في شاشة إنشاء وتعديل الأدوار (`/roles`).
+  * **حماية الواجهات والكنترولر ([app/Http/Controllers/SurgicalAssistantController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgicalAssistantController.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - ربط `index()` بصلاحية `view surgical assistants` أو `manage surgical assistants` مع وضع العرض فقط (`$canManage = false`) عند امتلاك صلاحية العرض دون الإدارة.
+    - تقييد دوال `store()`, `update()`, `toggleStatus()`, `destroy()` بصلاحية `manage surgical assistants`.
+    - تحديث شرط القائمة الجانبية: `@canany(['view surgical assistants', 'manage surgical assistants', 'view surgeries', 'edit surgeries'])`.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
+    - بناء واجتياز اختبارات العرض، الإدارة، ومنع غير المصرحين (403) بنسبة 100% (`10 passed, 35 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 - **المرحلة 276 (2026-11-23 — `main`) — البحث الفوري اللحظي والتصفية الذكية في أرشيف جميع زيارات الطبيب والزيارات المعلقة بدون أزرار (Instant Zero-Click Real-Time Search & Multi-Filter for Doctor Visits Archive & Incomplete Visits)**:
   * **الواجهة التفاعلية الفورية بدون أزرار ([resources/views/doctors/visits/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/doctors/visits/index.blade.php))**:
     - بناء شريط بحث وفلترة لحظي أعلى جدول أرشيف جميع الزيارات: حقل بحث نصي سريع، منسدلة الحالات (مكتملة، غير مكتملة/معلقة، جاري الفحص، بالانتظار، ملغية)، وفلاتر التاريخ (من/إلى)، وزر تفريغ ومسح فوري.

@@ -99,6 +99,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgeries',
             'manage surgery waiting list',
             'manage surgery tab permissions',
+            'view surgical assistants',
+            'manage surgical assistants',
             'control surgeries',
             'manage rooms',
             'view bed reservations',
@@ -634,6 +636,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'process surgery payments',
             'manage medical devices',
             'view medical devices',
+            'view surgical assistants',
+            'manage surgical assistants',
         ]);
 
         // دور موظف الاستعلامات (Inquiry Staff)

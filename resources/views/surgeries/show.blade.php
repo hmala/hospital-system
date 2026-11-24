@@ -1709,7 +1709,7 @@
                                                         <label for="surgical_assistant_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-hands-helping text-primary me-1"></i>{{ __('مساعد جراح:') }}
                                                         </label>
-                                                        @canany(['view surgeries', 'edit surgeries'])
+                                                        @canany(['view surgical assistants', 'manage surgical assistants'])
                                                             <a href="{{ route('surgical-assistants.index', ['type' => 'surgical']) }}" target="_blank" class="small text-decoration-none text-primary fw-semibold" style="font-size: 0.72rem;" title="{{ __('فتح دليل وإدارة مساعدي الجراحين في نافذة جديدة') }}">
                                                                 <i class="fas fa-external-link-alt me-1"></i>{{ __('دليل المساعدين') }}
                                                             </a>
@@ -1831,7 +1831,7 @@
                                                         <label for="team_anesthesia_assistant_name" class="form-label text-dark small fw-semibold mb-0">
                                                             <i class="fas fa-user-nurse text-secondary me-1"></i>{{ __('مساعد التخدير:') }}
                                                         </label>
-                                                        @canany(['view surgeries', 'edit surgeries'])
+                                                        @canany(['view surgical assistants', 'manage surgical assistants'])
                                                             <a href="{{ route('surgical-assistants.index', ['type' => 'anesthesia']) }}" target="_blank" class="small text-decoration-none text-info fw-semibold" style="font-size: 0.72rem;" title="{{ __('فتح دليل مساعدي التخدير في نافذة جديدة') }}">
                                                                 <i class="fas fa-external-link-alt me-1"></i>{{ __('دليل المساعدين') }}
                                                             </a>

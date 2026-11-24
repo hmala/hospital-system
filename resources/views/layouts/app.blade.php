@@ -1731,7 +1731,7 @@
                         @endcanany
 
                         <!-- قسم العمليات الجراحية -->
-                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'manage surgery tab permissions', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices'])
+                        @canany(['view surgeries', 'create surgeries', 'manage rooms', 'manage surgery waiting list', 'manage surgery tab permissions', 'view resident station', 'view operation theater station', 'view surgeon station', 'view anesthesia station', 'view nursing station', 'view medical devices', 'manage surgery store'])
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#surgerySection" aria-expanded="false">
                             <span><i class="fas fa-procedures"></i> {{ __('العمليات الجراحية') }}</span>
@@ -1771,7 +1771,7 @@
                             </a>
                         </li>
                         @endcan
-                        @canany(['view surgeries', 'edit surgeries'])
+                        @canany(['view surgical assistants', 'manage surgical assistants'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('surgical-assistants.*') ? 'active' : '' }}" href="{{ route('surgical-assistants.index') }}">
                                 <i class="fas fa-hands-helping text-info"></i><span> {{ __('مساعدو الجراحين') }}</span>
@@ -1844,6 +1844,14 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('nursing-sub-stores.*') ? 'active' : '' }}" href="{{ route('nursing-sub-stores.index') }}">
                                 <i class="fas fa-boxes-stacked text-warning"></i><span> {{ __('رقابة مخازن وعُهد التمريض') }}</span>
+                            </a>
+                        </li>
+                        @endif
+
+                        @if(auth()->check() && (auth()->user()->can('manage surgery store') || auth()->user()->hasRole(['admin', 'surgery_staff', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()->role === 'surgery_staff'))
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('surgery-store.*') ? 'active' : '' }}" href="{{ route('surgery-store.index') }}">
+                                <i class="fas fa-warehouse text-primary"></i><span> {{ __('مخزن وعُهد صالات العمليات') }}</span>
                             </a>
                         </li>
                         @endif

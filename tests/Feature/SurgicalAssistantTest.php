@@ -170,4 +170,73 @@ class SurgicalAssistantTest extends TestCase
         $response->assertSee('مضاء علي');
         $response->assertSee('دليل المساعدين');
     }
+
+    public function test_user_with_view_permission_can_view_index_but_cannot_manage(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('view surgical assistants');
+
+        SurgicalAssistant::create(['name' => 'مساعد مشاهدة', 'is_active' => true]);
+
+        $response = $this->actingAs($user)->get(route('surgical-assistants.index'));
+        $response->assertStatus(200);
+        $response->assertSee('مساعد مشاهدة');
+        $response->assertDontSee('إضافة مساعد جديد');
+
+        // Cannot store
+        $storeResponse = $this->actingAs($user)->post(route('surgical-assistants.store'), [
+            'name' => 'مساعد ممنوع',
+        ]);
+        $storeResponse->assertStatus(403);
+    }
+
+    public function test_user_with_manage_permission_can_create_and_manage_assistants(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo('manage surgical assistants');
+
+        $response = $this->actingAs($user)->get(route('surgical-assistants.index'));
+        $response->assertStatus(200);
+        $response->assertSee('إضافة مساعد جديد');
+
+        $storeResponse = $this->actingAs($user)->post(route('surgical-assistants.store'), [
+            'name' => 'مساعد مجاز',
+            'phone' => '07711223344',
+            'type' => 'surgical',
+        ]);
+        $storeResponse->assertRedirect(route('surgical-assistants.index'));
+        $this->assertDatabaseHas('surgical_assistants', ['name' => 'مساعد مجاز']);
+    }
+
+    public function test_user_without_permission_is_forbidden(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('surgical-assistants.index'));
+        $response->assertStatus(403);
+
+        $storeResponse = $this->actingAs($user)->post(route('surgical-assistants.store'), [
+            'name' => 'مساعد مرفوض',
+        ]);
+        $storeResponse->assertStatus(403);
+    }
+
+    public function test_surgery_staff_with_revoked_permissions_is_forbidden_and_hidden(): void
+    {
+        $role = \Spatie\Permission\Models\Role::findByName('surgery_staff');
+        $role->revokePermissionTo('view surgical assistants');
+        $role->revokePermissionTo('manage surgical assistants');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $staff = User::factory()->create();
+        $staff->assignRole('surgery_staff');
+
+        // Access index must be forbidden (403)
+        $response = $this->actingAs($staff)->get(route('surgical-assistants.index'));
+        $response->assertStatus(403);
+
+        // Sidebar link must not be visible on dashboard/surgeries
+        $pageResponse = $this->actingAs($staff)->get(route('surgeries.index'));
+        $pageResponse->assertDontSee(route('surgical-assistants.index'));
+    }
 }

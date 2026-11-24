@@ -23,7 +23,7 @@ class SurgicalAssistantController extends Controller
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && ! $user->can('view surgeries') && ! $user->can('edit surgeries') && ! $user->hasRole('surgery_staff')) {
+        if (! $isAdmin && ! $user->can('view surgical assistants') && ! $user->can('manage surgical assistants')) {
             abort(403, 'غير مصرح لك بالوصول إلى إدارة مساعدي الجراحين');
         }
 
@@ -69,7 +69,7 @@ class SurgicalAssistantController extends Controller
         $activeCount = SurgicalAssistant::where('is_active', true)->count();
         $inactiveCount = $totalCount - $activeCount;
 
-        $canManage = $isAdmin || $user->can('edit surgeries') || $user->hasRole('surgery_staff');
+        $canManage = $isAdmin || $user->can('manage surgical assistants');
 
         return view('surgical-assistants.index', compact(
             'assistants',
@@ -178,7 +178,7 @@ class SurgicalAssistantController extends Controller
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && ! $user->can('edit surgeries') && ! $user->hasRole('surgery_staff')) {
+        if (! $isAdmin && ! $user->can('manage surgical assistants')) {
             abort(403, 'غير مصرح لك بإدارة مساعدي الجراحين');
         }
     }
