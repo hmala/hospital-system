@@ -26,12 +26,12 @@ class MedicineBatchController extends Controller
             $search = trim($request->search);
             $query->where(function ($q) use ($search) {
                 $q->where('batch_number', 'like', "%{$search}%")
-                  ->orWhere('supplier_name', 'like', "%{$search}%")
-                  ->orWhereHas('medicine', function ($mq) use ($search) {
-                      $mq->where('name', 'like', "%{$search}%")
-                         ->orWhere('generic_name', 'like', "%{$search}%")
-                         ->orWhere('national_code', 'like', "%{$search}%");
-                  });
+                    ->orWhere('supplier_name', 'like', "%{$search}%")
+                    ->orWhereHas('medicine', function ($mq) use ($search) {
+                        $mq->where('name', 'like', "%{$search}%")
+                            ->orWhere('generic_name', 'like', "%{$search}%")
+                            ->orWhere('national_code', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -41,26 +41,26 @@ class MedicineBatchController extends Controller
 
         if ($status === 'active') {
             $query->where('status', 'active')
-                  ->where('expiry_date', '>=', $today)
-                  ->where('current_quantity', '>', 0);
+                ->where('expiry_date', '>=', $today)
+                ->where('current_quantity', '>', 0);
         } elseif ($status === 'expiring_soon') {
             $days = (int) $request->get('days', 90);
             $query->where('status', 'active')
-                  ->whereBetween('expiry_date', [$today, now()->addDays($days)->toDateString()])
-                  ->where('current_quantity', '>', 0);
+                ->whereBetween('expiry_date', [$today, now()->addDays($days)->toDateString()])
+                ->where('current_quantity', '>', 0);
         } elseif ($status === 'expired') {
             $query->where(function ($q) use ($today) {
                 $q->where('expiry_date', '<', $today)
-                  ->orWhere('status', 'expired');
+                    ->orWhere('status', 'expired');
             });
         } elseif ($status === 'quarantined') {
             $query->where('status', 'quarantined');
         } elseif ($status === 'depleted') {
             $query->where('status', 'depleted')
-                  ->orWhere(function ($q) {
-                      $q->where('current_quantity', 0)
+                ->orWhere(function ($q) {
+                    $q->where('current_quantity', 0)
                         ->where('current_sub_units', 0);
-                  });
+                });
         }
 
         // ترتيب افتراضي بنظام FEFO (الأقرب انتهاءً أولاً)
@@ -96,19 +96,73 @@ class MedicineBatchController extends Controller
     /**
      * نموذج توريد وجبة جديدة
      */
+    /**
+     * نموذج توريد وجبة / قائمة أدوية جديدة
+     */
     public function create(Request $request)
     {
         $selectedMedicineId = $request->get('medicine_id');
-        $medicines = Medicine::where('is_active', true)->orderBy('name')->get();
+        $medicines = Medicine::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'generic_name', 'dosage_form', 'strength', 'main_unit', 'cost_price', 'sale_price', 'national_code']);
 
         return view('pharmacy.batches.create', compact('medicines', 'selectedMedicineId'));
     }
 
     /**
-     * حفظ وجبة جديدة بالدليل
+     * حفظ وجبة أو قائمة توريد وجبات جديدة بالصيدلية
      */
     public function store(Request $request)
     {
+        // 1. معالجة توريد قائمة أدوية متعددة البنود
+        if ($request->has('items') && is_array($request->items)) {
+            $validated = $request->validate([
+                'supplier_name' => 'nullable|string|max:255',
+                'received_at' => 'nullable|date',
+                'status' => 'required|in:active,quarantined',
+                'items' => 'required|array|min:1',
+                'items.*.medicine_id' => 'required|exists:medicines,id',
+                'items.*.batch_number' => 'required|string|max:100',
+                'items.*.expiry_date' => 'required|date',
+                'items.*.initial_quantity' => 'required|integer|min:1',
+                'items.*.purchase_price' => 'required|numeric|min:0',
+            ], [
+                'items.required' => 'يجب إضافة دواء واحد على الأقل في قائمة التوريد.',
+                'items.*.medicine_id.required' => 'يرجى اختيار الدواء لكل سطر.',
+                'items.*.batch_number.required' => 'رقم الوجبة/التشغيلة مطلوب لكل بند.',
+                'items.*.expiry_date.required' => 'تاريخ الانتهاء مطلوب لكل بند.',
+                'items.*.initial_quantity.min' => 'الكمية يجب أن تكون 1 على الأقل.',
+                'items.*.purchase_price.min' => 'سعر الشراء لا يمكن أن يكون سالباً.',
+            ]);
+
+            $createdCount = 0;
+            $receivedAt = $validated['received_at'] ?? now()->toDateString();
+            $supplierName = $validated['supplier_name'] ?? null;
+            $status = $validated['status'];
+
+            \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $receivedAt, $supplierName, $status, &$createdCount) {
+                foreach ($validated['items'] as $item) {
+                    MedicineBatch::create([
+                        'medicine_id' => $item['medicine_id'],
+                        'batch_number' => trim($item['batch_number']),
+                        'expiry_date' => $item['expiry_date'],
+                        'initial_quantity' => (int) $item['initial_quantity'],
+                        'current_quantity' => (int) $item['initial_quantity'],
+                        'current_sub_units' => 0,
+                        'purchase_price' => (float) $item['purchase_price'],
+                        'supplier_name' => $supplierName,
+                        'received_at' => $receivedAt,
+                        'status' => $status,
+                    ]);
+                    $createdCount++;
+                }
+            });
+
+            return redirect()->route('pharmacy.batches.index')
+                ->with('success', "تم توريد وإيداع قائمة الأدوية بنجاح ({$createdCount} وجبة مسجلة برصيد الصيدلية).");
+        }
+
+        // 2. معالجة الإدخال الفردي لدواء واحد (Backward Compatibility)
         $validated = $request->validate([
             'medicine_id' => 'required|exists:medicines,id',
             'batch_number' => 'required|string|max:100',
@@ -136,6 +190,7 @@ class MedicineBatchController extends Controller
     public function edit(MedicineBatch $batch)
     {
         $batch->load('medicine');
+
         return view('pharmacy.batches.edit', compact('batch'));
     }
 

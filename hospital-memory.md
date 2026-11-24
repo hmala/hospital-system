@@ -2743,3 +2743,14 @@
     - إسناد موقع الشراء ديناميكياً إلى المخزن الرئيسي وتحديث واجهات الموردين والتحويلات.
   * **الاختبارات الآلية الحصينة ([tests/Feature/RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php))**:
     - تحديث مصفوفة اختبارات الصلاحيات لتعكس فصل بطاقة «الصيدلية ومخزن الأدوية» عن بطاقة «المستودع والمخزن الرئيسي للمستشفى»، واجتياز كافة الاختبارات بنسبة 100% (15 اختبار، 243 توكيد) وتوافق تام مع `Laravel Pint`.
+
+- **المرحلة 284:** تحويل شاشة توريد الأدوية للصيدلية إلى قائمة توريد متعددة البنود ديناميكية وتحديث المعالجة التلقائية (Pharmacy Multi-Item Batch Supply & Inward Invoice Processing):
+  * **تطوير متحكم توريد الوجبات ([app/Http/Controllers/Pharmacy/MedicineBatchController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/MedicineBatchController.php))**:
+    - دعم استقبال وحفظ قوائم التوريد المتعددة (`items` array) دفعة واحدة داخل معاملة قاعدة بيانات آمنة (`DB::transaction`) مع توثيق اسم المورد وتاريخ الاستلام ورقم إذن التوريد.
+    - الحفاظ التام على التوافق الرجعي (Backward Compatibility) للإدخال الفردي.
+  * **إعادة تصميم واجهة التوريد كقائمة وفاتورة ديناميكية ([resources/views/pharmacy/batches/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/batches/create.blade.php))**:
+    - رأس فاتورة موحد (المورد، رقم الفاتورة الورقية، تاريخ الاستلام، وحالة الشحنة).
+    - جدول ديناميكي تفاعلي لإضافة وحذف أسطر الأدوية (`itemsTable`) مع جلب تلقائي لسعر التكلفة لكل دواء عند الاختيار.
+    - شريط ملخص إحصائي لحظي (إجمالي الأصناف، إجمالي العلب، وإجمالي قيمة الفاتورة بالدينار العراقي).
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyMultiItemBatchSupplyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyMultiItemBatchSupplyTest.php))**:
+    - بناء واجتياز اختبارات عرض الواجهة وحفظ قوائم التوريد المتعددة والتأكد من إيداع الوجبات بنجاح 100% (`4 passed, 20 assertions`)، وتوافق تام مع `Laravel Pint`.
