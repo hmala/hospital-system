@@ -154,6 +154,7 @@ class PharmacyMultiItemBatchSupplyTest extends TestCase
                     'expiry_date' => '2028-12-31',
                     'initial_quantity' => 10,
                     'bonus_quantity' => 2,
+                    'sub_units_count' => 3,
                     'purchase_price' => 2000.00,
                     'sale_price' => 3500.00,
                     'sub_unit_sale_price' => 1750.00,
@@ -176,8 +177,9 @@ class PharmacyMultiItemBatchSupplyTest extends TestCase
             'purchase_price' => 1666.67,
         ]);
 
-        // التأكد من تحديث أسعار الدواء في الدليل
+        // التأكد من تحديث أسعار الدواء ومعامل التعبئة في الدليل
         $med->refresh();
+        $this->assertEquals(3, $med->sub_units_count);
         $this->assertEquals(2000.00, $med->cost_price);
         $this->assertEquals(3500.00, $med->sale_price);
         $this->assertEquals(1750.00, $med->sub_unit_sale_price);

@@ -85,12 +85,13 @@
                         <thead class="table-light small">
                             <tr>
                                 <th style="width: 3%;">#</th>
-                                <th style="width: 25%;">الدواء ومعامل التعبئة <span class="text-danger">*</span></th>
-                                <th style="width: 14%;">رقم التشغيلة (Batch/Lot) <span class="text-danger">*</span></th>
-                                <th style="width: 11%;">الصلاحية <span class="text-danger">*</span></th>
-                                <th style="width: 13%;">الكمية + بونص مجاني <span class="text-danger">*</span></th>
-                                <th style="width: 14%;">سعر شراء العلبة (د.ع) <span class="text-danger">*</span></th>
-                                <th style="width: 12%;">أسعار البيع للجمهور</th>
+                                <th style="width: 22%;">الدواء ومعامل التعبئة <span class="text-danger">*</span></th>
+                                <th style="width: 12%;">رقم التشغيلة (Batch) <span class="text-danger">*</span></th>
+                                <th style="width: 10%;">الصلاحية <span class="text-danger">*</span></th>
+                                <th style="width: 9%;">أشرطة/العلبة <span class="text-danger">*</span></th>
+                                <th style="width: 14%;">الكمية + بونص مجاني <span class="text-danger">*</span></th>
+                                <th style="width: 13%;">سعر شراء العلبة <span class="text-danger">*</span></th>
+                                <th style="width: 11%;">أسعار البيع للجمهور</th>
                                 <th style="width: 5%;">الإجمالي</th>
                                 <th style="width: 3%;" class="text-center">حذف</th>
                             </tr>
@@ -181,13 +182,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 <input type="date" name="items[${rowIndex}][expiry_date]" class="form-control form-select-sm" required>
             </td>
             <td>
+                <div class="input-group input-group-sm">
+                    <input type="number" name="items[${rowIndex}][sub_units_count]" class="form-control text-center fw-bold sub-count-input" min="1" value="1" title="عدد الأشرطة أو القطع في العلبة">
+                    <span class="input-group-text bg-light p-1 sub-unit-label" style="font-size: 0.7rem;">شريط</span>
+                </div>
+            </td>
+            <td>
                 <div class="input-group input-group-sm mb-1">
                     <span class="input-group-text bg-light text-muted" title="العلب المدفوعة" style="font-size: 0.75rem;">شراء</span>
                     <input type="number" name="items[${rowIndex}][initial_quantity]" class="form-control fw-bold text-center qty-input" min="1" value="10" required>
                 </div>
-                <div class="input-group input-group-sm">
+                <div class="input-group input-group-sm mb-1">
                     <span class="input-group-text bg-success bg-opacity-10 text-success" title="علب مجانية بونص" style="font-size: 0.75rem;">بونص</span>
                     <input type="number" name="items[${rowIndex}][bonus_quantity]" class="form-control text-center bonus-input" min="0" value="0" placeholder="0">
+                </div>
+                <div class="text-secondary fw-bold text-center" style="font-size: 0.72rem;">
+                    <span class="row-total-sub-units">= 10</span> <span class="sub-unit-label-total">شريط</span>
                 </div>
             </td>
             <td>
@@ -247,6 +257,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         tr.querySelector('.conv-text').textContent = `1 ${mainUnit} = ${subCount} ${subUnit}`;
         tr.querySelector('.sub-unit-label').textContent = subUnit;
+        const subCountInput = tr.querySelector('.sub-count-input');
+        if (subCountInput) subCountInput.value = subCount;
+        const subUnitTotalLabel = tr.querySelector('.sub-unit-label-total');
+        if (subUnitTotalLabel) subUnitTotalLabel.textContent = subUnit;
 
         const priceInput = tr.querySelector('.price-input');
         if (parseFloat(priceInput.value) === 0 && defaultCost > 0) {
@@ -270,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const medSelect = tr.querySelector('.medicine-select');
         const qtyInput = tr.querySelector('.qty-input');
         const bonusInput = tr.querySelector('.bonus-input');
+        const subCountInput = tr.querySelector('.sub-count-input');
         const priceInput = tr.querySelector('.price-input');
         const salePriceInput = tr.querySelector('.sale-price-input');
         const deleteBtn = tr.querySelector('.delete-row-btn');
@@ -280,6 +295,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         qtyInput.addEventListener('input', () => recalcRow(tr));
         bonusInput.addEventListener('input', () => recalcRow(tr));
+        if (subCountInput) {
+            subCountInput.addEventListener('input', () => recalcRow(tr));
+        }
         priceInput.addEventListener('input', function() {
             // Auto suggest strip price if strip sale price is empty
             const opt = medSelect.options[medSelect.selectedIndex];
@@ -319,7 +337,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function recalcRow(tr) {
         const medSelect = tr.querySelector('.medicine-select');
         const opt = medSelect.options[medSelect.selectedIndex];
-        const subCount = opt ? (parseInt(opt.dataset.subUnitsCount) || 1) : 1;
+        const subCountInput = tr.querySelector('.sub-count-input');
+        const subCount = subCountInput ? (parseInt(subCountInput.value) || 1) : (opt ? (parseInt(opt.dataset.subUnitsCount) || 1) : 1);
 
         const qty = parseFloat(tr.querySelector('.qty-input').value) || 0;
         const bonus = parseFloat(tr.querySelector('.bonus-input').value) || 0;
@@ -327,6 +346,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const totalRowCost = qty * price;
         const totalReceived = qty + bonus;
+        const totalStrips = totalReceived * subCount;
+
+        const totalStripsElem = tr.querySelector('.row-total-sub-units');
+        if (totalStripsElem) {
+            totalStripsElem.textContent = `= ${totalStrips}`;
+        }
 
         // Effective box cost after bonus
         const effectiveBoxCost = totalReceived > 0 ? (totalRowCost / totalReceived) : price;
@@ -354,7 +379,8 @@ document.addEventListener('DOMContentLoaded', function () {
         Array.from(tableBody.children).forEach(tr => {
             const medSelect = tr.querySelector('.medicine-select');
             const opt = medSelect ? medSelect.options[medSelect.selectedIndex] : null;
-            const subCount = opt ? (parseInt(opt.dataset.subUnitsCount) || 1) : 1;
+            const subCountInput = tr.querySelector('.sub-count-input');
+            const subCount = subCountInput ? (parseInt(subCountInput.value) || 1) : (opt ? (parseInt(opt.dataset.subUnitsCount) || 1) : 1);
 
             const qty = parseFloat(tr.querySelector('.qty-input')?.value) || 0;
             const bonus = parseFloat(tr.querySelector('.bonus-input')?.value) || 0;

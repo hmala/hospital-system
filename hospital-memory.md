@@ -2768,3 +2768,13 @@
     - شريط إحصائي فوري (عدد الأصناف، إجمالي العلب المشتراة، إجمالي البونص المجاني، إجمالي الأشرطة المعادل، وإجمالي قيمة الفاتورة).
   * **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyMultiItemBatchSupplyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyMultiItemBatchSupplyTest.php))**:
     - بناء واجتياز اختبارات التوريد بالبونص وحساب التكلفة الفعلية وتحديث أسعار البيع بنجاح 100% (`3 passed, 16 assertions`)، مع اجتياز كامل حزمة اختبارات الصيدلية (`6 passed, 37 assertions`)، وتوافق تام مع `Laravel Pint`.
+
+- **المرحلة 286:** إضافة حقل معامل التعبئة القابل للتعديل لكل دواء وحساب إجمالي الأشرطة اللحظي (Editable Pack Size & Real-Time Strips Calculation per Batch Row):
+  * **تطوير واجهة التوريد بجدول البنود ([resources/views/pharmacy/batches/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/batches/create.blade.php))**:
+    - إضافة عمود مخصص وقابل للتعديل: **«أشرطة/العلبة»** (`sub_units_count`) يُملأ تلقائياً من بطاقة الدواء (2، 3، 10... إلخ) وقابل للتعديل لكل صنف وشحنة فوراً.
+    - إضافة شارة تفاعلية فورية تحت حقل الكميات بالعلب: `[ = N شريط/قطعة ]` تتحدث لحظياً عند تغيير العلب أو البونص أو معامل التعبئة.
+    - ربط التحديث اللحظي باشتقاق تكلفة الشريط الواحد وإجمالي أشرطة الشحنة في خلاصة الفاتورة.
+  * **تحديث المتحكم ([app/Http/Controllers/Pharmacy/MedicineBatchController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/MedicineBatchController.php))**:
+    - استقبال `items.*.sub_units_count` وتحديث بطاقة الدواء تلقائياً لضبط سعة التعبئة الجديدة الموردة.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyMultiItemBatchSupplyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyMultiItemBatchSupplyTest.php))**:
+    - تحديث واجتياز كافة الاختبارات بنجاح 100% (`3 passed, 17 assertions`)، وتوافق تام مع `Laravel Pint`.

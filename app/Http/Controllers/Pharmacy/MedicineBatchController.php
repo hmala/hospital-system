@@ -126,6 +126,7 @@ class MedicineBatchController extends Controller
                 'items.*.expiry_date' => 'required|date',
                 'items.*.initial_quantity' => 'required|integer|min:1',
                 'items.*.bonus_quantity' => 'nullable|integer|min:0',
+                'items.*.sub_units_count' => 'nullable|integer|min:1',
                 'items.*.purchase_price' => 'required|numeric|min:0',
                 'items.*.sale_price' => 'nullable|numeric|min:0',
                 'items.*.sub_unit_sale_price' => 'nullable|numeric|min:0',
@@ -173,6 +174,10 @@ class MedicineBatchController extends Controller
                     $medicine = Medicine::find($item['medicine_id']);
                     if ($medicine) {
                         $updateData = ['cost_price' => $boxPurchasePrice];
+
+                        if (isset($item['sub_units_count']) && (int) $item['sub_units_count'] > 0) {
+                            $updateData['sub_units_count'] = (int) $item['sub_units_count'];
+                        }
 
                         if (! empty($item['update_prices'])) {
                             if (isset($item['sale_price']) && (float) $item['sale_price'] > 0) {
