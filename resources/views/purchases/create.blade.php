@@ -23,6 +23,17 @@
         </div>
     </div>
 
+    @if($errors->any())
+    <div class="alert alert-danger border-0 shadow-sm rounded-3 mb-4">
+        <div class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-2"></i>يرجى تصحيح الأخطاء التالية:</div>
+        <ul class="mb-0">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+    @endif
+
     <!-- Form -->
     <div class="row">
         <div class="col-12">
@@ -48,7 +59,7 @@
                                     <select name="supplier_id" id="supplierSelect" class="form-select" required>
                                         <option value="">اختر المورد</option>
                                         @foreach($suppliers as $supplier)
-                                            <option value="{{ $supplier->id }}">{{ $supplier->name }}</option>
+                                            <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}>{{ $supplier->name }}</option>
                                         @endforeach
                                     </select>
                                     <label for="supplierSelect">المورد <span class="text-danger">*</span></label>
@@ -56,7 +67,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    <input type="text" name="invoice_number" class="form-control" id="invoiceNumber" placeholder="رقم الفاتورة" required>
+                                    <input type="text" name="invoice_number" class="form-control" id="invoiceNumber" value="{{ old('invoice_number') }}" placeholder="رقم الفاتورة" required>
                                     <label for="invoiceNumber">رقم الفاتورة الورقية <span class="text-danger">*</span></label>
                                 </div>
                             </div>
@@ -202,7 +213,12 @@ function filterItemsTable(query) {
     }
 }
 
-function createRow(index) {
+const oldPurchaseItems = @json(array_values(old('items', [])));
+
+function createRow(index, oldItem = null) {
+    const qtyVal = oldItem && oldItem.qty !== undefined ? oldItem.qty : '';
+    const costVal = oldItem && oldItem.cost_price !== undefined ? oldItem.cost_price : '';
+    const expiryVal = oldItem && oldItem.expiry_date !== undefined ? oldItem.expiry_date : '';
     return `
         <tr id="row${index}">
             <td class="text-center fw-bold row-index"></td>
@@ -212,9 +228,9 @@ function createRow(index) {
                     ${productOptionsTemplate}
                 </select>
             </td>
-            <td><input type="number" name="items[${index}][qty]" class="form-control" min="1" required></td>
-            <td><input type="number" step="0.01" name="items[${index}][cost_price]" class="form-control" required></td>
-            <td><input type="date" name="items[${index}][expiry_date]" class="form-control expiry-date"></td>
+            <td><input type="number" name="items[${index}][qty]" class="form-control" min="1" value="${qtyVal}" required></td>
+            <td><input type="number" step="0.01" name="items[${index}][cost_price]" class="form-control" value="${costVal}" required></td>
+            <td><input type="date" name="items[${index}][expiry_date]" class="form-control expiry-date" value="${expiryVal}"></td>
             <td class="text-center"><button type="button" class="btn btn-danger btn-sm remove-row">حذف</button></td>
         </tr>
     `;
@@ -289,8 +305,24 @@ $(document).ready(function() {
         }
     });
 
-    // إدخال السطر الأول تلقائياً
-    addRowButton.click();
+    // استعادة الأسطر المدخلة سابقاً عند فشل التحقق أو إدخال السطر الأول تلقائياً
+    if (Array.isArray(oldPurchaseItems) && oldPurchaseItems.length > 0) {
+        oldPurchaseItems.forEach(function(item) {
+            itemsTableBody.insertAdjacentHTML('beforeend', createRow(rowIdx, item));
+            const newRow = itemsTableBody.lastElementChild;
+            if (item.product_id) {
+                $(newRow).find('.item-product').val(String(item.product_id));
+            }
+            initSelect2OnRow(newRow);
+            if (item.product_id) {
+                $(newRow).find('.item-product').trigger('change');
+            }
+            rowIdx++;
+        });
+        updateRowIndices();
+    } else {
+        addRowButton.click();
+    }
 });
 </script>
 

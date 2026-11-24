@@ -16,7 +16,7 @@
                         </div>
                         <div class="text-end">
                             <div class="badge bg-white text-primary fs-6 px-3 py-2 rounded-pill">
-                                <i class="fas fa-file-invoice me-1"></i>{{ $purchases->count() }} فاتورة
+                                <i class="fas fa-file-invoice me-1"></i>{{ $totalPurchasesCount ?? $purchases->total() }} فاتورة
                             </div>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
                     <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-file-invoice text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-primary">{{ $purchases->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-primary">{{ $totalPurchasesCount ?? $purchases->total() }}</h3>
                     <p class="text-muted mb-0">إجمالي الفواتير</p>
                 </div>
             </div>
@@ -44,7 +44,7 @@
                     <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-calculator text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-success">{{ number_format($purchases->sum('total_amount'), 2) }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-success">{{ number_format($totalPurchasesAmount ?? $purchases->sum('total_amount'), 2) }}</h3>
                     <p class="text-muted mb-0">إجمالي المشتريات</p>
                 </div>
             </div>
@@ -55,7 +55,7 @@
                     <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-truck text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-info">{{ $purchases->whereNotNull('received_at')->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-info">{{ $receivedPurchasesCount ?? $purchases->whereNotNull('received_at')->count() }}</h3>
                     <p class="text-muted mb-0">تم التوريد</p>
                 </div>
             </div>
@@ -66,7 +66,7 @@
                     <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-clock text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-warning">{{ $purchases->whereNull('received_at')->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-warning">{{ $pendingPurchasesCount ?? $purchases->whereNull('received_at')->count() }}</h3>
                     <p class="text-muted mb-0">في الانتظار</p>
                 </div>
             </div>
@@ -285,15 +285,6 @@
                 alert.style.transform = 'translateY(-20px)';
                 setTimeout(() => alert.remove(), 500);
             }, 5000);
-        });
-
-        // Format currency display
-        const currencyElements = document.querySelectorAll('.text-primary');
-        currencyElements.forEach(element => {
-            if (element.textContent.includes('.')) {
-                // This is likely a currency value
-                element.innerHTML = element.textContent.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1,');
-            }
         });
     });
 </script>

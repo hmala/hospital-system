@@ -121,6 +121,12 @@
                     </div>
                 @endif
 
+                @if(session('error'))
+                    <div class="alert alert-danger border-0 mx-4 mt-3" style="border-radius: 15px;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>{{ session('error') }}
+                    </div>
+                @endif
+
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0" id="productsTable">

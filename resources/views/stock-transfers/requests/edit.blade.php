@@ -100,7 +100,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="ps-3" style="width: 50px;">#</th>
-                                        <th style="min-width: 380px;">اسم المادة أو الدواء (بحث ذكي مباشر) <span class="text-danger">*</span></th>
+                                        <th style="min-width: 380px;">اسم المادة أو المستلزم (بحث ذكي مباشر) <span class="text-danger">*</span></th>
                                         <th style="width: 140px;" class="text-center">الوحدة</th>
                                         <th style="width: 180px;" class="text-center">الكمية المطلوبة <span class="text-danger">*</span></th>
                                         <th style="width: 70px;" class="text-center pe-3">إجراء</th>
@@ -263,12 +263,18 @@
                 const prodId = initial ? initial.product_id : '';
                 const prodUnit = initial ? initial.unit : '-';
                 const prodQty = initial ? initial.qty : 1;
+                const batchId = initial && initial.batch_id ? initial.batch_id : '';
+                const reasonVal = initial && initial.reason ? initial.reason : '';
+                const notesVal = initial && initial.notes ? initial.notes : '';
                 const hasItem = Boolean(prodId);
 
                 return `
                     <tr id="row${index}" class="item-row">
                         <td class="ps-3 fw-bold text-muted row-num">${itemsTableBody.children.length + 1}</td>
                         <td>
+                            ${batchId ? `<input type="hidden" name="items[${index}][batch_id]" value="${escapeHtml(String(batchId))}">` : ''}
+                            ${reasonVal ? `<input type="hidden" name="items[${index}][reason]" value="${escapeHtml(reasonVal)}">` : ''}
+                            ${notesVal ? `<input type="hidden" name="items[${index}][notes]" value="${escapeHtml(notesVal)}">` : ''}
                             <div class="product-autocomplete-wrapper">
                                 <div class="input-group shadow-xs">
                                     <span class="input-group-text bg-white border-end-0 text-primary">

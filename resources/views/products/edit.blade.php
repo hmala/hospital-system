@@ -101,14 +101,18 @@
 
                             <div class="col-md-4">
                                 <div class="form-floating">
+                                    @php
+                                        $standardUnits = ['قطعة', 'علبة', 'كرتون', 'عبوة', 'رول', 'طقم', 'زوج', 'متر', 'أنبوب', 'كجم', 'لتر'];
+                                        $currentUnit = old('unit', $product->unit);
+                                    @endphp
                                     <select name="unit" class="form-select" id="unitSelect" required>
                                         <option value="">اختر الوحدة</option>
-                                        <option value="قطعة" {{ old('unit', $product->unit)=='قطعة' ? 'selected' : '' }}>قطعة</option>
-                                        <option value="علبة" {{ old('unit', $product->unit)=='علبة' ? 'selected' : '' }}>علبة</option>
-                                        <option value="كرتون" {{ old('unit', $product->unit)=='كرتون' ? 'selected' : '' }}>كرتون</option>
-                                        <option value="كجم" {{ old('unit', $product->unit)=='كجم' ? 'selected' : '' }}>كجم</option>
-                                        <option value="لتر" {{ old('unit', $product->unit)=='لتر' ? 'selected' : '' }}>لتر</option>
-                                        <option value="قطرة" {{ old('unit', $product->unit)=='قطرة' ? 'selected' : '' }}>قطرة</option>
+                                        @foreach($standardUnits as $unitOption)
+                                            <option value="{{ $unitOption }}" {{ $currentUnit == $unitOption ? 'selected' : '' }}>{{ $unitOption }}</option>
+                                        @endforeach
+                                        @if($currentUnit && !in_array($currentUnit, $standardUnits, true))
+                                            <option value="{{ $currentUnit }}" selected>{{ $currentUnit }}</option>
+                                        @endif
                                     </select>
                                     <label for="unitSelect">الوحدة <span class="text-danger">*</span></label>
                                     @error('unit') <div class="text-danger mt-1 small">{{ $message }}</div> @enderror

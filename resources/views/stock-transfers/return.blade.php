@@ -16,7 +16,7 @@
                             <div>
                                 <h3 class="mb-1 fw-bold" style="color: #0f172a;">إرجاع مواد وعُهدة إلى المخزن الرئيسي</h3>
                                 <p class="mb-0 text-muted small">
-                                    توثيق وإرجاع الأدوية والمستلزمات الفائضة أو غير المستهلكة من عهدة الطابق إلى المستودع المركزي.
+                                    توثيق وإرجاع المواد والمستلزمات الفائضة أو غير المستهلكة من عهدة الطابق إلى المستودع المركزي.
                                 </p>
                             </div>
                         </div>
@@ -115,7 +115,7 @@
                                     </div>
                                     <small class="text-muted mt-1 d-block">مقفل تلقائياً على عهدة الطابق المرتبطة بحسابك.</small>
                                 @else
-                                    <select name="from_location_id" id="from_location_id" class="form-select rounded-3 py-2" required onchange="this.form.submit()">
+                                    <select name="from_location_id" id="from_location_id" class="form-select rounded-3 py-2" required onchange="if(this.value){ const url = new URL('{{ route('stock-transfers.returns.create') }}', window.location.origin); url.searchParams.set('from_location_id', this.value); window.location.href = url.toString(); }">
                                         <option value="">-- اختر المخزن الفرعي --</option>
                                         @foreach($subLocations as $loc)
                                             <option value="{{ $loc->id }}" {{ (old('from_location_id', $selectedFromLocation?->id) == $loc->id) ? 'selected' : '' }}>

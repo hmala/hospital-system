@@ -153,7 +153,7 @@
                         <i class="fas fa-filter me-1"></i>تطبيق الفلتر
                     </button>
                     @if($search || $locationId || $status !== 'all')
-                        <a href="{{ route('inventory.expiring') }}" class="btn btn-outline-secondary rounded-pill" title="إعادة تعيين">
+                        <a href="{{ route('inventory.expiring', ['location_id' => '']) }}" class="btn btn-outline-secondary rounded-pill" title="إعادة تعيين">
                             <i class="fas fa-undo"></i>
                         </a>
                     @endif

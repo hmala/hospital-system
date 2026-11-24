@@ -112,9 +112,14 @@
                                                         <option value="قطعة" {{ old('unit')=='قطعة' ? 'selected' : '' }}>قطعة</option>
                                                         <option value="علبة" {{ old('unit')=='علبة' ? 'selected' : '' }}>علبة</option>
                                                         <option value="كرتون" {{ old('unit')=='كرتون' ? 'selected' : '' }}>كرتون</option>
+                                                        <option value="عبوة" {{ old('unit')=='عبوة' ? 'selected' : '' }}>عبوة</option>
+                                                        <option value="رول" {{ old('unit')=='رول' ? 'selected' : '' }}>رول</option>
+                                                        <option value="طقم" {{ old('unit')=='طقم' ? 'selected' : '' }}>طقم</option>
+                                                        <option value="زوج" {{ old('unit')=='زوج' ? 'selected' : '' }}>زوج</option>
+                                                        <option value="متر" {{ old('unit')=='متر' ? 'selected' : '' }}>متر</option>
+                                                        <option value="أنبوب" {{ old('unit')=='أنبوب' ? 'selected' : '' }}>أنبوب</option>
                                                         <option value="كجم" {{ old('unit')=='كجم' ? 'selected' : '' }}>كجم</option>
                                                         <option value="لتر" {{ old('unit')=='لتر' ? 'selected' : '' }}>لتر</option>
-                                                        <option value="قطرة" {{ old('unit')=='قطرة' ? 'selected' : '' }}>قطرة</option>
                                                     </select>
                                                     <label for="unit" class="fw-semibold">
                                                         <i class="fas fa-balance-scale me-2 text-primary"></i>الوحدة

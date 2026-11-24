@@ -109,6 +109,11 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        if ($product->stockBatches()->exists() || $product->purchaseItems()->exists()) {
+            return redirect()->route('products.index')
+                ->with('error', 'لا يمكن حذف هذه المادة لارتباطها بدفعات مخزنية أو فواتير مشتريات مسجلة.');
+        }
+
         $product->delete();
         return redirect()->route('products.index')->with('success', 'تم حذف المادة بنجاح');
     }

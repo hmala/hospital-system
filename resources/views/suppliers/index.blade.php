@@ -16,7 +16,7 @@
                         </div>
                         <div class="text-end">
                             <div class="badge bg-white text-primary fs-6 px-3 py-2 rounded-pill">
-                                <i class="fas fa-users me-1"></i>{{ $suppliers->count() }} مورد
+                                <i class="fas fa-users me-1"></i>{{ $totalSuppliersCount ?? $suppliers->total() }} مورد
                             </div>
                         </div>
                     </div>
@@ -33,7 +33,7 @@
                     <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-users text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-primary">{{ $suppliers->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-primary">{{ $totalSuppliersCount ?? $suppliers->total() }}</h3>
                     <p class="text-muted mb-0">إجمالي الموردين</p>
                 </div>
             </div>
@@ -44,7 +44,7 @@
                     <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-phone text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-success">{{ $suppliers->where('phone', '!=', null)->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-success">{{ $suppliersWithPhoneCount ?? $suppliers->where('phone', '!=', null)->count() }}</h3>
                     <p class="text-muted mb-0">لديهم رقم هاتف</p>
                 </div>
             </div>
@@ -55,7 +55,7 @@
                     <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
                         <i class="fas fa-envelope text-white fs-4"></i>
                     </div>
-                    <h3 class="mt-3 mb-1 fw-bold text-info">{{ $suppliers->where('email', '!=', null)->count() }}</h3>
+                    <h3 class="mt-3 mb-1 fw-bold text-info">{{ $suppliersWithEmailCount ?? $suppliers->where('email', '!=', null)->count() }}</h3>
                     <p class="text-muted mb-0">لديهم بريد إلكتروني</p>
                 </div>
             </div>

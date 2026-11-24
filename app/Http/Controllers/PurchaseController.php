@@ -24,7 +24,18 @@ class PurchaseController extends Controller
             ->orderBy('received_at', 'desc')
             ->paginate(20);
 
-        return view('purchases.index', compact('purchases'));
+        $totalPurchasesCount = Purchase::count();
+        $totalPurchasesAmount = (float) Purchase::sum('total_amount');
+        $receivedPurchasesCount = Purchase::whereNotNull('received_at')->count();
+        $pendingPurchasesCount = Purchase::whereNull('received_at')->count();
+
+        return view('purchases.index', compact(
+            'purchases',
+            'totalPurchasesCount',
+            'totalPurchasesAmount',
+            'receivedPurchasesCount',
+            'pendingPurchasesCount'
+        ));
     }
 
     public function create()
@@ -68,6 +79,11 @@ class PurchaseController extends Controller
                 'user_id'        => Auth::id(),
             ]);
 
+            $mainLocation = Location::firstOrCreate([
+                'name' => 'المخزن الرئيسي',
+                'type' => 'main',
+            ]);
+
             $lineIndex = 1;
             foreach ($request->items as $itemData) {
                 $product = Product::findOrFail($itemData['product_id']);
@@ -88,11 +104,6 @@ class PurchaseController extends Controller
 
                 $internalBarcode = $this->generateBatchBarcode($product, $purchase->id, $lineIndex);
 
-                $mainLocation = Location::firstOrCreate([
-                    'name' => 'المخزن الرئيسي',
-                    'type' => 'main',
-                ]);
-
                 $batch = StockBatch::create([
                     'product_id'       => $product->id,
                     'purchase_item_id' => $purchaseItem->id,
@@ -109,8 +120,8 @@ class PurchaseController extends Controller
 
                 StockMovement::create([
                     'batch_id'         => $batch->id,
-                    'from_location_id' => 1,
-                    'to_location_id'   => 1,
+                    'from_location_id' => $mainLocation->id,
+                    'to_location_id'   => $mainLocation->id,
                     'quantity'         => $itemData['qty'],
                     'type'             => 'purchase',
                     'user_id'          => Auth::id(),
@@ -183,12 +194,38 @@ class PurchaseController extends Controller
                 $itemId = $itemData['item_id'] ?? null;
 
                 if ($itemId && $existingItems->has($itemId)) {
-                    // تحديث عنصر موجود
+                    // تحديث عنصر موجود مع حماية الكميات المصروفة أو المنقولة
                     $submittedItemIds[] = $itemId;
                     $purchaseItem = $existingItems->get($itemId);
-                    $oldQty = $purchaseItem->qty;
-                    $newQty = (int)$itemData['qty'];
-                    $qtyDiff = $newQty - $oldQty;
+                    $newQty = (int) $itemData['qty'];
+
+                    if ($purchaseItem->stockBatch) {
+                        $batch = $purchaseItem->stockBatch;
+                        $consumedOrTransferred = max(0, (int) $batch->initial_qty - (int) $batch->current_qty);
+                        $hasExternalMovements = StockMovement::where('batch_id', $batch->id)
+                            ->where('type', '!=', 'purchase')
+                            ->exists() || $batch->childBatches()->exists();
+
+                        if ($hasExternalMovements && (int) $product->id !== (int) $purchaseItem->product_id) {
+                            throw new \InvalidArgumentException("لا يمكن تغيير صنف المادة {$purchaseItem->product?->name} لوجود عمليات صرف أو نقل مخزني تمت عليها.");
+                        }
+
+                        if ($newQty < $consumedOrTransferred) {
+                            throw new \InvalidArgumentException("لا يمكن تقليل كمية المادة {$product->name} إلى ({$newQty}) لأنه تم صرف أو تحويل ({$consumedOrTransferred}) منها بالفعل.");
+                        }
+
+                        $batch->product_id  = $product->id;
+                        $batch->cost_price  = $itemData['cost_price'];
+                        $batch->expiry_date = $itemData['expiry_date'] ?? null;
+                        $batch->initial_qty = $newQty;
+                        $batch->current_qty = $newQty - $consumedOrTransferred;
+                        $batch->save();
+
+                        // تحديث حركة الشراء الأصلية
+                        StockMovement::where('batch_id', $batch->id)
+                            ->where('type', 'purchase')
+                            ->update(['quantity' => $newQty]);
+                    }
 
                     $purchaseItem->update([
                         'product_id'  => $product->id,
@@ -197,21 +234,6 @@ class PurchaseController extends Controller
                         'subtotal'    => $subtotal,
                         'expiry_date' => $itemData['expiry_date'] ?? null,
                     ]);
-
-                    // تحديث الوجبة المخزنية
-                    if ($purchaseItem->stockBatch) {
-                        $batch = $purchaseItem->stockBatch;
-                        $batch->cost_price  = $itemData['cost_price'];
-                        $batch->expiry_date = $itemData['expiry_date'] ?? null;
-                        $batch->initial_qty = $newQty;
-                        $batch->current_qty = max(0, $batch->current_qty + $qtyDiff);
-                        $batch->save();
-
-                        // تحديث حركة الشراء الأصلية
-                        StockMovement::where('batch_id', $batch->id)
-                            ->where('type', 'purchase')
-                            ->update(['quantity' => $newQty]);
-                    }
                 } else {
                     // إضافة مادة جديدة للفاتورة
                     $purchaseItem = $purchase->items()->create([
@@ -251,11 +273,21 @@ class PurchaseController extends Controller
                 }
             }
 
-            // حذف المواد التي أزالها المستخدم من الفاتورة
+            // حذف المواد التي أزالها المستخدم من الفاتورة بعد التحقق من عدم صرفها أو نقلها
             foreach ($existingItems as $id => $existingItem) {
                 if (!in_array($id, $submittedItemIds)) {
                     if ($existingItem->stockBatch) {
                         $batch = $existingItem->stockBatch;
+                        $hasExternalActivity = StockMovement::where('batch_id', $batch->id)
+                            ->where('type', '!=', 'purchase')
+                            ->exists()
+                            || $batch->childBatches()->exists()
+                            || $batch->current_qty < $batch->initial_qty;
+
+                        if ($hasExternalActivity) {
+                            throw new \InvalidArgumentException("لا يمكن إزالة المادة {$existingItem->product?->name} من الفاتورة لوجود عمليات صرف أو نقل مخزني تمت عليها.");
+                        }
+
                         StockMovement::where('batch_id', $batch->id)->delete();
                         $batch->delete();
                     }

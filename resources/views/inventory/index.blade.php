@@ -141,7 +141,7 @@
                                 <i class="fas fa-search me-1"></i>بحث
                             </button>
                             @if(request('search') || request('location_id'))
-                                <a href="{{ route('inventory.index') }}" class="btn btn-outline-secondary px-3 py-2 rounded-pill" title="إلغاء التصفية">
+                                <a href="{{ route('inventory.index', ['location_id' => '']) }}" class="btn btn-outline-secondary px-3 py-2 rounded-pill" title="إلغاء التصفية">
                                     <i class="fas fa-undo"></i>
                                 </a>
                             @endif
@@ -160,7 +160,7 @@
                             @if($selectedLocation)
                                 <span class="badge bg-secondary px-3 py-2 rounded-pill fs-6">
                                     المخزن: {{ $selectedLocation->name }}
-                                    <a href="{{ route('inventory.index', array_merge(request()->except('location_id'))) }}" class="text-white ms-2 text-decoration-none">&times;</a>
+                                    <a href="{{ route('inventory.index', array_merge(request()->except('location_id'), ['location_id' => ''])) }}" class="text-white ms-2 text-decoration-none">&times;</a>
                                 </span>
                             @endif
                         </div>

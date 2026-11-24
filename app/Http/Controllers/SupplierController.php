@@ -10,7 +10,16 @@ class SupplierController extends Controller
     public function index()
     {
         $suppliers = Supplier::orderBy('name')->paginate(20);
-        return view('suppliers.index', compact('suppliers'));
+        $totalSuppliersCount = Supplier::count();
+        $suppliersWithPhoneCount = Supplier::whereNotNull('phone')->where('phone', '!=', '')->count();
+        $suppliersWithEmailCount = Supplier::whereNotNull('email')->where('email', '!=', '')->count();
+
+        return view('suppliers.index', compact(
+            'suppliers',
+            'totalSuppliersCount',
+            'suppliersWithPhoneCount',
+            'suppliersWithEmailCount'
+        ));
     }
 
     public function create()

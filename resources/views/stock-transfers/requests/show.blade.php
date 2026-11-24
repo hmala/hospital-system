@@ -44,18 +44,24 @@
                     @php
                         $user = auth()->user();
                         $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
+                        $isWarehouseAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $user->can('manage inventory'));
+                        $isDestinationStaff = $user?->location_id && $stockTransferRequest->to_location_id == $user->location_id;
+                        $isWardOrORStaff = $user && (
+                            $user->hasRole(['head_nurse', 'nurse', 'nicu_nurse', 'icu_nurse', 'surgery_staff', 'surgery_nurse', 'anesthesia', 'surgeon'])
+                            || in_array($user->role, ['nurse', 'head_nurse', 'doctor', 'surgery_staff'])
+                        );
                         $canEditOrCancel = $stockTransferRequest->status === 'pending' && (
                             $isSuperAdmin ||
                             $stockTransferRequest->requested_by == $user?->id ||
                             ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id)
                         );
                         $canConfirmReceipt = $stockTransferRequest->status === 'approved' && (
-                            $isSuperAdmin ||
+                            $isWarehouseAdmin ||
                             $stockTransferRequest->requested_by == $user?->id ||
-                            ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id) ||
-                            $user?->hasRole(['head_nurse', 'nurse', 'nicu_nurse', 'icu_nurse', 'surgery_staff', 'surgery_nurse', 'anesthesia', 'surgeon']) ||
-                            in_array($user?->role, ['nurse', 'head_nurse', 'doctor', 'surgery_staff'])
+                            ($isDestinationStaff && $isWardOrORStaff)
                         );
+                        $isNursingUser = $user && $user->hasRole(['nurse', 'head_nurse', 'nicu_nurse', 'icu_nurse']);
+                        $isSurgeryUser = $user && $user->hasRole(['surgery_staff', 'surgery_nurse']);
                     @endphp
 
                     <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -71,9 +77,13 @@
                                 </button>
                             </form>
                         @endif
-                        @if(empty($isAdmin))
+                        @if(empty($isAdmin) && $isNursingUser)
                             <a href="{{ route('nursing-station.index') }}" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-xs">
                                 <i class="fas fa-arrow-right me-1"></i> العودة لمحطة التمريض
+                            </a>
+                        @elseif(empty($isAdmin) && $isSurgeryUser)
+                            <a href="{{ route('surgeries.index', ['tab' => 'or_store']) }}" class="btn btn-primary rounded-pill px-3 py-2 fw-bold shadow-xs">
+                                <i class="fas fa-arrow-right me-1"></i> العودة لمخزن العمليات
                             </a>
                         @endif
                         <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2">
@@ -244,7 +254,7 @@
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 45px;" class="text-center">#</th>
-                                            <th style="min-width: 250px;">المادة أو الدواء</th>
+                                            <th style="min-width: 250px;">المادة أو المستلزم</th>
                                             <th style="width: 140px;" class="text-center">الكمية المطلوبة</th>
                                             <th style="width: 160px;" class="text-center">المتوفر بالمخزن المصدر</th>
                                             <th style="min-width: 190px;" class="text-center">حالة الرصيد</th>
@@ -357,7 +367,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width: 45px;" class="text-center">#</th>
-                                        <th>المادة أو الدواء</th>
+                                        <th>المادة أو المستلزم</th>
                                         <th style="width: 140px;" class="text-center">الكمية المطلوبة</th>
                                         @if(in_array($stockTransferRequest->status, ['approved', 'completed']))
                                             <th style="width: 160px;" class="text-center bg-success-subtle text-success fw-bold">

@@ -118,7 +118,7 @@
             transform: translate(-50%, -50%);
             width: auto;
         }
-        .barcode-label {
+        .barcode-card {
             border: 1px solid #000 !important;
             page-break-inside: avoid;
             padding: 4px 8px !important;

@@ -10,19 +10,30 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class InventoryController extends Controller
 {
+    /**
+     * تحديد المخازن المتاحة للمستودع وتطبيق فلتر الموقع بدون إجبار مدير المخزن عند اختيار "جميع المخازن".
+     */
+    private function resolveLocationFilter(Request $request): array
+    {
+        $locations = Location::warehouseAccessible()->orderBy('name')->get();
+        $hasExplicitLocation = $request->exists('location_id');
+        $rawLocationId = $request->get('location_id');
+        $locationId = ($rawLocationId === '' || $rawLocationId === 'all') ? null : $rawLocationId;
+
+        $userLocationId = auth()->user()?->location_id;
+        if (! $hasExplicitLocation && ! $locationId && $userLocationId) {
+            $locationId = $userLocationId;
+        }
+
+        $selectedLocation = $locationId ? Location::find($locationId) : null;
+
+        return [$locations, $locationId, $selectedLocation];
+    }
+
     public function index(Request $request)
     {
-        $locations = Location::orderBy('name')->get();
-        $locationId = $request->get('location_id');
-        $selectedLocation = $locationId ? Location::find($locationId) : null;
+        [$locations, $locationId, $selectedLocation] = $this->resolveLocationFilter($request);
         $search = trim($request->get('search', ''));
-
-        // إذا كان المستخدم مرتبط بمخزن معين، استخدمه كافتراضي
-        $userLocationId = auth()->user()->location_id;
-        if (!$locationId && $userLocationId) {
-            $locationId = $userLocationId;
-            $selectedLocation = Location::find($userLocationId);
-        }
 
         $query = Product::orderBy('name');
 
@@ -95,16 +106,7 @@ class InventoryController extends Controller
 
     public function lowStock(Request $request)
     {
-        $locations = Location::orderBy('name')->get();
-        $locationId = $request->get('location_id');
-        $selectedLocation = $locationId ? Location::find($locationId) : null;
-
-        // إذا كان المستخدم مرتبط بمخزن معين، استخدمه كافتراضي
-        $userLocationId = auth()->user()->location_id;
-        if (!$locationId && $userLocationId) {
-            $locationId = $userLocationId;
-            $selectedLocation = Location::find($userLocationId);
-        }
+        [$locations, $locationId, $selectedLocation] = $this->resolveLocationFilter($request);
 
         $products = Product::with([
             'stockBatches' => function ($q) use ($locationId) {
@@ -149,15 +151,7 @@ class InventoryController extends Controller
      */
     public function expiring(Request $request)
     {
-        $locations = Location::orderBy('name')->get();
-        $locationId = $request->get('location_id');
-        $selectedLocation = $locationId ? Location::find($locationId) : null;
-
-        $userLocationId = auth()->user()->location_id;
-        if (!$locationId && $userLocationId) {
-            $locationId = $userLocationId;
-            $selectedLocation = Location::find($userLocationId);
-        }
+        [$locations, $locationId, $selectedLocation] = $this->resolveLocationFilter($request);
 
         $status = $request->get('status', 'all');
         $search = $request->get('search');

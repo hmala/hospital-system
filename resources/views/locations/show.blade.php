@@ -56,7 +56,7 @@
                                     <td>{{ $product->name }}</td>
                                     <td>{{ $currentQty }}</td>
                                     <td>{{ $batchCount }}</td>
-                                    <td>{{ $firstBatch ? $firstBatch->received_at->format('Y-m-d') : '-' }}</td>
+                                    <td>{{ $firstBatch?->received_at?->format('Y-m-d') ?? '-' }}</td>
                                 </tr>
                             @endif
                         @endforeach

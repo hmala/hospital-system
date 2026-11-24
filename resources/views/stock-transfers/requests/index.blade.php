@@ -27,9 +27,18 @@
                 </div>
             </div>
             <div class="d-flex align-items-center gap-2">
-                @if(!$isAdmin)
+                @php
+                    $navUser = auth()->user();
+                    $isNursingUser = $navUser && $navUser->hasRole(['nurse', 'head_nurse', 'nicu_nurse', 'icu_nurse']);
+                    $isSurgeryUser = $navUser && $navUser->hasRole(['surgery_staff', 'surgery_nurse']);
+                @endphp
+                @if(!$isAdmin && $isNursingUser)
                     <a href="{{ route('nursing-station.index') }}" class="btn btn-light btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs text-primary">
                         <i class="fas fa-arrow-right me-1"></i> العودة لمحطة التمريض
+                    </a>
+                @elseif(!$isAdmin && $isSurgeryUser)
+                    <a href="{{ route('surgeries.index', ['tab' => 'or_store']) }}" class="btn btn-light btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs text-primary">
+                        <i class="fas fa-arrow-right me-1"></i> العودة لمخزن العمليات
                     </a>
                 @endif
                 <a href="{{ route('stock-transfers.create') }}" class="btn btn-warning btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs text-dark">
@@ -144,12 +153,17 @@
                                             <i class="fas fa-eye me-1"></i> عرض
                                         </a>
                                         @php
+                                            $currentUser = auth()->user();
+                                            $isWarehouseAdmin = $currentUser && ($currentUser->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || $currentUser->can('manage inventory'));
+                                            $isDestinationStaff = $currentUser?->location_id && $req->to_location_id == $currentUser->location_id;
+                                            $isWardOrORStaff = $currentUser && (
+                                                $currentUser->hasRole(['head_nurse', 'nurse', 'nicu_nurse', 'icu_nurse', 'surgery_staff', 'surgery_nurse', 'anesthesia', 'surgeon'])
+                                                || in_array($currentUser->role, ['nurse', 'head_nurse', 'doctor', 'surgery_staff'])
+                                            );
                                             $canConfirmReceiptThis = $req->status === 'approved' && (
-                                                !empty($isSuperAdmin) ||
-                                                $req->requested_by == auth()->id() ||
-                                                (auth()->user()?->location_id && $req->to_location_id == auth()->user()->location_id) ||
-                                                auth()->user()?->hasRole(['head_nurse', 'nurse', 'nicu_nurse', 'icu_nurse', 'surgery_staff', 'surgery_nurse', 'anesthesia', 'surgeon']) ||
-                                                in_array(auth()->user()?->role, ['nurse', 'head_nurse', 'doctor', 'surgery_staff'])
+                                                $isWarehouseAdmin ||
+                                                $req->requested_by == $currentUser?->id ||
+                                                ($isDestinationStaff && $isWardOrORStaff)
                                             );
                                         @endphp
                                         @if($canConfirmReceiptThis)

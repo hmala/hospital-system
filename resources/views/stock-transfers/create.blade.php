@@ -15,9 +15,26 @@
                 </div>
             </div>
             <div>
-                <a href="{{ request()->query('from') == 'nursing' || !empty($lockedLocation) ? route('nursing-station.index') : url()->previous() }}" class="btn btn-light btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs text-primary">
-                    <i class="fas fa-arrow-right me-1"></i> العودة لمحطة التمريض
-                </a>
+                @php
+                    $currentUser = auth()->user();
+                    $isNursingReturn = request()->query('from') === 'nursing'
+                        || ($currentUser && $currentUser->hasRole(['nurse', 'head_nurse', 'nicu_nurse', 'icu_nurse']) && ! $currentUser->can('manage inventory'));
+                    $isSurgeryReturn = request()->query('from') === 'surgery'
+                        || ($currentUser && $currentUser->hasRole(['surgery_staff', 'surgery_nurse']) && ! $currentUser->can('manage inventory'));
+                @endphp
+                @if($isNursingReturn)
+                    <a href="{{ route('nursing-station.index') }}" class="btn btn-light btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs text-primary">
+                        <i class="fas fa-arrow-right me-1"></i> العودة لمحطة التمريض
+                    </a>
+                @elseif($isSurgeryReturn)
+                    <a href="{{ route('surgeries.index', ['tab' => 'or_store']) }}" class="btn btn-light btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs text-primary">
+                        <i class="fas fa-arrow-right me-1"></i> العودة لمخزن العمليات
+                    </a>
+                @else
+                    <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-light btn-sm rounded-pill px-3 py-1.5 fw-bold shadow-xs text-primary">
+                        <i class="fas fa-list me-1"></i> سجل طلبات النقل
+                    </a>
+                @endif
             </div>
         </div>
 
@@ -116,7 +133,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="ps-3" style="width: 50px;">#</th>
-                                        <th style="min-width: 380px;">اسم المادة أو الدواء (بحث ذكي مباشر) <span class="text-danger">*</span></th>
+                                        <th style="min-width: 380px;">اسم المادة أو المستلزم (بحث ذكي مباشر) <span class="text-danger">*</span></th>
                                         <th style="width: 140px;" class="text-center">الوحدة</th>
                                         <th style="width: 180px;" class="text-center">الكمية المطلوبة <span class="text-danger">*</span></th>
                                         <th style="width: 70px;" class="text-center pe-3">إجراء</th>
@@ -135,10 +152,10 @@
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                         <div class="text-muted small">
                             <i class="fas fa-shield-alt text-primary me-1"></i>
-                            سيتم تسجيل الطلبية باسمك واعتمادها من قِبل أمين المخزن الرئيسي وفق نظام FIFO المعتمد.
+                            سيتم تسجيل الطلبية باسمك واعتمادها من قِبل أمين المخزن الرئيسي وفق نظام FEFO المعتمد.
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <a href="{{ request()->query('from') == 'nursing' || !empty($lockedLocation) ? route('nursing-station.index') : url()->previous() }}" class="btn btn-outline-secondary rounded-pill px-4 py-2">
+                            <a href="{{ $isNursingReturn ? route('nursing-station.index') : ($isSurgeryReturn ? route('surgeries.index', ['tab' => 'or_store']) : route('stock-transfers.requests.index')) }}" class="btn btn-outline-secondary rounded-pill px-4 py-2">
                                 إلغاء
                             </a>
                             <button type="submit" class="btn btn-primary rounded-pill px-5 py-2.5 fw-bold shadow-sm">

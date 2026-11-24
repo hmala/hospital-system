@@ -34,6 +34,11 @@ class Product extends Model
         return $this->hasMany(StockBatch::class);
     }
 
+    public function purchaseItems()
+    {
+        return $this->hasMany(PurchaseItem::class);
+    }
+
     public function locationThresholds()
     {
         return $this->hasMany(LocationProductThreshold::class);

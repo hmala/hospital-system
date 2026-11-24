@@ -10,7 +10,12 @@ class LocationController extends Controller
 {
     public function index()
     {
-        $locations = Location::orderBy('type')->orderBy('name')->get();
+        $locations = Location::excludeUnusedPharmacy()
+            ->with('stockBatches')
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
+
         return view('locations.index', compact('locations'));
     }
 

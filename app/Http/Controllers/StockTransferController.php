@@ -49,7 +49,7 @@ class StockTransferController extends Controller
     {
         $user = Auth::user();
         $mainLocations = Location::where('type', 'main')->orderBy('name')->get();
-        $subLocations = Location::where('type', 'sub')->orderBy('name')->get();
+        $subLocations = Location::where('type', 'sub')->excludePharmacy()->orderBy('name')->get();
         $products = Product::orderBy('name')->get();
 
         // تحديد ما إذا كان المستخدم مقيداً بمخزنه الفرعي
@@ -141,7 +141,7 @@ class StockTransferController extends Controller
         }
 
         $mainLocations = Location::where('type', 'main')->orderBy('name')->get();
-        $subLocations = Location::where('type', 'sub')->orderBy('name')->get();
+        $subLocations = Location::where('type', 'sub')->excludePharmacy()->orderBy('name')->get();
         $products = Product::orderBy('name')->get();
         $lockedLocation = $stockTransferRequest->toLocation;
         $isLockedToLocation = ! $isSuperAdmin || (bool) $user?->location_id;
@@ -162,6 +162,9 @@ class StockTransferController extends Controller
                         'code' => $prod->code ?: 'PRD-'.$prod->id,
                         'unit' => $prod->unit ?: 'وحدة',
                         'qty' => (int) ($it['qty'] ?? 1),
+                        'batch_id' => $it['batch_id'] ?? null,
+                        'reason' => $it['reason'] ?? null,
+                        'notes' => $it['notes'] ?? null,
                     ];
                 }
             }
@@ -205,10 +208,25 @@ class StockTransferController extends Controller
             return back()->withInput()->withErrors(['items' => 'لا يوجد مخزن رئيسي متاح للطلب.']);
         }
 
+        $existingRawItems = is_array($stockTransferRequest->items)
+            ? $stockTransferRequest->items
+            : (json_decode((string) $stockTransferRequest->items, true) ?? []);
+        $existingByProduct = collect($existingRawItems)->keyBy('product_id');
+
         $itemsPayload = [];
         foreach ($request->items as $item) {
             $qty = (int) $item['qty'];
-            $itemsPayload[] = array_merge($item, [
+            $existingItem = $existingByProduct->get($item['product_id']);
+            $preservedFields = [];
+            if (is_array($existingItem)) {
+                foreach (['batch_id', 'reason', 'notes', 'admin_notes'] as $field) {
+                    if (array_key_exists($field, $existingItem) && $existingItem[$field] !== null && $existingItem[$field] !== '') {
+                        $preservedFields[$field] = $existingItem[$field];
+                    }
+                }
+            }
+
+            $itemsPayload[] = array_merge($preservedFields, $item, [
                 'qty' => $qty,
                 'original_qty' => $qty,
             ]);
@@ -247,18 +265,23 @@ class StockTransferController extends Controller
     {
         $user = Auth::user();
         $mainLocations = Location::where('type', 'main')->orderBy('name')->get();
-        $subLocations = Location::where('type', 'sub')->orderBy('name')->get();
+        $subLocations = Location::where('type', 'sub')->excludePharmacy()->orderBy('name')->get();
 
-        // 1. تحديد المخزن الفرعي (مخزن الطابق المصدر)
+        $userLocation = $user?->location_id ? Location::find($user->location_id) : null;
+        $isSubLocationUser = $userLocation && $userLocation->type === 'sub';
+        $isAdminRole = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory'));
+
+        // 1. تحديد المخزن الفرعي (مخزن الطابق المصدر) — لا نقفل أمين المخزن الرئيسي على موقعه
         $selectedFromLocationId = $request->query('from_location_id');
-        if (! $selectedFromLocationId && $user && $user->location_id) {
-            $selectedFromLocationId = $user->location_id;
+        if (! $selectedFromLocationId && $isSubLocationUser) {
+            $selectedFromLocationId = $userLocation->id;
         }
 
-        // قفل المخزن إذا كان المستخدم ممرضاً/أمين عهدة وليس مديراً عاماً
+        // قفل المخزن فقط لكادر القسم/الطابق الفرعي غير الإداري
         $isLockedToLocation = false;
-        if ($user && $user->location_id && ! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
-            $selectedFromLocationId = $user->location_id;
+        if ($isSubLocationUser && ! $isAdminRole) {
+            $selectedFromLocationId = $userLocation->id;
             $isLockedToLocation = true;
         }
 
@@ -334,9 +357,14 @@ class StockTransferController extends Controller
         $fromLocationId = $request->from_location_id;
         $toLocationId = $request->to_location_id;
 
-        // التحقق الأمني: إذا كان المستخدم مرتبطاً بموقع معين وليس مديراً
-        if ($user && $user->location_id && ! $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])) {
-            if ($fromLocationId != $user->location_id) {
+        // التحقق الأمني: إذا كان المستخدم مرتبطاً بمخزن فرعي وليس مديراً أو أمين مخزن رئيسي
+        $userLocation = $user?->location_id ? Location::find($user->location_id) : null;
+        $isSubLocationUser = $userLocation && $userLocation->type === 'sub';
+        $isAdminRole = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory'));
+
+        if ($isSubLocationUser && ! $isAdminRole) {
+            if ($fromLocationId != $userLocation->id) {
                 abort(403, 'غير مصرح لك بتقديم طلب إرجاع نيابة عن مخزن طابق آخر.');
             }
         }
@@ -552,6 +580,7 @@ class StockTransferController extends Controller
         $productIds = collect($request->items)->pluck('product_id')->filter()->unique();
         $subLocationBatches = StockBatch::where('location_id', $request->to_location_id)
             ->whereIn('product_id', $productIds)
+            ->where('current_qty', '>', 0)
             ->fefo()
             ->get();
 
