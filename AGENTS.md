@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-24 — المرحلة 285: اعتماد المعيار الصيدلاني العالمي لنظام التوريد المزدوج واشتقاق تكلفة التجزئة واحتساب البونص وتحديث أسعار البيع Global Dual-Unit Pharmacy Inward Supply, Automatic Sub-Unit Cost Derivation & Bonus Packs Handling)
+
+### Done
+- **تطوير متحكم توريد الوجبات ([app/Http/Controllers/Pharmacy/MedicineBatchController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/MedicineBatchController.php))**:
+  * تضمين بيانات معامل التعبئة والتجزئة (`sub_units_count`, `sub_unit`, `main_unit`, `sale_price`, `sub_unit_sale_price`) ضمن دالة `create()`.
+  * دعم إدخال كميات البونص المجاني (`bonus_quantity`) وحساب التكلفة الفعلية للعلبة (`effectiveBoxCost`) تلقائياً.
+  * دعم خيار تحديث أسعار البيع المعتمدة (`sale_price`, `sub_unit_sale_price`) وتحديث سعر آخر تكلفة شراء في دليل الأدوية المركزي تلقائياً.
+- **تطوير واجهة التوريد بنظام الوحدات المزدوج ([resources/views/pharmacy/batches/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/batches/create.blade.php))**:
+  * إبراز شارة التعبئة المزدوجة لكل دواء بمجرد اختياره: `[1 علبة = N شريط]`.
+  * الاشتقاق الآلي اللحظي لتكلفة الشريط الواحد: `[تكلفة الشريط = سعر شراء العلبة ÷ عدد الأشرطة]`.
+  * دعم حقل البونص المجاني مع احتساب أثر البونص على خفض تكلفة العلبة والشريط الحقيقية.
+  * إتاحة حقول أسعار البيع للجمهور (بيع العلبة وبيع الشريط) مع مفتاح لتحديثها بدليل الأدوية بنقرة واحدة.
+  * شريط إحصائي فوري (عدد الأصناف، إجمالي العلب المشتراة، إجمالي البونص المجاني، إجمالي الأشرطة المعادل، وإجمالي قيمة الفاتورة).
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyMultiItemBatchSupplyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyMultiItemBatchSupplyTest.php))**:
+  * بناء واجتياز اختبارات التوريد بالبونص وحساب التكلفة الفعلية وتحديث أسعار البيع بنجاح 100% (`3 passed, 16 assertions`)، مع اجتياز كامل حزمة اختبارات الصيدلية (`6 passed, 37 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-24 — المرحلة 284: تحويل شاشة توريد الأدوية للصيدلية إلى قائمة توريد متعددة البنود ديناميكية Pharmacy Multi-Item Batch Supply & Inward Invoice Processing)
 
 ### Done

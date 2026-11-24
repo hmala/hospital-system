@@ -104,7 +104,7 @@ class MedicineBatchController extends Controller
         $selectedMedicineId = $request->get('medicine_id');
         $medicines = Medicine::where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'generic_name', 'dosage_form', 'strength', 'main_unit', 'cost_price', 'sale_price', 'national_code']);
+            ->get(['id', 'name', 'generic_name', 'dosage_form', 'strength', 'main_unit', 'sub_unit', 'sub_units_count', 'cost_price', 'sale_price', 'sub_unit_sale_price', 'national_code']);
 
         return view('pharmacy.batches.create', compact('medicines', 'selectedMedicineId'));
     }
@@ -125,7 +125,11 @@ class MedicineBatchController extends Controller
                 'items.*.batch_number' => 'required|string|max:100',
                 'items.*.expiry_date' => 'required|date',
                 'items.*.initial_quantity' => 'required|integer|min:1',
+                'items.*.bonus_quantity' => 'nullable|integer|min:0',
                 'items.*.purchase_price' => 'required|numeric|min:0',
+                'items.*.sale_price' => 'nullable|numeric|min:0',
+                'items.*.sub_unit_sale_price' => 'nullable|numeric|min:0',
+                'items.*.update_prices' => 'nullable|boolean',
             ], [
                 'items.required' => 'يجب إضافة دواء واحد على الأقل في قائمة التوريد.',
                 'items.*.medicine_id.required' => 'يرجى اختيار الدواء لكل سطر.',
@@ -142,18 +146,46 @@ class MedicineBatchController extends Controller
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($validated, $receivedAt, $supplierName, $status, &$createdCount) {
                 foreach ($validated['items'] as $item) {
+                    $orderedQty = (int) $item['initial_quantity'];
+                    $bonusQty = isset($item['bonus_quantity']) ? max(0, (int) $item['bonus_quantity']) : 0;
+                    $totalReceivedBoxes = $orderedQty + $bonusQty;
+
+                    // احتساب التكلفة الفعلية للعلبة مع احتساب البونص
+                    $boxPurchasePrice = (float) $item['purchase_price'];
+                    $effectiveBoxCost = $totalReceivedBoxes > 0
+                        ? round(($orderedQty * $boxPurchasePrice) / $totalReceivedBoxes, 2)
+                        : $boxPurchasePrice;
+
                     MedicineBatch::create([
                         'medicine_id' => $item['medicine_id'],
                         'batch_number' => trim($item['batch_number']),
                         'expiry_date' => $item['expiry_date'],
-                        'initial_quantity' => (int) $item['initial_quantity'],
-                        'current_quantity' => (int) $item['initial_quantity'],
+                        'initial_quantity' => $totalReceivedBoxes,
+                        'current_quantity' => $totalReceivedBoxes,
                         'current_sub_units' => 0,
-                        'purchase_price' => (float) $item['purchase_price'],
+                        'purchase_price' => $effectiveBoxCost,
                         'supplier_name' => $supplierName,
                         'received_at' => $receivedAt,
                         'status' => $status,
                     ]);
+
+                    // تحديث أسعار الدواء المرجعية في الدليل إذا تم تحديد ذلك أو لتحديث سعر آخر تكلفة
+                    $medicine = Medicine::find($item['medicine_id']);
+                    if ($medicine) {
+                        $updateData = ['cost_price' => $boxPurchasePrice];
+
+                        if (! empty($item['update_prices'])) {
+                            if (isset($item['sale_price']) && (float) $item['sale_price'] > 0) {
+                                $updateData['sale_price'] = (float) $item['sale_price'];
+                            }
+                            if (isset($item['sub_unit_sale_price']) && (float) $item['sub_unit_sale_price'] > 0) {
+                                $updateData['sub_unit_sale_price'] = (float) $item['sub_unit_sale_price'];
+                            }
+                        }
+
+                        $medicine->update($updateData);
+                    }
+
                     $createdCount++;
                 }
             });

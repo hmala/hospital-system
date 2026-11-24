@@ -39,7 +39,7 @@ class PharmacyMultiItemBatchSupplyTest extends TestCase
         $response = $this->actingAs($pharmacyUser)->get(route('pharmacy.batches.create'));
 
         $response->assertStatus(200);
-        $response->assertSee('توريد قائمة أدوية وشحنات جديدة للصيدلية');
+        $response->assertSee('توريد شحنة أدوية بنظام الوحدات المزدوج');
         $response->assertSee('إضافة دواء آخر للقائمة');
         $response->assertSee('itemsTable');
     }
@@ -118,5 +118,68 @@ class PharmacyMultiItemBatchSupplyTest extends TestCase
             'supplier_name' => 'شركة بغداد الدوائية',
             'status' => 'active',
         ]);
+    }
+
+    public function test_pharmacy_staff_can_supply_with_bonus_and_update_medicine_prices(): void
+    {
+        $pharmacyUser = User::factory()->create();
+        $pharmacyRole = Role::firstOrCreate(['name' => 'pharmacy_staff', 'guard_name' => 'web']);
+        $pharmacyRole->syncPermissions(['view pharmacy', 'manage medicines']);
+        $pharmacyUser->assignRole($pharmacyRole);
+
+        $med = Medicine::create([
+            'name' => 'Cataflam 50mg',
+            'dosage_form' => 'حبوب',
+            'strength' => '50mg',
+            'main_unit' => 'علبة',
+            'sub_unit' => 'شريط',
+            'sub_units_count' => 2,
+            'cost_price' => 2000,
+            'sale_price' => 3000,
+            'sub_unit_sale_price' => 1500,
+            'is_active' => true,
+        ]);
+
+        // توريد 10 علب بسعر 2000 للعلبة + 2 علب بونص مجاني = 12 علبة مستلمة
+        // التكلفة الإجمالية = 20,000 د.ع / 12 علبة = 1,666.67 د.ع للعلبة
+        $postData = [
+            'supplier_name' => 'مذخر الأمل الدوائي',
+            'invoice_number' => 'INV-AMAL-101',
+            'received_at' => '2026-11-24',
+            'status' => 'active',
+            'items' => [
+                1 => [
+                    'medicine_id' => $med->id,
+                    'batch_number' => 'LOT-CAT-99',
+                    'expiry_date' => '2028-12-31',
+                    'initial_quantity' => 10,
+                    'bonus_quantity' => 2,
+                    'purchase_price' => 2000.00,
+                    'sale_price' => 3500.00,
+                    'sub_unit_sale_price' => 1750.00,
+                    'update_prices' => 1,
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($pharmacyUser)->post(route('pharmacy.batches.store'), $postData);
+
+        $response->assertRedirect(route('pharmacy.batches.index'));
+        $response->assertSessionHas('success');
+
+        // التأكد من إيداع 12 علبة بالرصيد واحتساب التكلفة الفعلية
+        $this->assertDatabaseHas('medicine_batches', [
+            'medicine_id' => $med->id,
+            'batch_number' => 'LOT-CAT-99',
+            'initial_quantity' => 12,
+            'current_quantity' => 12,
+            'purchase_price' => 1666.67,
+        ]);
+
+        // التأكد من تحديث أسعار الدواء في الدليل
+        $med->refresh();
+        $this->assertEquals(2000.00, $med->cost_price);
+        $this->assertEquals(3500.00, $med->sale_price);
+        $this->assertEquals(1750.00, $med->sub_unit_sale_price);
     }
 }
