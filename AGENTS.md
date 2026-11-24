@@ -54,6 +54,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-24 — المرحلة 287: محرك بحث ذكي للأدوية بشاشة التوريد على نسق ICD-10 مع بيان أسعار الضمان والكاش ICD-10-Styled Smart Medicine Autocomplete Supply Engine)
+
+### Done
+- **تطوير شاشة التوريد بمحرك ICD-10 الذكي ([resources/views/pharmacy/batches/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/batches/create.blade.php))**:
+  * استبدال القائمة المنسدلة التقليدية بمحرك بحث فوري لحظي يبحث بالاسم التجاري، العلمي، الرمز الوطني، والباركود.
+  * قائمة منسدلة منبثقة غنية تبرز: الرمز الوطني `#code`، العيار، الشكل الصيدلاني، معادلة التعبئة `[1 علبة = N شريط]`، وسعر الضمان المعتمد `[🛡️ ضمان: X د.ع]` مقارنة بسعر الكاش.
+  * دعم التنقل الكامل بلوحة المفاتيح عبر الأسهم (Arrow Up/Down) واختيار الدواء وتثبيته فوراً بـ (Enter) أو النقر بالماوس.
+  * إبراز شارة سعر الضمان للعلبة في السطر بجانب أسعار البيع لتفادي بيع الدواء للمضمونين بخسارة مقارنة بسعر الشراء.
+- **تحديث المتحكم ([app/Http/Controllers/Pharmacy/MedicineBatchController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/MedicineBatchController.php))**:
+  * تضمين `hi_price` و `barcode` ضمن استعلام الأدوية في `create()`.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyMultiItemBatchSupplyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyMultiItemBatchSupplyTest.php))**:
+  * اجتياز كامل حزمة الاختبارات الآلية (`5 passed, 28 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-24 — المرحلة 286: إضافة حقل معامل التعبئة القابل للتعديل لكل دواء وحساب إجمالي الأشرطة اللحظي Editable Pack Size & Real-Time Strips Calculation per Batch Row)
 
 ### Done

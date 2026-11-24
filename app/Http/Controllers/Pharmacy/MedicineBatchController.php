@@ -104,7 +104,7 @@ class MedicineBatchController extends Controller
         $selectedMedicineId = $request->get('medicine_id');
         $medicines = Medicine::where('is_active', true)
             ->orderBy('name')
-            ->get(['id', 'name', 'generic_name', 'dosage_form', 'strength', 'main_unit', 'sub_unit', 'sub_units_count', 'cost_price', 'sale_price', 'sub_unit_sale_price', 'national_code']);
+            ->get(['id', 'name', 'generic_name', 'dosage_form', 'strength', 'main_unit', 'sub_unit', 'sub_units_count', 'cost_price', 'sale_price', 'sub_unit_sale_price', 'hi_price', 'national_code', 'barcode']);
 
         return view('pharmacy.batches.create', compact('medicines', 'selectedMedicineId'));
     }
