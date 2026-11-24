@@ -2322,7 +2322,7 @@
                         @endcanany
 
                         <!-- قسم الصيدلية وصرف الأدوية (Pharmacy) -->
-                        @canany(['view pharmacy', 'manage medicines'])
+                        @if(auth()->check() && (auth()->user()->canany(['view pharmacy', 'manage medicines']) || auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'pharmacy_staff', 'pharmacist']) || in_array(auth()->user()->role, ['pharmacy_staff', 'pharmacist'])))
                         @php
                             $isPharmacyActive = request()->routeIs('pharmacy.*');
                             $pendingRxCount = \App\Models\Prescription::where('status', 'pending')->count();
@@ -2380,7 +2380,7 @@
                             </li>
                             @endcan
                         </div>
-                        @endcanany
+                        @endif
 
 
                    @canany(['manage inventory', 'view products', 'view suppliers', 'view purchases', 'view stock transfers', 'view stock transfer requests'])

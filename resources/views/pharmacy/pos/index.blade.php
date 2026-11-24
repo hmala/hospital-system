@@ -2,297 +2,425 @@
 
 @section('content')
 <style>
-/* Kanban Board Styling */
-.kanban-board {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(320px, 1fr));
-    gap: 1.25rem;
-    align-items: start;
+/* POS Custom Layout Styling */
+.pos-container {
+    min-height: calc(100vh - 120px);
 }
-@media (max-width: 992px) {
-    .kanban-board {
-        grid-template-columns: 1fr;
-    }
-}
-.kanban-col {
-    background: #f8fafc;
-    border-radius: 14px;
-    border: 1px solid #e2e8f0;
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 210px);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
-}
-.kanban-col-header {
-    padding: 1rem 1.25rem;
-    border-bottom: 2px solid transparent;
-    border-radius: 14px 14px 0 0;
-    background: #fff;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.kanban-col-new .kanban-col-header {
-    border-bottom-color: #3b82f6;
-}
-.kanban-col-pending .kanban-col-header {
-    border-bottom-color: #f59e0b;
-}
-.kanban-col-ready .kanban-col-header {
-    border-bottom-color: #10b981;
-}
-.kanban-col-body {
-    padding: 0.85rem;
-    overflow-y: auto;
-    flex-grow: 1;
-    min-height: 250px;
-}
-.kanban-card {
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 0.85rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    cursor: pointer;
+.pos-search-wrapper {
     position: relative;
 }
-.kanban-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+.pos-search-results {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    z-index: 1040;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+    max-height: 380px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    margin-top: 4px;
 }
-.kanban-card.card-ready {
-    border-left: 4px solid #10b981;
-    background: linear-gradient(to left, #ffffff, #f0fdf4);
-}
-.kanban-card.card-pending {
-    border-left: 4px solid #f59e0b;
-    background: linear-gradient(to left, #ffffff, #fffbeb);
-}
-.kanban-card.card-new {
-    border-left: 4px solid #3b82f6;
-}
-.kanban-empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-    color: #94a3b8;
-}
-/* Compact Table Styling */
-.table-pos-compact tbody tr {
-    transition: background-color 0.15s ease;
+.pos-search-item {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
     cursor: pointer;
+    transition: background-color 0.15s ease;
 }
-.table-pos-compact tbody tr:hover {
-    background-color: #f1f5f9 !important;
+.pos-search-item:last-child {
+    border-bottom: none;
 }
-.sla-badge {
+.pos-search-item:hover, .pos-search-item.active {
+    background-color: #f8fafc;
+}
+.pos-cart-table th {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: #f8fafc;
+    color: #475569;
+    border-top: none;
+}
+.pos-cart-table td {
+    vertical-align: middle;
+    padding: 0.75rem 0.6rem;
+}
+.qty-btn {
+    width: 28px;
+    height: 28px;
+    padding: 0;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 0.76rem;
-    font-weight: 600;
-    padding: 0.2rem 0.55rem;
-    border-radius: 9999px;
+    justify-content: center;
+    border-radius: 6px;
+    font-weight: bold;
 }
-.sla-green {
-    background-color: #ecfdf5;
-    color: #059669;
-    border: 1px solid #a7f3d0;
+.qty-input {
+    width: 50px;
+    text-align: center;
+    font-weight: bold;
+    border-radius: 6px;
+    padding: 2px 4px;
+    font-size: 0.9rem;
 }
-.sla-yellow {
-    background-color: #fffbeb;
-    color: #d97706;
-    border: 1px solid #fde68a;
+.unit-toggle-btn {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
 }
-.sla-red {
-    background-color: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
-    animation: pulseRed 2s infinite;
+/* Live Prescription Stream Cards */
+.rx-stream-container {
+    max-height: calc(100vh - 240px);
+    overflow-y: auto;
+    padding-right: 2px;
 }
-@keyframes pulseRed {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+.rx-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    border-right: 4px solid #3b82f6;
 }
-.filter-btn.active {
+.rx-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+}
+.rx-card.rx-emergency {
+    border-right-color: #ef4444;
+    background: linear-gradient(to left, #ffffff, #fef2f2);
+}
+.rx-card.rx-ready {
+    border-right-color: #10b981;
+    background: linear-gradient(to left, #ffffff, #f0fdf4);
+}
+.rx-card.rx-pending {
+    border-right-color: #f59e0b;
+    background: linear-gradient(to left, #ffffff, #fffbeb);
+}
+.filter-pill.active {
     background-color: #0d6efd !important;
     color: #fff !important;
     border-color: #0d6efd !important;
 }
 </style>
 
-<div class="container-fluid py-3 px-lg-4">
-    <!-- الشريط العلوي لمحطة صرف الأدوية -->
+<div class="container-fluid py-3 px-lg-4 pos-container">
+
+    <!-- 1. الشريط العلوي لمحطة الصيدلية ونقطة البيع -->
     <div class="card border-0 shadow-sm rounded-4 mb-3 bg-dark text-white p-3">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div class="d-flex align-items-center gap-3">
-                <div class="bg-success text-white p-2 rounded-3 fs-4 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                <div class="bg-primary text-white p-2 rounded-3 fs-4 d-flex align-items-center justify-content-center shadow-sm" style="width: 48px; height: 48px;">
                     <i class="fas fa-pills"></i>
                 </div>
                 <div>
                     <h5 class="mb-0 fw-bold text-white d-flex align-items-center gap-2">
-                        خط صرف وتجهيز الأدوية (Pharmacy POS Flow)
+                        صيدلية المستشفى | نقطة البيع وصرف الأدوية
                         <span class="badge bg-success-subtle text-success fs-6 rounded-pill px-3 py-1 border border-success">
                             <i class="fas fa-satellite-dish me-1 fa-fade"></i> استقبال مباشر
                         </span>
                     </h5>
-                    <small class="text-secondary">صرف وتجهيز الوصفات الطبية الإلكترونية ومقترحات البدائل لحظياً</small>
+                    <small class="text-secondary">خط صرف وتجهيز الأدوية والبيع المباشر بنظام FEFO والربط الإلكتروني</small>
                 </div>
             </div>
 
-            <!-- المؤشرات وأزرار التحكم السريعة -->
+            <!-- أزرار الإجراءات السريعة -->
             <div class="d-flex align-items-center flex-wrap gap-2">
-                <!-- أزرار التبديل بين الجدول والكانبان -->
-                <div class="btn-group btn-group-sm bg-secondary p-1 rounded-3" role="group">
-                    <button type="button" class="btn btn-sm text-white fw-bold px-3 py-1 rounded-2" id="btnViewTable" onclick="switchPosView('table')">
-                        <i class="fas fa-list-ul me-1"></i> جدول مدمج سريع
-                    </button>
-                    <button type="button" class="btn btn-sm text-white fw-bold px-3 py-1 rounded-2" id="btnViewKanban" onclick="switchPosView('kanban')">
-                        <i class="fas fa-columns me-1"></i> خط كانبان
-                    </button>
-                </div>
-
-                <!-- حقل البحث السريع الفوري / مسح الباركود -->
-                <div class="input-group input-group-sm" style="width: 260px;">
-                    <span class="input-group-text bg-secondary border-0 text-white"><i class="fas fa-barcode"></i></span>
-                    <input type="text" id="kanbanSearchInput" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="امسح باركود RX أو ابحث بالاسم...">
-                </div>
-
-                <button type="button" class="btn btn-outline-info btn-sm px-3 py-2 rounded-3" id="btnRefreshQueue" title="تحديث يدوي">
-                    <i class="fas fa-sync-alt me-1" id="refreshIcon"></i> تحديث
-                </button>
+                @if($heldCount > 0)
+                <a href="{{ route('pharmacy.pos.held') }}" class="btn btn-warning btn-sm px-3 py-2 rounded-3 fw-bold shadow-xs">
+                    <i class="fas fa-pause-circle me-1"></i> فواتير معلقة ({{ $heldCount }})
+                </a>
+                @endif
 
                 <button type="button" class="btn btn-outline-light btn-sm px-3 py-2 rounded-3" data-bs-toggle="modal" data-bs-target="#manualSearchModal">
                     <i class="fas fa-search me-1"></i> فحص رصيد / بدائل
                 </button>
 
                 <a href="{{ route('pharmacy.pos.sales.history') }}" class="btn btn-outline-secondary btn-sm px-3 py-2 rounded-3 text-white">
-                    <i class="fas fa-history me-1"></i> سجل الصرف
+                    <i class="fas fa-history me-1"></i> سجل المبيعات
                 </a>
 
                 <div class="form-check form-switch small mb-0 ms-2 text-white d-flex align-items-center gap-2">
                     <input class="form-check-input" type="checkbox" id="autoRefreshSwitch" checked>
-                    <label class="form-check-label text-secondary small" for="autoRefreshSwitch">تحديث تلقائي</label>
+                    <label class="form-check-label text-secondary small" for="autoRefreshSwitch">تحديث الوصفات تلقائياً</label>
                 </div>
-            </div>
-        </div>
-
-        <!-- شريط الفلاتر السريعة والإحصائيات اللحظية -->
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-3 mt-3 border-top border-secondary border-opacity-50">
-            <div class="d-flex align-items-center flex-wrap gap-2">
-                <span class="small text-secondary me-1"><i class="fas fa-filter me-1"></i>تصفية سريعة:</span>
-                <button type="button" class="btn btn-sm btn-outline-light py-1 px-3 rounded-pill filter-btn active" data-filter="all" onclick="setPosFilter('all')">
-                    الكل <span class="badge bg-secondary ms-1" id="filterCountAll">0</span>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-success py-1 px-3 rounded-pill filter-btn" data-filter="ready" onclick="setPosFilter('ready')">
-                    <i class="fas fa-check-double me-1"></i> جاهزة للصرف الفوري <span class="badge bg-success ms-1" id="filterCountReady">0</span>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-warning text-white py-1 px-3 rounded-pill filter-btn" data-filter="pending" onclick="setPosFilter('pending')">
-                    <i class="fas fa-hourglass-half me-1"></i> بانتظار قرار الطبيب <span class="badge bg-warning text-dark ms-1" id="filterCountPending">0</span>
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-primary py-1 px-3 rounded-pill filter-btn" data-filter="new" onclick="setPosFilter('new')">
-                    <i class="fas fa-inbox me-1"></i> جديدة واردة <span class="badge bg-primary ms-1" id="filterCountNew">0</span>
-                </button>
-            </div>
-
-            <div class="small text-secondary d-flex align-items-center gap-3">
-                <span class="d-flex align-items-center gap-1"><span class="badge bg-success rounded-circle p-1"> </span> جاهز للصرف</span>
-                <span class="d-flex align-items-center gap-1"><span class="badge bg-warning rounded-circle p-1"> </span> بديل معلق</span>
-                <span class="d-flex align-items-center gap-1"><span class="badge bg-primary rounded-circle p-1"> </span> وارد جديد</span>
-                <span class="badge bg-dark border border-secondary text-info"><i class="fas fa-keyboard me-1"></i> المسح بالباركود مفعل تلقائياً</span>
             </div>
         </div>
     </div>
 
-    <!-- 1) عرض الجدول المدمج فائق السرعة (Table View) -->
-    <div id="posTableViewContainer" class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
-        <div class="table-responsive">
-            <table class="table table-hover table-pos-compact align-middle mb-0" id="posCompactTable">
-                <thead class="table-light text-muted small border-bottom">
-                    <tr>
-                        <th style="width: 140px;">رقم الوصفة (RX)</th>
-                        <th style="width: 130px;">وقت الوصول</th>
-                        <th style="min-width: 180px;">المريض</th>
-                        <th style="min-width: 180px;">الطبيب والعيادة</th>
-                        <th style="min-width: 280px;">الأدوية والجرعات المطلوبة</th>
-                        <th style="width: 150px;" class="text-center">حالة الصرف</th>
-                        <th style="width: 150px;" class="text-center">الإجراء السريع</th>
-                    </tr>
-                </thead>
-                <tbody id="posTableBody">
-                    <!-- Dynamic Table Rows -->
-                </tbody>
-            </table>
-        </div>
-    </div>
+    <!-- 2. الشبكة الرئيسية المنقسمة (Split View): كاشير يميناً + طابور الوصفات يساراً -->
+    <div class="row g-3">
 
-    <!-- 2) عرض خط الصرف KANBAN BOARD (3 أعمدة) -->
-    <div class="kanban-board" id="posKanbanViewContainer" style="display: none;">
-        <!-- العمود 1: 📥 وصفات جديدة واردة -->
-        <div class="kanban-col kanban-col-new">
-            <div class="kanban-col-header">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="bg-primary text-white p-2 rounded-circle fs-6 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                        <i class="fas fa-inbox"></i>
+        <!-- ========================================== -->
+        <!-- الجانب الأيمن: كاشير وسلة نقطة البيع (POS Cart) -->
+        <!-- ========================================== -->
+        <div class="col-12 col-xl-7 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100 d-flex flex-column bg-white">
+
+                <!-- رأس السلة: حقل البحث السريع وقارئ الباركود -->
+                <div class="card-header bg-white border-0 pt-3 px-3 px-md-4 pb-2">
+                    <div class="pos-search-wrapper mb-2">
+                        <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border">
+                            <span class="input-group-text bg-light border-0 text-primary ps-3">
+                                <i class="fas fa-barcode fa-lg"></i>
+                            </span>
+                            <input type="text" 
+                                   id="posOmniSearchInput" 
+                                   class="form-control border-0 py-2 fs-6" 
+                                   placeholder="امسح الباركود، أو اكتب اسم الدواء أو المادة الفعالة... (اضغط Enter للإضافة السريعة)" 
+                                   autocomplete="off" 
+                                   autofocus>
+                            <span class="input-group-text bg-light border-0 text-muted pe-3">
+                                <kbd class="bg-white border text-secondary px-2 py-1 small">F2 للتركيز</kbd>
+                            </span>
+                        </div>
+
+                        <!-- قائمة نتائج البحث اللحظي المنسدلة -->
+                        <div id="posSearchResultsDropdown" class="pos-search-results" style="display: none;"></div>
                     </div>
-                    <div>
-                        <h6 class="fw-bold text-dark mb-0">وصفات واردة جديدة</h6>
-                        <small class="text-muted">بانتظار المراجعة والتجهيز</small>
+
+                    <!-- شريط بيانات العميل ونوع الفاتورة -->
+                    <div class="row g-2 align-items-center pt-2 pb-1 border-bottom">
+                        <div class="col-12 col-md-4">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted"><i class="fas fa-user"></i></span>
+                                <input type="text" id="posPatientNameInput" class="form-control" placeholder="اسم المريض (اختياري للبيع المباشر)" value="مريض مباشر OTC">
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light text-muted"><i class="fas fa-shield-alt"></i></span>
+                                <select id="posInsuranceTypeSelect" class="form-select" onchange="handleInsuranceTypeChange()">
+                                    <option value="none">نقدي كامل (Cash)</option>
+                                    <option value="health_insurance">الضمان الصحي (HI)</option>
+                                    <option value="interior_ministry">وزارة الداخلية (MOI)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-6 col-md-3" id="insuranceCategoryCol" style="display: none;">
+                            <select id="posInsuranceCategorySelect" class="form-select form-select-sm" onchange="calculateCartTotals()">
+                                <option value="">اختر فئة الضمان...</option>
+                                @foreach($insuranceCategories as $cat)
+                                <option value="{{ $cat->id }}" data-copay="{{ $cat->medication_copay }}">
+                                    {{ $cat->name }} (تحمل {{ $cat->medication_copay }}%)
+                                </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md text-md-end">
+                            <span class="badge bg-light text-dark border px-3 py-1.5" id="posActiveBillTypeBadge">
+                                <i class="fas fa-shopping-bag text-primary me-1"></i> بيع مباشر OTC
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- شريط تنبيه إذا كانت الفاتورة محملة من وصفة طبية إلكترونية -->
+                    <div id="loadedPrescriptionBanner" class="alert alert-info border-2 border-info shadow-xs rounded-3 p-2 mb-0 mt-2 d-flex justify-content-between align-items-center" style="display: none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary fs-6 px-2.5 py-1" id="bannerRxNumber">RX-0000</span>
+                            <span class="small fw-bold text-dark" id="bannerRxDoctor">د. الطبيب</span>
+                            <span class="badge bg-success-subtle text-success border border-success" id="bannerRxSource">وصفة إلكترونية</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2 rounded-2" onclick="unloadPrescriptionFromCart()" title="إلغاء ربط الوصفة والعودة للبيع المباشر">
+                            <i class="fas fa-times me-1"></i> فك الربط
+                        </button>
                     </div>
                 </div>
-                <span class="badge bg-primary rounded-pill font-monospace fs-6 px-3 py-1" id="badgeCountNew">0</span>
-            </div>
-            <div class="kanban-col-body" id="colBodyNew">
-                <!-- Dynamic Cards -->
+
+                <!-- جدول سلة الفاتورة الحالية -->
+                <div class="card-body p-0 flex-grow-1 overflow-auto" style="min-height: 280px; max-height: calc(100vh - 460px);">
+                    <div class="table-responsive h-100">
+                        <table class="table table-hover pos-cart-table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px;" class="text-center">#</th>
+                                    <th>الصنف الدوائي / المستلزم</th>
+                                    <th style="width: 130px;" class="text-center">الوحدة المباعة</th>
+                                    <th style="width: 140px;" class="text-center">الكمية</th>
+                                    <th style="width: 110px;" class="text-end">السعر</th>
+                                    <th style="width: 120px;" class="text-end">المجموع</th>
+                                    <th style="width: 50px;" class="text-center">حذف</th>
+                                </tr>
+                            </thead>
+                            <tbody id="posCartTableBody">
+                                <!-- سيتم تعبئة الأصناف عبر JavaScript -->
+                            </tbody>
+                        </table>
+
+                        <!-- حالة السلة الفارغة -->
+                        <div id="posCartEmptyState" class="text-center py-5 text-muted">
+                            <div class="mb-3">
+                                <i class="fas fa-shopping-cart fa-3x text-secondary opacity-25"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">سلة الفاتورة فارغة حالياً</h6>
+                            <p class="small text-secondary mb-0">امسح الباركود، أو ابحث عن دواء، أو اضغط <strong>«تحميل للسلة»</strong> من قائمة الوصفات يساراً.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- أسفل السلة: ملخص الفاتورة وأزرار الدفع السريع -->
+                <div class="card-footer bg-light border-top p-3 p-md-4">
+                    <div class="row g-3 align-items-center">
+                        <!-- مؤشرات المبالغ المالية -->
+                        <div class="col-12 col-md-7">
+                            <div class="row g-2 text-center text-md-start">
+                                <div class="col-4">
+                                    <small class="text-muted d-block">إجمالي الفاتورة</small>
+                                    <h4 class="fw-bold text-dark mb-0 font-monospace" id="posTotalAmountDisplay">0.00</h4>
+                                    <small class="text-muted">د.ع</small>
+                                </div>
+                                <div class="col-4 border-start">
+                                    <small class="text-success fw-semibold d-block">حصة المريض (نقداً)</small>
+                                    <h4 class="fw-bold text-success mb-0 font-monospace" id="posPatientShareDisplay">0.00</h4>
+                                    <small class="text-muted">د.ع</small>
+                                </div>
+                                <div class="col-4 border-start">
+                                    <small class="text-primary fw-semibold d-block">حصة التأمين / الضمان</small>
+                                    <h4 class="fw-bold text-primary mb-0 font-monospace" id="posInsuranceShareDisplay">0.00</h4>
+                                    <small class="text-muted">د.ع</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- أزرار الدفع والتعليق -->
+                        <div class="col-12 col-md-5 d-flex gap-2 justify-content-md-end flex-wrap">
+                            <button type="button" class="btn btn-outline-secondary px-3 py-2.5 rounded-3 fw-semibold shadow-xs" onclick="clearCart()" title="إلغاء الفاتورة بالكامل">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+
+                            <button type="button" class="btn btn-warning text-dark px-3 py-2.5 rounded-3 fw-bold shadow-xs d-flex align-items-center gap-1" onclick="submitPosSale(true)" id="btnHoldSale" title="تعليق الفاتورة (F4)">
+                                <i class="fas fa-pause"></i>
+                                <span>تعليق (F4)</span>
+                            </button>
+
+                            <button type="button" class="btn btn-success px-4 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2 flex-grow-1 justify-content-center" onclick="submitPosSale(false)" id="btnCheckoutSale">
+                                <i class="fas fa-check-circle fa-lg"></i>
+                                <span>تأكيد وصرف (F9)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
-        <!-- العمود 2: ⏳ بانتظار موافقة الطبيب على البديل -->
-        <div class="kanban-col kanban-col-pending">
-            <div class="kanban-col-header">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="bg-warning text-dark p-2 rounded-circle fs-6 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                        <i class="fas fa-hourglass-half fa-spin"></i>
+        <!-- ======================================================== -->
+        <!-- الجانب الأيسر: طابور الوصفات الطبية الإلكترونية الواردة كصفوف سريعة -->
+        <!-- ======================================================== -->
+        <div class="col-12 col-xl-5 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white d-flex flex-column">
+
+                <!-- رأس الطابور -->
+                <div class="card-header bg-white border-0 p-3 pb-2">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="bg-primary-subtle text-primary p-2 rounded-circle fs-6 d-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                                <i class="fas fa-list-ol"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold text-dark mb-0">طابور الوصفات الواردة</h6>
+                                <small class="text-muted">جدول صفوف سريع للمعاينة والتحميل الفوري</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary rounded-pill font-monospace fs-6 px-2.5 py-1" id="badgeTotalPendingRx">0</span>
+                            <button type="button" class="btn btn-sm btn-light border rounded-circle p-1.5" onclick="refreshPrescriptionsQueue(true)" title="تحديث القائمة">
+                                <i class="fas fa-sync-alt text-muted" id="rxRefreshIcon"></i>
+                            </button>
+                        </div>
                     </div>
-                    <div>
-                        <h6 class="fw-bold text-dark mb-0">بانتظار قرار الطبيب</h6>
-                        <small class="text-muted">مقترحات بدائل أدوية معلقة</small>
+
+                    <!-- شريط البحث اللحظي السريع في طابور الوصفات -->
+                    <div class="input-group input-group-sm mb-2 shadow-xs">
+                        <span class="input-group-text bg-light border-end-0 text-muted ps-2.5">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" 
+                               id="rxStreamSearchInput" 
+                               class="form-control border-start-0 border-end-0 bg-light" 
+                               placeholder="ابحث برقم الوصفة، المريض، الطبيب، أو اسم الدواء..." 
+                               oninput="handleRxStreamSearch(this.value)"
+                               autocomplete="off">
+                        <button type="button" 
+                                class="btn btn-light border border-start-0 text-muted" 
+                                id="btnRxClearSearch" 
+                                onclick="clearRxStreamSearch()" 
+                                style="display: none;" 
+                                title="مسح البحث">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- أزرار تصفية سريعة للطابور -->
+                    <div class="d-flex gap-1 overflow-auto pb-1 align-items-center justify-content-between">
+                        <div class="d-flex gap-1 overflow-auto">
+                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 filter-pill active" data-rxfilter="all" onclick="filterRxStream('all')">
+                                الكل (<span id="rxFilterCountAll">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 filter-pill" data-rxfilter="new" onclick="filterRxStream('new')">
+                                جديدة (<span id="rxFilterCountNew">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1 filter-pill" data-rxfilter="ready" onclick="filterRxStream('ready')">
+                                جاهزة (<span id="rxFilterCountReady">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-xs btn-outline-warning text-dark rounded-pill px-2.5 py-1 filter-pill" data-rxfilter="pending" onclick="filterRxStream('pending')">
+                                بدائل (<span id="rxFilterCountPending">0</span>)
+                            </button>
+                        </div>
+                        <span class="small text-muted font-monospace pe-1" id="rxSearchMatchCounter" style="display: none; font-size: 0.75rem;"></span>
                     </div>
                 </div>
-                <span class="badge bg-warning text-dark rounded-pill font-monospace fs-6 px-3 py-1" id="badgeCountPending">0</span>
-            </div>
-            <div class="kanban-col-body" id="colBodyPending">
-                <!-- Dynamic Cards -->
+
+                <!-- جدول صفوف الوصفات الواردة -->
+                <div class="card-body p-0 flex-grow-1 overflow-auto" style="min-height: 280px; max-height: calc(100vh - 460px);">
+                    <div class="table-responsive h-100">
+                        <table class="table table-hover table-sm align-middle mb-0 rx-stream-table">
+                            <thead class="table-light sticky-top small text-muted border-bottom">
+                                <tr>
+                                    <th style="width: 105px;">الوصفة</th>
+                                    <th>المريض / الطبيب</th>
+                                    <th style="width: 70px;" class="text-center">الأدوية</th>
+                                    <th style="width: 80px;" class="text-center">الحالة</th>
+                                    <th style="width: 115px;" class="text-center">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rxStreamTableBody">
+                                <!-- سيتم تحميل الصفوف عبر JavaScript -->
+                            </tbody>
+                        </table>
+                        <div id="rxStreamEmptyState" class="text-center py-5 text-muted" style="display: none;">
+                            <i class="fas fa-clipboard-check fa-3x text-secondary opacity-25 mb-2"></i>
+                            <h6 class="fw-bold text-dark mb-1">لا توجد وصفات طبية معلقة</h6>
+                            <small class="text-secondary">أي وصفة يكتبها الطبيب ستصلك هنا فوراً.</small>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
-        <!-- العمود 3: ✅ معتمدة وجاهزة للصرف الفوري -->
-        <div class="kanban-col kanban-col-ready">
-            <div class="kanban-col-header">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="bg-success text-white p-2 rounded-circle fs-6 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                        <i class="fas fa-check-double"></i>
-                    </div>
-                    <div>
-                        <h6 class="fw-bold text-dark mb-0">معتمدة وجاهزة للصرف</h6>
-                        <small class="text-muted">وافق الطبيب أو متوفرة بالكامل</small>
-                    </div>
-                </div>
-                <span class="badge bg-success rounded-pill font-monospace fs-6 px-3 py-1" id="badgeCountReady">0</span>
-            </div>
-            <div class="kanban-col-body" id="colBodyReady">
-                <!-- Dynamic Cards -->
-            </div>
-        </div>
     </div>
 </div>
 
-<!-- Modal: نافذة فحص وصرف وتجهيز الوصفة السريعة -->
+<!-- ======================================================== -->
+<!-- Modal 1: نافذة فحص وتجهيز البدائل الطبية التفاعلية -->
+<!-- ======================================================== -->
 <div class="modal fade" id="dispensingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content rounded-4 border-0 shadow-lg">
-            <!-- Modal Header -->
             <div class="modal-header bg-white py-3 px-4 border-bottom">
                 <div class="d-flex flex-wrap justify-content-between align-items-center w-100 gap-3">
                     <div class="d-flex align-items-center gap-3">
@@ -321,12 +449,9 @@
                 </div>
             </div>
 
-            <!-- Modal Body -->
             <div class="modal-body p-4 bg-light">
-                <!-- إشعار موافقة / رفض الطبيب على البديل -->
                 <div id="modalRxSubstitutionFeedbackBanner" class="mb-3" style="display: none;"></div>
 
-                <!-- ملاحظات / التشخيص إن وجد -->
                 <div class="alert alert-white bg-white border rounded-3 p-3 mb-3 d-flex align-items-center gap-2 small shadow-xs">
                     <i class="fas fa-stethoscope text-info fs-5 me-2"></i>
                     <div>
@@ -335,7 +460,6 @@
                     </div>
                 </div>
 
-                <!-- جدول الأدوية المطلوب صرفها -->
                 <div class="card border-0 shadow-sm rounded-3">
                     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                         <h6 class="fw-bold text-dark mb-0">
@@ -351,27 +475,30 @@
                                     <th style="width: 35%;">اسم الدواء والشكل</th>
                                     <th style="width: 15%;" class="text-center">الكمية المطلوبة</th>
                                     <th style="width: 25%;">الجرعة وتعليمات الاستخدام</th>
-                                    <th style="width: 20%;" class="text-center">حالة التوفر بالمخزون</th>
+                                    <th style="width: 20%;" class="text-center">حالة التوفر والبدائل</th>
                                 </tr>
                             </thead>
                             <tbody id="modalDispensingItemsBody">
-                                <!-- Dynamic Items Table -->
+                                <!-- Dynamic Items -->
                             </tbody>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- Modal Footer -->
             <div class="modal-footer bg-white p-3 border-top justify-content-between">
                 <div class="text-muted small">
-                    <i class="fas fa-shield-alt text-success me-1"></i> يتم خصم الأرصدة تلقائياً بنظام FEFO (الأقرب انتهاءً أولاً) وإشعار الطبيب فوراً.
+                    <i class="fas fa-shield-alt text-success me-1"></i> يتم الصرف بنظام FEFO وتحديث سجلات المريض تلقائياً.
                 </div>
 
                 <div class="d-flex align-items-center gap-2">
                     <a href="#" target="_blank" class="btn btn-outline-dark px-3 py-2 fw-bold rounded-3" id="modalBtnPrintPrescription">
                         <i class="fas fa-print me-1"></i> طباعة الوصفة (RX)
                     </a>
+
+                    <button type="button" class="btn btn-primary px-3 py-2 fw-bold shadow-sm rounded-3" onclick="loadCurrentModalRxIntoCart()">
+                        <i class="fas fa-arrow-right me-1"></i> نقل إلى سلة الكاشير
+                    </button>
 
                     <button type="button" class="btn btn-success btn-lg px-4 py-2 fw-bold shadow-sm rounded-3 d-flex align-items-center gap-2" id="modalBtnExecuteDispense" onclick="executeDispenseFromModal()">
                         <i class="fas fa-check-circle fa-lg"></i>
@@ -383,7 +510,9 @@
     </div>
 </div>
 
-<!-- Modal: فحص رصيد وبدائل دواء سريع -->
+<!-- ======================================================== -->
+<!-- Modal 2: فحص سريع لرصيد الأدوية والبدائل المتاحة -->
+<!-- ======================================================== -->
 <div class="modal fade" id="manualSearchModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -408,7 +537,9 @@
     </div>
 </div>
 
-<!-- Modal: استبدال الدواء ببديل مكافئ متوفر -->
+<!-- ======================================================== -->
+<!-- Modal 3: استبدال الدواء ببديل مكافئ متوفر -->
+<!-- ======================================================== -->
 <div class="modal fade" id="alternativeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -446,7 +577,7 @@
     </div>
 </div>
 
-<!-- صوت تنبيه خفيف عند اكتمال الصرف -->
+<!-- تنبيه صوتي خفيف عند الصرف -->
 <audio id="dispenseAudio" preload="auto">
     <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
 </audio>
@@ -454,15 +585,20 @@
 
 @push('scripts')
 <script>
+    // ==========================================
+    // الحالة العامة ونظام السلة اللحظي (POS State)
+    // ==========================================
+    let posCart = []; // بنود السلة الحالية
+    let currentLoadedPrescription = null; // الوصفة المحملة حالياً إن وجدت
     let currentSelectedRxId = null;
     let currentPrescriptionData = null;
-    let autoRefreshTimer = null;
     let targetItemForAlternative = null;
     let allPrescriptionsCache = [];
-    let currentViewMode = localStorage.getItem('pos_view_mode') || 'table';
-    let currentPosFilter = 'all';
+    let currentRxStreamFilter = 'all';
+    let currentRxSearchQuery = '';
+    let autoRefreshTimer = null;
 
-    // مخزن الباركود من الماسح الضوئي
+    // ذاكرة ماسح الباركود
     let barcodeScannerBuffer = '';
     let barcodeScannerLastTime = 0;
 
@@ -475,14 +611,32 @@
             }
         });
 
-        // تهيئة وضع العرض المفضل
-        switchPosView(currentViewMode, false);
-
-        // تشغيل التحديث التلقائي كل 10 ثوان
-        startAutoRefresh();
+        // تشغيل تدفق طابور الوصفات
         refreshPrescriptionsQueue(true);
+        startAutoRefresh();
 
-        // التبديل اليدوي للتحديث التلقائي
+        // ربط حقل البحث اللحظي السريع عن الأدوية
+        const searchInput = document.getElementById('posOmniSearchInput');
+        searchInput.addEventListener('input', debounce(function() {
+            handleOmniSearch(this.value.trim());
+        }, 250));
+
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                selectFirstSearchResult();
+            }
+        });
+
+        // إغلاق قائمة البحث عند النقر خارجها
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('posSearchResultsDropdown');
+            if (dropdown && !dropdown.contains(e.target) && e.target !== searchInput) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        // التحديث التلقائي
         document.getElementById('autoRefreshSwitch').addEventListener('change', function(e) {
             if (e.target.checked) {
                 startAutoRefresh();
@@ -491,20 +645,37 @@
             }
         });
 
-        // زر التحديث اليدوي
-        document.getElementById('btnRefreshQueue').addEventListener('click', function() {
-            refreshPrescriptionsQueue(true);
+        // اختصارات لوحة المفاتيح
+        document.addEventListener('keydown', function(e) {
+            // F2: التركيز على حقل البحث
+            if (e.key === 'F2') {
+                e.preventDefault();
+                searchInput.focus();
+                searchInput.select();
+            }
+            // F9: دفع وصرف
+            if (e.key === 'F9') {
+                e.preventDefault();
+                submitPosSale(false);
+            }
+            // F4: تعليق الفاتورة
+            if (e.key === 'F4') {
+                e.preventDefault();
+                submitPosSale(true);
+            }
+            // مفتاح Space لتأكيد الصرف من داخل المودال إن كان مفتوحاً
+            if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+                const modal = document.getElementById('dispensingModal');
+                if (modal && modal.classList.contains('show')) {
+                    e.preventDefault();
+                    executeDispenseFromModal();
+                }
+            }
         });
 
-        // البحث الفوري في الجدول والكانبان
-        document.getElementById('kanbanSearchInput').addEventListener('input', function() {
-            renderAllViews();
-        });
-
-        // ماسح الباركود الضوئي المباشر (Hardware Barcode Gun Listener)
+        // مستمع الباركود التلقائي (Hardware Gun)
         document.addEventListener('keydown', function(e) {
             const now = Date.now();
-            // إذا كان المدخل سريعاً (أقل من 60ms بين المفاتيح فهو ماسح باركود)
             if (now - barcodeScannerLastTime > 100) {
                 barcodeScannerBuffer = '';
             }
@@ -512,14 +683,18 @@
 
             if (e.key === 'Enter') {
                 if (barcodeScannerBuffer.length >= 3) {
-                    const scannedCode = barcodeScannerBuffer.trim().toLowerCase();
+                    const scannedCode = barcodeScannerBuffer.trim();
+                    // إذا كان يبدأ بـ RX أو يحتوي على شرطة، قد يكون رقم وصفة
                     const matchedRx = allPrescriptionsCache.find(r => 
-                        (r.prescription_number || '').toLowerCase() === scannedCode ||
-                        (r.prescription_number || '').toLowerCase().replace(/[^a-z0-9]/g, '') === scannedCode.replace(/[^a-z0-9]/g, '')
+                        (r.prescription_number || '').toLowerCase() === scannedCode.toLowerCase()
                     );
+
                     if (matchedRx) {
                         e.preventDefault();
-                        openDispensingModal(matchedRx.id);
+                        loadPrescriptionIntoCart(matchedRx.id);
+                    } else {
+                        // مسح باركود دواء عادي
+                        quickScanMedicineBarcode(scannedCode);
                     }
                 }
                 barcodeScannerBuffer = '';
@@ -528,7 +703,7 @@
             }
         });
 
-        // نافذة فحص الأدوية السريعة
+        // حقل فحص رصيد الأدوية بالمودال
         const quickSearchMedInput = document.getElementById('quickSearchMedInput');
         if (quickSearchMedInput) {
             quickSearchMedInput.addEventListener('input', debounce(function() {
@@ -550,7 +725,7 @@
             }, 300));
         }
 
-        // البحث عن بدائل داخل مودال البدائل
+        // مودال البدائل
         const modalAltSearchInput = document.getElementById('modalAltSearchInput');
         if (modalAltSearchInput) {
             modalAltSearchInput.addEventListener('input', debounce(function() {
@@ -568,231 +743,470 @@
             }, 300));
         }
 
-        // اختصار لوحة المفاتيح: Space لتأكيد الصرف عند فتح المودال
-        document.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-                const modal = document.getElementById('dispensingModal');
-                if (modal.classList.contains('show')) {
-                    e.preventDefault();
-                    executeDispenseFromModal();
-                }
-            }
-        });
+        renderCart();
     });
 
-    // تبديل نمط العرض (جدول / كانبان)
-    function switchPosView(mode, savePreference = true) {
-        currentViewMode = mode;
-        if (savePreference) {
-            localStorage.setItem('pos_view_mode', mode);
-        }
+    // ==========================================
+    // إدارة سلة نقطة البيع (POS Cart Management)
+    // ==========================================
 
-        const tableBtn = document.getElementById('btnViewTable');
-        const kanbanBtn = document.getElementById('btnViewKanban');
-        const tableContainer = document.getElementById('posTableViewContainer');
-        const kanbanContainer = document.getElementById('posKanbanViewContainer');
+    function addToCart(medicine, unitType = 'main_unit', quantity = 1, dosageInstructions = '') {
+        const existingIdx = posCart.findIndex(item => item.medicine_id === medicine.id && item.unit_type === unitType);
 
-        if (mode === 'table') {
-            tableBtn.className = 'btn btn-sm btn-primary text-white fw-bold px-3 py-1 rounded-2 shadow-xs';
-            kanbanBtn.className = 'btn btn-sm text-white-50 fw-bold px-3 py-1 rounded-2';
-            tableContainer.style.display = 'block';
-            kanbanContainer.style.display = 'none';
+        if (existingIdx >= 0) {
+            posCart[existingIdx].quantity += quantity;
         } else {
-            tableBtn.className = 'btn btn-sm text-white-50 fw-bold px-3 py-1 rounded-2';
-            kanbanBtn.className = 'btn btn-sm btn-primary text-white fw-bold px-3 py-1 rounded-2 shadow-xs';
-            tableContainer.style.display = 'none';
-            kanbanContainer.style.display = 'grid';
+            posCart.push({
+                item_type: 'medicine',
+                medicine_id: medicine.id,
+                name: medicine.name,
+                dosage_form: medicine.dosage_form || '',
+                strength: medicine.strength || '',
+                unit_type: unitType,
+                main_unit: medicine.main_unit || 'علبة',
+                sub_unit: medicine.sub_unit || 'شريط',
+                sub_units_count: medicine.sub_units_count || 1,
+                quantity: quantity,
+                sale_price: parseFloat(medicine.sale_price) || 0,
+                sub_unit_sale_price: parseFloat(medicine.sub_unit_sale_price) || (parseFloat(medicine.sale_price) / (medicine.sub_units_count || 1)),
+                hi_price: parseFloat(medicine.hi_price) || parseFloat(medicine.sale_price) || 0,
+                moi_price: parseFloat(medicine.moi_price) || parseFloat(medicine.sale_price) || 0,
+                total_stock: medicine.total_stock || 0,
+                dosage_instructions: dosageInstructions
+            });
         }
 
-        renderAllViews();
+        renderCart();
+        const searchInput = document.getElementById('posOmniSearchInput');
+        searchInput.value = '';
+        document.getElementById('posSearchResultsDropdown').style.display = 'none';
+        searchInput.focus();
     }
 
-    // تعيين فلتر التصفية السريع
-    function setPosFilter(filter) {
-        currentPosFilter = filter;
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            if (btn.getAttribute('data-filter') === filter) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
+    function updateCartItemQty(index, newQty) {
+        newQty = parseFloat(newQty);
+        if (isNaN(newQty) || newQty <= 0) {
+            removeFromCart(index);
+            return;
+        }
+        posCart[index].quantity = newQty;
+        renderCart();
+    }
+
+    function toggleCartItemUnit(index) {
+        const item = posCart[index];
+        item.unit_type = (item.unit_type === 'main_unit') ? 'sub_unit' : 'main_unit';
+        renderCart();
+    }
+
+    function removeFromCart(index) {
+        posCart.splice(index, 1);
+        renderCart();
+    }
+
+    function clearCart() {
+        posCart = [];
+        currentLoadedPrescription = null;
+        document.getElementById('loadedPrescriptionBanner').style.display = 'none';
+        document.getElementById('posPatientNameInput').value = 'مريض مباشر OTC';
+        document.getElementById('posInsuranceTypeSelect').value = 'none';
+        handleInsuranceTypeChange();
+        renderCart();
+    }
+
+    function renderCart() {
+        const tbody = document.getElementById('posCartTableBody');
+        const emptyState = document.getElementById('posCartEmptyState');
+
+        if (posCart.length === 0) {
+            tbody.innerHTML = '';
+            emptyState.style.display = 'block';
+            calculateCartTotals();
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        let html = '';
+
+        posCart.forEach((item, index) => {
+            const isSub = (item.unit_type === 'sub_unit');
+            const unitLabel = isSub ? item.sub_unit : item.main_unit;
+            const currentPrice = isSub ? item.sub_unit_sale_price : item.sale_price;
+            const lineTotal = currentPrice * item.quantity;
+
+            html += `
+                <tr>
+                    <td class="text-center text-muted fw-bold">${index + 1}</td>
+                    <td>
+                        <div class="fw-bold text-dark">${item.name}</div>
+                        <div class="small text-muted">
+                            ${item.dosage_form ? `<span class="badge bg-light text-secondary border me-1">${item.dosage_form}</span>` : ''}
+                            ${item.strength ? `<span class="badge bg-light text-secondary border me-1">${item.strength}</span>` : ''}
+                            ${item.dosage_instructions ? `<span class="text-primary small ms-1"><i class="fas fa-info-circle me-1"></i>${item.dosage_instructions}</span>` : ''}
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <button type="button" 
+                                class="btn btn-sm ${isSub ? 'btn-info text-dark' : 'btn-primary text-white'} unit-toggle-btn shadow-xs" 
+                                onclick="toggleCartItemUnit(${index})" 
+                                title="اضغط للتبديل بين علبة وشريط">
+                            <i class="fas fa-exchange-alt me-1"></i> ${unitLabel}
+                        </button>
+                    </td>
+                    <td class="text-center">
+                        <div class="d-inline-flex align-items-center gap-1">
+                            <button type="button" class="btn btn-sm btn-light border qty-btn" onclick="updateCartItemQty(${index}, ${item.quantity - 1})">-</button>
+                            <input type="number" 
+                                   class="form-control form-control-sm qty-input" 
+                                   value="${item.quantity}" 
+                                   min="0.1" 
+                                   step="1" 
+                                   onchange="updateCartItemQty(${index}, this.value)">
+                            <button type="button" class="btn btn-sm btn-light border qty-btn" onclick="updateCartItemQty(${index}, ${item.quantity + 1})">+</button>
+                        </div>
+                    </td>
+                    <td class="text-end fw-semibold text-dark font-monospace">${formatMoney(currentPrice)}</td>
+                    <td class="text-end fw-bold text-success font-monospace">${formatMoney(lineTotal)}</td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm text-danger p-0" onclick="removeFromCart(${index})" title="حذف الصنف">
+                            <i class="fas fa-times-circle fa-lg"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+        calculateCartTotals();
+    }
+
+    function calculateCartTotals() {
+        const insuranceType = document.getElementById('posInsuranceTypeSelect').value;
+        const categorySelect = document.getElementById('posInsuranceCategorySelect');
+        let copayPercent = 0;
+
+        if (insuranceType === 'health_insurance' && categorySelect && categorySelect.value) {
+            const selectedOpt = categorySelect.options[categorySelect.selectedIndex];
+            copayPercent = parseFloat(selectedOpt.getAttribute('data-copay')) || 0;
+        }
+
+        let total = 0;
+        let patientShare = 0;
+        let insuranceShare = 0;
+
+        posCart.forEach(item => {
+            const isSub = (item.unit_type === 'sub_unit');
+            let basePrice = isSub ? item.sub_unit_sale_price : item.sale_price;
+
+            if (insuranceType === 'health_insurance') {
+                basePrice = isSub ? (item.hi_price / (item.sub_units_count || 1)) : item.hi_price;
+            } else if (insuranceType === 'interior_ministry') {
+                basePrice = isSub ? (item.moi_price / (item.sub_units_count || 1)) : item.moi_price;
+            }
+
+            const lineTotal = basePrice * item.quantity;
+            total += lineTotal;
+
+            if (insuranceType === 'none') {
+                patientShare += lineTotal;
+            } else if (insuranceType === 'health_insurance') {
+                const linePatientShare = (lineTotal * copayPercent) / 100;
+                patientShare += linePatientShare;
+                insuranceShare += (lineTotal - linePatientShare);
+            } else if (insuranceType === 'interior_ministry') {
+                insuranceShare += lineTotal;
             }
         });
-        renderAllViews();
+
+        document.getElementById('posTotalAmountDisplay').innerText = formatMoney(total);
+        document.getElementById('posPatientShareDisplay').innerText = formatMoney(patientShare);
+        document.getElementById('posInsuranceShareDisplay').innerText = formatMoney(insuranceShare);
     }
+
+    function handleInsuranceTypeChange() {
+        const type = document.getElementById('posInsuranceTypeSelect').value;
+        const catCol = document.getElementById('insuranceCategoryCol');
+        const badge = document.getElementById('posActiveBillTypeBadge');
+
+        if (type === 'health_insurance') {
+            catCol.style.display = 'block';
+            badge.innerHTML = '<i class="fas fa-shield-alt text-success me-1"></i> الضمان الصحي (HI)';
+            badge.className = 'badge bg-success-subtle text-success border border-success px-3 py-1.5';
+        } else if (type === 'interior_ministry') {
+            catCol.style.display = 'none';
+            badge.innerHTML = '<i class="fas fa-shield-alt text-info me-1"></i> وزارة الداخلية (MOI)';
+            badge.className = 'badge bg-info-subtle text-info border border-info px-3 py-1.5';
+        } else {
+            catCol.style.display = 'none';
+            badge.innerHTML = '<i class="fas fa-shopping-bag text-primary me-1"></i> بيع مباشر OTC';
+            badge.className = 'badge bg-light text-dark border px-3 py-1.5';
+        }
+
+        calculateCartTotals();
+    }
+
+    // ==========================================
+    // البحث اللحظي عن الأدوية (Omni Search)
+    // ==========================================
+
+    let lastSearchResults = [];
+
+    function handleOmniSearch(query) {
+        const dropdown = document.getElementById('posSearchResultsDropdown');
+        if (!query || query.length < 1) {
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        fetch(`{{ route('pharmacy.pos.search') }}?q=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+                lastSearchResults = data.medicines || [];
+                renderSearchResultsDropdown(lastSearchResults);
+            })
+            .catch(err => {
+                console.error('Error searching medicines:', err);
+            });
+    }
+
+    function renderSearchResultsDropdown(medicines) {
+        const dropdown = document.getElementById('posSearchResultsDropdown');
+        if (!medicines || medicines.length === 0) {
+            dropdown.innerHTML = `
+                <div class="p-3 text-center text-muted small">
+                    <i class="fas fa-exclamation-circle me-1 text-warning"></i> لم يتم العثور على أدوية مطابقة
+                </div>`;
+            dropdown.style.display = 'block';
+            return;
+        }
+
+        let html = '';
+        medicines.forEach((med, idx) => {
+            const hasStock = (med.total_stock > 0 || (med.total_open_sub_units && med.total_open_sub_units > 0));
+            html += `
+                <div class="pos-search-item d-flex justify-content-between align-items-center" onclick="addToCartByIndex(${idx})">
+                    <div>
+                        <div class="fw-bold text-dark">${med.name}</div>
+                        <div class="small text-muted">
+                            ${med.generic_name ? `<span class="me-2"><i class="fas fa-flask text-secondary me-1"></i>${med.generic_name}</span>` : ''}
+                            ${med.dosage_form ? `<span class="badge bg-light text-secondary border me-1">${med.dosage_form}</span>` : ''}
+                            ${med.strength ? `<span class="badge bg-light text-secondary border">${med.strength}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-primary font-monospace">${formatMoney(med.sale_price)} د.ع</div>
+                        <div class="small">
+                            ${hasStock 
+                                ? `<span class="badge bg-success-subtle text-success">متوفر: ${med.total_stock} ${med.main_unit || 'علبة'}</span>`
+                                : `<span class="badge bg-danger-subtle text-danger">نفد الرصيد</span>`}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        dropdown.innerHTML = html;
+        dropdown.style.display = 'block';
+    }
+
+    function addToCartByIndex(index) {
+        if (lastSearchResults[index]) {
+            addToCart(lastSearchResults[index]);
+        }
+    }
+
+    function selectFirstSearchResult() {
+        if (lastSearchResults.length > 0) {
+            addToCart(lastSearchResults[0]);
+        }
+    }
+
+    function quickScanMedicineBarcode(barcode) {
+        fetch(`{{ route('pharmacy.pos.search') }}?q=${encodeURIComponent(barcode)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.medicines && data.medicines.length > 0) {
+                    addToCart(data.medicines[0]);
+                }
+            });
+    }
+
+    // ========================================================
+    // طابور الوصفات الواردة اللحظية (Prescriptions Stream)
+    // ========================================================
 
     function startAutoRefresh() {
         clearInterval(autoRefreshTimer);
         autoRefreshTimer = setInterval(() => {
             refreshPrescriptionsQueue(false);
-        }, 10000);
+        }, 8000);
     }
 
-    // تحديث طابور الوصفات بالـ AJAX
     function refreshPrescriptionsQueue(showSpinner = false) {
-        const refreshIcon = document.getElementById('refreshIcon');
-        if (showSpinner && refreshIcon) refreshIcon.classList.add('fa-spin');
+        const icon = document.getElementById('rxRefreshIcon');
+        if (showSpinner && icon) icon.classList.add('fa-spin');
 
         fetch(`{{ route('pharmacy.pos.pending-prescriptions') }}`)
             .then(res => res.json())
             .then(data => {
-                if (showSpinner && refreshIcon) refreshIcon.classList.remove('fa-spin');
+                if (showSpinner && icon) icon.classList.remove('fa-spin');
                 if (data.success) {
                     allPrescriptionsCache = data.prescriptions || [];
-                    renderAllViews();
+                    renderRxStream();
                 }
             })
             .catch(err => {
-                if (showSpinner && refreshIcon) refreshIcon.classList.remove('fa-spin');
-                console.error('Error fetching pending prescriptions:', err);
+                if (showSpinner && icon) icon.classList.remove('fa-spin');
+                console.error('Error fetching prescriptions queue:', err);
             });
     }
 
-    // رسم كافة العروض (الجدول والكانبان والعدادات)
-    function renderAllViews() {
-        const searchInput = document.getElementById('kanbanSearchInput');
-        const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
-
-        // 1. تحديث إحصائيات العدادات العامة
-        const allItems = allPrescriptionsCache;
-        const newItems = allItems.filter(rx => rx.stage === 'new');
-        const pendingItems = allItems.filter(rx => rx.stage === 'awaiting_doctor');
-        const readyItems = allItems.filter(rx => rx.stage === 'approved_ready');
-
-        document.getElementById('filterCountAll').innerText = allItems.length;
-        document.getElementById('filterCountReady').innerText = readyItems.length;
-        document.getElementById('filterCountPending').innerText = pendingItems.length;
-        document.getElementById('filterCountNew').innerText = newItems.length;
-
-        document.getElementById('badgeCountNew').innerText = newItems.length;
-        document.getElementById('badgeCountPending').innerText = pendingItems.length;
-        document.getElementById('badgeCountReady').innerText = readyItems.length;
-
-        // 2. تطبيق التصفية والبحث
-        let filtered = allItems;
-
-        if (currentPosFilter === 'ready') {
-            filtered = filtered.filter(rx => rx.stage === 'approved_ready');
-        } else if (currentPosFilter === 'pending') {
-            filtered = filtered.filter(rx => rx.stage === 'awaiting_doctor');
-        } else if (currentPosFilter === 'new') {
-            filtered = filtered.filter(rx => rx.stage === 'new');
-        }
-
-        if (query.length > 0) {
-            filtered = filtered.filter(rx => 
-                (rx.prescription_number || '').toLowerCase().includes(query) ||
-                (rx.patient_name || '').toLowerCase().includes(query) ||
-                (rx.doctor_name || '').toLowerCase().includes(query) ||
-                (rx.items_summary || []).some(i => (i.name || '').toLowerCase().includes(query))
-            );
-        }
-
-        // 3. رسم الجدول ورسم الكانبان
-        renderCompactTable(filtered);
-        renderKanbanBoard(filtered);
+    function filterRxStream(filter) {
+        currentRxStreamFilter = filter;
+        document.querySelectorAll('.filter-pill').forEach(btn => {
+            if (btn.getAttribute('data-rxfilter') === filter) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        renderRxStream();
     }
 
-    // رسم الجدول المدمج فائق السرعة
-    function renderCompactTable(prescriptions) {
-        const tbody = document.getElementById('posTableBody');
+    function handleRxStreamSearch(val) {
+        currentRxSearchQuery = (val || '').trim().toLowerCase();
+        const clearBtn = document.getElementById('btnRxClearSearch');
+        if (clearBtn) {
+            clearBtn.style.display = currentRxSearchQuery ? 'block' : 'none';
+        }
+        renderRxStream();
+    }
+
+    function clearRxStreamSearch() {
+        const input = document.getElementById('rxStreamSearchInput');
+        if (input) input.value = '';
+        currentRxSearchQuery = '';
+        const clearBtn = document.getElementById('btnRxClearSearch');
+        if (clearBtn) clearBtn.style.display = 'none';
+        renderRxStream();
+    }
+
+    function renderRxStream() {
+        const tbody = document.getElementById('rxStreamTableBody');
+        const emptyState = document.getElementById('rxStreamEmptyState');
         if (!tbody) return;
 
-        if (prescriptions.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center py-5 text-muted">
-                        <i class="fas fa-inbox fa-3x mb-3 text-secondary opacity-50"></i>
-                        <h6 class="fw-bold">لا توجد طلبات وصفات تطابق خيارات التصفية الحالية</h6>
-                        <small>ستظهر الوصفات تلقائياً فور كتابتها في العيادات الاستشارية</small>
-                    </td>
-                </tr>
-            `;
+        const all = allPrescriptionsCache;
+        const newCount = all.filter(r => r.stage === 'new').length;
+        const readyCount = all.filter(r => r.stage === 'approved_ready').length;
+        const pendingCount = all.filter(r => r.stage === 'awaiting_doctor').length;
+
+        document.getElementById('badgeTotalPendingRx').innerText = all.length;
+        document.getElementById('rxFilterCountAll').innerText = all.length;
+        document.getElementById('rxFilterCountNew').innerText = newCount;
+        document.getElementById('rxFilterCountReady').innerText = readyCount;
+        document.getElementById('rxFilterCountPending').innerText = pendingCount;
+
+        let filtered = all;
+        if (currentRxStreamFilter === 'new') {
+            filtered = all.filter(r => r.stage === 'new');
+        } else if (currentRxStreamFilter === 'ready') {
+            filtered = all.filter(r => r.stage === 'approved_ready');
+        } else if (currentRxStreamFilter === 'pending') {
+            filtered = all.filter(r => r.stage === 'awaiting_doctor');
+        }
+
+        // تطبيق البحث النصي اللحظي
+        if (currentRxSearchQuery) {
+            filtered = filtered.filter(rx => {
+                const rxNum = (rx.prescription_number || '').toLowerCase();
+                const patName = (rx.patient_name || '').toLowerCase();
+                const docName = (rx.doctor_name || '').toLowerCase();
+                const medNames = (rx.items_summary || []).map(i => (i.name || '').toLowerCase()).join(' ');
+                
+                return rxNum.includes(currentRxSearchQuery) ||
+                       patName.includes(currentRxSearchQuery) ||
+                       docName.includes(currentRxSearchQuery) ||
+                       medNames.includes(currentRxSearchQuery);
+            });
+        }
+
+        const matchCounter = document.getElementById('rxSearchMatchCounter');
+        if (matchCounter) {
+            if (currentRxSearchQuery) {
+                matchCounter.innerText = `${filtered.length} نتيجة`;
+                matchCounter.style.display = 'inline-block';
+            } else {
+                matchCounter.style.display = 'none';
+            }
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            if (emptyState) {
+                emptyState.style.display = 'block';
+                const emptyTitle = emptyState.querySelector('h6');
+                const emptyDesc = emptyState.querySelector('small');
+                if (currentRxSearchQuery) {
+                    if (emptyTitle) emptyTitle.innerText = 'لا توجد نتائج مطابقة للبحث';
+                    if (emptyDesc) emptyDesc.innerText = `لم يتم العثور على وصفات تطابق: "${currentRxSearchQuery}"`;
+                } else {
+                    if (emptyTitle) emptyTitle.innerText = 'لا توجد وصفات طبية معلقة';
+                    if (emptyDesc) emptyDesc.innerText = 'أي وصفة يكتبها الطبيب ستصلك هنا فوراً.';
+                }
+            }
             return;
         }
 
+        if (emptyState) emptyState.style.display = 'none';
+
         let html = '';
-        prescriptions.forEach((rx, index) => {
-            // احتساب شارة وقت الانتظار SLA
-            let slaClass = 'sla-green';
-            let slaText = rx.time_ago || 'الآن';
-            if (rx.time_ago && (rx.time_ago.includes('ساعة') || rx.time_ago.includes('ساعات') || rx.time_ago.includes('hour'))) {
-                slaClass = 'sla-red';
-            } else if (rx.time_ago && (rx.time_ago.includes('15') || rx.time_ago.includes('20') || rx.time_ago.includes('30') || rx.time_ago.includes('40') || rx.time_ago.includes('50'))) {
-                slaClass = 'sla-yellow';
-            }
+        filtered.forEach(rx => {
+            const isEmerg = rx.is_emergency;
+            let statusBadge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">جديدة</span>';
 
-            // ملخص الأدوية
-            const itemsPills = (rx.items_summary || []).map(it => {
-                let badgeStyle = 'bg-light text-dark border';
-                let icon = 'fa-pills';
-                if (it.substitution_status === 'approved') {
-                    badgeStyle = 'bg-success text-white';
-                    icon = 'fa-check';
-                } else if (it.substitution_status === 'pending_approval') {
-                    badgeStyle = 'bg-warning text-dark border border-warning';
-                    icon = 'fa-hourglass-half';
-                }
-                return `<span class="badge ${badgeStyle} small me-1 mb-1 px-2 py-1"><i class="fas ${icon} me-1"></i>${it.name}</span>`;
-            }).join('');
-
-            // شارة الحالة وزر الإجراء
-            let statusBadge = '';
-            let actionBtn = '';
-
-            if (rx.stage === 'approved_ready') {
-                statusBadge = `<span class="badge bg-success px-3 py-2 fs-6 rounded-pill"><i class="fas fa-check-circle me-1"></i> جاهزة للصرف</span>`;
-                actionBtn = `
-                    <button type="button" class="btn btn-success btn-sm w-100 fw-bold shadow-xs py-2 d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-check-double fa-lg"></i> ⚡ صرف فوري
-                    </button>
-                `;
+            if (isEmerg) {
+                statusBadge = '<span class="badge bg-danger">🚨 طوارئ</span>';
+            } else if (rx.stage === 'approved_ready') {
+                statusBadge = '<span class="badge bg-success-subtle text-success border border-success">معتمدة جاهزة</span>';
             } else if (rx.stage === 'awaiting_doctor') {
-                statusBadge = `<span class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill border border-warning"><i class="fas fa-hourglass-half me-1"></i> بانتظار الطبيب</span>`;
-                actionBtn = `
-                    <button type="button" class="btn btn-outline-warning text-dark btn-sm w-100 fw-bold shadow-xs py-2 d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-search-plus"></i> مراجعة البديل
-                    </button>
-                `;
-            } else {
-                statusBadge = `<span class="badge bg-primary px-3 py-2 fs-6 rounded-pill"><i class="fas fa-inbox me-1"></i> واردة جديدة</span>`;
-                actionBtn = `
-                    <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-xs py-2 d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-tasks"></i> ⚡ فحص وتجهيز
-                    </button>
-                `;
+                statusBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning">بانتظار الطبيب</span>';
             }
+
+            const itemsPreview = (rx.items_summary || []).map(i => i.name).join('، ');
+            const itemsCount = (rx.items_summary || []).length;
 
             html += `
-                <tr onclick="openDispensingModal(${rx.id})">
-                    <td class="font-monospace fw-bold text-primary">
-                        <span class="fs-6 d-block">${rx.prescription_number}</span>
-                        <small class="text-muted font-monospace">#${rx.id}</small>
+                <tr class="${isEmerg ? 'table-danger' : (rx.stage === 'approved_ready' ? 'table-success-subtle' : '')}" style="cursor: pointer;" onclick="loadPrescriptionIntoCart(${rx.id})" title="انقر لتحميل الوصفة إلى سلة الكاشير">
+                    <td>
+                        <div class="fw-bold ${isEmerg ? 'text-danger' : 'text-primary'} font-monospace small">
+                            ${rx.prescription_number}
+                        </div>
+                        <small class="text-muted font-monospace" style="font-size: 0.72rem;">${rx.time_ago}</small>
                     </td>
                     <td>
-                        <span class="sla-badge ${slaClass}">
-                            <i class="far fa-clock"></i> ${slaText}
+                        <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">${rx.patient_name}</div>
+                        <small class="text-muted d-block text-truncate" style="max-width: 150px; font-size: 0.73rem;">
+                            <i class="fas fa-user-md text-primary me-1"></i>${rx.doctor_name}
+                        </small>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-light text-dark border px-2 py-1 font-monospace" title="${itemsPreview}">
+                            ${itemsCount} أصناف
                         </span>
-                    </td>
-                    <td>
-                        <div class="fw-bold text-dark fs-6">
-                            <i class="fas fa-user text-secondary me-1"></i>${rx.patient_name}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="fw-semibold text-dark small">
-                            <i class="fas fa-user-md text-info me-1"></i>${rx.doctor_name}
-                        </div>
-                    </td>
-                    <td>
-                        <div class="d-flex flex-wrap align-items-center">
-                            ${itemsPills}
-                        </div>
                     </td>
                     <td class="text-center">
                         ${statusBadge}
                     </td>
-                    <td class="text-center" style="min-width: 140px;">
-                        ${actionBtn}
+                    <td class="text-center" onclick="event.stopPropagation()">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2 py-1 shadow-xs" onclick="loadPrescriptionIntoCart(${rx.id})" title="تحميل أدوية الوصفة للسلة">
+                                <i class="fas fa-arrow-right"></i> تحميل
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" onclick="openDispensingModal(${rx.id})" title="فحص الأدوية واقتراح البدائل">
+                                <i class="fas fa-sliders-h"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -801,123 +1215,147 @@
         tbody.innerHTML = html;
     }
 
-    // رسم لوحة الكانبان بالأعمدة الثلاثة
-    function renderKanbanBoard(prescriptions) {
-        const colNew = document.getElementById('colBodyNew');
-        const colPending = document.getElementById('colBodyPending');
-        const colReady = document.getElementById('colBodyReady');
-        if (!colNew || !colPending || !colReady) return;
+    // تحميل أدوية الوصفة مباشرة في سلة الكاشير
+    function loadPrescriptionIntoCart(rxId) {
+        fetch(`{{ url('pharmacy/pos/prescriptions') }}/${rxId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success || !data.prescription) {
+                    alert('تعذر تحميل بيانات الوصفة');
+                    return;
+                }
 
-        const newItems = prescriptions.filter(rx => rx.stage === 'new');
-        const pendingItems = prescriptions.filter(rx => rx.stage === 'awaiting_doctor');
-        const readyItems = prescriptions.filter(rx => rx.stage === 'approved_ready');
+                const rx = data.prescription;
+                currentLoadedPrescription = rx;
 
-        // العمود 1: جديدة
-        if (newItems.length === 0) {
-            colNew.innerHTML = `
-                <div class="kanban-empty-state">
-                    <i class="fas fa-check-circle fa-2x mb-2 text-success opacity-50"></i>
-                    <p class="small mb-0">لا توجد وصفات جديدة</p>
-                </div>`;
-        } else {
-            colNew.innerHTML = newItems.map(rx => createKanbanCardHtml(rx, 'new')).join('');
-        }
+                // تفريغ السلة القديمة وتحميل الجديدة
+                posCart = [];
+                (rx.items || []).forEach(item => {
+                    posCart.push({
+                        item_type: 'medicine',
+                        medicine_id: item.medicine_id,
+                        name: item.name,
+                        dosage_form: item.dosage_form || '',
+                        strength: item.strength || '',
+                        unit_type: item.unit_type || 'main_unit',
+                        main_unit: item.main_unit || 'علبة',
+                        sub_unit: item.sub_unit || 'شريط',
+                        sub_units_count: item.sub_units_count || 1,
+                        quantity: parseFloat(item.quantity) || 1,
+                        sale_price: parseFloat(item.sale_price) || 0,
+                        sub_unit_sale_price: parseFloat(item.sub_unit_sale_price) || 0,
+                        hi_price: parseFloat(item.hi_price) || parseFloat(item.sale_price) || 0,
+                        moi_price: parseFloat(item.moi_price) || parseFloat(item.sale_price) || 0,
+                        total_stock: item.total_stock || 0,
+                        dosage_instructions: trim((item.dosage_frequency || '') + ' ' + (item.instructions || ''))
+                    });
+                });
 
-        // العمود 2: بانتظار الطبيب
-        if (pendingItems.length === 0) {
-            colPending.innerHTML = `
-                <div class="kanban-empty-state">
-                    <i class="fas fa-clock fa-2x mb-2 text-warning opacity-50"></i>
-                    <p class="small mb-0">لا توجد طلبات بانتظار الطبيب</p>
-                </div>`;
-        } else {
-            colPending.innerHTML = pendingItems.map(rx => createKanbanCardHtml(rx, 'pending')).join('');
-        }
+                // تحديث بيانات المريض والشريط العلوي
+                document.getElementById('posPatientNameInput').value = rx.patient_name || 'مريض';
+                const banner = document.getElementById('loadedPrescriptionBanner');
+                document.getElementById('bannerRxNumber').innerText = rx.prescription_number;
+                document.getElementById('bannerRxDoctor').innerText = rx.doctor_name || 'الاستشاري';
+                document.getElementById('bannerRxSource').innerText = rx.is_emergency ? '🚨 طوارئ STAT' : 'وصفة عيادة استشارية';
+                banner.style.display = 'flex';
 
-        // العمود 3: جاهزة للصرف
-        if (readyItems.length === 0) {
-            colReady.innerHTML = `
-                <div class="kanban-empty-state">
-                    <i class="fas fa-prescription-bottle-alt fa-2x mb-2 text-success opacity-50"></i>
-                    <p class="small mb-0">لا توجد وصفات جاهزة للصرف</p>
-                </div>`;
-        } else {
-            colReady.innerHTML = readyItems.map(rx => createKanbanCardHtml(rx, 'ready')).join('');
+                renderCart();
+            })
+            .catch(err => {
+                console.error('Error loading prescription to cart:', err);
+                alert('حدث خطأ أثناء تحميل الوصفة للسلة.');
+            });
+    }
+
+    function unloadPrescriptionFromCart() {
+        currentLoadedPrescription = null;
+        document.getElementById('loadedPrescriptionBanner').style.display = 'none';
+        document.getElementById('posPatientNameInput').value = 'مريض مباشر OTC';
+        calculateCartTotals();
+    }
+
+    function loadCurrentModalRxIntoCart() {
+        if (currentSelectedRxId) {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('dispensingModal')).hide();
+            loadPrescriptionIntoCart(currentSelectedRxId);
         }
     }
 
-    // توليد HTML بطاقة الكانبان
-    function createKanbanCardHtml(rx, type) {
-        const itemsSummaryHtml = (rx.items_summary || []).map(it => {
-            let badgeClass = 'bg-light text-dark border';
-            if (it.substitution_status === 'approved') badgeClass = 'bg-success text-white';
-            else if (it.substitution_status === 'pending_approval') badgeClass = 'bg-warning text-dark border border-warning';
-            return `<span class="badge ${badgeClass} small me-1 mb-1 px-2 py-1"><i class="fas fa-pills me-1"></i>${it.name}</span>`;
-        }).join('');
+    // ==========================================
+    // حفظ وصرف الفاتورة (Checkout / Hold)
+    // ==========================================
 
-        // شريط طوارئ في أعلى البطاقة
-        const emergencyBanner = rx.is_emergency
-            ? `<div class="d-flex align-items-center gap-1 mb-2 px-2 py-1 bg-danger bg-opacity-10 rounded border border-danger" style="margin: -4px -4px 8px -4px;">
-                   <i class="fas fa-ambulance text-danger small"></i>
-                   <span class="text-danger fw-bold small">🚨 وصفة طوارئ</span>
-               </div>`
-            : '';
-
-        let actionButtonHtml = '';
-        if (type === 'ready') {
-            actionButtonHtml = `
-                <div class="d-flex gap-1 mt-3 pt-2 border-top">
-                    <button type="button" class="btn btn-success btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-check-circle fa-lg"></i> ⚡ صرف فوري وتجهيز
-                    </button>
-                </div>`;
-        } else if (type === 'pending') {
-            actionButtonHtml = `
-                <div class="d-flex gap-1 mt-3 pt-2 border-top">
-                    <button type="button" class="btn btn-outline-warning text-dark btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-hourglass-half"></i> مراجعة المقترح
-                    </button>
-                </div>`;
-        } else {
-            actionButtonHtml = `
-                <div class="d-flex gap-1 mt-3 pt-2 border-top">
-                    <button type="button" class="btn ${rx.is_emergency ? 'btn-danger' : 'btn-primary'} btn-sm w-100 fw-bold shadow-xs d-flex align-items-center justify-content-center gap-1" onclick="openDispensingModal(${rx.id}); event.stopPropagation();">
-                        <i class="fas fa-tasks"></i> ${rx.is_emergency ? '🚨 صرف طوارئ STAT' : '⚡ فحص وتجهيز الصرف'}
-                    </button>
-                </div>`;
+    function submitPosSale(isHeld = false) {
+        if (posCart.length === 0) {
+            alert('⚠️ سلة الفاتورة فارغة! يرجى إضافة أدوية أو اختيار وصفة أولاً.');
+            return;
         }
 
-        return `
-            <div class="kanban-card card-${type}${rx.is_emergency ? ' border border-danger' : ''}"
-                 data-id="${rx.id}"
-                 data-rx-number="${rx.prescription_number}"
-                 data-patient-name="${rx.patient_name}"
-                 onclick="openDispensingModal(${rx.id})">
-                ${emergencyBanner}
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="badge ${type === 'ready' ? 'bg-success' : (type === 'pending' ? 'bg-warning text-dark' : 'bg-primary-subtle text-primary')} font-monospace fw-bold px-2 py-1">
-                        <i class="fas fa-hashtag me-1"></i>${rx.prescription_number}
-                    </span>
-                    <span class="badge bg-light text-muted border font-monospace small">
-                        <i class="far fa-clock me-1"></i>${rx.time_ago}
-                    </span>
-                </div>
-                <div class="fw-bold text-dark fs-6 mb-1">
-                    <i class="fas fa-user-injured text-secondary me-1"></i>${rx.patient_name}
-                </div>
-                <div class="small text-muted mb-2">
-                    <i class="fas fa-user-md text-info me-1"></i>${rx.doctor_name}
-                    ${rx.is_emergency ? '<span class="badge bg-danger text-white ms-1 small">طوارئ</span>' : ''}
-                </div>
-                <div class="mb-2">
-                    ${itemsSummaryHtml}
-                </div>
-                ${actionButtonHtml}
-            </div>
-        `;
+        const patientName = document.getElementById('posPatientNameInput').value.trim() || 'مريض مباشر OTC';
+        const insuranceType = document.getElementById('posInsuranceTypeSelect').value;
+        const categoryId = document.getElementById('posInsuranceCategorySelect').value || null;
+
+        const payload = {
+            sale_type: currentLoadedPrescription ? (currentLoadedPrescription.is_emergency ? 'emergency' : 'prescription') : 'direct_otc',
+            prescription_id: currentLoadedPrescription ? currentLoadedPrescription.id : null,
+            patient_name: patientName,
+            patient_id: currentLoadedPrescription ? currentLoadedPrescription.patient_id : null,
+            insurance_type: insuranceType,
+            health_insurance_category_id: categoryId,
+            payment_route: 'pharmacy_cashier',
+            is_held: isHeld ? 1 : 0,
+            notes: currentLoadedPrescription ? `صرف عبر نقطة البيع للوصفة ${currentLoadedPrescription.prescription_number}` : 'بيع مباشر OTC',
+            items: posCart.map(item => ({
+                item_type: 'medicine',
+                medicine_id: item.medicine_id,
+                unit_type: item.unit_type,
+                quantity: item.quantity,
+                dosage_instructions: item.dosage_instructions || null
+            }))
+        };
+
+        const btn = isHeld ? document.getElementById('btnHoldSale') : document.getElementById('btnCheckoutSale');
+        btn.disabled = true;
+
+        fetch(`{{ route('pharmacy.pos.store') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success) {
+                try {
+                    document.getElementById('dispenseAudio').play();
+                } catch(e) {}
+
+                if (!isHeld && data.print_url) {
+                    window.open(data.print_url, '_blank', 'width=800,height=600');
+                }
+
+                alert(`✅ ${data.message}`);
+                clearCart();
+                refreshPrescriptionsQueue(false);
+            } else {
+                alert(`❌ ${data.message || 'حدث خطأ أثناء حفظ الفاتورة'}`);
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            console.error('Error submitting POS sale:', err);
+            alert('حدث خطأ في الاتصال أثناء حفظ الفاتورة.');
+        });
     }
 
-    // فتح نافذة تفاصيل وصرف الوصفة
+    // ==========================================
+    // دوال المودالات والبدائل السابقة
+    // ==========================================
+
     function openDispensingModal(rxId) {
         currentSelectedRxId = rxId;
 
@@ -926,7 +1364,6 @@
             document.body.appendChild(modalEl);
         }
 
-        // جلب تفاصيل الوصفة بالـ AJAX
         fetch(`{{ url('pharmacy/pos/prescriptions') }}/${rxId}`)
             .then(res => res.json())
             .then(data => {
@@ -944,7 +1381,6 @@
             });
     }
 
-    // تعبئة بيانات نافذة الصرف
     function renderModalPrescription(rx) {
         currentPrescriptionData = rx;
 
@@ -964,7 +1400,6 @@
         const elItemsCount = document.getElementById('modalDispItemsCount');
         if (elItemsCount) elItemsCount.innerText = (rx.items ? rx.items.length : 0) + ' أدوية';
 
-        // فحص إشعارات موافقة أو رفض الطبيب على البدائل
         const feedbackBanner = document.getElementById('modalRxSubstitutionFeedbackBanner');
         if (feedbackBanner) {
             const approvedItems = (rx.items || []).filter(i => i.substitution_status === 'approved');
@@ -979,14 +1414,10 @@
                             <i class="fas fa-check-double fa-bounce"></i>
                         </div>
                         <div class="flex-grow-1">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <strong class="text-success fs-6">✅ وافق الطبيب المعالج على استبدال (${approvedItems.length}) دواء!</strong>
-                                <span class="badge bg-success text-white">معتمد وجاهز للصرف</span>
-                            </div>
+                            <strong class="text-success fs-6">✅ وافق الطبيب المعالج على استبدال (${approvedItems.length}) دواء!</strong>
                             <div class="small text-dark mt-1">
-                                ${approvedItems.map(ai => `<span class="me-3"><i class="fas fa-pills text-success me-1"></i><strong>${ai.name}</strong> ${ai.substitution_response_notes ? `(${ai.substitution_response_notes})` : ''}</span>`).join('')}
+                                ${approvedItems.map(ai => `<span class="me-3"><i class="fas fa-pills text-success me-1"></i><strong>${ai.name}</strong></span>`).join('')}
                             </div>
-                            <small class="text-muted d-block mt-1">تم تعديل الوصفة الطبية رسمياً، اضغط على <strong>«تأكيد صرف وتجهيز الدواء»</strong> أدناه لإتمام الصرف وخصم المخزون.</small>
                         </div>
                     </div>`;
             } else if (pendingItems.length > 0) {
@@ -998,7 +1429,6 @@
                         </div>
                         <div>
                             <strong class="text-dark fs-6">⏳ بانتظار موافقة الطبيب على البديل المقترح</strong>
-                            <small class="text-muted d-block">تم إرسال المقترح إلى شاشة الطبيب. ستصلك الموافقة هنا تلقائياً فور اعتمادها من قبل الطبيب.</small>
                         </div>
                     </div>`;
             } else if (rejectedItems.length > 0) {
@@ -1009,8 +1439,7 @@
                             <i class="fas fa-times-circle"></i>
                         </div>
                         <div>
-                            <strong class="text-danger fs-6">❌ رفض الطبيب المعالج مقترح البديل:</strong>
-                            <small class="text-dark d-block">${rejectedItems.map(ri => ri.substitution_response_notes || 'يرجى البحث عن الصنف الأصلي أو اقتراح بديل آخر').join(', ')}</small>
+                            <strong class="text-danger fs-6">❌ رفض الطبيب المعالج مقترح البديل</strong>
                         </div>
                     </div>`;
             } else {
@@ -1018,112 +1447,47 @@
             }
         }
 
-        // رابط الطباعة (غير متاح لوصفات الطوارئ)
         const printBtn = document.getElementById('modalBtnPrintPrescription');
-        if (rx.is_emergency) {
-            printBtn.style.display = 'none';
-        } else {
-            printBtn.style.display = '';
-            printBtn.href = `{{ url('doctor/visits') }}/${rx.patient_id}/prescription/print`;
+        if (printBtn) {
+            if (rx.is_emergency) {
+                printBtn.style.display = 'none';
+            } else {
+                printBtn.style.display = '';
+                printBtn.href = `{{ url('doctor/visits') }}/${rx.patient_id || ''}/prescription/print`;
+            }
         }
 
-        // رسم جدول الأدوية
         const tbody = document.getElementById('modalDispensingItemsBody');
         let html = '';
 
-        rx.items.forEach((item, index) => {
+        (rx.items || []).forEach((item, index) => {
             const hasStock = item.is_in_stock;
             let stockBadge = '';
 
             if (item.substitution_status === 'pending_approval') {
-                stockBadge = `
-                    <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-warning text-dark border border-warning px-2 py-1 shadow-xs mb-1">
-                            <i class="fas fa-hourglass-half fa-spin me-1"></i> بانتظار موافقة الطبيب
-                        </span>
-                        <small class="text-muted font-monospace mb-1">مقترح: <strong>${item.suggested_medicine_name || 'بديل'}</strong></small>
-                        <button type="button" class="btn btn-xs btn-outline-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})">
-                            <i class="fas fa-exchange-alt me-1"></i> تغيير البديل المقترح
-                        </button>
-                    </div>`;
+                stockBadge = `<span class="badge bg-warning text-dark border border-warning px-2 py-1"><i class="fas fa-hourglass-half fa-spin me-1"></i> بانتظار الطبيب</span>`;
             } else if (item.substitution_status === 'approved') {
-                stockBadge = `
-                    <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-success text-white px-2 py-1 shadow-xs mb-1">
-                            <i class="fas fa-check-circle me-1"></i> وافق الطبيب على البديل ✅
-                        </span>
-                        <small class="text-success font-monospace">معتمد للصرف الفوري</small>
-                    </div>`;
-            } else if (item.substitution_status === 'rejected') {
-                stockBadge = `
-                    <div class="d-flex flex-column gap-1 align-items-center">
-                        <span class="badge bg-danger text-white px-2 py-1 shadow-xs mb-1">
-                            <i class="fas fa-times-circle me-1"></i> رفض الطبيب البديل ❌
-                        </span>
-                        <div class="d-flex align-items-center gap-1">
-                            <button type="button" class="btn btn-xs btn-outline-success py-1 px-2 rounded shadow-xs" onclick="toggleItemStock(${item.id})">
-                                <i class="fas fa-check me-1"></i> توفر الأصلي
-                            </button>
-                            <button type="button" class="btn btn-xs btn-warning text-dark fw-bold py-1 px-2 rounded shadow-xs" onclick="openAlternativesModal(${item.id})">
-                                <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل آخر
-                            </button>
-                        </div>
-                    </div>`;
+                stockBadge = `<span class="badge bg-success text-white px-2 py-1"><i class="fas fa-check-circle me-1"></i> بديل معتمد</span>`;
             } else {
                 stockBadge = `
-                    <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
-                        <div class="btn-group btn-group-sm shadow-xs" role="group">
-                            <button type="button" 
-                                    class="btn ${hasStock ? 'btn-success fw-bold text-white shadow-xs' : 'btn-outline-success'}" 
-                                    onclick="setItemAvailability(${item.id}, true)"
-                                    title="تحديد كـ متوفر على الرف">
-                                <i class="fas fa-check-circle me-1"></i> متوفر
-                            </button>
-                            <button type="button" 
-                                    class="btn ${!hasStock ? 'btn-danger fw-bold text-white shadow-xs' : 'btn-outline-danger'}" 
-                                    onclick="setItemAvailability(${item.id}, false)"
-                                    title="تحديد كـ غير متوفر">
-                                <i class="fas fa-times-circle me-1"></i> غير متوفر
-                            </button>
-                        </div>
-                        <button type="button" 
-                                class="btn btn-sm ${!hasStock ? 'btn-warning text-dark fw-bold' : 'btn-outline-secondary'} py-1 px-2 rounded-2 shadow-xs" 
-                                onclick="openAlternativesModal(${item.id})" 
-                                title="اقتراح بديل مكافئ لهذا الدواء">
+                    <div class="d-flex align-items-center justify-content-center gap-2">
+                        <span class="badge ${hasStock ? 'bg-success' : 'bg-danger'} px-2 py-1">${hasStock ? 'متوفر' : 'غير متوفر'}</span>
+                        <button type="button" class="btn btn-xs btn-outline-warning text-dark py-1 px-2 rounded" onclick="openAlternativesModal(${item.id})">
                             <i class="fas fa-exchange-alt me-1"></i> اقتراح بديل
                         </button>
                     </div>`;
             }
 
             html += `
-                <tr id="modalDispRow-${item.id}" class="${!hasStock && item.substitution_status !== 'approved' ? 'table-warning' : ''}">
+                <tr>
                     <td class="text-center fw-bold text-muted">${index + 1}</td>
                     <td>
-                        <div class="fw-bold text-dark fs-6" id="modalMedName-${item.id}">
-                            ${item.name}
-                            ${item.substitution_status === 'approved' ? '<span class="badge bg-success ms-1">بديل معتمد من الطبيب</span>' : ''}
-                        </div>
-                        <div class="small text-muted">
-                            ${item.generic_name ? `<span class="badge bg-light text-secondary border me-1">${item.generic_name}</span>` : ''}
-                            ${item.dosage_form ? `<span class="text-secondary">${item.dosage_form}</span>` : ''}
-                            ${item.strength ? `<span class="text-secondary ms-1">(${item.strength})</span>` : ''}
-                        </div>
+                        <div class="fw-bold text-dark">${item.name}</div>
+                        <div class="small text-muted">${item.dosage_form || ''} ${item.strength || ''}</div>
                     </td>
-                    <td class="text-center">
-                        <span class="badge bg-primary fs-6 font-monospace px-3 py-1">
-                            ${item.quantity} ${item.unit_type === 'sub_unit' ? (item.sub_unit || 'شريط') : (item.main_unit || 'علبة')}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="fw-bold text-primary">
-                            <i class="fas fa-clock me-1"></i>${item.dosage_frequency || 'حسب إرشادات الطبيب'}
-                        </div>
-                        ${item.instructions ? `<div class="small text-muted"><i class="fas fa-info-circle me-1"></i>${item.instructions}</div>` : ''}
-                        ${item.duration_days ? `<div class="small text-muted"><i class="far fa-calendar-alt me-1"></i>لمدة ${item.duration_days} يوم</div>` : ''}
-                    </td>
-                    <td class="text-center" id="modalStockCol-${item.id}">
-                        ${stockBadge}
-                    </td>
+                    <td class="text-center font-monospace fw-bold">${item.quantity} ${item.unit_type === 'sub_unit' ? (item.sub_unit || 'شريط') : (item.main_unit || 'علبة')}</td>
+                    <td>${item.dosage_frequency || 'حسب الإرشادات'}</td>
+                    <td class="text-center">${stockBadge}</td>
                 </tr>
             `;
         });
@@ -1131,33 +1495,6 @@
         tbody.innerHTML = html;
     }
 
-    // تعيين حالة توفر الدواء (متوفر / غير متوفر)
-    function setItemAvailability(itemId, isAvailable) {
-        if (!currentPrescriptionData) return;
-        const item = currentPrescriptionData.items.find(i => i.id === itemId);
-        if (!item) return;
-
-        item.is_in_stock = isAvailable;
-        if (item.substitution_status === 'rejected') {
-            item.substitution_status = 'none';
-        }
-        renderModalPrescription(currentPrescriptionData);
-    }
-
-    // تبديل حالة توفر الدواء يدوياً من الشاشة
-    function toggleItemStock(itemId) {
-        if (!currentPrescriptionData) return;
-        const item = currentPrescriptionData.items.find(i => i.id === itemId);
-        if (!item) return;
-
-        item.is_in_stock = !item.is_in_stock;
-        if (item.substitution_status === 'rejected') {
-            item.substitution_status = 'none';
-        }
-        renderModalPrescription(currentPrescriptionData);
-    }
-
-    // فتح نافذة اقتراح البديل للدواء المحدد
     function openAlternativesModal(itemId) {
         targetItemForAlternative = itemId;
         if (!currentPrescriptionData) return;
@@ -1170,7 +1507,6 @@
         const searchInp = document.getElementById('modalAltSearchInput');
         searchInp.value = '';
 
-        // لا نظهر أي مقترحات تلقائياً - المودال يبدأ فارغاً للبحث فقط
         renderAlternativesList([]);
 
         const altModalEl = document.getElementById('alternativeModal');
@@ -1185,7 +1521,6 @@
         }, { once: true });
     }
 
-    // رسم قائمة البدائل داخل النافذة (اختيار يدوي للموظف)
     function renderAlternativesList(alternatives) {
         const listContainer = document.getElementById('alternativesModalList');
         document.getElementById('modalAltCountBadge').innerText = `${alternatives.length} بديل`;
@@ -1195,7 +1530,6 @@
                 <div class="text-center py-4 text-muted">
                     <i class="fas fa-search fa-2x mb-2 text-warning opacity-75"></i>
                     <p class="small mb-1 fw-bold">اكتب اسم الدواء البديل في حقل البحث أعلاه</p>
-                    <small class="text-secondary">يمكنك اختيار أي دواء من الدليل لاقتراحه على الطبيب المعالج.</small>
                 </div>`;
             return;
         }
@@ -1203,19 +1537,13 @@
         let html = '';
         alternatives.forEach(alt => {
             html += `
-                <div class="list-group-item list-group-item-action p-3 d-flex justify-content-between align-items-center gap-3">
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3">
                     <div>
-                        <div class="fw-bold text-dark fs-6">
-                            <i class="fas fa-pills text-primary me-1"></i>${alt.name}
-                        </div>
-                        <div class="small text-muted mt-1">
-                            ${alt.dosage_form ? `<span class="badge bg-light text-secondary border me-1">${alt.dosage_form}</span>` : ''}
-                            ${alt.strength ? `<span class="badge bg-light text-secondary border me-1">${alt.strength}</span>` : ''}
-                            ${alt.sale_price ? `<span class="badge bg-success-subtle text-success border border-success">${Number(alt.sale_price).toLocaleString()} د.ع</span>` : ''}
-                        </div>
+                        <h6 class="mb-1 fw-bold text-dark">${alt.name}</h6>
+                        <small class="text-muted">${alt.generic_name || ''} | ${alt.dosage_form || ''} (${alt.strength || ''})</small>
                     </div>
-                    <button type="button" class="btn btn-warning btn-sm text-dark fw-bold px-3 py-2 rounded-3 shadow-xs d-flex align-items-center gap-1" onclick="submitAlternativeSuggestion(${alt.id})">
-                        <i class="fas fa-check-circle"></i> اختيار هذا البديل
+                    <button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1.5" onclick="submitAlternativeSuggestion(${alt.id})">
+                        <i class="fas fa-paper-plane me-1"></i> إرسال المقترح
                     </button>
                 </div>`;
         });
@@ -1223,7 +1551,6 @@
         listContainer.innerHTML = html;
     }
 
-    // إرسال اقتراح البديل إلى الطبيب
     function submitAlternativeSuggestion(suggestedMedId) {
         if (!targetItemForAlternative) return;
 
@@ -1260,29 +1587,11 @@
         });
     }
 
-    // تنفيذ عملية الصرف من داخل المودال
     function executeDispenseFromModal() {
         if (!currentPrescriptionData) return;
 
-        const pendingSubs = currentPrescriptionData.items.filter(i => i.substitution_status === 'pending_approval');
-        if (pendingSubs.length > 0) {
-            if (!confirm(`⚠️ تنبيه: توجد (${pendingSubs.length}) أدوية ما زالت بانتظار موافقة الطبيب على البديل.\nهل ترغب في متابعة الصرف الجزئي للأدوية المتوفرة وتخطي الأصناف المعلقة؟`)) {
-                return;
-            }
-        }
-
         const btn = document.getElementById('modalBtnExecuteDispense');
         btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i> جاري الصرف وخصم المخزون...`;
-
-        const itemsPayload = currentPrescriptionData.items.map(item => {
-            return {
-                id: item.id,
-                medicine_id: item.medicine_id,
-                quantity: item.quantity,
-                is_available: (item.is_in_stock || item.substitution_status === 'approved') && item.substitution_status !== 'pending_approval'
-            };
-        });
 
         fetch(`{{ url('pharmacy/pos/prescriptions') }}/${currentPrescriptionData.id}/dispense`, {
             method: 'POST',
@@ -1291,15 +1600,11 @@
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                items: itemsPayload
-            })
+            body: JSON.stringify({ items: [] })
         })
         .then(res => res.json())
         .then(data => {
             btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-check-circle fa-lg"></i> <span>تأكيد صرف وتجهيز الدواء</span>`;
-
             if (data.success) {
                 try {
                     document.getElementById('dispenseAudio').play();
@@ -1314,52 +1619,50 @@
         })
         .catch(err => {
             btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-check-circle fa-lg"></i> <span>تأكيد صرف وتجهيز الدواء</span>`;
             console.error('Error dispensing prescription:', err);
             alert('حدث خطأ في الاتصال أثناء الصرف.');
         });
     }
 
-    // رسم نتائج الفحص السريع للأدوية
     function renderQuickSearchResults(medicines) {
-        const container = document.getElementById('quickSearchResultsList');
-        if (medicines.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-4 text-muted">
-                    <i class="fas fa-exclamation-circle fa-2x mb-2 opacity-50"></i>
-                    <p class="small mb-0">لم يتم العثور على أدوية مطابقة لبحثك</p>
-                </div>`;
+        const list = document.getElementById('quickSearchResultsList');
+        if (!medicines || medicines.length === 0) {
+            list.innerHTML = `<div class="text-center py-4 text-muted">لم يتم العثور على أدوية مطابقة</div>`;
             return;
         }
 
         let html = '';
         medicines.forEach(med => {
-            const hasStock = med.total_stock > 0 || med.total_open_sub_units > 0;
             html += `
-                <div class="list-group-item list-group-item-action p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <strong class="text-dark fs-6">${med.name}</strong>
-                        <span class="badge ${hasStock ? 'bg-success' : 'bg-danger'} font-monospace">
-                            ${hasStock ? `متوفر (${med.total_stock} ${med.main_unit || 'علبة'})` : 'رصيد نافد'}
-                        </span>
+                <div class="list-group-item d-flex justify-content-between align-items-center p-3">
+                    <div>
+                        <h6 class="mb-1 fw-bold text-dark">${med.name}</h6>
+                        <small class="text-muted">${med.generic_name || ''} | ${med.dosage_form || ''} (${med.strength || ''})</small>
                     </div>
-                    <div class="small text-muted d-flex justify-content-between">
-                        <span>المادة الفعالة: ${med.generic_name || '-'} | الشكل: ${med.dosage_form || '-'} (${med.strength || ''})</span>
-                        <span class="fw-bold text-primary font-monospace">${Number(med.sale_price).toLocaleString()} د.ع</span>
+                    <div class="text-end">
+                        <div class="fw-bold text-primary font-monospace">${formatMoney(med.sale_price)} د.ع</div>
+                        <span class="badge ${med.total_stock > 0 ? 'bg-success' : 'bg-danger'}">رصيد: ${med.total_stock}</span>
                     </div>
                 </div>`;
         });
-
-        container.innerHTML = html;
+        list.innerHTML = html;
     }
 
-    // دالة مساعدة للـ Debounce
+    // دوال مساعدة
     function debounce(func, wait) {
         let timeout;
         return function(...args) {
             clearTimeout(timeout);
             timeout = setTimeout(() => func.apply(this, args), wait);
         };
+    }
+
+    function formatMoney(amount) {
+        return (parseFloat(amount) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function trim(str) {
+        return (str || '').trim();
     }
 </script>
 @endpush
