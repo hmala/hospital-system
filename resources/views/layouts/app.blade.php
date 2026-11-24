@@ -2348,11 +2348,16 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link {{ request()->routeIs('pharmacy.batches.*') ? 'active' : '' }}" href="{{ route('pharmacy.batches.index') }}">
-                                    <i class="fas fa-boxes text-warning"></i><span> {{ __('تتبع الشحنات والصلاحية (FEFO)') }}</span>
+                                <a class="nav-link {{ request()->routeIs('pharmacy.batches.index') || request()->routeIs('pharmacy.batches.show') || request()->routeIs('pharmacy.batches.edit') ? 'active' : '' }}" href="{{ route('pharmacy.batches.index') }}">
+                                    <i class="fas fa-boxes-stacked text-warning"></i><span> {{ __('مخزن وجرد الأدوية (الأرصدة والوجبات)') }}</span>
                                     @if($expiringBatchesCount > 0)
                                         <span class="badge bg-warning text-dark ms-auto">{{ $expiringBatchesCount }} {{ __('تنبيه') }}</span>
                                     @endif
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('pharmacy.batches.create') ? 'active' : '' }}" href="{{ route('pharmacy.batches.create') }}">
+                                    <i class="fas fa-truck-ramp-box text-warning"></i><span> {{ __('توريد وجبة أدوية جديدة') }}</span>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -2363,7 +2368,7 @@
                             @if(auth()->check() && (auth()->user()->can('create medicines') || auth()->user()->hasRole(['pharmacy_staff', 'pharmacist', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || in_array(auth()->user()->role, ['pharmacy_staff', 'pharmacist'])))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.create') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.create') }}">
-                                    <i class="fas fa-plus-circle text-success"></i><span> {{ __('إضافة دواء / مستلزم جديد') }}</span>
+                                    <i class="fas fa-plus-circle text-success"></i><span> {{ __('إضافة دواء جديد') }}</span>
                                 </a>
                             </li>
                             @endif
@@ -2375,7 +2380,7 @@
                             @if(auth()->check() && (auth()->user()->can('import medicines') || auth()->user()->hasRole(['pharmacy_staff', 'pharmacist', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || in_array(auth()->user()->role, ['pharmacy_staff', 'pharmacist'])))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.import') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.import') }}">
-                                    <i class="fas fa-file-excel text-success"></i><span> {{ __('استيراد وتحديث الأدوية') }}</span>
+                                    <i class="fas fa-file-excel text-success"></i><span> {{ __('استيراد وتحديث الأدوية (إكسل)') }}</span>
                                 </a>
                             </li>
                             @endif

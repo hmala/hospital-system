@@ -45,14 +45,15 @@ class PharmacySidebarAndPermissionsTest extends TestCase
 
         $response->assertStatus(200);
 
-        // تأكيد ظهور كافة الروابط الـ 7 في القائمة الجانبية
+        // تأكيد ظهور كافة الروابط في القائمة الجانبية
         $response->assertSee('نقطة البيع والصرف (POS)');
         $response->assertSee('سجل مبيعات الصيدلية');
-        $response->assertSee('تتبع الشحنات والصلاحية (FEFO)');
+        $response->assertSee('مخزن وجرد الأدوية (الأرصدة والوجبات)');
+        $response->assertSee('توريد وجبة أدوية جديدة');
         $response->assertSee('دليل الأدوية والبدائل');
-        $response->assertSee('إضافة دواء / مستلزم جديد');
+        $response->assertSee('إضافة دواء جديد');
         $response->assertSee('الخدمات الصيدلانية');
-        $response->assertSee('استيراد وتحديث الأدوية');
+        $response->assertSee('استيراد وتحديث الأدوية (إكسل)');
     }
 
     public function test_pharmacy_staff_can_access_create_and_import_medicine_routes(): void
