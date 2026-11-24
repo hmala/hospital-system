@@ -18,12 +18,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <a href="{{ route('surgeries.index') }}" class="btn btn-outline-primary rounded-pill px-3 py-2 fw-medium shadow-xs">
-                            <i class="fas fa-procedures me-1.5"></i> جدول العمليات
-                        </a>
-                        <a href="{{ route('surgeries.waiting') }}" class="btn btn-outline-warning rounded-pill px-3 py-2 fw-medium shadow-xs">
-                            <i class="fas fa-clock me-1.5"></i> قائمة الانتظار
-                        </a>
                         <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-medium shadow-xs">
                             <i class="fas fa-truck-loading me-1.5"></i> طلبيات المخزن
                         </a>
@@ -49,7 +43,7 @@
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary" style="border-radius: 16px;">
                 <div class="card-body p-3.5 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold">مخازن وصالات العمليات</span>
+                        <span class="text-muted small fw-semibold">مواقع وعُهد العمليات</span>
                         <h3 class="mb-0 fw-bold text-dark mt-1">{{ $stats['total_stores'] }}</h3>
                         <small class="text-success fw-medium">
                             <i class="fas fa-user-shield me-1"></i> {{ $stats['assigned_custodians'] }} معتمد العهدة
@@ -69,7 +63,7 @@
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-info" style="border-radius: 16px;">
                 <div class="card-body p-3.5 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold">المواد والأدوات المتاحة بالرصيد</span>
+                        <span class="text-muted small fw-semibold">المواد والمستلزمات المتاحة بالرصيد</span>
                         <h3 class="mb-0 fw-bold text-dark mt-1">{{ number_format($stats['total_items_in_stock']) }}</h3>
                         <small class="text-muted">سيتات، أدوية، ومستهلكات جراحية</small>
                     </div>
@@ -99,14 +93,14 @@
             <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning" style="border-radius: 16px;">
                 <div class="card-body p-3.5 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold">العمليات المجدولة / الجارية</span>
-                        <h3 class="mb-0 fw-bold text-warning-emphasis mt-1">{{ $stats['today_surgeries_count'] }}</h3>
+                        <span class="text-muted small fw-semibold">طلبيات التعزيز الجارية</span>
+                        <h3 class="mb-0 fw-bold text-warning-emphasis mt-1">{{ $stats['total_pending_requests'] }}</h3>
                         <small class="text-muted">
-                            <i class="fas fa-truck-loading me-1"></i> {{ $stats['total_pending_requests'] }} طلبيات تزويد جارية
+                            <i class="fas fa-truck-loading me-1"></i> بانتظار الاعتماد أو الاستلام الرسمي
                         </small>
                     </div>
                     <div class="rounded-circle bg-warning-subtle text-warning-emphasis d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                        <i class="fas fa-procedures fs-4"></i>
+                        <i class="fas fa-truck-loading fs-4"></i>
                     </div>
                 </div>
             </div>
@@ -114,7 +108,7 @@
     </div>
 
     <!-- جدول مخازن وصالات العمليات -->
-    <div class="card border-0 shadow-lg mb-4" style="border-radius: 16px;">
+    <div class="card border-0 shadow-lg" style="border-radius: 16px;">
         <div class="card-header bg-light border-0 p-3.5 d-flex align-items-center justify-content-between flex-wrap gap-3" style="border-radius: 16px 16px 0 0;">
             <div class="d-flex align-items-center gap-2">
                 <i class="fas fa-door-open text-primary fs-5"></i>
@@ -254,95 +248,6 @@
             </div>
         </div>
     </div>
-
-    <!-- جدول تتبع العمليات الجراحية المجدولة لليوم والتجهيز المسبق -->
-    <div class="card border-0 shadow-lg" style="border-radius: 16px;">
-        <div class="card-header bg-light border-0 p-3.5 d-flex align-items-center justify-content-between flex-wrap gap-2" style="border-radius: 16px 16px 0 0;">
-            <div class="d-flex align-items-center gap-2">
-                <i class="fas fa-calendar-check text-info fs-5"></i>
-                <h5 class="mb-0 fw-bold text-dark">جدول العمليات الجراحية لليوم (تجهيز المستلزمات والصرف السريري)</h5>
-                <span class="badge bg-info-subtle text-info rounded-pill px-2.5 py-1">{{ $todaySurgeries->count() }} عمليات</span>
-            </div>
-            <a href="{{ route('surgeries.index') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                <i class="fas fa-external-link-alt me-1"></i> فتح السجل الكامل
-            </a>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th class="ps-3" style="width: 50px;">#</th>
-                            <th>المريض</th>
-                            <th>العملية الجراحية</th>
-                            <th>الجراح المسؤول</th>
-                            <th>صالة العمليات</th>
-                            <th class="text-center">الموعد</th>
-                            <th class="text-center">الحالة</th>
-                            <th class="text-center pe-3">الإجراء</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($todaySurgeries as $surgery)
-                            <tr>
-                                <td class="ps-3 text-muted fw-bold">#{{ $surgery->id }}</td>
-                                <td>
-                                    <div class="fw-bold text-dark">{{ $surgery->patient?->name ?? 'غير محدد' }}</div>
-                                    <small class="text-muted">{{ $surgery->patient?->phone ?: ($surgery->patient?->national_id ? 'هوية: '.$surgery->patient->national_id : '') }}</small>
-                                </td>
-                                <td>
-                                    <span class="fw-semibold text-primary">{{ $surgery->surgery_type ?: ($surgery->surgicalOperation?->name ?? 'عملية جراحية') }}</span>
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-1.5">
-                                        <i class="fas fa-user-md text-secondary"></i>
-                                        <span>{{ $surgery->doctor?->name ?: ($surgery->surgeon_name ?: 'جراح غير محدد') }}</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-dark border rounded-pill px-2.5 py-1">
-                                        <i class="fas fa-procedures text-info me-1"></i>
-                                        {{ $surgery->operationTheater?->name ?: 'صالة عامة' }}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    <div class="fw-medium text-dark">{{ $surgery->scheduled_date ? \Carbon\Carbon::parse($surgery->scheduled_date)->format('Y-m-d') : 'اليوم' }}</div>
-                                    <small class="text-muted">{{ $surgery->scheduled_time ?: '' }}</small>
-                                </td>
-                                <td class="text-center">
-                                    @php
-                                        $statusBadges = [
-                                            'scheduled' => 'bg-info-subtle text-info border-info-subtle',
-                                            'in_progress' => 'bg-warning-subtle text-warning-emphasis border-warning-subtle',
-                                            'completed' => 'bg-success-subtle text-success border-success-subtle',
-                                            'cancelled' => 'bg-danger-subtle text-danger border-danger-subtle',
-                                            'waiting' => 'bg-secondary-subtle text-secondary border-secondary-subtle',
-                                        ];
-                                        $badgeClass = $statusBadges[$surgery->status] ?? 'bg-light text-dark';
-                                    @endphp
-                                    <span class="badge {{ $badgeClass }} border rounded-pill px-2.5 py-1">
-                                        {{ __($surgery->status) }}
-                                    </span>
-                                </td>
-                                <td class="text-center pe-3">
-                                    <a href="{{ route('surgeries.show', $surgery) }}" class="btn btn-sm btn-outline-info rounded-pill px-2.5">
-                                        <i class="fas fa-file-medical me-1"></i> تفاصيل العملية
-                                    </a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="8" class="text-center py-4 text-muted">
-                                    <i class="fas fa-procedures fs-2 mb-2 text-secondary opacity-50"></i>
-                                    <p class="mb-0">لا توجد عمليات جراحية مجدولة اليوم.</p>
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Modal تكليف أو تغيير أمين عهدة صالات ومخزن العمليات -->
@@ -383,7 +288,7 @@
                                 </option>
                             @endforeach
                         </select>
-                        <div class="form-text">يتولى أمين العهدة إدارة ومطابقة الرصيد واستلام الشحنات الرسمية وتجهيز العمليات.</div>
+                        <div class="form-text">يتولى أمين العهدة إدارة ومطابقة الرصيد واستلام الشحنات الرسمية وتجهيز المستلزمات.</div>
                     </div>
 
                     <div class="mb-3 form-check form-switch">

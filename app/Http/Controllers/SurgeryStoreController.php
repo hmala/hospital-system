@@ -6,7 +6,6 @@ use App\Models\Location;
 use App\Models\LocationCustodianHistory;
 use App\Models\StockMovement;
 use App\Models\StockTransferRequest;
-use App\Models\Surgery;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -98,19 +97,7 @@ class SurgeryStoreController extends Controller
             ->orderBy('name')
             ->get();
 
-        // العمليات الجراحية لليوم (لتتبع التجهيز الميداني المسبق)
-        $todaySurgeries = Surgery::with(['patient.user', 'doctor.user', 'operationTheater'])
-            ->whereDate('scheduled_date', today())
-            ->orWhere(function ($q) {
-                $q->whereIn('status', ['in_progress', 'scheduled'])
-                    ->whereDate('scheduled_date', '>=', today()->subDay());
-            })
-            ->orderBy('scheduled_date')
-            ->orderBy('scheduled_time')
-            ->take(15)
-            ->get();
-
-        // مؤشرات القيادة العامة
+        // مؤشرات القيادة العامة المخزنية
         $stats = [
             'total_stores' => $subStores->count(),
             'assigned_custodians' => $subStores->whereNotNull('custodian_id')->count(),
@@ -118,7 +105,6 @@ class SurgeryStoreController extends Controller
             'total_items_in_stock' => $subStores->sum(fn ($s) => $s->stockBatches->sum('current_qty')),
             'total_monthly_consumptions' => $monthlyConsumptions->sum('count'),
             'total_pending_requests' => $pendingTransfers->sum('count'),
-            'today_surgeries_count' => $todaySurgeries->count(),
         ];
 
         return view('surgery-store.index', compact(
@@ -126,7 +112,6 @@ class SurgeryStoreController extends Controller
             'monthlyConsumptions',
             'pendingTransfers',
             'availableStaff',
-            'todaySurgeries',
             'stats',
             'search'
         ));
@@ -157,7 +142,7 @@ class SurgeryStoreController extends Controller
             ->paginate(20);
 
         // طلبيات تعزيز الرصيد الخاصة بهذا المخزن
-        $transferRequests = StockTransferRequest::with(['requestedBy', 'approvedBy', 'receivedBy', 'items.product'])
+        $transferRequests = StockTransferRequest::with(['requestedBy', 'approvedBy', 'receivedBy'])
             ->where(function ($q) use ($location) {
                 $q->where('to_location_id', $location->id)
                     ->orWhere('from_location_id', $location->id);
@@ -176,25 +161,12 @@ class SurgeryStoreController extends Controller
             ->orderBy('name')
             ->get();
 
-        // العمليات الجراحية المرتبطة بهذا الموقع/الصالة
-        $upcomingSurgeries = Surgery::with(['patient.user', 'doctor.user', 'operationTheater'])
-            ->where(function ($q) use ($location) {
-                $q->where('location_id', $location->id)
-                    ->orWhereHas('operationTheater', function ($tq) use ($location) {
-                        $tq->where('name', 'like', "%{$location->name}%");
-                    });
-            })
-            ->latest('scheduled_date')
-            ->take(10)
-            ->get();
-
         return view('surgery-store.show', compact(
             'location',
             'activeBatches',
             'movements',
             'transferRequests',
-            'availableStaff',
-            'upcomingSurgeries'
+            'availableStaff'
         ));
     }
 

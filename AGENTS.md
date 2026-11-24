@@ -81,10 +81,11 @@ Consult these files before making changes or proposing fixes:
   * منحهما تلقائياً لأدوار الإدارة (`admin`, `hospital_admin`, `admin-hsop`) وكادر العمليات (`surgery_staff`).
 - **إدارة الأدوار والصلاحيات ([app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php))**:
   * إدراج الصلاحيتين تحت تصنيف `surgeries` لكي تظهرا في شاشة إنشاء وتعديل الأدوار (`/roles`).
-- **التحكم والحماية بالواجهات ([app/Http/Controllers/SurgicalAssistantController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgicalAssistantController.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+- **التحكم والحماية بالواجهات ([app/Http/Controllers/SurgicalAssistantController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgicalAssistantController.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php), [resources/views/surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php))**:
+  * قصر الوصول بدقة وصرامة على الصلاحيات المستقلة `view surgical assistants` و `manage surgical assistants` وإلغاء الاستثناءات العامة السابقة (`view surgeries`, `edit surgeries`, `surgery_staff`) لضمان انضباط التفعيل والتعطيل من شاشة الأدوار بنسبة 100%.
   * ربط `index()` بصلاحية `view surgical assistants` مع وضع القراءة فقط إذا لم تتوفر صلاحية الإدارة.
   * ربط `store()`, `update()`, `toggleStatus()`, `destroy()` بصلاحية `manage surgical assistants`.
-  * تحديث القائمة الجانبية لتشمل الصلاحيات الجديدة.
+  * تحديث القائمة الجانبية وشاشة تفاصيل العملية لتشمل الصلاحيات الجديدة حصراً.
 - **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgicalAssistantTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgicalAssistantTest.php))**:
   * إضافة اختبارات التحقق من الصلاحيات والمنع (403) والسماح واجتياز كافة الاختبارات بنسبة 100% (`10 passed, 35 assertions`)، وتنسيق الأكواد بـ `Laravel Pint`.
 
