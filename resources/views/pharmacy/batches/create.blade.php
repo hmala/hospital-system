@@ -70,7 +70,7 @@
         </div>
 
         <!-- 2. جدول بنود الأدوية المستلمة في الفاتورة -->
-        <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card border-0 shadow-sm rounded-3 mb-4" style="overflow: visible !important;">
             <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
                 <h6 class="fw-bold text-success mb-0">
                     <i class="fas fa-list-ol me-2"></i>قائمة الأدوية والشحنات المستلمة (بحث ذكي بنمط ICD-10)
@@ -79,8 +79,8 @@
                     <i class="fas fa-plus me-1"></i> إضافة دواء آخر للقائمة
                 </button>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive" style="overflow-x: auto; min-height: 250px;">
+            <div class="card-body p-0" style="overflow: visible !important;">
+                <div class="table-responsive" style="overflow: visible !important;">
                     <table class="table table-hover align-middle mb-0" id="itemsTable">
                         <thead class="table-light small">
                             <tr>
@@ -135,6 +135,9 @@
 @push('styles')
 <style>
 /* تصميم القائمة الذكية للأدوية على نسق التشخيص الدولي ICD-10 */
+#itemsTable, #itemsTable tbody, #itemsTable tr, #itemsTable td {
+    overflow: visible !important;
+}
 .medicine-autocomplete-wrapper {
     position: relative;
     overflow: visible !important;
@@ -143,16 +146,16 @@
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
-    left: 0;
-    width: 100% !important;
-    min-width: 380px;
-    z-index: 999999 !important;
-    max-height: 330px;
+    left: auto;
+    width: 440px !important;
+    max-width: 90vw;
+    z-index: 9999999 !important;
+    max-height: 340px;
     overflow-y: auto;
     background: #ffffff !important;
     border: 2px solid #0d6efd !important;
     border-radius: 12px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(13, 110, 253, 0.15) !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(13, 110, 253, 0.2) !important;
 }
 .medicine-dropdown-header {
     background: linear-gradient(135deg, #eff6ff, #dbeafe);
