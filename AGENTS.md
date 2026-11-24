@@ -54,6 +54,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-24 — المرحلة 283: تحصين مسارات وصلاحيات المستودع والمخزن الرئيسي للمستشفى وعزل موقع الصيدلية وحماية المواد وتصفير الوجبات الوهمية Main Warehouse RBAC Hardening, Dummy Batches Zeroing & Complete Pharmacy Decoupling)
+
+### Done
+- **تصفير الوجبات الافتراضية الوهمية**:
+  * حذف وتصفير جميع الوجبات الوهمية القديمة (3,972 دفعة برقم `INIT-*`) من جدول `medicine_batches` نهائياً وتصفير كمياتها، مع الحفاظ الكامل على كافة الأدوية (3,974 دواء).
+- **تحصين مسارات المستودع وصلاحيات Spatie ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * حماية مسارات الموردين والمواد والمشتريات والمستودعات والتحويلات بميدلوير `role_or_permission` الصارم لمنع كادر الصيدلية أو الكاشير من دخولها برمز `403 Forbidden`.
+  * عزل واستبعاد موقع الصيدلية الوهمي القديم (`Location #16`) من كافة استعلامات ومنسدلات المخزن العام في `LocationController`, `InventoryController`, `StockTransferController`.
+- **حماية حذف المواد والعمليات المخزنية ([app/Http/Controllers/ProductController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ProductController.php))**:
+  * منع حذف أي مادة في المستودع إذا كانت مرتبطة بوجبات مخزنية (`stockBatches`) أو بنود شراء مسجلة (`purchaseItems`).
+  * إسناد موقع الشراء ديناميكياً إلى المخزن الرئيسي وتحديث واجهات الموردين والتحويلات.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php))**:
+  * تحديث مصفوفة اختبارات الصلاحيات لتعكس فصل بطاقة «الصيدلية ومخزن الأدوية» عن بطاقة «المستودع والمخزن الرئيسي للمستشفى»، واجتياز كافة الاختبارات بنسبة 100% (15 اختبار، 243 توكيد) وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-24 — المرحلة 282: فصل تبويب الصيدلية ومخزن الأدوية عن المستودع والمخزن الرئيسي في شاشة إدارة الأدوار والصلاحيات Role Management Pharmacy & Main Warehouse Modules Separation)
 
 ### Done

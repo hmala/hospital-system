@@ -2731,3 +2731,15 @@
     - ظهور تبويبين منفصلين تماماً في الأكورديون مع أيقونات ووصف وشارات تفصيلية لكل قسم بشكل معزول ومستقل.
   * **الاختبارات الآلية الحصينة ([tests/Feature/RolePharmacyInventorySeparationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePharmacyInventorySeparationTest.php))**:
     - اجتياز اختبارات الفصل وتأكيد استقلال بطاقة الصيدلية عن بطاقة المستودع وظهور كافة عناصر الصلاحيات لكل قسم بنجاح 100% (`1 passed, 10 assertions`)، وتوافق تام مع `Laravel Pint`.
+
+- **المرحلة 283:** تحصين مسارات وصلاحيات المستودع والمخزن الرئيسي للمستشفى وعزل موقع الصيدلية وحماية المواد وتصفير الوجبات الوهمية (Main Warehouse RBAC Hardening, Dummy Batches Zeroing & Complete Pharmacy Decoupling):
+  * **تصفير الوجبات الافتراضية الوهمية**:
+    - حذف كافة الوجبات الوهمية المسبقة (3,972 دفعة برقم `INIT-*`) من جدول `medicine_batches` نهائياً وتصفير كمياتها، مع الحفاظ الكامل على كافة الأدوية (3,974 دواء).
+  * **تحصين مسارات المستودع وصلاحيات Spatie ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - حماية مسارات الموردين والمواد والمشتريات والمستودعات والتحويلات بميدلوير `role_or_permission` الصارم لمنع كادر الصيدلية أو الكاشير من دخولها برمز `403 Forbidden`.
+    - عزل واستبعاد موقع الصيدلية الوهمي القديم (`Location #16`) من كافة استعلامات ومنسدلات المخزن العام.
+  * **حماية حذف المواد والعمليات المخزنية ([app/Http/Controllers/ProductController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ProductController.php))**:
+    - منع حذف أي مادة في المستودع إذا كانت مرتبطة بوجبات مخزنية (`stockBatches`) أو بنود شراء مسجلة (`purchaseItems`).
+    - إسناد موقع الشراء ديناميكياً إلى المخزن الرئيسي وتحديث واجهات الموردين والتحويلات.
+  * **الاختبارات الآلية الحصينة ([tests/Feature/RolePermissionsMatrixTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePermissionsMatrixTest.php))**:
+    - تحديث مصفوفة اختبارات الصلاحيات لتعكس فصل بطاقة «الصيدلية ومخزن الأدوية» عن بطاقة «المستودع والمخزن الرئيسي للمستشفى»، واجتياز كافة الاختبارات بنسبة 100% (15 اختبار، 243 توكيد) وتوافق تام مع `Laravel Pint`.

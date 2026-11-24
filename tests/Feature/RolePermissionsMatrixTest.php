@@ -51,6 +51,7 @@ class RolePermissionsMatrixTest extends TestCase
             'manage rooms',
             'manage users',
             'manage roles',
+            'manage inventory',
         ];
 
         foreach ($samples as $sample) {
@@ -75,7 +76,8 @@ class RolePermissionsMatrixTest extends TestCase
         $response->assertSee('الحسابات العامة والمالية');
         $response->assertSee('الأشعة والسونار والإيكو');
         $response->assertSee('المختبر والتحاليل الطبية');
-        $response->assertSee('الصيدلية والمخزن الطبي');
+        $response->assertSee('الصيدلية ومخزن الأدوية');
+        $response->assertSee('المستودع والمخزن الرئيسي للمستشفى');
         $response->assertSee('قسم الطوارئ');
         $response->assertSee('العمليات الجراحية والرقود');
         $response->assertSee('خدمات ومراسلات الواتساب');
