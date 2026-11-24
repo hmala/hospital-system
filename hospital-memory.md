@@ -2721,3 +2721,13 @@
     - تأكيد استقلالية الصيدلية التامة عن مخزن المستشفى العام.
   * **الاختبارات الآلية الحصينة ([tests/Feature/PharmacySidebarAndPermissionsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacySidebarAndPermissionsTest.php))**:
     - بناء واجتياز اختبارات الميزة وتأكيد ظهور كافة الروابط الـ 7 لكادر الصيدلية والوصول لشاشات الإضافة والاستيراد بنجاح 100% (`2 passed, 10 assertions`).
+
+- **المرحلة 282:** فصل تبويب الصيدلية ومخزن الأدوية عن المستودع والمخزن الرئيسي في شاشة إدارة الأدوار والصلاحيات (Role Management Pharmacy & Main Warehouse Modules Separation):
+  * **فصل التبويبات والمجموعات البرمجية ([app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php))**:
+    - فصل بطاقة ومجموعة الصيدلية لتصبح قسماً مستقلاً: **«الصيدلية ومخزن الأدوية»** تحوي كافة الصلاحيات الصيدلانية حصراً (`view pharmacy`, `dispense medications`, `process pharmacy requests`, `manage medicines`, `create medicines`, `edit medicines`, `delete medicines`, `import medicines`, `manage pharmacy services`).
+    - إنشاء بطاقة ومجموعة مستقلة للمستودع والمخزن الرئيسي: **«المستودع والمخزن الرئيسي للمستشفى»** تحوي صلاحيات المخزن العام حصراً (`manage inventory`, `view inventory`, `products`, `stock_batches`, `stock_movements`, `stock transfers`, `stock transfer requests`, `manage nursing sub stores`, `manage surgery store`, `purchases`, `suppliers`, `manage location thresholds`).
+    - فصل تصنيف الأدوار في `getRoleCategory()` ليكون دور `pharmacy_staff` تابعاً للصيدلية، ودور `inventory_manager` تابعاً للمستودع العام.
+  * **شاشة تعديل الأدوار ([resources/views/roles/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/roles/edit.blade.php), `/roles/7/edit`)**:
+    - ظهور تبويبين منفصلين تماماً في الأكورديون مع أيقونات ووصف وشارات تفصيلية لكل قسم بشكل معزول ومستقل.
+  * **الاختبارات الآلية الحصينة ([tests/Feature/RolePharmacyInventorySeparationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePharmacyInventorySeparationTest.php))**:
+    - اجتياز اختبارات الفصل وتأكيد استقلال بطاقة الصيدلية عن بطاقة المستودع وظهور كافة عناصر الصلاحيات لكل قسم بنجاح 100% (`1 passed, 10 assertions`)، وتوافق تام مع `Laravel Pint`.

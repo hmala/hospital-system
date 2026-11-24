@@ -67,10 +67,22 @@ class RoleManagementController extends Controller
                 'icon' => 'ambulance',
                 'color' => 'danger',
             ],
-            'pharmacy_staff', 'inventory_manager', 'surgery_staff', 'gh&est', 'patient' => [
-                'key' => 'pharmacy_services',
-                'name' => 'الصيدلية والمستودع والخدمات',
+            'pharmacy_staff' => [
+                'key' => 'pharmacy',
+                'name' => 'الصيدلية وصرف الأدوية',
                 'icon' => 'pills',
+                'color' => 'success',
+            ],
+            'inventory_manager' => [
+                'key' => 'inventory',
+                'name' => 'المستودع والمخزن الرئيسي',
+                'icon' => 'warehouse',
+                'color' => 'secondary',
+            ],
+            'surgery_staff', 'gh&est', 'patient' => [
+                'key' => 'services',
+                'name' => 'الخدمات والعمليات المساندة',
+                'icon' => 'procedures',
                 'color' => 'primary',
             ],
             'admin', 'admin-hsop', 'hospital_admin', 'staff', 'hr_manager' => [
@@ -441,10 +453,16 @@ class RoleManagementController extends Controller
                 'description' => 'محطة التحاليل وسحب العينات، إدخال النتائج، تسعير الفحوصات ومجموعات المفضلات',
             ],
             'pharmacy' => [
-                'name' => 'الصيدلية والمخزن الطبي',
+                'name' => 'الصيدلية ومخزن الأدوية',
                 'icon' => 'fa-pills',
                 'color' => 'success',
-                'description' => 'نقطة بيع وصرف الصيدلية (POS Kanban)، صرف الوصفات، المخزن، والمشتريات',
+                'description' => 'نقطة بيع وصرف الصيدلية (POS)، صرف الوصفات، دليل الأدوية، والخدمات الصيدلانية',
+            ],
+            'inventory' => [
+                'name' => 'المستودع والمخزن الرئيسي للمستشفى',
+                'icon' => 'fa-warehouse',
+                'color' => 'secondary',
+                'description' => 'المخزن الرئيسي، الردهات والعمليات، حركة النقل والتحويلات، المشتريات والموردين',
             ],
             'emergency' => [
                 'name' => 'قسم الطوارئ',
@@ -591,25 +609,37 @@ class RoleManagementController extends Controller
             'edit packages' => ['label' => 'تعديل باقات الفحوصات والأسعار', 'action' => 'تعديل', 'badge' => 'warning'],
             'delete packages' => ['label' => 'حذف باقة فحص', 'action' => 'حذف', 'badge' => 'danger'],
 
-            // 💊 6. الصيدلية والمخزن الطبي
-            'view pharmacy' => ['label' => 'عرض شاشة الصيدلية ونقطة البيع (POS Kanban)', 'action' => 'عرض', 'badge' => 'info'],
+            // 💊 6. الصيدلية ومخزن الأدوية
+            'view pharmacy' => ['label' => 'عرض شاشة الصيدلية ونقطة البيع (POS)', 'action' => 'عرض', 'badge' => 'info'],
+            'dispense medications' => ['label' => 'صرف الأدوية وتسجيل مبيعات الصيدلية', 'action' => 'صرف', 'badge' => 'success'],
             'process pharmacy requests' => ['label' => 'صرف الوصفات الطبية واقتراح البدائل الدوائية', 'action' => 'معالجة', 'badge' => 'success'],
-            'view products' => ['label' => 'عرض دليل الأدوية والمواد الطبية', 'action' => 'عرض', 'badge' => 'info'],
-            'create products' => ['label' => 'إضافة دواء أو مستلزم طبي جديد', 'action' => 'إضافة', 'badge' => 'success'],
-            'edit products' => ['label' => 'تعديل بيانات الدواء والأسعار والباركود', 'action' => 'تعديل', 'badge' => 'warning'],
-            'delete products' => ['label' => 'حذف صنف دوائي', 'action' => 'حذف', 'badge' => 'danger'],
-            'manage inventory' => ['label' => 'إدارة المستودع والمخزن الطبي العام', 'action' => 'إدارة', 'badge' => 'primary'],
-            'view inventory' => ['label' => 'عرض تقرير ومستوى أرصدة المخزون', 'action' => 'عرض', 'badge' => 'info'],
-            'view stock_batches' => ['label' => 'تتبع وجبات وتواريخ صلاحية الأدوية (FEFO)', 'action' => 'عرض', 'badge' => 'info'],
+            'manage medicines' => ['label' => 'إدارة دليل الأدوية والمستلزمات الصيدلانية', 'action' => 'إدارة', 'badge' => 'primary'],
+            'create medicines' => ['label' => 'إضافة دواء أو مستلزم جديد للصيدلية', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit medicines' => ['label' => 'تعديل بيانات وأسعار الأدوية بالصيدلية', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete medicines' => ['label' => 'حذف دواء من دليل الصيدلية', 'action' => 'حذف', 'badge' => 'danger'],
+            'import medicines' => ['label' => 'استيراد وتحديث الأدوية والوجبات عبر ملف إكسل', 'action' => 'استيراد', 'badge' => 'success'],
+            'manage pharmacy services' => ['label' => 'إدارة وتسعير الخدمات الصيدلانية غير المخزنية', 'action' => 'إدارة', 'badge' => 'primary'],
+
+            // 🏢 7. المستودع والمخزن الرئيسي للمستشفى
+            'manage inventory' => ['label' => 'إدارة المستودع والمخزن الطبي العام للمستشفى', 'action' => 'إدارة', 'badge' => 'primary'],
+            'view inventory' => ['label' => 'عرض تقرير ومستوى أرصدة المستودع العام', 'action' => 'عرض', 'badge' => 'info'],
+            'view products' => ['label' => 'عرض دليل مواد ومستلزمات المخزن العام', 'action' => 'عرض', 'badge' => 'info'],
+            'create products' => ['label' => 'إضافة مادة أو مستلزم جديد للمخزن العام', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit products' => ['label' => 'تعديل بيانات مادة ومستلزم بالمخزن المركزي', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete products' => ['label' => 'حذف مادة من المخزن المركزي', 'action' => 'حذف', 'badge' => 'danger'],
+            'view stock_batches' => ['label' => 'عرض وجبات وأرصدة المستودع العام', 'action' => 'عرض', 'badge' => 'info'],
             'view stock_movements' => ['label' => 'عرض سجل حركات الوارد والمنصرف المخزني', 'action' => 'عرض', 'badge' => 'info'],
-            'view stock transfers' => ['label' => 'عرض حركات نقل الأدوية بين الأقسام', 'action' => 'عرض', 'badge' => 'info'],
-            'view stock transfer requests' => ['label' => 'عرض والموافقة على طلبات نقل المخزون', 'action' => 'عرض', 'badge' => 'info'],
-            'view purchases' => ['label' => 'عرض فواتير المشتريات الدوائية', 'action' => 'عرض', 'badge' => 'info'],
-            'create purchases' => ['label' => 'تسجيل فاتورة شراء واستلام وجبات جديدة', 'action' => 'إضافة', 'badge' => 'success'],
-            'edit purchases' => ['label' => 'تعديل فاتورة مشتريات', 'action' => 'تعديل', 'badge' => 'warning'],
-            'delete purchases' => ['label' => 'حذف فاتورة مشتريات', 'action' => 'حذف', 'badge' => 'danger'],
-            'view suppliers' => ['label' => 'عرض قائمة شركات الأدوية والموردين', 'action' => 'عرض', 'badge' => 'info'],
-            'create suppliers' => ['label' => 'إضافة مورد أو شركة أدوية جديدة', 'action' => 'إضافة', 'badge' => 'success'],
+            'view stock transfers' => ['label' => 'عرض حركات نقل المواد بين الأقسام والردهات', 'action' => 'عرض', 'badge' => 'info'],
+            'view stock transfer requests' => ['label' => 'عرض والموافقة على طلبات نقل وتعزيز المخزون', 'action' => 'عرض', 'badge' => 'info'],
+            'manage nursing sub stores' => ['label' => 'رقابة مخازن وعُهد ردهات التمريض وتعيين المسؤولين', 'action' => 'إدارة', 'badge' => 'primary'],
+            'manage surgery store' => ['label' => 'رقابة مخزن وعُهد صالات العمليات الجراحية', 'action' => 'إدارة', 'badge' => 'primary'],
+            'manage location thresholds' => ['label' => 'إدارة وتحديد حدود الطلب ونواقص المواقع والمخازن', 'action' => 'إدارة', 'badge' => 'primary'],
+            'view purchases' => ['label' => 'عرض فواتير المشتريات والتوريد للمستودع', 'action' => 'عرض', 'badge' => 'info'],
+            'create purchases' => ['label' => 'تسجيل فاتورة شراء واستلام وجبات جديدة بالمخزن', 'action' => 'إضافة', 'badge' => 'success'],
+            'edit purchases' => ['label' => 'تعديل فاتورة مشتريات المستودع', 'action' => 'تعديل', 'badge' => 'warning'],
+            'delete purchases' => ['label' => 'حذف فاتورة مشتريات المستودع', 'action' => 'حذف', 'badge' => 'danger'],
+            'view suppliers' => ['label' => 'عرض قائمة الموردين والشركات للمخزن العام', 'action' => 'عرض', 'badge' => 'info'],
+            'create suppliers' => ['label' => 'إضافة مورد أو شركة توريد جديدة', 'action' => 'إضافة', 'badge' => 'success'],
             'edit suppliers' => ['label' => 'تعديل بيانات الموردين وحساباتهم', 'action' => 'تعديل', 'badge' => 'warning'],
             'delete suppliers' => ['label' => 'حذف سجل مورد', 'action' => 'حذف', 'badge' => 'danger'],
 
@@ -784,11 +814,17 @@ class RoleManagementController extends Controller
             return 'lab';
         }
 
-        // 5. Pharmacy & Inventory
-        if ((str_contains($permissionName, 'pharmacy') || str_contains($permissionName, 'product') || str_contains($permissionName, 'supplier') ||
-            str_contains($permissionName, 'purchase') || str_contains($permissionName, 'inventory') ||
-            str_starts_with($permissionName, 'view stock') || str_starts_with($permissionName, 'manage location')) && ! str_contains($permissionName, 'medicine group')) {
+        // 5. Pharmacy (الصيدلية ومخزن الأدوية)
+        if ((str_contains($permissionName, 'pharmacy') || str_contains($permissionName, 'medicine') || str_contains($permissionName, 'dispense')) && ! str_contains($permissionName, 'medicine group')) {
             return 'pharmacy';
+        }
+
+        // 6. Inventory & Warehouse (المستودع والمخزن الرئيسي للمستشفى)
+        if (str_contains($permissionName, 'product') || str_contains($permissionName, 'supplier') ||
+            str_contains($permissionName, 'purchase') || str_contains($permissionName, 'inventory') ||
+            str_starts_with($permissionName, 'view stock') || str_contains($permissionName, 'sub stores') ||
+            $permissionName === 'manage surgery store' || str_starts_with($permissionName, 'manage location')) {
+            return 'inventory';
         }
 
         // 6. Emergency

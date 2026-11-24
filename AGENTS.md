@@ -54,6 +54,18 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-24 — المرحلة 282: فصل تبويب الصيدلية ومخزن الأدوية عن المستودع والمخزن الرئيسي في شاشة إدارة الأدوار والصلاحيات Role Management Pharmacy & Main Warehouse Modules Separation)
+
+### Done
+- **فصل التبويبات والمجموعات البرمجية ([app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php))**:
+  * فصل بطاقة ومجموعة الصيدلية لتصبح قسماً مستقلاً: **«الصيدلية ومخزن الأدوية»** (`pharmacy`) تحوي كافة الصلاحيات الصيدلانية حصراً (`view pharmacy`, `dispense medications`, `process pharmacy requests`, `manage medicines`, `create medicines`, `edit medicines`, `delete medicines`, `import medicines`, `manage pharmacy services`).
+  * إنشاء بطاقة ومجموعة مستقلة للمستودع العام: **«المستودع والمخزن الرئيسي للمستشفى»** (`inventory`) تحوي صلاحيات المستودع العام حصراً (`manage inventory`, `view inventory`, `products`, `stock_batches`, `stock_movements`, `stock transfers`, `stock transfer requests`, `manage nursing sub stores`, `manage surgery store`, `purchases`, `suppliers`, `manage location thresholds`).
+  * فصل تصنيف الأدوار في `getRoleCategory()` ليكون دور `pharmacy_staff` تابعاً لقسم الصيدلية، ودور `inventory_manager` تابعاً لقسم المستودع العام.
+- **شاشة تعديل الأدوار ([resources/views/roles/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/roles/edit.blade.php), `/roles/7/edit`)**:
+  * ظهور قسمين منفصلين تماماً في الأكورديون مع أيقونات ووصف وشارات تفصيلية لكل قسم بشكل معزول ومستقل بدلاً من الدمج السابق.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/RolePharmacyInventorySeparationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RolePharmacyInventorySeparationTest.php))**:
+  * اجتياز اختبارات الفصل وتأكيد استقلال بطاقة الصيدلية عن بطاقة المستودع وظهور كافة عناصر الصلاحيات لكل قسم بنجاح 100% (`1 passed, 10 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-24 — المرحلة 281: إبراز كافة روابط القائمة الجانبية للصيدلية ومزامنة الصلاحيات لكادر الصيدلية Pharmacy Staff Complete Sidebar Links & Permissions Synchronization)
 
 ### Done
