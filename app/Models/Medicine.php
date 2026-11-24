@@ -70,7 +70,7 @@ class Medicine extends Model
             ->where('expiry_date', '>=', now()->toDateString())
             ->where(function ($q) {
                 $q->where('current_quantity', '>', 0)
-                  ->orWhere('current_sub_units', '>', 0);
+                    ->orWhere('current_sub_units', '>', 0);
             })
             ->orderBy('expiry_date', 'asc');
     }
@@ -131,6 +131,7 @@ class Medicine extends Model
     public function getTotalSubUnitsStockAttribute(): int
     {
         $factor = max(1, $this->sub_units_count);
+
         return ($this->total_stock * $factor) + $this->total_open_sub_units;
     }
 
@@ -148,8 +149,8 @@ class Medicine extends Model
     public function calculatePricing(string $unitType = 'main_unit', ?string $insuranceType = 'none', ?float $copayPercent = 0.00): array
     {
         $insuranceType = strtolower((string) ($insuranceType ?? 'none'));
-        $copayPercent  = max(0.00, min(100.00, (float) ($copayPercent ?? 0.00)));
-        $isSubUnit     = ($unitType === 'sub_unit');
+        $copayPercent = max(0.00, min(100.00, (float) ($copayPercent ?? 0.00)));
+        $isSubUnit = ($unitType === 'sub_unit');
 
         // السعر الأساسي للجمهور (نقداً)
         if ($isSubUnit) {
@@ -161,45 +162,45 @@ class Medicine extends Model
         }
 
         // إذا كان الدواء غير مشمول بالضمان أساساً
-        if (!$this->is_insurance_covered || $insuranceType === 'none') {
+        if (! $this->is_insurance_covered || $insuranceType === 'none') {
             return [
-                'unit_type'        => $unitType,
-                'insurance_type'   => 'none',
+                'unit_type' => $unitType,
+                'insurance_type' => 'none',
                 'copay_percentage' => 0.00,
-                'is_covered'       => false,
-                'regular_price'    => $regularPrice,
-                'approved_price'   => $regularPrice,
-                'total_amount'     => $regularPrice,
-                'patient_share'    => $regularPrice,
-                'insurance_share'  => 0.00,
+                'is_covered' => false,
+                'regular_price' => $regularPrice,
+                'approved_price' => $regularPrice,
+                'total_amount' => $regularPrice,
+                'patient_share' => $regularPrice,
+                'insurance_share' => 0.00,
             ];
         }
 
         // تحديد السعر المعتمد حسب جهة التأمين
         $approvedPrice = $regularPrice;
-        if (in_array($insuranceType, ['moi', 'interior_ministry']) && !is_null($this->moi_price) && (float) $this->moi_price > 0) {
+        if (in_array($insuranceType, ['moi', 'interior_ministry']) && ! is_null($this->moi_price) && (float) $this->moi_price > 0) {
             $approvedPrice = $isSubUnit
                 ? round((float) $this->moi_price / max(1, $this->sub_units_count), 2)
                 : (float) $this->moi_price;
-        } elseif (in_array($insuranceType, ['hi', 'health_insurance']) && !is_null($this->hi_price) && (float) $this->hi_price > 0) {
+        } elseif (in_array($insuranceType, ['hi', 'health_insurance']) && ! is_null($this->hi_price) && (float) $this->hi_price > 0) {
             $approvedPrice = $isSubUnit
                 ? round((float) $this->hi_price / max(1, $this->sub_units_count), 2)
                 : (float) $this->hi_price;
         }
 
-        $patientShare   = round($approvedPrice * ($copayPercent / 100.0), 2);
+        $patientShare = round($approvedPrice * ($copayPercent / 100.0), 2);
         $insuranceShare = round($approvedPrice - $patientShare, 2);
 
         return [
-            'unit_type'        => $unitType,
-            'insurance_type'   => $insuranceType,
+            'unit_type' => $unitType,
+            'insurance_type' => $insuranceType,
             'copay_percentage' => $copayPercent,
-            'is_covered'       => true,
-            'regular_price'    => $regularPrice,
-            'approved_price'   => $approvedPrice,
-            'total_amount'     => $approvedPrice,
-            'patient_share'    => $patientShare,
-            'insurance_share'  => $insuranceShare,
+            'is_covered' => true,
+            'regular_price' => $regularPrice,
+            'approved_price' => $approvedPrice,
+            'total_amount' => $approvedPrice,
+            'patient_share' => $patientShare,
+            'insurance_share' => $insuranceShare,
         ];
     }
 }

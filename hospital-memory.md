@@ -79,6 +79,22 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 288 (2026-11-25 — `main`) — الربط الآلي المقفل لتصنيف المريض التأميني من الاستعلامات بنقطة البيع والصرف والتسعير المزدوج للصيدلية المتعاقدة (Contracted Pharmacy Dual Cash/Insurance POS Engine & Automated Reception Patient Profile Lock)**:
+  * **إلغاء التحديد اليدوي وقفل الوضع المالي من الاستعلامات ([resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
+    - حذف القوائم المنسدلة لاختيار الضمان من شاشة الصيدلية (الصيدلية لا تحدد ولا تختار نوع المريض).
+    - الربط الآلي المقفل ببيانات حجز المريض من الاستعلامات (`insurance_type`, `health_insurance_category_id`, `copay_percentage`).
+    - تثبيت شارة رسمية مقفلة للمريض: `🔒 معتمد ومسجل بالاستعلامات: ضمان صحي (فئة X - استقطاع Y%)` أو `🔒 مسجل بالاستعلامات: نقدي كاش (100% نقداً)`.
+    - إبقاء البيع المباشر OTC لحالات زبائن الشارع غير المسجلين كمرضى بالمستشفى.
+  * **إبراز تصنيف الاستعلامات بطابور الوصفات الواردة ([app/Http/Controllers/Pharmacy/PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php))**:
+    - تحديث `pendingPrescriptions()` و `getPrescriptionDetails()` لتضمين شارات تصنيف الاستعلامات والتأمين آلياً.
+  * **التسعير المزدوج واشتقاق أسعار الأشرطة ([app/Models/Medicine.php](file:///c:/wamp64/www/hospital-system/app/Models/Medicine.php))**:
+    - إضافة ميثود `getHiSubUnitPriceAttribute()` لحساب سعر شريط الضمان بدقة.
+    - مريض الضمان: تطبيق جدول التعاقد الحكومي (`hi_price`) والخصم وفق فئة استقطاع الاستعلامات.
+    - مريض الكاش والبيع المباشر: تطبيق أسعار الصيدلية المتعاقدة (`sale_price`, `sub_unit_sale_price`).
+    - المواد غير المشمولة بالضمان تُحمّل كاش للمريض مباشرة مع شارة توضيحية.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyPosTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyPosTest.php))**:
+    - اجتياز كامل حزمة الاختبارات الآلية بنجاح (`7 passed, 36 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 - **المرحلة 280 (2026-11-24 — `main`) — لوحة القيادة المستقلة لرقابة مخازن وعُهد صالات العمليات الجراحية وإدارة أمناء العهد وتتبع صرفيات العمليات (Operation Theaters & Main Surgery Store Governance Dashboard, Custody Tracking & Clinical Consumption Auditing)**:
   * **الصلاحيات والعهدة الافتراضية بالميجريشن ([database/migrations/2026_11_24_100000_create_surgery_store_governance.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_24_100000_create_surgery_store_governance.php))**:
     - إنشاء صلاحية `manage surgery store` وربطها تلقائياً بدور كادر العمليات `surgery_staff` وأدوار الإدارة (`admin`, `admin-hsop`, `hospital_admin`, `super_admin`).

@@ -188,41 +188,23 @@
                         <div id="posSearchResultsDropdown" class="pos-search-results" style="display: none;"></div>
                     </div>
 
-                    <!-- شريط بيانات العميل ونوع الفاتورة -->
+                    <!-- شريط بيانات العميل والوضع المالي المستمد آلياً من الاستعلامات -->
                     <div class="row g-2 align-items-center pt-2 pb-1 border-bottom">
-                        <div class="col-12 col-md-4">
+                        <div class="col-12 col-md-5">
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text bg-light text-muted"><i class="fas fa-user"></i></span>
-                                <input type="text" id="posPatientNameInput" class="form-control" placeholder="اسم المريض (اختياري للبيع المباشر)" value="مريض مباشر OTC">
+                                <input type="text" id="posPatientNameInput" class="form-control fw-semibold" placeholder="اسم المريض (اختياري للبيع المباشر)" value="مريض مباشر OTC">
                             </div>
                         </div>
 
-                        <div class="col-6 col-md-3">
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-light text-muted"><i class="fas fa-shield-alt"></i></span>
-                                <select id="posInsuranceTypeSelect" class="form-select" onchange="handleInsuranceTypeChange()">
-                                    <option value="none">نقدي كامل (Cash)</option>
-                                    <option value="health_insurance">الضمان الصحي (HI)</option>
-                                    <option value="interior_ministry">وزارة الداخلية (MOI)</option>
-                                </select>
+                        <div class="col-12 col-md-7 text-md-end">
+                            <div id="receptionInsuranceStatusContainer" class="d-inline-flex align-items-center gap-1">
+                                <span class="badge bg-light text-dark border px-3 py-1.5" id="posActiveBillTypeBadge">
+                                    <i class="fas fa-shopping-bag text-primary me-1"></i> بيع مباشر OTC (تسعيرة الصيدلية كاش)
+                                </span>
                             </div>
-                        </div>
-
-                        <div class="col-6 col-md-3" id="insuranceCategoryCol" style="display: none;">
-                            <select id="posInsuranceCategorySelect" class="form-select form-select-sm" onchange="calculateCartTotals()">
-                                <option value="">اختر فئة الضمان...</option>
-                                @foreach($insuranceCategories as $cat)
-                                <option value="{{ $cat->id }}" data-copay="{{ $cat->medication_copay }}">
-                                    {{ $cat->name }} (تحمل {{ $cat->medication_copay }}%)
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="col-12 col-md text-md-end">
-                            <span class="badge bg-light text-dark border px-3 py-1.5" id="posActiveBillTypeBadge">
-                                <i class="fas fa-shopping-bag text-primary me-1"></i> بيع مباشر OTC
-                            </span>
+                            <input type="hidden" id="posInsuranceTypeSelect" value="none">
+                            <input type="hidden" id="posInsuranceCategorySelect" value="">
                         </div>
                     </div>
 
@@ -828,11 +810,58 @@
         emptyState.style.display = 'none';
         let html = '';
 
+        const insuranceType = document.getElementById('posInsuranceTypeSelect').value;
+        const categoryId = document.getElementById('posInsuranceCategorySelect').value;
+        const copayPercent = currentLoadedPrescription ? (parseFloat(currentLoadedPrescription.copay_percentage) || 0) : 0;
+
         posCart.forEach((item, index) => {
             const isSub = (item.unit_type === 'sub_unit');
             const unitLabel = isSub ? item.sub_unit : item.main_unit;
-            const currentPrice = isSub ? item.sub_unit_sale_price : item.sale_price;
-            const lineTotal = currentPrice * item.quantity;
+            const subUnitsCount = item.sub_units_count || 1;
+            const isCovered = (item.is_insurance_covered !== false && item.is_insurance_covered !== 0);
+
+            // احتساب سعر الوحدة الفعلي بناءً على الوضع المالي المعتمد من الاستعلامات
+            let effectiveUnitPrice = 0;
+            let priceModeBadge = '';
+
+            if (insuranceType === 'health_insurance') {
+                if (isCovered && item.hi_price > 0) {
+                    effectiveUnitPrice = isSub ? Math.round(item.hi_price / subUnitsCount) : item.hi_price;
+                    priceModeBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success-subtle small ms-1"><i class="fas fa-shield-alt"></i> ضمان معتمد</span>`;
+                } else {
+                    effectiveUnitPrice = isSub ? item.sub_unit_sale_price : item.sale_price;
+                    priceModeBadge = `<span class="badge bg-warning bg-opacity-10 text-warning-emphasis border border-warning-subtle small ms-1">كاش كامل (غير مشمول)</span>`;
+                }
+            } else if (insuranceType === 'interior_ministry') {
+                effectiveUnitPrice = isSub ? Math.round(item.moi_price / subUnitsCount) : item.moi_price;
+                priceModeBadge = `<span class="badge bg-info bg-opacity-10 text-info border border-info-subtle small ms-1"><i class="fas fa-shield-alt"></i> داخلية</span>`;
+            } else {
+                // كاش نقدي كامل (أسعار الصيدلية المتعاقدة)
+                effectiveUnitPrice = isSub ? item.sub_unit_sale_price : item.sale_price;
+                priceModeBadge = `<span class="badge bg-light text-dark border small ms-1">كاش</span>`;
+            }
+
+            const lineTotal = effectiveUnitPrice * item.quantity;
+            let breakdownHtml = '';
+
+            if (insuranceType === 'health_insurance') {
+                if (isCovered && item.hi_price > 0) {
+                    const linePatientShare = Math.round((lineTotal * copayPercent) / 100);
+                    const lineInsShare = lineTotal - linePatientShare;
+                    breakdownHtml = `
+                        <div class="small text-muted mt-0.5" style="font-size: 0.74rem;">
+                            <span class="text-success fw-bold">حصة المريض (${copayPercent}%): ${formatMoney(linePatientShare)} د.ع</span> | 
+                            <span class="text-primary">الضمان: ${formatMoney(lineInsShare)} د.ع</span>
+                        </div>
+                    `;
+                } else {
+                    breakdownHtml = `
+                        <div class="small text-warning-emphasis mt-0.5" style="font-size: 0.74rem;">
+                            غير مشمول بالضمان - يُدفع بالكامل نقداً
+                        </div>
+                    `;
+                }
+            }
 
             html += `
                 <tr>
@@ -842,6 +871,7 @@
                         <div class="small text-muted">
                             ${item.dosage_form ? `<span class="badge bg-light text-secondary border me-1">${item.dosage_form}</span>` : ''}
                             ${item.strength ? `<span class="badge bg-light text-secondary border me-1">${item.strength}</span>` : ''}
+                            ${subUnitsCount > 1 ? `<span class="badge bg-light text-dark border me-1">[1 علبة = ${subUnitsCount} ${item.sub_unit}]</span>` : ''}
                             ${item.dosage_instructions ? `<span class="text-primary small ms-1"><i class="fas fa-info-circle me-1"></i>${item.dosage_instructions}</span>` : ''}
                         </div>
                     </td>
@@ -865,8 +895,14 @@
                             <button type="button" class="btn btn-sm btn-light border qty-btn" onclick="updateCartItemQty(${index}, ${item.quantity + 1})">+</button>
                         </div>
                     </td>
-                    <td class="text-end fw-semibold text-dark font-monospace">${formatMoney(currentPrice)}</td>
-                    <td class="text-end fw-bold text-success font-monospace">${formatMoney(lineTotal)}</td>
+                    <td class="text-end">
+                        <div class="fw-semibold text-dark font-monospace">${formatMoney(effectiveUnitPrice)} د.ع</div>
+                        <div>${priceModeBadge}</div>
+                    </td>
+                    <td class="text-end">
+                        <div class="fw-bold text-success font-monospace">${formatMoney(lineTotal)} د.ع</div>
+                        ${breakdownHtml}
+                    </td>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm text-danger p-0" onclick="removeFromCart(${index})" title="حذف الصنف">
                             <i class="fas fa-times-circle fa-lg"></i>
@@ -882,13 +918,7 @@
 
     function calculateCartTotals() {
         const insuranceType = document.getElementById('posInsuranceTypeSelect').value;
-        const categorySelect = document.getElementById('posInsuranceCategorySelect');
-        let copayPercent = 0;
-
-        if (insuranceType === 'health_insurance' && categorySelect && categorySelect.value) {
-            const selectedOpt = categorySelect.options[categorySelect.selectedIndex];
-            copayPercent = parseFloat(selectedOpt.getAttribute('data-copay')) || 0;
-        }
+        const copayPercent = currentLoadedPrescription ? (parseFloat(currentLoadedPrescription.copay_percentage) || 0) : 0;
 
         let total = 0;
         let patientShare = 0;
@@ -896,12 +926,18 @@
 
         posCart.forEach(item => {
             const isSub = (item.unit_type === 'sub_unit');
+            const subUnitsCount = item.sub_units_count || 1;
+            const isCovered = (item.is_insurance_covered !== false && item.is_insurance_covered !== 0);
             let basePrice = isSub ? item.sub_unit_sale_price : item.sale_price;
 
             if (insuranceType === 'health_insurance') {
-                basePrice = isSub ? (item.hi_price / (item.sub_units_count || 1)) : item.hi_price;
+                if (isCovered && item.hi_price > 0) {
+                    basePrice = isSub ? Math.round(item.hi_price / subUnitsCount) : item.hi_price;
+                } else {
+                    basePrice = isSub ? item.sub_unit_sale_price : item.sale_price;
+                }
             } else if (insuranceType === 'interior_ministry') {
-                basePrice = isSub ? (item.moi_price / (item.sub_units_count || 1)) : item.moi_price;
+                basePrice = isSub ? Math.round(item.moi_price / subUnitsCount) : item.moi_price;
             }
 
             const lineTotal = basePrice * item.quantity;
@@ -910,9 +946,14 @@
             if (insuranceType === 'none') {
                 patientShare += lineTotal;
             } else if (insuranceType === 'health_insurance') {
-                const linePatientShare = (lineTotal * copayPercent) / 100;
-                patientShare += linePatientShare;
-                insuranceShare += (lineTotal - linePatientShare);
+                if (isCovered && item.hi_price > 0) {
+                    const linePatientShare = Math.round((lineTotal * copayPercent) / 100);
+                    patientShare += linePatientShare;
+                    insuranceShare += (lineTotal - linePatientShare);
+                } else {
+                    // غير مشمول بالضمان: يتحمله المريض كاملاً نقداً
+                    patientShare += lineTotal;
+                }
             } else if (insuranceType === 'interior_ministry') {
                 insuranceShare += lineTotal;
             }
@@ -925,24 +966,22 @@
 
     function handleInsuranceTypeChange() {
         const type = document.getElementById('posInsuranceTypeSelect').value;
-        const catCol = document.getElementById('insuranceCategoryCol');
         const badge = document.getElementById('posActiveBillTypeBadge');
 
         if (type === 'health_insurance') {
-            catCol.style.display = 'block';
-            badge.innerHTML = '<i class="fas fa-shield-alt text-success me-1"></i> الضمان الصحي (HI)';
+            const catName = currentLoadedPrescription ? (currentLoadedPrescription.category_name || 'فئة معتمدة') : 'فئة معتمدة';
+            const copay = currentLoadedPrescription ? (parseFloat(currentLoadedPrescription.copay_percentage) || 0) : 0;
+            badge.innerHTML = `<i class="fas fa-shield-alt text-success me-1"></i> 🔒 معتمد ومسجل بالاستعلامات: ضمان صحي (${catName} - استقطاع ${copay}%)`;
             badge.className = 'badge bg-success-subtle text-success border border-success px-3 py-1.5';
         } else if (type === 'interior_ministry') {
-            catCol.style.display = 'none';
-            badge.innerHTML = '<i class="fas fa-shield-alt text-info me-1"></i> وزارة الداخلية (MOI)';
+            badge.innerHTML = '<i class="fas fa-shield-alt text-info me-1"></i> 🔒 معتمد ومسجل بالاستعلامات: وزارة الداخلية (MOI)';
             badge.className = 'badge bg-info-subtle text-info border border-info px-3 py-1.5';
         } else {
-            catCol.style.display = 'none';
-            badge.innerHTML = '<i class="fas fa-shopping-bag text-primary me-1"></i> بيع مباشر OTC';
+            badge.innerHTML = '<i class="fas fa-shopping-bag text-primary me-1"></i> بيع مباشر OTC (تسعيرة الصيدلية كاش)';
             badge.className = 'badge bg-light text-dark border px-3 py-1.5';
         }
 
-        calculateCartTotals();
+        renderCart();
     }
 
     // ==========================================
@@ -983,21 +1022,36 @@
         let html = '';
         medicines.forEach((med, idx) => {
             const hasStock = (med.total_stock > 0 || (med.total_open_sub_units && med.total_open_sub_units > 0));
+            const subUnitsCount = med.sub_units_count || 1;
+            const hiPrice = parseFloat(med.hi_price) || parseFloat(med.sale_price) || 0;
+            const hiSubPrice = Math.round(hiPrice / subUnitsCount);
+            const isCovered = (med.is_insurance_covered !== false && med.is_insurance_covered !== 0);
+
             html += `
                 <div class="pos-search-item d-flex justify-content-between align-items-center" onclick="addToCartByIndex(${idx})">
                     <div>
-                        <div class="fw-bold text-dark">${med.name}</div>
-                        <div class="small text-muted">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-dark">${med.name}</span>
+                            ${med.national_code ? `<span class="badge bg-dark bg-opacity-75 font-monospace" style="font-size: 0.72rem;">#${med.national_code}</span>` : ''}
+                        </div>
+                        <div class="small text-muted mt-0.5">
                             ${med.generic_name ? `<span class="me-2"><i class="fas fa-flask text-secondary me-1"></i>${med.generic_name}</span>` : ''}
                             ${med.dosage_form ? `<span class="badge bg-light text-secondary border me-1">${med.dosage_form}</span>` : ''}
-                            ${med.strength ? `<span class="badge bg-light text-secondary border">${med.strength}</span>` : ''}
+                            ${med.strength ? `<span class="badge bg-light text-secondary border me-1">${med.strength}</span>` : ''}
+                            ${subUnitsCount > 1 ? `<span class="badge bg-light text-dark border">[1 علبة = ${subUnitsCount} ${med.sub_unit || 'شريط'}]</span>` : ''}
                         </div>
                     </div>
                     <div class="text-end">
-                        <div class="fw-bold text-primary font-monospace">${formatMoney(med.sale_price)} د.ع</div>
-                        <div class="small">
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            <span class="badge bg-light text-dark border font-monospace">كاش: ${formatMoney(med.sale_price)} د.ع</span>
+                            ${isCovered 
+                                ? `<span class="badge bg-success bg-opacity-10 text-success border border-success-subtle font-monospace"><i class="fas fa-shield-alt"></i> ضمان: ${formatMoney(hiPrice)} د.ع</span>`
+                                : `<span class="badge bg-warning bg-opacity-10 text-warning-emphasis small">غير مشمول</span>`}
+                        </div>
+                        <div class="small mt-1 d-flex align-items-center justify-content-end gap-2">
+                            <span class="text-muted" style="font-size: 0.75rem;">(الشريط: ${formatMoney(med.sub_unit_sale_price)} كاش | ${formatMoney(hiSubPrice)} ضمان)</span>
                             ${hasStock 
-                                ? `<span class="badge bg-success-subtle text-success">متوفر: ${med.total_stock} ${med.main_unit || 'علبة'}</span>`
+                                ? `<span class="badge bg-success-subtle text-success">متوفر: ${med.total_stock} ${med.main_unit || 'علبة'}${med.total_open_sub_units > 0 ? ` + ${med.total_open_sub_units} ${med.sub_unit || 'شريط'}` : ''}</span>`
                                 : `<span class="badge bg-danger-subtle text-danger">نفد الرصيد</span>`}
                         </div>
                     </div>
@@ -1189,6 +1243,11 @@
                         <small class="text-muted d-block text-truncate" style="max-width: 150px; font-size: 0.73rem;">
                             <i class="fas fa-user-md text-primary me-1"></i>${rx.doctor_name}
                         </small>
+                        <div class="mt-0.5">
+                            <span class="badge ${rx.insurance_type === 'health_insurance' ? 'bg-success-subtle text-success border border-success' : (rx.insurance_type === 'interior_ministry' ? 'bg-info-subtle text-info border border-info' : 'bg-light text-dark border')}" style="font-size: 0.70rem;">
+                                ${rx.insurance_badge || 'كاش'}
+                            </span>
+                        </div>
                     </td>
                     <td class="text-center">
                         <span class="badge bg-light text-dark border px-2 py-1 font-monospace" title="${itemsPreview}">
@@ -1228,7 +1287,7 @@
                 const rx = data.prescription;
                 currentLoadedPrescription = rx;
 
-                // تفريغ السلة القديمة وتحميل الجديدة
+                // تفريغ السلة القديمة وتحميل بنود الوصفة
                 posCart = [];
                 (rx.items || []).forEach(item => {
                     posCart.push({
@@ -1246,13 +1305,35 @@
                         sub_unit_sale_price: parseFloat(item.sub_unit_sale_price) || 0,
                         hi_price: parseFloat(item.hi_price) || parseFloat(item.sale_price) || 0,
                         moi_price: parseFloat(item.moi_price) || parseFloat(item.sale_price) || 0,
+                        is_insurance_covered: (item.is_insurance_covered !== false && item.is_insurance_covered !== 0),
                         total_stock: item.total_stock || 0,
                         dosage_instructions: trim((item.dosage_frequency || '') + ' ' + (item.instructions || ''))
                     });
                 });
 
-                // تحديث بيانات المريض والشريط العلوي
+                // تحديث بيانات المريض والشريط العلوي والوضع المالي المثبت آلياً من الاستعلامات
                 document.getElementById('posPatientNameInput').value = rx.patient_name || 'مريض';
+                document.getElementById('posPatientNameInput').readOnly = true;
+
+                const insType = rx.insurance_type || 'none';
+                const catId = rx.health_insurance_category_id || '';
+                const copay = parseFloat(rx.copay_percentage) || 0;
+
+                document.getElementById('posInsuranceTypeSelect').value = insType;
+                document.getElementById('posInsuranceCategorySelect').value = catId;
+
+                const badge = document.getElementById('posActiveBillTypeBadge');
+                if (insType === 'health_insurance') {
+                    badge.innerHTML = `<i class="fas fa-shield-alt text-success me-1"></i> 🔒 معتمد ومسجل بالاستعلامات: ضمان صحي (${rx.category_name || 'فئة معتمدة'} - استقطاع ${copay}%)`;
+                    badge.className = 'badge bg-success-subtle text-success border border-success px-3 py-1.5';
+                } else if (insType === 'interior_ministry') {
+                    badge.innerHTML = '<i class="fas fa-shield-alt text-info me-1"></i> 🔒 معتمد ومسجل بالاستعلامات: وزارة الداخلية (MOI)';
+                    badge.className = 'badge bg-info-subtle text-info border border-info px-3 py-1.5';
+                } else {
+                    badge.innerHTML = '<i class="fas fa-receipt text-primary me-1"></i> 🔒 مسجل بالاستعلامات: نقدي كاش (100% نقداً)';
+                    badge.className = 'badge bg-light text-dark border px-3 py-1.5';
+                }
+
                 const banner = document.getElementById('loadedPrescriptionBanner');
                 document.getElementById('bannerRxNumber').innerText = rx.prescription_number;
                 document.getElementById('bannerRxDoctor').innerText = rx.doctor_name || 'الاستشاري';
@@ -1271,7 +1352,13 @@
         currentLoadedPrescription = null;
         document.getElementById('loadedPrescriptionBanner').style.display = 'none';
         document.getElementById('posPatientNameInput').value = 'مريض مباشر OTC';
-        calculateCartTotals();
+        document.getElementById('posPatientNameInput').readOnly = false;
+        document.getElementById('posInsuranceTypeSelect').value = 'none';
+        document.getElementById('posInsuranceCategorySelect').value = '';
+        const badge = document.getElementById('posActiveBillTypeBadge');
+        badge.innerHTML = '<i class="fas fa-shopping-bag text-primary me-1"></i> بيع مباشر OTC (تسعيرة الصيدلية كاش)';
+        badge.className = 'badge bg-light text-dark border px-3 py-1.5';
+        renderCart();
     }
 
     function loadCurrentModalRxIntoCart() {

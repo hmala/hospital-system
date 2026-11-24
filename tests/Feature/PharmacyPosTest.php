@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\HealthInsuranceCategory;
 use App\Models\Medicine;
 use App\Models\MedicineBatch;
+use App\Models\Patient;
 use App\Models\PharmacySale;
-use App\Models\PharmacyService;
+use App\Models\Prescription;
+use App\Models\PrescriptionItem;
 use App\Models\User;
 use Database\Seeders\HealthInsuranceCategorySeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -18,7 +20,9 @@ class PharmacyPosTest extends TestCase
     use RefreshDatabase;
 
     protected $adminUser;
+
     protected $medicine;
+
     protected $batch;
 
     protected function setUp(): void
@@ -76,10 +80,10 @@ class PharmacyPosTest extends TestCase
         $response->assertJsonStructure([
             'medicines' => [
                 '*' => [
-                    'id', 'name', 'sale_price', 'sub_unit_sale_price', 'total_stock', 'earliest_batch', 'alternatives'
-                ]
+                    'id', 'name', 'sale_price', 'sub_unit_sale_price', 'total_stock', 'earliest_batch', 'alternatives',
+                ],
             ],
-            'services'
+            'services',
         ]);
     }
 
@@ -97,8 +101,8 @@ class PharmacyPosTest extends TestCase
                     'medicine_id' => $this->medicine->id,
                     'unit_type' => 'main_unit',
                     'quantity' => 2,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->adminUser)->postJson(route('pharmacy.pos.store'), $payload);
@@ -136,8 +140,8 @@ class PharmacyPosTest extends TestCase
                     'medicine_id' => $this->medicine->id,
                     'unit_type' => 'main_unit',
                     'quantity' => 1,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->adminUser)->postJson(route('pharmacy.pos.store'), $payload);
@@ -169,8 +173,8 @@ class PharmacyPosTest extends TestCase
                     'medicine_id' => $this->medicine->id,
                     'unit_type' => 'main_unit',
                     'quantity' => 1,
-                ]
-            ]
+                ],
+            ],
         ];
 
         $response = $this->actingAs($this->adminUser)->postJson(route('pharmacy.pos.store'), $payload);

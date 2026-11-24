@@ -163,6 +163,7 @@ class PharmacyPosController extends Controller
         $prescriptions = Prescription::where('status', 'pending')
             ->with([
                 'patient.user',
+                'patient.healthInsuranceCategory',
                 'doctor.user',
                 'items.medicine',
                 'items.suggestedMedicine',
@@ -218,6 +219,24 @@ class PharmacyPosController extends Controller
                     $specialization = optional($rx->doctor)?->specialization ?? 'استشارية';
                 }
 
+                // التصنيف المالي والتأميني المسجل بالمستشفى من الاستعلامات
+                $patient = $rx->patient;
+                $rawType = $patient?->insurance_type ?? 'none';
+                $insType = match($rawType) {
+                    'hi', 'health_insurance' => 'health_insurance',
+                    'moi', 'interior_ministry' => 'interior_ministry',
+                    default => 'none',
+                };
+                $category = $patient?->healthInsuranceCategory;
+                $copayPercent = (float) ($category?->medication_copay ?? $patient?->copay_percentage ?? 0);
+                $categoryName = $category?->name ?? 'فئة معتمدة';
+
+                $insuranceBadge = match($insType) {
+                    'health_insurance' => "🛡️ ضمان: {$categoryName} ({$copayPercent}%)",
+                    'interior_ministry' => '🛡️ داخلية MOI',
+                    default => '💵 كاش نقدي',
+                };
+
                 return [
                     'id' => $rx->id,
                     'prescription_number' => $rx->prescription_number,
@@ -225,6 +244,10 @@ class PharmacyPosController extends Controller
                     'patient_name' => $patientName,
                     'patient_phone' => optional($rx->patient)?->user?->phone ?? '-',
                     'patient_national_id' => optional($rx->patient)?->user?->national_id ?? '-',
+                    'insurance_type' => $insType,
+                    'category_name' => $categoryName,
+                    'copay_percentage' => $copayPercent,
+                    'insurance_badge' => $insuranceBadge,
                     'doctor_name' => $doctorName,
                     'specialization' => $specialization,
                     'is_emergency' => $isEmergency,
@@ -249,6 +272,7 @@ class PharmacyPosController extends Controller
     {
         $prescription->load([
             'patient.user',
+            'patient.healthInsuranceCategory',
             'doctor.user',
             'items.medicine.activeBatches' => function ($q) {
                 $q->orderBy('expiry_date', 'asc');
@@ -270,9 +294,11 @@ class PharmacyPosController extends Controller
             $doctorName  = optional($em->doctor)?->user?->name
                 ?? optional($prescription->doctor)?->user?->name
                 ?? 'طبيب طوارئ';
+            $specialization = '🚨 قسم الطوارئ';
         } else {
-            $patientName = optional($prescription->patient)?->user?->name ?? 'مريض مباشر';
-            $doctorName  = optional($prescription->doctor)?->user?->name ?? 'استشاري';
+            $patientName   = optional($prescription->patient)?->user?->name ?? 'مريض مباشر';
+            $doctorName    = optional($prescription->doctor)?->user?->name ?? 'طبيب استشاري';
+            $specialization = optional($prescription->doctor)?->specialization ?? 'استشارية';
         }
 
         $itemsData = $prescription->items->map(function ($item) {
@@ -324,6 +350,7 @@ class PharmacyPosController extends Controller
                 'sub_unit_sale_price' => $med?->sub_unit_sale_price ?? 0,
                 'hi_price' => $med?->hi_price ?? $med?->sale_price ?? 0,
                 'moi_price' => $med?->moi_price ?? $med?->sale_price ?? 0,
+                'is_insurance_covered' => (bool) ($med?->is_insurance_covered ?? true),
                 'sub_units_count' => $med?->sub_units_count ?? 1,
                 'total_stock' => $med?->total_stock ?? 0,
                 'total_open_sub_units' => $med?->total_open_sub_units ?? 0,
@@ -338,19 +365,42 @@ class PharmacyPosController extends Controller
             ];
         });
 
+        // استخراج التصنيف المالي والتأميني المسجل بالمستشفى من الاستعلامات
+        $patient = $prescription->patient;
+        $rawType = $patient?->insurance_type ?? 'none';
+        $insType = match($rawType) {
+            'hi', 'health_insurance' => 'health_insurance',
+            'moi', 'interior_ministry' => 'interior_ministry',
+            default => 'none',
+        };
+        $category = $patient?->healthInsuranceCategory;
+        $copayPercent = (float) ($category?->medication_copay ?? $patient?->copay_percentage ?? 0);
+        $categoryName = $category?->name ?? 'فئة معتمدة';
+
+        $insuranceBadge = match($insType) {
+            'health_insurance' => "🔒 معتمد ومسجل بالاستعلامات: ضمان صحي ({$categoryName} - استقطاع {$copayPercent}%)",
+            'interior_ministry' => '🔒 معتمد ومسجل بالاستعلامات: وزارة الداخلية (MOI)',
+            default => '🔒 مسجل بالاستعلامات: نقدي كاش (100% نقداً)',
+        };
+
         return response()->json([
             'success' => true,
             'prescription' => [
-                'id'                  => $prescription->id,
-                'prescription_number' => $prescription->prescription_number,
-                'patient_id'          => $prescription->patient_id,
-                'patient_name'        => $patientName,
-                'patient_phone'       => optional($prescription->patient)?->user?->phone ?? '',
-                'doctor_name'         => $doctorName,
-                'diagnosis'           => $prescription->diagnosis,
-                'notes'               => $prescription->notes,
-                'is_emergency'        => $isEmergency,
-                'items'               => $itemsData,
+                'id'                           => $prescription->id,
+                'prescription_number'          => $prescription->prescription_number,
+                'patient_id'                   => $prescription->patient_id,
+                'patient_name'                 => $patientName,
+                'patient_phone'                => optional($prescription->patient)?->user?->phone ?? '',
+                'doctor_name'                  => $doctorName,
+                'diagnosis'                    => $prescription->diagnosis,
+                'notes'                        => $prescription->notes,
+                'is_emergency'                 => $isEmergency,
+                'insurance_type'               => $insType,
+                'health_insurance_category_id' => $patient?->health_insurance_category_id,
+                'category_name'                => $categoryName,
+                'copay_percentage'             => $copayPercent,
+                'insurance_badge'              => $insuranceBadge,
+                'items'                        => $itemsData,
             ]
         ]);
     }

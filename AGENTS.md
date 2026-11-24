@@ -54,6 +54,24 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 288: الربط الآلي المقفل لتصنيف المريض التأميني من الاستعلامات بنقطة البيع والصرف والتسعير المزدوج للصيدلية المتعاقدة Contracted Pharmacy Dual Cash/Insurance POS Engine & Automated Reception Patient Profile Lock)
+
+### Done
+- **إلغاء التحديد اليدوي وقفل الوضع المالي من الاستعلامات ([resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
+  * حذف القوائم المنسدلة لاختيار الضمان من شاشة الصيدلية (الصيدلية لا تحدد ولا تختار نوع المريض).
+  * الربط الآلي المقفل ببيانات حجز المريض من الاستعلامات (`insurance_type`, `health_insurance_category_id`, `copay_percentage`).
+  * تثبيت شارة رسمية مقفلة للمريض: `🔒 معتمد ومسجل بالاستعلامات: ضمان صحي (فئة X - استقطاع Y%)` أو `🔒 مسجل بالاستعلامات: نقدي كاش (100% نقداً)`.
+  * إبقاء البيع المباشر OTC لحالات زبائن الشارع غير المسجلين كمرضى بالمستشفى.
+- **إبراز تصنيف الاستعلامات بطابور الوصفات الواردة ([app/Http/Controllers/Pharmacy/PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php))**:
+  * تحديث `pendingPrescriptions()` و `getPrescriptionDetails()` لتضمين شارات تصنيف الاستعلامات والتأمين آلياً تحت اسم كل مريض.
+- **التسعير المزدوج واشتقاق أسعار الأشرطة ([app/Models/Medicine.php](file:///c:/wamp64/www/hospital-system/app/Models/Medicine.php))**:
+  * إضافة ميثود `getHiSubUnitPriceAttribute()` لحساب سعر شريط الضمان بدقة.
+  * مريض الضمان: تطبيق جدول التعاقد الحكومي (`hi_price`) والخصم وفق فئة استقطاع الاستعلامات.
+  * مريض الكاش والبيع المباشر: تطبيق أسعار الصيدلية المتعاقدة (`sale_price`, `sub_unit_sale_price`).
+  * المواد غير المشمولة بالضمان تُحمّل كاش للمريض مباشرة مع شارة توضيحية.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyPosTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyPosTest.php))**:
+  * اجتياز كامل حزمة الاختبارات الآلية بنجاح (`7 passed, 36 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-24 — المرحلة 287: محرك بحث ذكي للأدوية بشاشة التوريد على نسق ICD-10 مع بيان أسعار الضمان والكاش ICD-10-Styled Smart Medicine Autocomplete Supply Engine)
 
 ### Done
