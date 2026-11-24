@@ -350,33 +350,55 @@ Route::middleware(['auth'])->group(function () {
 
     // إدارة المشتريات والمستودع
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\SupplierController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\SupplierController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\SupplierController::class, 'store'])->name('store');
+        Route::get('/', [\App\Http\Controllers\SupplierController::class, 'index'])
+            ->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view suppliers'])
+            ->name('index');
+        Route::middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|create suppliers'])->group(function () {
+            Route::get('/create', [\App\Http\Controllers\SupplierController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\SupplierController::class, 'store'])->name('store');
+        });
     });
 
     Route::prefix('products')->name('products.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\ProductController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\ProductController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\ProductController::class, 'store'])->name('store');
-        Route::get('/print-all', [\App\Http\Controllers\ProductController::class, 'printAllBarcodes'])->name('print-all');
-        Route::get('/{product}/edit', [\App\Http\Controllers\ProductController::class, 'edit'])->name('edit');
-        Route::put('/{product}', [\App\Http\Controllers\ProductController::class, 'update'])->name('update');
-        Route::delete('/{product}', [\App\Http\Controllers\ProductController::class, 'destroy'])->name('destroy');
-        Route::get('/{product}/barcode', [\App\Http\Controllers\ProductController::class, 'showBarcode'])->name('barcode');
+        Route::middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view products'])->group(function () {
+            Route::get('/', [\App\Http\Controllers\ProductController::class, 'index'])->name('index');
+            Route::get('/print-all', [\App\Http\Controllers\ProductController::class, 'printAllBarcodes'])->name('print-all');
+            Route::get('/{product}/barcode', [\App\Http\Controllers\ProductController::class, 'showBarcode'])->name('barcode');
+        });
+        Route::middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|create products'])->group(function () {
+            Route::get('/create', [\App\Http\Controllers\ProductController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\ProductController::class, 'store'])->name('store');
+        });
+        Route::middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|edit products'])->group(function () {
+            Route::get('/{product}/edit', [\App\Http\Controllers\ProductController::class, 'edit'])->name('edit');
+            Route::put('/{product}', [\App\Http\Controllers\ProductController::class, 'update'])->name('update');
+        });
+        Route::delete('/{product}', [\App\Http\Controllers\ProductController::class, 'destroy'])
+            ->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|delete products'])
+            ->name('destroy');
     });
 
     Route::prefix('purchases')->name('purchases.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\PurchaseController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\PurchaseController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\PurchaseController::class, 'store'])->name('store');
-        Route::get('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'show'])->name('show');
-        Route::get('/{purchase}/edit', [\App\Http\Controllers\PurchaseController::class, 'edit'])->name('edit');
-        Route::put('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'update'])->name('update');
-        Route::delete('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'destroy'])->name('destroy');
+        Route::get('/', [\App\Http\Controllers\PurchaseController::class, 'index'])
+            ->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view purchases'])
+            ->name('index');
+        Route::middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|create purchases'])->group(function () {
+            Route::get('/create', [\App\Http\Controllers\PurchaseController::class, 'create'])->name('create');
+            Route::post('/', [\App\Http\Controllers\PurchaseController::class, 'store'])->name('store');
+        });
+        Route::get('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'show'])
+            ->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view purchases'])
+            ->name('show');
+        Route::middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|edit purchases'])->group(function () {
+            Route::get('/{purchase}/edit', [\App\Http\Controllers\PurchaseController::class, 'edit'])->name('edit');
+            Route::put('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'update'])->name('update');
+        });
+        Route::delete('/{purchase}', [\App\Http\Controllers\PurchaseController::class, 'destroy'])
+            ->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|delete purchases'])
+            ->name('destroy');
     });
 
-    Route::prefix('barcodes')->name('barcodes.')->group(function () {
+    Route::prefix('barcodes')->name('barcodes.')->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view products|view stock_batches|view purchases'])->group(function () {
         Route::get('/', [\App\Http\Controllers\BarcodeController::class, 'index'])->name('index');
         Route::get('/batch/{batch}', [\App\Http\Controllers\BarcodeController::class, 'show'])->name('show');
         Route::get('/all', [\App\Http\Controllers\BarcodeController::class, 'printAll'])->name('all');
@@ -384,21 +406,22 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/print-multiple', [\App\Http\Controllers\BarcodeController::class, 'printMultiple'])->name('print_multiple');
     });
 
-    Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'index'])
-        ->middleware(['auth'])
-        ->name('inventory.index');
+    Route::middleware(['auth', 'role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view inventory|view stock_batches|view purchases|create purchases'])->group(function () {
+        Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'index'])
+            ->name('inventory.index');
 
-    Route::get('/inventory/low-stock', [\App\Http\Controllers\InventoryController::class, 'lowStock'])
-        ->middleware(['auth'])
-        ->name('inventory.low_stock');
+        Route::get('/inventory/low-stock', [\App\Http\Controllers\InventoryController::class, 'lowStock'])
+            ->name('inventory.low_stock');
 
-    Route::get('/inventory/expiring', [\App\Http\Controllers\InventoryController::class, 'expiring'])
-        ->middleware(['auth'])
-        ->name('inventory.expiring');
+        Route::get('/inventory/expiring', [\App\Http\Controllers\InventoryController::class, 'expiring'])
+            ->name('inventory.expiring');
+    });
 
-    Route::prefix('stock-transfers')->name('stock-transfers.')->group(function () {
+    Route::prefix('stock-transfers')->name('stock-transfers.')->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view stock transfers|view stock transfer requests|create stock transfer requests|nurse|head_nurse|nicu_nurse|icu_nurse|surgery_staff|surgery_nurse|anesthesia|surgeon'])->group(function () {
         Route::get('/create', [\App\Http\Controllers\StockTransferController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\StockTransferController::class, 'store'])->name('store');
+        Route::post('/', [\App\Http\Controllers\StockTransferController::class, 'store'])
+            ->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view stock transfers'])
+            ->name('store');
         Route::post('/requests', [\App\Http\Controllers\StockTransferController::class, 'storeRequest'])->name('requests.store');
         Route::get('/requests', [\App\Http\Controllers\StockTransferController::class, 'indexRequests'])->name('requests.index');
         Route::get('/requests/{stockTransferRequest}', [\App\Http\Controllers\StockTransferController::class, 'showRequest'])->name('requests.show');
@@ -412,7 +435,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/returns', [\App\Http\Controllers\StockTransferController::class, 'storeReturn'])->name('returns.store');
     });
 
-    Route::prefix('locations')->name('locations.')->group(function () {
+    Route::prefix('locations')->name('locations.')->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|manage locations'])->group(function () {
         Route::get('/', [\App\Http\Controllers\LocationController::class, 'index'])->name('index');
         Route::get('/create', [\App\Http\Controllers\LocationController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\LocationController::class, 'store'])->name('store');

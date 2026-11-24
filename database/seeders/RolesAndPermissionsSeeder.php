@@ -211,6 +211,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view stock_movements',
             'view stock transfers',
             'view stock transfer requests',
+            'manage locations',
 
             // صلاحيات الصيدلية
             'view pharmacy',
@@ -533,6 +534,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'create purchases',
             'edit purchases',
             'delete purchases',
+            'view inventory',
             'manage inventory',
             'view products',
             'create products',
@@ -542,6 +544,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view stock_movements',
             'view stock transfers',
             'view stock transfer requests',
+            'manage locations',
         ]);
 
         // دور الممرض (Nurse)

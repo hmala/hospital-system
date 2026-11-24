@@ -2388,13 +2388,21 @@
                         @endif
 
 
-                   @canany(['manage inventory', 'view products', 'view suppliers', 'view purchases', 'view stock transfers', 'view stock transfer requests'])
+                   @canany(['manage inventory', 'view inventory', 'view products', 'view suppliers', 'view purchases', 'view stock transfers', 'view stock transfer requests', 'manage locations'])
+                    @php
+                        $isInventoryActive = request()->routeIs('products.*')
+                            || request()->routeIs('suppliers.*')
+                            || request()->routeIs('inventory.*')
+                            || request()->routeIs('locations.*')
+                            || request()->routeIs('stock-transfers.*')
+                            || request()->routeIs('purchases.*');
+                    @endphp
                     <div class="sidebar-divider"></div>
-                    <div class="sidebar-section-title collapsed" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="false">
+                    <div class="sidebar-section-title {{ $isInventoryActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#inventorySection" aria-expanded="{{ $isInventoryActive ? 'true' : 'false' }}">
                         <span><i class="fas fa-warehouse"></i> {{ __('إدارة المخزون') }}</span>
                         <i class="fas fa-chevron-down toggle-icon"></i>
                     </div>
-                    <div class="collapse collapse-section" id="inventorySection">
+                    <div class="collapse collapse-section {{ $isInventoryActive ? 'show' : '' }}" id="inventorySection">
                         @canany(['manage inventory', 'view products'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">
@@ -2409,7 +2417,7 @@
                             </a>
                         </li>
                         @endcanany
-                        @canany(['manage inventory', 'view inventory', 'create purchases', 'view cashier', 'view purchases'])
+                        @canany(['manage inventory', 'view inventory', 'create purchases', 'view purchases'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('inventory.index') ? 'active' : '' }}" href="{{ route('inventory.index') }}">
                                 <i class="fas fa-warehouse"></i><span> {{ __('المخزون') }}</span>
@@ -2421,13 +2429,13 @@
                             </a>
                         </li>
                         @endcanany
-                        @can('manage locations')
+                        @canany(['manage inventory', 'manage locations'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('locations.*') ? 'active' : '' }}" href="{{ route('locations.index') }}">
                                 <i class="fas fa-map-marker-alt"></i><span> {{ __('الأقسام') }}</span>
                             </a>
                         </li>
-                        @endcan
+                        @endcanany
                         @canany(['view stock transfers', 'view stock transfer requests'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('stock-transfers.create') ? 'active' : '' }}" href="{{ route('stock-transfers.create') }}">
@@ -2445,7 +2453,7 @@
                             </a>
                         </li>
                         @endcanany
-                        @canany(['manage inventory', 'create purchases', 'view cashier', 'view purchases'])
+                        @canany(['manage inventory', 'create purchases', 'view purchases'])
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('purchases.index') ? 'active' : '' }}" href="{{ route('purchases.index') }}">
                                 <i class="fas fa-list-alt"></i><span> {{ __('قائمة المشتريات') }}</span>
