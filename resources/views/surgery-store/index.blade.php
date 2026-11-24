@@ -16,15 +16,6 @@
                         </div>
                         <p class="mb-0 text-muted">لوحة القيادة الميدانية لإدارة مخزن العمليات الرئيسي، صالات العمليات الجراحية، متابعة عُهد التجهيز الجراحي وصرفيات المرضى.</p>
                     </div>
-
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2 fw-medium shadow-xs">
-                            <i class="fas fa-truck-loading me-1.5"></i> طلبيات المخزن
-                        </a>
-                        <a href="{{ route('stock-transfers.create') }}" class="btn btn-primary rounded-pill px-3 py-2 fw-medium shadow-xs">
-                            <i class="fas fa-plus me-1.5"></i> طلب تعزيز رصيد
-                        </a>
-                    </div>
                 </div>
             </div>
         </div>

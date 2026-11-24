@@ -22,9 +22,6 @@
                         <button type="button" class="btn btn-warning rounded-pill px-3 py-2 fw-bold text-dark shadow-xs" data-bs-toggle="modal" data-bs-target="#changeCustodianModal">
                             <i class="fas fa-user-shield me-1"></i> تغيير مسؤول العهدة
                         </button>
-                        <a href="{{ route('stock-transfers.create') }}" class="btn btn-primary rounded-pill px-3 py-2 fw-medium shadow-xs">
-                            <i class="fas fa-plus me-1.5"></i> طلب تعزيز رصيد
-                        </a>
                         <a href="{{ route('surgery-store.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2">
                             <i class="fas fa-list me-1"></i> قائمة المخازن
                         </a>
