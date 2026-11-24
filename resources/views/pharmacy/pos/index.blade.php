@@ -467,6 +467,14 @@
     let barcodeScannerLastTime = 0;
 
     document.addEventListener('DOMContentLoaded', function() {
+        // نقل النوافذ المنبثقة مباشرة إلى body لمنع حجبها خلف الـ backdrop
+        ['dispensingModal', 'manualSearchModal', 'alternativeModal'].forEach(function(modalId) {
+            const modalEl = document.getElementById(modalId);
+            if (modalEl && modalEl.parentElement !== document.body) {
+                document.body.appendChild(modalEl);
+            }
+        });
+
         // تهيئة وضع العرض المفضل
         switchPosView(currentViewMode, false);
 
@@ -913,14 +921,21 @@
     function openDispensingModal(rxId) {
         currentSelectedRxId = rxId;
 
+        const modalEl = document.getElementById('dispensingModal');
+        if (modalEl && modalEl.parentElement !== document.body) {
+            document.body.appendChild(modalEl);
+        }
+
         // جلب تفاصيل الوصفة بالـ AJAX
         fetch(`{{ url('pharmacy/pos/prescriptions') }}/${rxId}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success && data.prescription) {
                     renderModalPrescription(data.prescription);
-                    const modal = new bootstrap.Modal(document.getElementById('dispensingModal'));
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
                     modal.show();
+                } else {
+                    alert('لم يتم العثور على بيانات الوصفة المطلوبة.');
                 }
             })
             .catch(err => {
@@ -933,18 +948,21 @@
     function renderModalPrescription(rx) {
         currentPrescriptionData = rx;
 
-        document.getElementById('modalDispRxNumber').innerText = rx.prescription_number;
-        document.getElementById('modalDispPatientName').innerText = rx.patient_name || 'مريض';
-        document.getElementById('modalDispDoctorName').innerText =
-            (rx.is_emergency ? '🚨 طوارئ — د. ' : 'د. ') + (rx.doctor_name || 'الاستشاري');
-        document.getElementById('modalDispDiagnosisText').innerText = rx.diagnosis || rx.notes || 'لا يوجد تشخيص إضافي مسجل';
-        document.getElementById('modalDispItemsCount').innerText = (rx.items ? rx.items.length : 0) + ' أدوية';
-
-        // شارة طوارئ في عنوان المودال
-        const modalTitle = document.getElementById('modalDispRxNumber');
-        if (modalTitle) {
-            modalTitle.innerHTML = `${rx.prescription_number}${rx.is_emergency ? ' <span class="badge bg-danger ms-1">🚨 طوارئ STAT</span>' : ''}`;
+        const elRxNum = document.getElementById('modalDispRxNumber');
+        if (elRxNum) {
+            elRxNum.innerHTML = `${rx.prescription_number || ''}${rx.is_emergency ? ' <span class="badge bg-danger ms-1">🚨 طوارئ STAT</span>' : ''}`;
         }
+        const elPatient = document.getElementById('modalDispPatientName');
+        if (elPatient) elPatient.innerText = rx.patient_name || 'مريض';
+
+        const elDoctor = document.getElementById('modalDispDoctorName');
+        if (elDoctor) elDoctor.innerText = (rx.is_emergency ? '🚨 طوارئ — د. ' : 'د. ') + (rx.doctor_name || 'الاستشاري');
+
+        const elDiag = document.getElementById('modalDispDiagnosisText');
+        if (elDiag) elDiag.innerText = rx.diagnosis || rx.notes || 'لا يوجد تشخيص إضافي مسجل';
+
+        const elItemsCount = document.getElementById('modalDispItemsCount');
+        if (elItemsCount) elItemsCount.innerText = (rx.items ? rx.items.length : 0) + ' أدوية';
 
         // فحص إشعارات موافقة أو رفض الطبيب على البدائل
         const feedbackBanner = document.getElementById('modalRxSubstitutionFeedbackBanner');
@@ -1156,7 +1174,10 @@
         renderAlternativesList([]);
 
         const altModalEl = document.getElementById('alternativeModal');
-        const altModal = new bootstrap.Modal(altModalEl);
+        if (altModalEl && altModalEl.parentElement !== document.body) {
+            document.body.appendChild(altModalEl);
+        }
+        const altModal = bootstrap.Modal.getOrCreateInstance(altModalEl);
         altModal.show();
 
         altModalEl.addEventListener('shown.bs.modal', function () {
@@ -1223,7 +1244,7 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('alternativeModal')).hide();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('alternativeModal')).hide();
                 alert(data.message);
                 if (currentSelectedRxId) {
                     openDispensingModal(currentSelectedRxId);
@@ -1284,7 +1305,7 @@
                     document.getElementById('dispenseAudio').play();
                 } catch(e) {}
 
-                bootstrap.Modal.getInstance(document.getElementById('dispensingModal')).hide();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('dispensingModal')).hide();
                 alert(`✅ ${data.message}`);
                 refreshPrescriptionsQueue(true);
             } else {

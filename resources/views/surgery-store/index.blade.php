@@ -205,12 +205,18 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    @if($pending && $pending->count > 0)
-                                        <span class="badge bg-warning-subtle text-warning-emphasis fw-bold rounded-pill px-2.5 py-1">
-                                            <i class="fas fa-truck-loading me-1"></i> {{ $pending->count }} جارية
-                                        </span>
+                                    @if($isMainSurgeryStore)
+                                        @if($pending && $pending->count > 0)
+                                            <span class="badge bg-warning-subtle text-warning-emphasis fw-bold rounded-pill px-2.5 py-1">
+                                                <i class="fas fa-truck-loading me-1"></i> {{ $pending->count }} جارية
+                                            </span>
+                                        @else
+                                            <span class="text-muted small">لا توجد</span>
+                                        @endif
                                     @else
-                                        <span class="text-muted small">لا توجد</span>
+                                        <span class="badge bg-light text-muted border rounded-pill px-2 py-1">
+                                            صرف من مخزن العمليات
+                                        </span>
                                     @endif
                                 </td>
                                 <td class="text-center pe-3">

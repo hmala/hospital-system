@@ -19,9 +19,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <button type="button" class="btn btn-warning rounded-pill px-3 py-2 fw-bold text-dark shadow-xs" data-bs-toggle="modal" data-bs-target="#changeCustodianModal">
-                            <i class="fas fa-user-shield me-1"></i> تغيير مسؤول العهدة
-                        </button>
                         <a href="{{ route('surgery-store.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2">
                             <i class="fas fa-list me-1"></i> قائمة المخازن
                         </a>
@@ -37,6 +34,10 @@
             <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
         </div>
     @endif
+
+    @php
+        $isMainSurgeryStore = str_contains($location->name, 'رئيسي') || str_contains($location->name, 'مخزن');
+    @endphp
 
     <!-- بطاقات تلخيصية سريعة -->
     <div class="row g-3 mb-4">
@@ -63,9 +64,15 @@
         </div>
         <div class="col-md-3">
             <div class="card border-0 shadow-sm rounded-4 p-3 border-start border-4 border-warning">
-                <span class="text-muted small">طلبيات التعزيز والشحن:</span>
-                <h5 class="fw-bold text-warning-emphasis mt-1 mb-0">{{ $transferRequests->count() }} طلبيات</h5>
-                <small class="text-muted">سجل التحويلات بين المخزن الرئيسي والصالة</small>
+                @if($isMainSurgeryStore)
+                    <span class="text-muted small">طلبيات التزويد من المستودع العام:</span>
+                    <h5 class="fw-bold text-warning-emphasis mt-1 mb-0">{{ $transferRequests->count() }} طلبيات</h5>
+                    <small class="text-muted">تعزيز رصيد مخزن العمليات المركزي</small>
+                @else
+                    <span class="text-muted small">آلية تزويد الصالة:</span>
+                    <h5 class="fw-bold text-primary mt-1 mb-0">صرف مباشر</h5>
+                    <small class="text-muted">يتم التجهيز من مخزن العمليات الرئيسي</small>
+                @endif
             </div>
         </div>
     </div>
@@ -89,11 +96,13 @@
                         <i class="fas fa-history me-1.5"></i> أرشيف تسليم واستلام العهدة ({{ $location->custodianHistories->count() }})
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-pill px-4 fw-bold shadow-xs" id="transfers-tab" data-bs-toggle="tab" data-bs-target="#transfers-pane" type="button" role="tab">
-                        <i class="fas fa-truck-loading me-1.5"></i> طلبيات المخزن ({{ $transferRequests->count() }})
-                    </button>
-                </li>
+                @if($isMainSurgeryStore)
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link rounded-pill px-4 fw-bold shadow-xs" id="transfers-tab" data-bs-toggle="tab" data-bs-target="#transfers-pane" type="button" role="tab">
+                            <i class="fas fa-truck-loading me-1.5"></i> طلبيات المستودع العام ({{ $transferRequests->count() }})
+                        </button>
+                    </li>
+                @endif
             </ul>
         </div>
 
@@ -299,7 +308,8 @@
                     </div>
                 </div>
 
-                <!-- تبويب 4: طلبيات تعزيز المخزن -->
+                @if($isMainSurgeryStore)
+                <!-- تبويب 4: طلبيات تعزيز المخزن المركزي -->
                 <div class="tab-pane fade" id="transfers-pane" role="tabpanel">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
@@ -390,67 +400,8 @@
                         </table>
                     </div>
                 </div>
+                @endif
             </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal تغيير مسؤول العهدة الجراحية -->
-<div class="modal fade" id="changeCustodianModal" tabindex="-1" aria-labelledby="changeCustodianModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header bg-light border-0 p-3.5 rounded-top-4">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="rounded-circle bg-warning-subtle text-warning-emphasis d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
-                        <i class="fas fa-user-shield"></i>
-                    </div>
-                    <h5 class="modal-title fw-bold" id="changeCustodianModalLabel">تكليف / نقل عهدة ({{ $location->name }})</h5>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-
-            <form method="POST" action="{{ route('surgery-store.assign-custodian', $location) }}">
-                @csrf
-                <div class="modal-body p-4">
-                    <div class="alert alert-light border rounded-3 p-3 mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="text-muted small">المسؤول الحالي:</span>
-                            <span class="fw-bold text-dark">{{ $location->custodian?->name ?? 'شاغر (غير محدد)' }}</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="custodian_id" class="form-label fw-bold">اختيار موظف العمليات الجديد <span class="text-danger">*</span></label>
-                        <select name="custodian_id" id="custodian_id" class="form-select form-select-lg rounded-3" required>
-                            <option value="">-- اختر موظف العمليات المكلف --</option>
-                            @foreach($availableStaff as $staff)
-                                <option value="{{ $staff->id }}" {{ $location->custodian_id == $staff->id ? 'selected' : '' }}>
-                                    {{ $staff->name }} ({{ $staff->email }}) {{ $staff->location ? '— موقع حالي: '.$staff->location->name : '' }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3 form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="sync_user_location" id="sync_user_location" value="1" checked>
-                        <label class="form-check-label fw-medium text-dark" for="sync_user_location">
-                            تحديث موقع الموظف بالنظام ليرتبط بـ {{ $location->name }}
-                        </label>
-                    </div>
-
-                    <div class="mb-2">
-                        <label for="notes" class="form-label fw-medium">ملاحظات التسليم والتسلم وأمر التكليف</label>
-                        <textarea name="notes" id="notes" class="form-control rounded-3" rows="3" placeholder="اكتب ملاحظات الاستلام، مطابقة الجرد، أو الأمر الإداري..."></textarea>
-                    </div>
-                </div>
-
-                <div class="modal-footer bg-light border-0 p-3 rounded-bottom-4">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
-                        <i class="fas fa-check me-1"></i> اعتماد التكليف ونقل العهدة
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
