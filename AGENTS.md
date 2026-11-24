@@ -54,6 +54,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-24 — المرحلة 281: إبراز كافة روابط القائمة الجانبية للصيدلية ومزامنة الصلاحيات لكادر الصيدلية Pharmacy Staff Complete Sidebar Links & Permissions Synchronization)
+
+### Done
+- **قاعدة البيانات والصلاحيات ([database/migrations/2026_11_24_200000_sync_pharmacy_staff_permissions.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_24_200000_sync_pharmacy_staff_permissions.php))**:
+  * منح ومزامنة صلاحيات الصيدلية الكاملة لكادر الصيدلية (`pharmacy_staff` و `pharmacist`): `create medicines`, `edit medicines`, `delete medicines`, `manage medicines`, `manage pharmacy services`, `import medicines`, `dispense medications`.
+  * تصفير وتحديث كاش الصلاحيات بنجاح (`permission:cache-reset`).
+- **واجهة القائمة الجانبية ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إبراز كافة الروابط الـ 7 لقسم الصيدلية كاملة ودون حجب لموظف الصيدلية (`pharmacy_staff`, `pharmacist`):
+    1. نقطة البيع والصرف (POS)
+    2. سجل مبيعات الصيدلية
+    3. تتبع الشحنات والصلاحية (FEFO)
+    4. دليل الأدوية والبدائل
+    5. إضافة دواء / مستلزم جديد
+    6. الخدمات الصيدلانية
+    7. استيراد وتحديث الأدوية (إكسل)
+  * التأكيد القاطع على استقلالية الصيدلية التامة عن مخزن المستشفى العام.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacySidebarAndPermissionsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacySidebarAndPermissionsTest.php))**:
+  * بناء واجتياز اختبارات التحقق من ظهور الروابط الـ 7 لكادر الصيدلية والوصول لشاشات الإضافة والاستيراد بنسبة 100% (`2 passed, 10 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-24 — المرحلة 280: لوحة القيادة المستقلة لرقابة مخازن وعُهد صالات العمليات الجراحية وإدارة أمناء العهد وتتبع صرفيات العمليات Operation Theaters & Main Surgery Store Governance Dashboard, Custody Tracking & Clinical Consumption Auditing)
 
 ### Done

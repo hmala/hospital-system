@@ -2360,25 +2360,25 @@
                                     <i class="fas fa-capsules text-info"></i><span> {{ __('دليل الأدوية والبدائل') }}</span>
                                 </a>
                             </li>
-                            @can('create medicines')
+                            @if(auth()->check() && (auth()->user()->can('create medicines') || auth()->user()->hasRole(['pharmacy_staff', 'pharmacist', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || in_array(auth()->user()->role, ['pharmacy_staff', 'pharmacist'])))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.create') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.create') }}">
                                     <i class="fas fa-plus-circle text-success"></i><span> {{ __('إضافة دواء / مستلزم جديد') }}</span>
                                 </a>
                             </li>
-                            @endcan
+                            @endif
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.services.*') ? 'active' : '' }}" href="{{ route('pharmacy.services.index') }}">
                                     <i class="fas fa-syringe text-danger"></i><span> {{ __('الخدمات الصيدلانية') }}</span>
                                 </a>
                             </li>
-                            @can('import medicines')
+                            @if(auth()->check() && (auth()->user()->can('import medicines') || auth()->user()->hasRole(['pharmacy_staff', 'pharmacist', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || in_array(auth()->user()->role, ['pharmacy_staff', 'pharmacist'])))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('pharmacy.medicines.import') ? 'active' : '' }}" href="{{ route('pharmacy.medicines.import') }}">
                                     <i class="fas fa-file-excel text-success"></i><span> {{ __('استيراد وتحديث الأدوية') }}</span>
                                 </a>
                             </li>
-                            @endcan
+                            @endif
                         </div>
                         @endif
 

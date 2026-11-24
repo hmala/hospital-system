@@ -2711,3 +2711,13 @@
     - نافذة Modal لتكليف وتبديل المسؤول مع تصنيف واقتراح ذكي يعرض أولاً كادر تمريض نفس الردهة المقيدين على الطابق بشاشة المستخدمين ثم باقي كادر التمريض بالمستشفى.
   * **الاختبارات الآلية الحصينة ([tests/Feature/NursingSubStoreGovernanceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingSubStoreGovernanceTest.php))**:
     - اجتياز كامل حزمة الاختبارات الآلية بنسبة 100% (`4 passed, 23 assertions`) واجتياز اختبارات استلام الشحنات `FloorCustodianStockTransferTest` (`13 passed, 95 assertions`)، وتوافق تام مع `Laravel Pint`.
+
+- **المرحلة 281:** استكمال وإبراز كافة روابط القائمة الجانبية للصيدلية ومزامنة الصلاحيات لكادر الصيدلية (Pharmacy Staff Full Sidebar Links & Permissions Synchronization):
+  * **قاعدة الصلاحيات والمزامنة ([database/migrations/2026_11_24_200000_sync_pharmacy_staff_permissions.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_24_200000_sync_pharmacy_staff_permissions.php))**:
+    - منح ومزامنة صلاحيات الصيدلية الكاملة لكادر الصيدلية (`pharmacy_staff`, `pharmacist`): `create medicines`, `edit medicines`, `delete medicines`, `manage medicines`, `manage pharmacy services`, `import medicines`, `dispense medications`.
+    - مسح وتحديث كاش الصلاحيات تلقائياً.
+  * **تحديث شروط القائمة الجانبية ([resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - إتاحة كافة روابط قسم الصيدلية الـ 7 كاملة وبارزة لموظف الصيدلية دون حجب، بما فيها رابط إضافة دواء جديد ورابط استيراد وتحديث الأدوية.
+    - تأكيد استقلالية الصيدلية التامة عن مخزن المستشفى العام.
+  * **الاختبارات الآلية الحصينة ([tests/Feature/PharmacySidebarAndPermissionsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacySidebarAndPermissionsTest.php))**:
+    - بناء واجتياز اختبارات الميزة وتأكيد ظهور كافة الروابط الـ 7 لكادر الصيدلية والوصول لشاشات الإضافة والاستيراد بنجاح 100% (`2 passed, 10 assertions`).
