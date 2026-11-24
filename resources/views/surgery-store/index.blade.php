@@ -214,16 +214,11 @@
                                     @endif
                                 </td>
                                 <td class="text-center pe-3">
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="{{ route('surgery-store.show', $store) }}" class="btn btn-outline-primary rounded-start-pill px-2.5" title="عرض الأرصدة وحركات الاستهلاك">
-                                            <i class="fas fa-eye me-1"></i> التفاصيل
-                                        </a>
-                                        <button type="button" class="btn btn-outline-secondary rounded-end-pill px-2.5"
-                                                onclick="openAssignCustodianModal({{ $store->id }}, '{{ addslashes($store->name) }}', '{{ $store->custodian_id ?? '' }}', '{{ addslashes($store->custodian?->name ?? 'شاغر') }}')"
-                                                title="تكليف أو تغيير أمين العهدة">
-                                            <i class="fas fa-user-edit me-1"></i> تكليف مسؤول
-                                        </button>
-                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                                            onclick="openAssignCustodianModal({{ $store->id }}, '{{ addslashes($store->name) }}', '{{ $store->custodian_id ?? '' }}', '{{ addslashes($store->custodian?->name ?? 'شاغر') }}')"
+                                            title="تكليف أو تغيير أمين العهدة">
+                                        <i class="fas fa-user-edit me-1"></i> تكليف مسؤول
+                                    </button>
                                 </td>
                             </tr>
                         @empty

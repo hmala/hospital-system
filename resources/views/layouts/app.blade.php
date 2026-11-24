@@ -453,6 +453,16 @@
             backdrop-filter: blur(16px);
             border-radius: 0;
         }
+        body.modal-open .main-content {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+        .modal {
+            z-index: 1065 !important;
+        }
+        .modal-backdrop {
+            z-index: 1055 !important;
+        }
         .main-content .card:not(.stat-card) {
             background: rgba(219, 234, 254, 0.48) !important;
             border: 1px solid rgba(96, 165, 250, 0.22) !important;
