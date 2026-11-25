@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
-use App\Models\Supplier;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
-use Illuminate\Support\Facades\DB;
+use App\Models\Supplier;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseController extends Controller
 {
@@ -59,24 +58,26 @@ class PurchaseController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'supplier_id'    => 'required|exists:suppliers,id',
+            'supplier_id' => 'required|exists:suppliers,id',
             'invoice_number' => 'required|string|unique:purchases,invoice_number',
-            'items'          => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty'        => 'required|integer|min:1',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|distinct|exists:products,id',
+            'items.*.qty' => 'required|integer|min:1',
             'items.*.cost_price' => 'required|numeric|min:0',
-            'items.*.expiry_date'=> 'nullable|date',
+            'items.*.expiry_date' => 'nullable|date',
+        ], [
+            'items.*.product_id.distinct' => 'لا يمكن تكرار نفس المادة في الفاتورة أكثر من مرة. يرجى تعديل الكمية في السطر الأصلي بدلاً من تكرارها.',
         ]);
 
         DB::beginTransaction();
 
         try {
             $purchase = Purchase::create([
-                'supplier_id'    => $request->supplier_id,
+                'supplier_id' => $request->supplier_id,
                 'invoice_number' => $request->invoice_number,
-                'total_amount'   => $this->calculateTotal($request->items),
-                'received_at'    => now(),
-                'user_id'        => Auth::id(),
+                'total_amount' => $this->calculateTotal($request->items),
+                'received_at' => now(),
+                'user_id' => Auth::id(),
             ]);
 
             $mainLocation = Location::firstOrCreate([
@@ -95,36 +96,36 @@ class PurchaseController extends Controller
                 $subtotal = $itemData['qty'] * $itemData['cost_price'];
 
                 $purchaseItem = $purchase->items()->create([
-                    'product_id'  => $product->id,
-                    'qty'         => $itemData['qty'],
-                    'unit_cost'   => $itemData['cost_price'],
-                    'subtotal'    => $subtotal,
+                    'product_id' => $product->id,
+                    'qty' => $itemData['qty'],
+                    'unit_cost' => $itemData['cost_price'],
+                    'subtotal' => $subtotal,
                     'expiry_date' => $itemData['expiry_date'] ?? null,
                 ]);
 
                 $internalBarcode = $this->generateBatchBarcode($product, $purchase->id, $lineIndex);
 
                 $batch = StockBatch::create([
-                    'product_id'       => $product->id,
+                    'product_id' => $product->id,
                     'purchase_item_id' => $purchaseItem->id,
-                    'location_id'      => $mainLocation->id,
+                    'location_id' => $mainLocation->id,
                     'internal_barcode' => $internalBarcode,
                     'original_barcode' => $internalBarcode,
-                    'cost_price'       => $itemData['cost_price'],
-                    'initial_qty'      => $itemData['qty'],
-                    'current_qty'      => $itemData['qty'],
-                    'expiry_date'      => $itemData['expiry_date'] ?? null,
-                    'received_at'      => now(),
+                    'cost_price' => $itemData['cost_price'],
+                    'initial_qty' => $itemData['qty'],
+                    'current_qty' => $itemData['qty'],
+                    'expiry_date' => $itemData['expiry_date'] ?? null,
+                    'received_at' => now(),
                     'original_received_at' => now(),
                 ]);
 
                 StockMovement::create([
-                    'batch_id'         => $batch->id,
+                    'batch_id' => $batch->id,
                     'from_location_id' => $mainLocation->id,
-                    'to_location_id'   => $mainLocation->id,
-                    'quantity'         => $itemData['qty'],
-                    'type'             => 'purchase',
-                    'user_id'          => Auth::id(),
+                    'to_location_id' => $mainLocation->id,
+                    'quantity' => $itemData['qty'],
+                    'type' => 'purchase',
+                    'user_id' => Auth::id(),
                 ]);
 
                 $lineIndex++;
@@ -137,7 +138,7 @@ class PurchaseController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->withInput()->withErrors(['purchase' => 'حدث خطأ أثناء المعالجة: ' . $e->getMessage()]);
+            return back()->withInput()->withErrors(['purchase' => 'حدث خطأ أثناء المعالجة: '.$e->getMessage()]);
         }
     }
 
@@ -156,22 +157,24 @@ class PurchaseController extends Controller
     public function update(Request $request, Purchase $purchase)
     {
         $request->validate([
-            'supplier_id'    => 'required|exists:suppliers,id',
-            'invoice_number' => 'required|string|unique:purchases,invoice_number,' . $purchase->id,
-            'items'          => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.qty'        => 'required|integer|min:1',
+            'supplier_id' => 'required|exists:suppliers,id',
+            'invoice_number' => 'required|string|unique:purchases,invoice_number,'.$purchase->id,
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|distinct|exists:products,id',
+            'items.*.qty' => 'required|integer|min:1',
             'items.*.cost_price' => 'required|numeric|min:0',
-            'items.*.expiry_date'=> 'nullable|date',
+            'items.*.expiry_date' => 'nullable|date',
+        ], [
+            'items.*.product_id.distinct' => 'لا يمكن تكرار نفس المادة في الفاتورة أكثر من مرة. يرجى تعديل الكمية في السطر الأصلي بدلاً من تكرارها.',
         ]);
 
         DB::beginTransaction();
 
         try {
             $purchase->update([
-                'supplier_id'    => $request->supplier_id,
+                'supplier_id' => $request->supplier_id,
                 'invoice_number' => $request->invoice_number,
-                'total_amount'   => $this->calculateTotal($request->items),
+                'total_amount' => $this->calculateTotal($request->items),
             ]);
 
             $mainLocation = Location::firstOrCreate([
@@ -214,8 +217,8 @@ class PurchaseController extends Controller
                             throw new \InvalidArgumentException("لا يمكن تقليل كمية المادة {$product->name} إلى ({$newQty}) لأنه تم صرف أو تحويل ({$consumedOrTransferred}) منها بالفعل.");
                         }
 
-                        $batch->product_id  = $product->id;
-                        $batch->cost_price  = $itemData['cost_price'];
+                        $batch->product_id = $product->id;
+                        $batch->cost_price = $itemData['cost_price'];
                         $batch->expiry_date = $itemData['expiry_date'] ?? null;
                         $batch->initial_qty = $newQty;
                         $batch->current_qty = $newQty - $consumedOrTransferred;
@@ -228,45 +231,45 @@ class PurchaseController extends Controller
                     }
 
                     $purchaseItem->update([
-                        'product_id'  => $product->id,
-                        'qty'         => $newQty,
-                        'unit_cost'   => $itemData['cost_price'],
-                        'subtotal'    => $subtotal,
+                        'product_id' => $product->id,
+                        'qty' => $newQty,
+                        'unit_cost' => $itemData['cost_price'],
+                        'subtotal' => $subtotal,
                         'expiry_date' => $itemData['expiry_date'] ?? null,
                     ]);
                 } else {
                     // إضافة مادة جديدة للفاتورة
                     $purchaseItem = $purchase->items()->create([
-                        'product_id'  => $product->id,
-                        'qty'         => $itemData['qty'],
-                        'unit_cost'   => $itemData['cost_price'],
-                        'subtotal'    => $subtotal,
+                        'product_id' => $product->id,
+                        'qty' => $itemData['qty'],
+                        'unit_cost' => $itemData['cost_price'],
+                        'subtotal' => $subtotal,
                         'expiry_date' => $itemData['expiry_date'] ?? null,
                     ]);
 
                     $internalBarcode = $this->generateBatchBarcode($product, $purchase->id, $lineIndex);
 
                     $batch = StockBatch::create([
-                        'product_id'       => $product->id,
+                        'product_id' => $product->id,
                         'purchase_item_id' => $purchaseItem->id,
-                        'location_id'      => $mainLocation->id,
+                        'location_id' => $mainLocation->id,
                         'internal_barcode' => $internalBarcode,
                         'original_barcode' => $internalBarcode,
-                        'cost_price'       => $itemData['cost_price'],
-                        'initial_qty'      => $itemData['qty'],
-                        'current_qty'      => $itemData['qty'],
-                        'expiry_date'      => $itemData['expiry_date'] ?? null,
-                        'received_at'      => now(),
+                        'cost_price' => $itemData['cost_price'],
+                        'initial_qty' => $itemData['qty'],
+                        'current_qty' => $itemData['qty'],
+                        'expiry_date' => $itemData['expiry_date'] ?? null,
+                        'received_at' => now(),
                         'original_received_at' => now(),
                     ]);
 
                     StockMovement::create([
-                        'batch_id'         => $batch->id,
+                        'batch_id' => $batch->id,
                         'from_location_id' => $mainLocation->id,
-                        'to_location_id'   => $mainLocation->id,
-                        'quantity'         => $itemData['qty'],
-                        'type'             => 'purchase',
-                        'user_id'          => Auth::id(),
+                        'to_location_id' => $mainLocation->id,
+                        'quantity' => $itemData['qty'],
+                        'type' => 'purchase',
+                        'user_id' => Auth::id(),
                     ]);
 
                     $lineIndex++;
@@ -275,7 +278,7 @@ class PurchaseController extends Controller
 
             // حذف المواد التي أزالها المستخدم من الفاتورة بعد التحقق من عدم صرفها أو نقلها
             foreach ($existingItems as $id => $existingItem) {
-                if (!in_array($id, $submittedItemIds)) {
+                if (! in_array($id, $submittedItemIds)) {
                     if ($existingItem->stockBatch) {
                         $batch = $existingItem->stockBatch;
                         $hasExternalActivity = StockMovement::where('batch_id', $batch->id)
@@ -302,7 +305,7 @@ class PurchaseController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->withInput()->withErrors(['purchase' => 'حدث خطأ أثناء التحديث: ' . $e->getMessage()]);
+            return back()->withInput()->withErrors(['purchase' => 'حدث خطأ أثناء التحديث: '.$e->getMessage()]);
         }
     }
 
@@ -342,7 +345,7 @@ class PurchaseController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
-            return back()->with('error', 'حدث خطأ أثناء حذف الفاتورة: ' . $e->getMessage());
+            return back()->with('error', 'حدث خطأ أثناء حذف الفاتورة: '.$e->getMessage());
         }
     }
 

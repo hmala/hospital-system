@@ -253,6 +253,27 @@ function initSelect2OnRow(rowElement) {
         });
         select.on('select2:select select2:clear change', function() {
             const tr = $(this).closest('tr');
+            const selectedVal = this.value;
+
+            // التحقق من عدم تكرار المادة في سطر آخر
+            if (selectedVal) {
+                let duplicateTr = null;
+                $('#itemsTable tbody tr').not(tr).each(function() {
+                    const otherVal = $(this).find('.item-product').val();
+                    if (otherVal && otherVal === selectedVal) {
+                        duplicateTr = $(this);
+                        return false;
+                    }
+                });
+
+                if (duplicateTr) {
+                    const rowNumber = duplicateTr.find('.row-index').text().trim() || 'آخر';
+                    alert(`⚠️ تنبيه: هذه المادة مضافة مسبقاً في السطر رقم (${rowNumber})! يرجى زيادة الكمية في ذلك السطر بدلاً من تكرارها.`);
+                    $(this).val('').trigger('change.select2');
+                    return;
+                }
+            }
+
             const expiryInput = tr.find('.expiry-date');
             const selectedOpt = this.options[this.selectedIndex];
             const isPerishable = selectedOpt ? selectedOpt.dataset.isPerishable === '1' : false;
