@@ -14,6 +14,7 @@ class IncubatorReservation extends Model
     protected $fillable = [
         'patient_id',
         'baby_name',
+        'guardian_name',
         'is_independent_patient',
         'birth_certificate_no',
         'birth_certificate_date',
@@ -200,6 +201,33 @@ class IncubatorReservation extends Model
     public function attachments()
     {
         return $this->hasMany(NicuAttachment::class, 'incubator_reservation_id')->latest();
+    }
+
+    /**
+     * أحدث نسخة مرفوعة/ممسوحة من تعهد دخول الخدج لولي الأمر
+     */
+    public function admissionConsentAttachment()
+    {
+        return $this->hasOne(NicuAttachment::class, 'incubator_reservation_id')
+            ->where('document_type', NicuAttachment::TYPE_ADMISSION_CONSENT)
+            ->latestOfMany();
+    }
+
+    /**
+     * الاسم المعتمد لولي أمر المريض في استمارة التعهد
+     */
+    public function getConsentGuardianNameAttribute(): string
+    {
+        $guardian = trim((string) ($this->guardian_name ?? ''));
+        if ($guardian !== '') {
+            return $guardian;
+        }
+
+        if (! $this->is_independent_patient) {
+            return optional($this->patient?->user)->name ?? '';
+        }
+
+        return $this->patient?->mother_name ?: (optional($this->patient?->user)->name ?? '');
     }
 
     /**

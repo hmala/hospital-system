@@ -5,6 +5,8 @@
 @section('content')
 @php
     $isDischarged = $reservation->status === 'discharged';
+    $consentAttachment = $reservation->admissionConsentAttachment
+        ?? $reservation->attachments->firstWhere('document_type', \App\Models\NicuAttachment::TYPE_ADMISSION_CONSENT);
 @endphp
 <div class="container-fluid py-3">
     <!-- رأس ملف الطفل -->
@@ -95,6 +97,18 @@
                     <a href="{{ route('nicu.print.prescription', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-light shadow-sm">
                         <i class="fas fa-prescription me-1"></i> طباعة الوصفة (RX)
                     </a>
+                    <a href="{{ route('nicu.print.admission-consent', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-light shadow-sm">
+                        <i class="fas fa-file-signature me-1"></i> طباعة تعهد الخدج
+                    </a>
+                    @if($consentAttachment)
+                        <button type="button" class="btn btn-sm btn-success shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#admissionConsentModal">
+                            <i class="fas fa-check-circle me-1"></i> التعهد مؤرشف
+                        </button>
+                    @elseif(! $isDischarged)
+                        <button type="button" class="btn btn-sm btn-warning text-dark shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#admissionConsentModal">
+                            <i class="fas fa-print me-1"></i> مسح/رفع التعهد (اختياري)
+                        </button>
+                    @endif
                 </div>
                 <div>
                     @if($reservation->status === 'admitted')
@@ -3447,6 +3461,53 @@
                 <!-- تبويب الأرشيف والمرفقات الطبية للطفل (NICU Patient Attachments) -->
                 <div class="tab-pane fade {{ $currentActiveTab === 'attachmentsPane' ? 'show active' : '' }}" id="attachmentsPane">
                     <div class="row g-4">
+                        <!-- بطاقة حالة تعهد دخول الخدج الموقّع (ولي الأمر) -->
+                        <div class="col-12">
+                            <div class="card border-0 shadow-xs rounded-3 {{ $consentAttachment ? 'bg-success bg-opacity-10 border border-success-subtle' : 'bg-light border' }}">
+                                <div class="card-body p-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center {{ $consentAttachment ? 'bg-success text-white' : 'bg-warning text-dark' }}" style="width: 44px; height: 44px;">
+                                            <i class="fas {{ $consentAttachment ? 'fa-file-signature' : 'fa-print' }} fa-lg"></i>
+                                        </div>
+                                        <div>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <h6 class="fw-bold mb-0 text-dark">تعهد دخول الخدج الموقّع (ولي أمر المريض)</h6>
+                                                @if($consentAttachment)
+                                                    <span class="badge bg-success">✓ مؤرشف وموقّع</span>
+                                                @else
+                                                    <span class="badge bg-secondary">غير مرفوع بعد (اختياري)</span>
+                                                @endif
+                                            </div>
+                                            <small class="text-muted">
+                                                ولي الأمر المعتمد: <strong>{{ $reservation->consent_guardian_name ?: 'غير محدد' }}</strong>
+                                                @if($consentAttachment)
+                                                    • رُفع بتاريخ {{ $consentAttachment->created_at->format('Y-m-d H:i') }}
+                                                @endif
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <a href="{{ route('nicu.print.admission-consent', $reservation) }}" target="_blank" class="btn btn-sm btn-primary fw-bold shadow-xs">
+                                            <i class="fas fa-print me-1"></i> طباعة التعهد (A4)
+                                        </a>
+                                        @if($consentAttachment)
+                                            <button type="button" class="btn btn-sm btn-outline-success fw-bold" data-bs-toggle="modal" data-bs-target="#previewAttModal{{ $consentAttachment->id }}">
+                                                <i class="fas fa-eye me-1"></i> معاينة التعهد
+                                            </button>
+                                            <a href="{{ route('nicu.attachments.download', $consentAttachment) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-download me-1"></i> تحميل
+                                            </a>
+                                        @endif
+                                        @if(! $isDischarged)
+                                            <button type="button" class="btn btn-sm {{ $consentAttachment ? 'btn-outline-primary' : 'btn-warning text-dark fw-bold' }}" data-bs-toggle="modal" data-bs-target="#admissionConsentModal">
+                                                <i class="fas fa-print me-1"></i> {{ $consentAttachment ? 'تحديث / مسح نسخة جديدة' : 'مسح بالسكانر / رفع ملف' }}
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         @if(! $isDischarged)
                         <!-- نموذج رفع مستند جديد -->
                         <div class="col-lg-4">
@@ -3471,7 +3532,8 @@
 
                                 <form action="{{ route('nicu.attachments.store', $reservation) }}" method="POST" enctype="multipart/form-data">
                                     @csrf
-                                    
+                                    <input type="hidden" name="_active_tab" value="attachmentsPane">
+
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-dark">
                                             <i class="fas fa-tag text-primary me-1"></i> اسم أو وصف المستند المرفق: <span class="text-danger">*</span>
@@ -3482,10 +3544,25 @@
 
                                     <div class="mb-3">
                                         <label class="form-label small fw-bold text-dark">
-                                            <i class="fas fa-paperclip text-primary me-1"></i> اختيار الملف: <span class="text-danger">*</span>
+                                            <i class="fas fa-paperclip text-primary me-1"></i> المسح بالسكانر أو اختيار ملف: <span class="text-danger">*</span>
                                         </label>
-                                        <input type="file" name="file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp,.bmp" required>
-                                        <small class="text-muted" style="font-size: 10px;">الملفات المسموحة: PDF، صور JPG/PNG (الحد الأقصى 20 ميجابايت)</small>
+                                        <div class="d-flex gap-2 mb-2">
+                                            <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_general_attachment_btn" onclick="scanNicuDocument('general_attachment')">
+                                                <i class="fas fa-print me-1"></i> مسح بالسكانر
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary flex-grow-1" onclick="document.getElementById('general_attachment_file').click()">
+                                                <i class="fas fa-upload me-1"></i> اختيار ملف
+                                            </button>
+                                        </div>
+                                        <input type="file" name="file" id="general_attachment_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp,.bmp" onchange="previewNicuUploadFile(this, 'general_attachment')">
+                                        <textarea name="scanned_attachment" id="scanned_general_attachment" class="d-none"></textarea>
+                                        <div id="preview_general_attachment" style="display: none;">
+                                            <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-1 small">
+                                                <span id="text_general_attachment"><i class="fas fa-check-circle me-1"></i> تم تجهيز الملف</span>
+                                                <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearNicuScan('general_attachment')"><i class="fas fa-times"></i></button>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted" style="font-size: 10px;">الملفات المسموحة: PDF، صور JPG/PNG (الحد الأقصى 10 ميجابايت)</small>
                                     </div>
 
                                     <div class="mb-3">
@@ -3835,6 +3912,111 @@
                     <button type="submit" class="btn btn-danger fw-bold">تأكيد الخروج وتوليد الفاتورة</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal تعهد دخول الخدج (طباعة + مسح بالسكانر اختياري) -->
+<div class="modal fade" id="admissionConsentModal" tabindex="-1" aria-labelledby="admissionConsentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow" style="border-radius: 14px;">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="admissionConsentModalLabel">
+                    <i class="fas fa-file-signature me-2"></i>
+                    تعهد ولي أمر المريض بدخول الخدج
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body p-4">
+                @if(session('show_consent_prompt'))
+                    <div class="alert alert-success border-0 shadow-xs mb-3 d-flex align-items-center gap-2">
+                        <i class="fas fa-check-circle fa-lg text-success"></i>
+                        <div>
+                            <strong>تم حجز الحاضنة للطفل بنجاح!</strong>
+                            <div class="small">اطبع استمارة التعهد ليوقّع عليها ولي الأمر، ويمكنك مسحها بالسكانر الآن أو لاحقاً (اختياري).</div>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="card border-0 bg-light p-3 mb-3 rounded-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="fw-bold text-dark">1) طباعة استمارة التعهد الخطي (A4)</div>
+                            <small class="text-muted">تتضمن بيانات المستشفى، اسم ولي الأمر، الطبيب المعالج، وتوقيع وبصمة ولي الأمر.</small>
+                        </div>
+                        <a href="{{ route('nicu.print.admission-consent', $reservation) }}" target="_blank" id="modalPrintConsentLink" class="btn btn-primary fw-bold shadow-sm">
+                            <i class="fas fa-print me-1"></i> طباعة التعهد الآن
+                        </a>
+                    </div>
+                </div>
+
+                @if($consentAttachment)
+                    <div class="alert alert-success py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div class="small">
+                            <i class="fas fa-check-circle me-1"></i>
+                            <strong>توجد نسخة مؤرشفة حالياً:</strong> {{ $consentAttachment->file_name }}
+                            <span class="text-muted">({{ $consentAttachment->created_at->format('Y-m-d H:i') }})</span>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button type="button" class="btn btn-xs btn-outline-success" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#previewAttModal{{ $consentAttachment->id }}">
+                                <i class="fas fa-eye me-1"></i> معاينة
+                            </button>
+                            <a href="{{ route('nicu.attachments.download', $consentAttachment) }}" class="btn btn-xs btn-outline-primary">
+                                <i class="fas fa-download me-1"></i> تحميل
+                            </a>
+                        </div>
+                    </div>
+                @endif
+
+                @if(! $isDischarged)
+                    <form action="{{ route('nicu.admission-consent.upload', $reservation) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <input type="hidden" name="_active_tab" value="attachmentsPane">
+
+                        <div class="border rounded-3 p-3 bg-white">
+                            <div class="fw-bold text-dark mb-2">
+                                <i class="fas fa-camera text-info me-1"></i>
+                                2) أرشفة التعهد الموقّع بالسكانر أو رفع ملف <span class="badge bg-secondary-subtle text-secondary fw-normal ms-1">اختياري</span>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="modalGuardianNameInput" class="form-label small fw-bold">اسم ولي أمر المريض (الأب / الأم):</label>
+                                <input type="text" name="guardian_name" id="modalGuardianNameInput" class="form-control form-control-sm" value="{{ $reservation->consent_guardian_name }}" placeholder="اسم ولي الأمر الموقّع على التعهد...">
+                            </div>
+
+                            <div class="d-flex gap-2 mb-3 flex-wrap">
+                                <button type="button" class="btn btn-info text-white fw-bold flex-grow-1" id="scan_consent_btn" onclick="scanNicuDocument('consent')">
+                                    <i class="fas fa-print me-1"></i> مسح التعهد بالسكانر
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="document.getElementById('consent_file').click()">
+                                    <i class="fas fa-upload me-1"></i> اختيار ملف (صورة / PDF)
+                                </button>
+                                <input type="file" name="consent_file" id="consent_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" onchange="previewNicuUploadFile(this, 'consent')">
+                                <textarea name="scanned_consent" id="scanned_consent" class="d-none"></textarea>
+                            </div>
+
+                            <div id="preview_consent" style="display: none;" class="mb-3">
+                                <div class="alert alert-success py-2 px-3 d-flex justify-content-between align-items-center mb-2 small">
+                                    <span id="text_consent"><i class="fas fa-check-circle me-1"></i> تم تجهيز نسخة التعهد</span>
+                                    <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearNicuScan('consent')"><i class="fas fa-times"></i></button>
+                                </div>
+                                <div class="text-center d-none" id="img_wrap_consent">
+                                    <img id="img_preview_consent" src="" alt="معاينة التعهد" class="img-fluid rounded border shadow-xs" style="max-height: 220px;">
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top flex-wrap gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                                    إغلاق والمتابعة بدون رفع الآن
+                                </button>
+                                <button type="submit" class="btn btn-success fw-bold shadow-sm">
+                                    <i class="fas fa-cloud-upload-alt me-1"></i> حفظ وأرشفة التعهد الموقّع
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                @endif
+            </div>
         </div>
     </div>
 </div>
@@ -5558,6 +5740,156 @@ function cancelEditClinicalProfile() {
     if (displayCard) displayCard.classList.remove('d-none');
     if (editForm) editForm.classList.add('d-none');
 }
+
+// ==================== السكانر المباشر وأرشفة تعهد الخدج والمرفقات ====================
+const nicuScanTargets = {
+    consent: {
+        btn: 'scan_consent_btn',
+        scanInput: 'scanned_consent',
+        fileInput: 'consent_file',
+        previewBox: 'preview_consent',
+        previewText: 'text_consent',
+        imgWrap: 'img_wrap_consent',
+        imgEl: 'img_preview_consent'
+    },
+    general_attachment: {
+        btn: 'scan_general_attachment_btn',
+        scanInput: 'scanned_general_attachment',
+        fileInput: 'general_attachment_file',
+        previewBox: 'preview_general_attachment',
+        previewText: 'text_general_attachment'
+    }
+};
+
+window.scanNicuDocument = async function(targetKey) {
+    const cfg = nicuScanTargets[targetKey];
+    if (!cfg) return;
+
+    const btn = document.getElementById(cfg.btn);
+    const scanInput = document.getElementById(cfg.scanInput);
+    const fileInput = document.getElementById(cfg.fileInput);
+    const previewBox = document.getElementById(cfg.previewBox);
+    const previewText = document.getElementById(cfg.previewText);
+    const imgWrap = cfg.imgWrap ? document.getElementById(cfg.imgWrap) : null;
+    const imgEl = cfg.imgEl ? document.getElementById(cfg.imgEl) : null;
+
+    if (!btn) return;
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المسح...';
+
+    const endpoints = ['http://127.0.0.1:5000/scan', 'http://127.0.0.1:37426/scan'];
+    let response = null;
+    let lastError = null;
+
+    for (const endpoint of endpoints) {
+        try {
+            const res = await fetch(endpoint, { method: 'POST', mode: 'cors' });
+            if (res.ok) {
+                response = res;
+                break;
+            }
+        } catch (err) {
+            lastError = err;
+        }
+    }
+
+    try {
+        if (!response) {
+            throw lastError || new Error('تعذر الاتصال بالسكانر');
+        }
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = function() {
+            const base64data = reader.result;
+            if (fileInput) fileInput.value = '';
+            if (scanInput) scanInput.value = base64data;
+            if (previewText) previewText.innerHTML = '<i class="fas fa-camera me-1"></i> تم سحب الصورة من السكانر بنجاح';
+            if (previewBox) previewBox.style.display = 'block';
+            if (imgWrap && imgEl) {
+                imgEl.src = base64data;
+                imgWrap.classList.remove('d-none');
+            }
+        };
+        reader.readAsDataURL(blob);
+    } catch (err) {
+        console.error('NICU Scanner error:', err);
+        alert('برنامج السكانر غير مشغل أو غير متصل. تأكد من تشغيل (تشغيل_السكانر_التلقائي.bat) أو استخدم زر "اختيار ملف".');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+};
+
+window.previewNicuUploadFile = function(input, targetKey) {
+    const cfg = nicuScanTargets[targetKey];
+    if (!cfg || !input.files || !input.files[0]) return;
+
+    const scanInput = document.getElementById(cfg.scanInput);
+    const previewBox = document.getElementById(cfg.previewBox);
+    const previewText = document.getElementById(cfg.previewText);
+    const imgWrap = cfg.imgWrap ? document.getElementById(cfg.imgWrap) : null;
+    const imgEl = cfg.imgEl ? document.getElementById(cfg.imgEl) : null;
+
+    if (scanInput) scanInput.value = '';
+    if (previewText) previewText.innerHTML = '<i class="fas fa-file-alt me-1"></i> تم اختيار ملف: ' + input.files[0].name;
+    if (previewBox) previewBox.style.display = 'block';
+
+    if (imgWrap && imgEl) {
+        if (input.files[0].type && input.files[0].type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                imgEl.src = e.target.result;
+                imgWrap.classList.remove('d-none');
+            };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            imgWrap.classList.add('d-none');
+            imgEl.src = '';
+        }
+    }
+};
+
+window.clearNicuScan = function(targetKey) {
+    const cfg = nicuScanTargets[targetKey];
+    if (!cfg) return;
+    const scanInput = document.getElementById(cfg.scanInput);
+    const fileInput = document.getElementById(cfg.fileInput);
+    const previewBox = document.getElementById(cfg.previewBox);
+    const imgWrap = cfg.imgWrap ? document.getElementById(cfg.imgWrap) : null;
+    const imgEl = cfg.imgEl ? document.getElementById(cfg.imgEl) : null;
+
+    if (scanInput) scanInput.value = '';
+    if (fileInput) fileInput.value = '';
+    if (previewBox) previewBox.style.display = 'none';
+    if (imgWrap) imgWrap.classList.add('d-none');
+    if (imgEl) imgEl.src = '';
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const modalGuardianInput = document.getElementById('modalGuardianNameInput');
+    const modalPrintLink = document.getElementById('modalPrintConsentLink');
+    if (modalGuardianInput && modalPrintLink) {
+        const basePrintUrl = @json(route('nicu.print.admission-consent', $reservation));
+        const syncConsentPrintUrl = () => {
+            const gName = modalGuardianInput.value.trim();
+            modalPrintLink.href = gName ? `${basePrintUrl}?guardian_name=${encodeURIComponent(gName)}` : basePrintUrl;
+        };
+        modalGuardianInput.addEventListener('input', syncConsentPrintUrl);
+        syncConsentPrintUrl();
+    }
+
+    @if(session('show_consent_prompt'))
+        const consentModalEl = document.getElementById('admissionConsentModal');
+        if (consentModalEl && typeof bootstrap !== 'undefined') {
+            new bootstrap.Modal(consentModalEl).show();
+        }
+    @endif
+
+    @if(session('auto_open_consent_print'))
+        window.open(@json(route('nicu.print.admission-consent', $reservation)), '_blank');
+    @endif
+});
 </script>
 @endpush
 @endsection

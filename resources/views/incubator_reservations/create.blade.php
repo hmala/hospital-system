@@ -399,11 +399,11 @@ label.incubator-card {
                             </div>
 
                             <!-- حقل اسم الطفل الخديج (اختياري) -->
-                            <div class="col-md-12 mb-3">
+                            <div class="col-md-6 mb-3">
                                 <label for="baby_name" class="form-label fw-bold">
                                     <i class="fas fa-baby text-primary me-1"></i>
                                     اسم الطفل الخديج 
-                                    <small class="text-muted fw-normal" id="babyNameHint">(اختياري - يولد تلقائياً كـ "طفل + اسم الأم" إذا تُرِك فارغاً)</small>
+                                    <small class="text-muted fw-normal" id="babyNameHint">(اختياري - يولد تلقائياً كـ "طفل + اسم الأم")</small>
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white"><i class="fas fa-id-badge text-primary"></i></span>
@@ -413,6 +413,25 @@ label.incubator-card {
                                            value="{{ old('baby_name', $prefillObservationBaby?->born_name ?? '') }}">
                                 </div>
                                 @error('baby_name')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <!-- حقل اسم ولي الأمر لطباعة التعهد (اختياري) -->
+                            <div class="col-md-6 mb-3">
+                                <label for="guardian_name" class="form-label fw-bold">
+                                    <i class="fas fa-user-shield text-success me-1"></i>
+                                    اسم ولي أمر المريض (للتعهد)
+                                    <small class="text-muted fw-normal">(اختياري - الأب أو الأم الموقّع على التعهد)</small>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="fas fa-file-signature text-success"></i></span>
+                                    <input type="text" name="guardian_name" id="guardian_name"
+                                           class="form-control @error('guardian_name') is-invalid @enderror"
+                                           placeholder="اسم ولي الأمر الذي سيوقع على تعهد الخدج..."
+                                           value="{{ old('guardian_name', (! $defaultRoleValue || $defaultRoleValue === '0') ? (optional($patient?->user)->name ?? '') : '') }}">
+                                </div>
+                                @error('guardian_name')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -746,7 +765,7 @@ label.incubator-card {
                             </div>
 
                             <!-- 1. وثيقة بيان الولادة -->
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 col-lg-3 mb-3">
                                 <div class="card p-3 h-100 border-0 bg-light shadow-xs rounded-3" style="border: 1px solid #e2e8f0 !important;">
                                     <label class="form-label fw-bold text-dark small mb-2">
                                         <i class="fas fa-file-medical text-warning me-1"></i> وثيقة بيان الولادة
@@ -771,7 +790,7 @@ label.incubator-card {
                             </div>
 
                             <!-- 2. البطاقة الموحدة / هوية الأحوال -->
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 col-lg-3 mb-3">
                                 <div class="card p-3 h-100 border-0 bg-light shadow-xs rounded-3" style="border: 1px solid #e2e8f0 !important;">
                                     <label class="form-label fw-bold text-dark small mb-2">
                                         <i class="fas fa-id-card text-info me-1"></i> هوية / موحدة الأم أو الأب
@@ -796,7 +815,7 @@ label.incubator-card {
                             </div>
 
                             <!-- 3. تقرير الإحالة / وثيقة التحويل -->
-                            <div class="col-md-4 mb-3">
+                            <div class="col-md-6 col-lg-3 mb-3">
                                 <div class="card p-3 h-100 border-0 bg-light shadow-xs rounded-3" style="border: 1px solid #e2e8f0 !important;">
                                     <label class="form-label fw-bold text-dark small mb-2">
                                         <i class="fas fa-file-export text-success me-1"></i> تقرير التحويل / الإحالة
@@ -819,21 +838,53 @@ label.incubator-card {
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- 4. تعهد دخول الخدج الموقّع (اختياري) -->
+                            <div class="col-md-6 col-lg-3 mb-3">
+                                <div class="card p-3 h-100 border-0 bg-light shadow-xs rounded-3" style="border: 1px solid #bfdbfe !important; background: #f0f9ff !important;">
+                                    <label class="form-label fw-bold text-dark small mb-2">
+                                        <i class="fas fa-file-signature text-primary me-1"></i> تعهد دخول الخدج الموقّع
+                                    </label>
+                                    <div class="d-flex gap-1 mb-2">
+                                        <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_admission_consent_btn" onclick="scanAttachment('admission_consent')" style="height:34px;">
+                                            <i class="fas fa-print me-1"></i> مسح بالسكانر
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('admission_consent_file').click()" style="height:34px;">
+                                            <i class="fas fa-upload me-1"></i> رفع ملف
+                                        </button>
+                                        <input type="file" name="admission_consent_file" id="admission_consent_file" class="d-none" accept="image/*,application/pdf" onchange="previewSelectedFile(this, 'admission_consent')">
+                                        <textarea id="scanned_admission_consent" name="scanned_admission_consent" style="display:none;"></textarea>
+                                    </div>
+                                    <div id="preview_admission_consent" style="display: none;">
+                                        <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
+                                            <span id="text_admission_consent"><i class="fas fa-check-circle me-1"></i> تم تجهيز التعهد</span>
+                                            <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearAttachment('admission_consent')"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 11px;">اختياري: يمكن طباعة التعهد بعد الحفظ ثم مسحه لاحقاً.</small>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- أزرار التحكم -->
                         <div class="row">
                             <div class="col-12">
                                 <hr>
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <a href="{{ route('incubators.index') }}" class="btn btn-secondary">
                                         <i class="fas fa-times me-1"></i>
                                         إلغاء
                                     </a>
-                                    <button type="submit" class="btn btn-primary btn-lg">
-                                        <i class="fas fa-save me-1"></i>
-                                        حفظ الحجز
-                                    </button>
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <button type="submit" class="btn btn-outline-primary btn-lg">
+                                            <i class="fas fa-save me-1"></i>
+                                            حفظ الحجز فقط
+                                        </button>
+                                        <button type="submit" name="print_consent_after_save" value="1" class="btn btn-primary btn-lg fw-bold shadow-sm">
+                                            <i class="fas fa-print me-1"></i>
+                                            حفظ وطباعة التعهد
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1100,6 +1151,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        const guardianNameInput = document.getElementById('guardian_name');
+        if (guardianNameInput && !guardianNameInput.dataset.userEdited) {
+            guardianNameInput.value = !isBaby ? (p.name || '') : '';
+        }
+
         if (toggleManualRoleBtn) toggleManualRoleBtn.style.display = 'inline';
         if (manualRoleContainer) manualRoleContainer.style.display = 'none';
 
@@ -1335,6 +1391,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // تشغيل التحديث الأولي عند تحميل الصفحة
     updateServicePrices();
     updateTierPreview();
+    // وظائف المسح بالسكانر ومعاينة المرفقات
+    const guardianNameField = document.getElementById('guardian_name');
+    if (guardianNameField) {
+        guardianNameField.addEventListener('input', function() {
+            this.dataset.userEdited = '1';
+        });
+    }
 });
 
 // وظائف المسح بالسكانر ومعاينة المرفقات
@@ -1342,22 +1405,26 @@ window.scanAttachment = async function(type) {
     const btnMap = {
         'birth_cert': document.getElementById('scan_birth_cert_btn'),
         'parent_id': document.getElementById('scan_parent_id_btn'),
-        'referral_doc': document.getElementById('scan_referral_doc_btn')
+        'referral_doc': document.getElementById('scan_referral_doc_btn'),
+        'admission_consent': document.getElementById('scan_admission_consent_btn')
     };
     const inputMap = {
         'birth_cert': document.getElementById('scanned_birth_certificate'),
         'parent_id': document.getElementById('scanned_parent_id'),
-        'referral_doc': document.getElementById('scanned_referral_doc')
+        'referral_doc': document.getElementById('scanned_referral_doc'),
+        'admission_consent': document.getElementById('scanned_admission_consent')
     };
     const previewMap = {
         'birth_cert': document.getElementById('preview_birth_cert'),
         'parent_id': document.getElementById('preview_parent_id'),
-        'referral_doc': document.getElementById('preview_referral_doc')
+        'referral_doc': document.getElementById('preview_referral_doc'),
+        'admission_consent': document.getElementById('preview_admission_consent')
     };
     const textMap = {
         'birth_cert': document.getElementById('text_birth_cert'),
         'parent_id': document.getElementById('text_parent_id'),
-        'referral_doc': document.getElementById('text_referral_doc')
+        'referral_doc': document.getElementById('text_referral_doc'),
+        'admission_consent': document.getElementById('text_admission_consent')
     };
 
     const btn = btnMap[type];
@@ -1413,12 +1480,14 @@ window.previewSelectedFile = function(input, type) {
     const previewMap = {
         'birth_cert': document.getElementById('preview_birth_cert'),
         'parent_id': document.getElementById('preview_parent_id'),
-        'referral_doc': document.getElementById('preview_referral_doc')
+        'referral_doc': document.getElementById('preview_referral_doc'),
+        'admission_consent': document.getElementById('preview_admission_consent')
     };
     const textMap = {
         'birth_cert': document.getElementById('text_birth_cert'),
         'parent_id': document.getElementById('text_parent_id'),
-        'referral_doc': document.getElementById('text_referral_doc')
+        'referral_doc': document.getElementById('text_referral_doc'),
+        'admission_consent': document.getElementById('text_admission_consent')
     };
 
     if (input.files && input.files[0]) {
@@ -1435,17 +1504,20 @@ window.clearAttachment = function(type) {
     const fileInputMap = {
         'birth_cert': document.getElementById('birth_certificate_file'),
         'parent_id': document.getElementById('parent_id_file'),
-        'referral_doc': document.getElementById('referral_doc_file')
+        'referral_doc': document.getElementById('referral_doc_file'),
+        'admission_consent': document.getElementById('admission_consent_file')
     };
     const scanInputMap = {
         'birth_cert': document.getElementById('scanned_birth_certificate'),
         'parent_id': document.getElementById('scanned_parent_id'),
-        'referral_doc': document.getElementById('scanned_referral_doc')
+        'referral_doc': document.getElementById('scanned_referral_doc'),
+        'admission_consent': document.getElementById('scanned_admission_consent')
     };
     const previewMap = {
         'birth_cert': document.getElementById('preview_birth_cert'),
         'parent_id': document.getElementById('preview_parent_id'),
-        'referral_doc': document.getElementById('preview_referral_doc')
+        'referral_doc': document.getElementById('preview_referral_doc'),
+        'admission_consent': document.getElementById('preview_admission_consent')
     };
 
     if (fileInputMap[type]) fileInputMap[type].value = '';

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Doctor;
+use App\Models\Hospital;
 use App\Models\Incubator;
 use App\Models\IncubatorReservation;
 use App\Models\LabTest;
@@ -18,6 +19,7 @@ use App\Models\NicuMedicationAdministration;
 use App\Models\NicuMilkType;
 use App\Models\NicuService;
 use App\Models\NicuServiceLog;
+use App\Models\NicuSetting;
 use App\Models\NicuVital;
 use App\Models\RadiologyType;
 use App\Models\Request as MedicalRequest;
@@ -274,6 +276,7 @@ class NicuController extends Controller
             'labResults',
             'careSchedules.creator',
             'attachments.uploader',
+            'admissionConsentAttachment.uploader',
             'doctorNotes.doctor',
             'stockMovements.batch.product',
             'stockMovements.user',
@@ -1666,6 +1669,79 @@ class NicuController extends Controller
     }
 
     /**
+     * طباعة استمارة التعهد الخطي لولي أمر المريض بدخول الخدج (A4)
+     */
+    public function admissionConsentPrint(Request $request, IncubatorReservation $reservation)
+    {
+        $this->authorizeNicuAction(
+            ['print nicu cards', 'view incubator reservations', 'create incubator reservations'],
+            ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff']
+        );
+
+        $reservation->load(['patient.user', 'incubator.room', 'doctor.user']);
+
+        $guardianName = trim((string) $request->query('guardian_name', ''));
+        if ($guardianName === '') {
+            $guardianName = $reservation->consent_guardian_name;
+        }
+
+        $hospital = Hospital::first();
+        $config = NicuSetting::observationConfig();
+
+        return view('nicu.print.admission_consent', compact('reservation', 'guardianName', 'hospital', 'config'));
+    }
+
+    /**
+     * رفع أو مسح (سكانر) استمارة التعهد الخطي الموقعة لولي الأمر (اختياري)
+     */
+    public function uploadAdmissionConsent(Request $request, IncubatorReservation $reservation)
+    {
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'attachmentsPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن رفع مستندات جديدة.');
+        }
+
+        $this->authorizeNicuAction(
+            ['manage nicu attachments', 'create incubator reservations', 'manage nicu nursing'],
+            ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff']
+        );
+
+        $validated = $request->validate([
+            'guardian_name' => 'nullable|string|max:255',
+            'consent_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240|required_without:scanned_consent',
+            'scanned_consent' => 'nullable|string|required_without:consent_file',
+            'notes' => 'nullable|string|max:1000',
+        ], [
+            'consent_file.required_without' => 'يرجى مسح التعهد بالسكانر أو اختيار ملف لرفعه.',
+            'scanned_consent.required_without' => 'يرجى مسح التعهد بالسكانر أو اختيار ملف لرفعه.',
+            'consent_file.mimes' => 'يجب أن يكون الملف بصيغة PDF أو صورة (JPG, PNG, WebP).',
+            'consent_file.max' => 'الحد الأقصى لحجم الملف هو 10 ميغابايت.',
+        ]);
+
+        if (! empty($validated['guardian_name'])) {
+            $reservation->update(['guardian_name' => trim($validated['guardian_name'])]);
+        }
+
+        $attachment = NicuAttachment::storeForReservation(
+            $reservation,
+            Auth::user(),
+            'تعهد دخول الخدج الموقّع (ولي الأمر)',
+            NicuAttachment::TYPE_ADMISSION_CONSENT,
+            $request->file('consent_file'),
+            $validated['scanned_consent'] ?? null,
+            $validated['notes'] ?? 'تعهد ولي أمر المريض بالتدخلات العلاجية لمرضى دخول الخدج'
+        );
+
+        if (! $attachment) {
+            return $this->redirectBackWithActiveState($request)
+                ->with('error', 'تعذر حفظ ملف التعهد، يرجى المحاولة مرة أخرى.');
+        }
+
+        return $this->redirectBackWithActiveState($request)
+            ->with('success', 'تمت أرشفة استمارة تعهد ولي الأمر الموقّعة بنجاح.');
+    }
+
+    /**
      * رفع وأرشفة مستند/ملف جديد للطفل الخديج
      */
     public function storeAttachment(Request $request, IncubatorReservation $reservation)
@@ -1684,34 +1760,31 @@ class NicuController extends Controller
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'file' => 'required|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240|required_without:scanned_attachment',
+            'scanned_attachment' => 'nullable|string|required_without:file',
             'notes' => 'nullable|string|max:1000',
         ], [
             'title.required' => 'يرجى كتابة اسم أو وصف للمستند المرفق',
-            'file.required' => 'يرجى اختيار ملف لرفعه',
+            'file.required_without' => 'يرجى اختيار ملف لرفعه أو المسح بالسكانر',
+            'scanned_attachment.required_without' => 'يرجى اختيار ملف لرفعه أو المسح بالسكانر',
             'file.mimes' => 'يجب أن يكون الملف بصيغة PDF أو صورة (JPG, PNG, WebP)',
             'file.max' => 'الحد الأقصى لحجم الملف هو 10 ميغابايت',
         ]);
 
-        $file = $request->file('file');
-        $fileName = $file->getClientOriginalName();
-        $mimeType = $file->getClientMimeType();
-        $fileSize = $file->getSize();
+        $attachment = NicuAttachment::storeForReservation(
+            $reservation,
+            $user,
+            $validated['title'],
+            NicuAttachment::TYPE_GENERAL,
+            $request->file('file'),
+            $validated['scanned_attachment'] ?? null,
+            $validated['notes'] ?? null
+        );
 
-        $storageName = time().'_'.Str::random(8).'.'.$file->getClientOriginalExtension();
-        $path = $file->storeAs('nicu_attachments/'.$reservation->id, $storageName, 'public');
-
-        NicuAttachment::create([
-            'incubator_reservation_id' => $reservation->id,
-            'patient_id' => $reservation->patient_id,
-            'user_id' => $user?->id,
-            'title' => $validated['title'],
-            'file_path' => $path,
-            'file_name' => $fileName,
-            'mime_type' => $mimeType,
-            'file_size' => $fileSize,
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        if (! $attachment) {
+            return $this->redirectBackWithActiveState($request, 'attachmentsPane')
+                ->with('error', 'تعذر قراءة أو حفظ المستند المرفق، يرجى المحاولة مجدداً.');
+        }
 
         return $this->redirectBackWithActiveState($request, 'attachmentsPane')->with('success', 'تم حفظ وأرشفة المستند بنجاح في السجل الطبي للطفل');
     }

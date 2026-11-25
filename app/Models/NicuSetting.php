@@ -24,6 +24,7 @@ class NicuSetting extends Model
         'hospital_print_name_en' => 'Al-Kafaat Hospital',
         'hospital_print_email' => 'alkafaathospital@gmail.com',
         'hospital_print_phone' => '07760507060',
+        'hospital_print_phone_2' => '07860507060',
         'hospital_print_address' => 'بغداد - الحارثية شارع الكندي',
     ];
 
@@ -86,6 +87,7 @@ class NicuSetting extends Model
             'hospital_name_en' => static::getValue('hospital_print_name_en', 'Al-Kafaat Hospital'),
             'hospital_email' => static::getValue('hospital_print_email', $hospital->email ?? 'alkafaathospital@gmail.com'),
             'hospital_phone' => static::getValue('hospital_print_phone', $hospital->phone ?? '07760507060'),
+            'hospital_phone_2' => static::getValue('hospital_print_phone_2', '07860507060'),
             'hospital_address' => static::getValue('hospital_print_address', $hospital->address ?? 'بغداد - الحارثية شارع الكندي'),
         ];
     }

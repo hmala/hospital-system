@@ -8,10 +8,7 @@ use App\Models\Incubator;
 use App\Models\IncubatorReservation;
 use App\Models\NicuAttachment;
 use App\Models\Patient;
-use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class IncubatorReservationController extends Controller
 {
@@ -135,6 +132,7 @@ class IncubatorReservationController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'is_independent_patient' => 'nullable|boolean',
             'baby_name' => 'nullable|string|max:255',
+            'guardian_name' => 'nullable|string|max:255',
             'birth_certificate_no' => 'nullable|string|max:100',
             'birth_certificate_date' => 'nullable|date',
             'incubator_id' => 'required|exists:incubators,id',
@@ -159,8 +157,14 @@ class IncubatorReservationController extends Controller
             'scanned_parent_id' => 'nullable|string',
             'referral_doc_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'scanned_referral_doc' => 'nullable|string',
+            'admission_consent_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
+            'scanned_admission_consent' => 'nullable|string',
+            'print_consent_after_save' => 'nullable|boolean',
             'observation_baby_id' => 'nullable|integer|exists:nicu_delivery_observation_babies,id',
         ]);
+
+        $printConsentAfterSave = $request->boolean('print_consent_after_save');
+        unset($validated['print_consent_after_save']);
 
         $observationBabyId = $validated['observation_baby_id'] ?? null;
         unset($validated['observation_baby_id']);
@@ -216,6 +220,10 @@ class IncubatorReservationController extends Controller
                     : ('طفل '.$motherOrGuardianName);
             }
         }
+
+        $validated['guardian_name'] = ! empty($validated['guardian_name'])
+            ? trim($validated['guardian_name'])
+            : (! $isIndependent ? (optional($patientUser->user)->name ?: null) : null);
 
         $validated['current_weight'] = $validated['birth_weight'] ?? null;
         $validated['insurance_type'] = $validated['insurance_type'] ?? 'none';
@@ -282,38 +290,49 @@ class IncubatorReservationController extends Controller
         }
 
         // حفظ الوثائق والمرفقات الرسمية المرفوعة أو الممسوحة بالسكانر
-        if ($request->hasFile('birth_certificate_file') || $request->filled('scanned_birth_certificate')) {
-            $certTitle = 'بيان الولادة الرسمي'.(! empty($reservation->birth_certificate_no) ? ' (رقم '.$reservation->birth_certificate_no.')' : '');
-            $this->saveReservationAttachment(
-                $reservation,
-                $user,
-                $certTitle,
-                $request->file('birth_certificate_file'),
-                $request->input('scanned_birth_certificate'),
-                'مستند بيان الولادة المرفق أثناء تسجيل واستقبال الخديج'
-            );
-        }
+        $attachmentSpecs = [
+            [
+                'file' => 'birth_certificate_file',
+                'scan' => 'scanned_birth_certificate',
+                'type' => NicuAttachment::TYPE_BIRTH_CERTIFICATE,
+                'title' => 'بيان الولادة الرسمي'.(! empty($reservation->birth_certificate_no) ? ' (رقم '.$reservation->birth_certificate_no.')' : ''),
+                'notes' => 'مستند بيان الولادة المرفق أثناء تسجيل واستقبال الخديج',
+            ],
+            [
+                'file' => 'parent_id_file',
+                'scan' => 'scanned_parent_id',
+                'type' => NicuAttachment::TYPE_PARENT_ID,
+                'title' => 'البطاقة الموحدة / هوية الأحوال للأم أو الأب',
+                'notes' => 'مستند الهوية المرفق أثناء تسجيل واستقبال الخديج',
+            ],
+            [
+                'file' => 'referral_doc_file',
+                'scan' => 'scanned_referral_doc',
+                'type' => NicuAttachment::TYPE_REFERRAL_DOC,
+                'title' => 'تقرير الإحالة / وثيقة التحويل الطبي',
+                'notes' => 'وثيقة التحويل الطبي أو الإحالة من خارج المستشفى',
+            ],
+            [
+                'file' => 'admission_consent_file',
+                'scan' => 'scanned_admission_consent',
+                'type' => NicuAttachment::TYPE_ADMISSION_CONSENT,
+                'title' => 'تعهد دخول الخدج الموقّع (ولي الأمر)',
+                'notes' => 'تعهد ولي أمر المريض بالتدخلات العلاجية لمرضى دخول الخدج',
+            ],
+        ];
 
-        if ($request->hasFile('parent_id_file') || $request->filled('scanned_parent_id')) {
-            $this->saveReservationAttachment(
-                $reservation,
-                $user,
-                'البطاقة الموحدة / هوية الأحوال للأم أو الأب',
-                $request->file('parent_id_file'),
-                $request->input('scanned_parent_id'),
-                'مستند الهوية المرفق أثناء تسجيل واستقبال الخديج'
-            );
-        }
-
-        if ($request->hasFile('referral_doc_file') || $request->filled('scanned_referral_doc')) {
-            $this->saveReservationAttachment(
-                $reservation,
-                $user,
-                'تقرير الإحالة / وثيقة التحويل الطبي',
-                $request->file('referral_doc_file'),
-                $request->input('scanned_referral_doc'),
-                'وثيقة التحويل الطبي أو الإحالة من خارج المستشفى'
-            );
+        foreach ($attachmentSpecs as $spec) {
+            if ($request->hasFile($spec['file']) || $request->filled($spec['scan'])) {
+                NicuAttachment::storeForReservation(
+                    $reservation,
+                    $user,
+                    $spec['title'],
+                    $spec['type'],
+                    $request->file($spec['file']),
+                    $request->input($spec['scan']),
+                    $spec['notes']
+                );
+            }
         }
 
         // تحديث حالة الحاضنة إلى مشغولة فور الدخول
@@ -342,7 +361,9 @@ class IncubatorReservationController extends Controller
         app(\App\Services\NicuBillingService::class)->calculateStayDetails($reservation);
 
         return redirect()->route('nicu.show', $reservation)
-            ->with('success', 'تم حجز واستقبال الخديج بنجاح في قسم الخدج والحاضنات.');
+            ->with('success', 'تم حجز واستقبال الخديج بنجاح في قسم الخدج والحاضنات.')
+            ->with('show_consent_prompt', true)
+            ->with('auto_open_consent_print', $printConsentAfterSave);
     }
 
     /**
@@ -586,63 +607,5 @@ class IncubatorReservationController extends Controller
             ->get();
 
         return view('incubator_reservations.occupied', compact('activeReservations'));
-    }
-
-    /**
-     * حفظ مرفق بالحاضنة سواء كان ملفاً مرفوعاً أو صورة مسحوبة من السكانر
-     */
-    private function saveReservationAttachment(
-        IncubatorReservation $reservation,
-        ?User $user,
-        string $title,
-        $uploadedFile,
-        ?string $scannedBase64,
-        ?string $notes = null
-    ): void {
-        if ($uploadedFile && $uploadedFile->isValid()) {
-            $fileName = $uploadedFile->getClientOriginalName();
-            $mimeType = $uploadedFile->getClientMimeType();
-            $fileSize = $uploadedFile->getSize();
-            $storageName = time().'_'.Str::random(8).'.'.$uploadedFile->getClientOriginalExtension();
-            $path = $uploadedFile->storeAs('nicu_attachments/'.$reservation->id, $storageName, 'public');
-
-            NicuAttachment::create([
-                'incubator_reservation_id' => $reservation->id,
-                'patient_id' => $reservation->patient_id,
-                'user_id' => $user?->id,
-                'title' => $title,
-                'file_path' => $path,
-                'file_name' => $fileName,
-                'mime_type' => $mimeType,
-                'file_size' => $fileSize,
-                'notes' => $notes,
-            ]);
-        } elseif (! empty($scannedBase64)) {
-            $base64Data = $scannedBase64;
-            if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $type)) {
-                $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
-                $ext = strtolower($type[1]);
-            } else {
-                $ext = 'jpg';
-            }
-            $decoded = base64_decode($base64Data);
-            if ($decoded !== false) {
-                $storageName = 'scan_'.time().'_'.Str::random(8).'.'.$ext;
-                $relativePath = 'nicu_attachments/'.$reservation->id.'/'.$storageName;
-                Storage::disk('public')->put($relativePath, $decoded);
-
-                NicuAttachment::create([
-                    'incubator_reservation_id' => $reservation->id,
-                    'patient_id' => $reservation->patient_id,
-                    'user_id' => $user?->id,
-                    'title' => $title,
-                    'file_path' => $relativePath,
-                    'file_name' => $storageName,
-                    'mime_type' => 'image/'.($ext === 'jpg' ? 'jpeg' : $ext),
-                    'file_size' => strlen($decoded),
-                    'notes' => $notes ?? 'مسح ضوئي مباشر عبر السكانر',
-                ]);
-            }
-        }
     }
 }
