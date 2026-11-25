@@ -56,6 +56,18 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 298: الدخول المباشر الديناميكي لمخزن الخدج المرتبط بصلاحية وموقع المستخدم، وبحث فوري لمدير القسم وحقول اختيارية لساعات العمل والحد الأقصى Dynamic User-Linked NICU Store, Department Manager Search & Optional Department Hours)
+
+### Done
+- **مخزن وعُهدة الخدج الديناميكي ([app/Models/Location.php](file:///C:/get/hospital-system/app/Models/Location.php), [app/Http/Controllers/NicuStoreController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuStoreController.php), [app/Http/Controllers/NicuController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuController.php), [app/Http/Controllers/StockTransferController.php](file:///C:/get/hospital-system/app/Http/Controllers/StockTransferController.php), [resources/views/nicu-store/show.blade.php](file:///C:/get/hospital-system/resources/views/nicu-store/show.blade.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إضافة `locations.code` والميجريشن `2026_11_25_150000_add_code_to_locations_and_configure_nicu_store.php` وإلغاء الاعتماد على أي ID ثابت عبر `Location::resolveNicuStoreForUser()` (الأولوية لـ `user->location_id` ثم `nicu_settings` ثم كود `nicu` ثم الاكتشاف/الإنشاء التلقائي).
+  * الدخول المباشر لمخزن الخدج بدون جدول وسيط، وحصر الصلاحية والرابط الجانبي والطلبيات بـ `manage nicu store` مع إضافة بحث الأرصدة، صرف مستهلك عام للقسم، وفلتر التاريخ.
+- **بحث فوري لمدير القسم وتحويل ساعات العمل والحد الأقصى لاختيارية ([app/Http/Controllers/DepartmentController.php](file:///C:/get/hospital-system/app/Http/Controllers/DepartmentController.php), [resources/views/departments/partials/manager-picker.blade.php](file:///C:/get/hospital-system/resources/views/departments/partials/manager-picker.blade.php), [resources/views/departments/edit.blade.php](file:///C:/get/hospital-system/resources/views/departments/edit.blade.php), [resources/views/departments/create.blade.php](file:///C:/get/hospital-system/resources/views/departments/create.blade.php))**:
+  * إضافة مسار `GET /departments/managers/search` ومكوّن البحث التفاعلي بالاسم والإيميل والهاتف مع استبعاد المرضى.
+  * تشغيل ميجريشن `2026_11_25_160000_make_department_working_hours_and_max_patients_nullable.php` وجعل `working_hours_start` و`working_hours_end` و`max_patients_per_day` اختيارية.
+- **الاختبارات وضمان الجودة ([tests/Feature/NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php), [tests/Feature/DepartmentManagerSearchTest.php](file:///C:/get/hospital-system/tests/Feature/DepartmentManagerSearchTest.php))**:
+  * اجتياز `23 passed (211 assertions)` في اختبارات مخزن الخدج والتحويلات، و`4 passed (33 assertions)` في اختبارات الأقسام، واجتياز `Pint` و`view:cache`.
+
 ## Session log (2026-11-25 — المرحلة 297: إصلاح خطأ TypeError في شاشتي الأشعة والمختبر عند التعامل مع نتائج طلبات الخدج Fix htmlspecialchars Array Argument Error in Radiology & Lab Views)
 
 ### Done
