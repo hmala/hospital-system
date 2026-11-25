@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\Accounting\Account;
+use App\Models\Accounting\AuditLog;
 use App\Models\Accounting\CostCenter;
+use App\Models\Accounting\Currency;
 use App\Models\Accounting\FiscalYear;
 use App\Models\Accounting\JournalEntry;
 use App\Models\Accounting\JournalEntryLine;
@@ -34,6 +36,11 @@ class AccountingVoucherAndChartTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('MedFinance IFRS');
         $response->assertSee('شجرة الحسابات والدليل الموحد');
+        $response->assertSee('وضع النافذة الكاملة (المخطط الشجري)');
+        $response->assertSee('+ إضافة فرع');
+        $response->assertSee('الحساب الأصل');
+        $response->assertDontSee('إضافة ابن');
+        $response->assertDontSee('الحساب الأب');
     }
 
     public function test_get_account_details_json_endpoint(): void
@@ -50,6 +57,8 @@ class AccountingVoucherAndChartTest extends TestCase
                 'code' => '134111',
                 'name' => 'نقدية لدى صندوق المركز بالعملة المحلية',
                 'is_postable' => true,
+                'can_add_branch' => true,
+                'has_transactions' => false,
             ],
         ]);
     }
@@ -63,6 +72,94 @@ class AccountingVoucherAndChartTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJsonStructure(['success', 'suggested_code', 'level', 'is_postable']);
+    }
+
+    public function test_create_branch_converts_postable_origin_to_non_postable_and_blocks_direct_voucher(): void
+    {
+        $origin = Account::where('code', '134111')->first();
+        $this->assertNotNull($origin);
+        $this->assertTrue($origin->is_postable);
+
+        $response = $this->actingAs($this->user)->post(route('accounting.chart.store'), [
+            'parent_id' => $origin->id,
+            'code' => '1341111',
+            'name' => 'صندوق المركز الصباحي',
+        ]);
+
+        $response->assertRedirect(route('accounting.chart.index'));
+
+        $origin->refresh();
+        $this->assertFalse($origin->is_postable);
+        $this->assertFalse($origin->canReceiveEntries());
+
+        $this->assertDatabaseHas('acc_accounts', [
+            'code' => '1341111',
+            'name' => 'صندوق المركز الصباحي',
+            'parent_id' => $origin->id,
+            'is_postable' => true,
+        ]);
+
+        // Direct voucher posting on the origin account must now be rejected
+        $rev = Account::where('account_type', 'revenue')->where('is_postable', true)->first();
+        $voucherResponse = $this->actingAs($this->user)->post(route('accounting.vouchers.store'), [
+            'date' => '2026-11-25',
+            'description' => 'محاولة قيد على حساب أصبح أصلاً',
+            'voucher_type' => 'receipt',
+            'lines' => [
+                ['account_id' => $origin->id, 'debit' => 10000, 'credit' => 0],
+                ['account_id' => $rev->id, 'debit' => 0, 'credit' => 10000],
+            ],
+        ]);
+
+        $voucherResponse->assertSessionHasErrors(['lines']);
+    }
+
+    public function test_cannot_add_branch_under_account_with_existing_journal_lines(): void
+    {
+        $cash = Account::where('code', '134111')->first();
+        $rev = Account::where('account_type', 'revenue')->where('is_postable', true)->first();
+        $year = FiscalYear::first();
+
+        $entry = JournalEntry::create([
+            'entry_number' => JournalEntry::generateEntryNumber(),
+            'date' => '2026-11-25',
+            'fiscal_year_id' => $year?->id,
+            'description' => 'قيد سابق على الصندوق',
+            'status' => 'posted',
+            'posted_at' => now(),
+            'posted_by' => $this->user->id,
+            'company_id' => 1,
+        ]);
+
+        JournalEntryLine::create([
+            'journal_entry_id' => $entry->id,
+            'account_id' => $cash->id,
+            'debit' => 5000,
+            'credit' => 0,
+        ]);
+        JournalEntryLine::create([
+            'journal_entry_id' => $entry->id,
+            'account_id' => $rev->id,
+            'debit' => 0,
+            'credit' => 5000,
+        ]);
+
+        $detailsResponse = $this->actingAs($this->user)->getJson(route('accounting.chart.details', $cash->id));
+        $detailsResponse->assertStatus(200)->assertJson([
+            'account' => [
+                'has_transactions' => true,
+                'can_add_branch' => false,
+            ],
+        ]);
+
+        $storeResponse = $this->actingAs($this->user)->post(route('accounting.chart.store'), [
+            'parent_id' => $cash->id,
+            'code' => '1341119',
+            'name' => 'فرع مرفوض',
+        ]);
+
+        $storeResponse->assertSessionHasErrors(['parent_id']);
+        $this->assertDatabaseMissing('acc_accounts', ['code' => '1341119']);
     }
 
     public function test_create_sub_account_enforces_rules(): void
@@ -246,5 +343,129 @@ class AccountingVoucherAndChartTest extends TestCase
         $response->assertRedirect(route('accounting.vouchers.index'));
         $this->assertEquals('reversed', $entry->fresh()->status);
         $this->assertNotNull($entry->fresh()->reversed_by_entry_id);
+    }
+
+    public function test_accounting_settings_updates_currency_rate_archives_audit_log_and_reflects_on_chart(): void
+    {
+        $usd = Currency::where('code', 'USD')->first();
+        $this->assertNotNull($usd);
+
+        $page = $this->actingAs($this->user)->get(route('accounting.settings.index'));
+        $page->assertStatus(200);
+        $page->assertSee('الإعدادات');
+        $page->assertSee('أرشيف تغييرات العملة وأسعار الصرف والتدقيق');
+
+        $updateResponse = $this->actingAs($this->user)->put(route('accounting.settings.currencies.update', $usd->id), [
+            'exchange_rate' => 1450,
+            'is_official' => 1,
+            'is_active' => 1,
+            'reason' => 'تحديث سعر الصرف وفق نشرة البنك المركزي',
+        ]);
+
+        $updateResponse->assertRedirect(route('accounting.settings.index'));
+        $this->assertEquals(1450.0, (float) $usd->fresh()->exchange_rate);
+
+        $audit = AuditLog::where('auditable_type', Currency::class)
+            ->where('auditable_id', $usd->id)
+            ->where('action', 'currency_updated')
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($audit);
+        $this->assertEquals($this->user->id, $audit->user_id);
+        $this->assertEquals(1320.0, (float) $audit->old_values['exchange_rate']);
+        $this->assertEquals(1450.0, (float) $audit->new_values['exchange_rate']);
+        $this->assertEquals(130.0, (float) $audit->new_values['rate_diff']);
+        $this->assertEquals('تحديث سعر الصرف وفق نشرة البنك المركزي', $audit->reason);
+
+        // Chart KPI card must now display the updated rate 1,450 dynamically
+        $chartResponse = $this->actingAs($this->user)->get(route('accounting.chart.index'));
+        $chartResponse->assertStatus(200);
+        $chartResponse->assertSee('1,450');
+
+        // Settings page must display the archived log entry with user name and reason
+        $settingsAfter = $this->actingAs($this->user)->get(route('accounting.settings.index'));
+        $settingsAfter->assertSee($this->user->name);
+        $settingsAfter->assertSee('تحديث سعر الصرف وفق نشرة البنك المركزي');
+    }
+
+    public function test_fx_revaluation_calculates_and_posts_exchange_difference_entry(): void
+    {
+        $usd = Currency::where('code', 'USD')->first();
+        $fxCash = Account::where('code', '134112')->first(); // نقدية لدى صندوق المركز بالعملة الأجنبية
+        $rev = Account::where('account_type', 'revenue')->where('is_postable', true)->first();
+        $year = FiscalYear::first();
+
+        // Record $100 receipt at 1,320 IQD = 132,000 IQD
+        $entry = JournalEntry::create([
+            'entry_number' => JournalEntry::generateEntryNumber(),
+            'date' => now()->toDateString(),
+            'fiscal_year_id' => $year?->id,
+            'description' => 'قبض 100 دولار بسعر 1320',
+            'status' => 'posted',
+            'posted_at' => now(),
+            'posted_by' => $this->user->id,
+            'company_id' => 1,
+        ]);
+
+        JournalEntryLine::create([
+            'journal_entry_id' => $entry->id,
+            'account_id' => $fxCash->id,
+            'debit' => 132000,
+            'credit' => 0,
+            'currency_id' => $usd->id,
+            'exchange_rate' => 1320,
+            'currency_amount' => 100,
+        ]);
+        JournalEntryLine::create([
+            'journal_entry_id' => $entry->id,
+            'account_id' => $rev->id,
+            'debit' => 0,
+            'credit' => 132000,
+            'currency_id' => $usd->id,
+            'exchange_rate' => 1320,
+            'currency_amount' => 100,
+        ]);
+
+        // Change USD rate to 1,400 -> $100 becomes 140,000 IQD -> +8,000 IQD FX gain
+        $this->actingAs($this->user)->put(route('accounting.settings.currencies.update', $usd->id), [
+            'exchange_rate' => 1400,
+            'is_official' => 1,
+            'is_active' => 1,
+            'reason' => 'ارتفاع سعر الصرف',
+        ])->assertRedirect(route('accounting.settings.index'));
+
+        $settingsView = $this->actingAs($this->user)->get(route('accounting.settings.index'));
+        $settingsView->assertStatus(200);
+        $settingsView->assertSee('8,000.00');
+        $settingsView->assertSee('ربح صرف');
+
+        // Post FX revaluation entry
+        $revalResponse = $this->actingAs($this->user)->post(route('accounting.settings.currencies.revalue', $usd->id));
+        $revalResponse->assertRedirect(route('accounting.settings.index'));
+
+        $revalEntry = JournalEntry::where('reference_type', Currency::class)
+            ->where('reference_id', $usd->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($revalEntry);
+        $this->assertTrue($revalEntry->isBalanced());
+        $this->assertEquals(8000.0, $revalEntry->total_debit);
+
+        $gainAccount = Account::where('code', '43551')->first();
+        $this->assertNotNull($gainAccount);
+        $this->assertDatabaseHas('acc_journal_entry_lines', [
+            'journal_entry_id' => $revalEntry->id,
+            'account_id' => $fxCash->id,
+            'debit' => 8000.00,
+            'credit' => 0.00,
+        ]);
+        $this->assertDatabaseHas('acc_journal_entry_lines', [
+            'journal_entry_id' => $revalEntry->id,
+            'account_id' => $gainAccount->id,
+            'debit' => 0.00,
+            'credit' => 8000.00,
+        ]);
     }
 }

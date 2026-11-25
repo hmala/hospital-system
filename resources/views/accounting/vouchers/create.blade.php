@@ -57,6 +57,7 @@
                     </select>
                     <input type="number" step="0.0001" name="exchange_rate" id="exchangeRateInput" value="1.0000" class="form-control font-monospace text-center" style="max-width: 100px;" title="سعر الصرف مقابل الدينار">
                 </div>
+                <div id="fxDiffIndicator" class="form-text small d-none"></div>
             </div>
 
             <div class="col-md-6">
@@ -332,12 +333,37 @@
     // Attach to initial rows
     document.querySelectorAll('.line-row').forEach(row => attachLineEvents(row));
 
-    // Currency change
+    // Currency change & FX difference indicator
+    function updateFxDiffIndicator() {
+        const select = document.getElementById('currencySelect');
+        const rateInput = document.getElementById('exchangeRateInput');
+        const indicator = document.getElementById('fxDiffIndicator');
+        if (!select || !rateInput || !indicator) return;
+
+        const selected = select.options[select.selectedIndex];
+        const officialRate = parseFloat(selected.getAttribute('data-rate') || '1');
+        const enteredRate = parseFloat(rateInput.value || '1');
+        const diff = enteredRate - officialRate;
+
+        if (Math.abs(diff) >= 0.01) {
+            indicator.classList.remove('d-none');
+            indicator.innerHTML = `<span class="${diff > 0 ? 'text-success' : 'text-danger'} fw-semibold">
+                فارق عن السعر المعتمد (${officialRate.toLocaleString('en-US')}): ${diff > 0 ? '+' : ''}${diff.toFixed(2)} د.ع
+            </span>`;
+        } else {
+            indicator.classList.add('d-none');
+            indicator.innerHTML = '';
+        }
+    }
+
     document.getElementById('currencySelect').addEventListener('change', function() {
         const selected = this.options[this.selectedIndex];
         const rate = selected.getAttribute('data-rate') || '1.0000';
         document.getElementById('exchangeRateInput').value = rate;
+        updateFxDiffIndicator();
     });
+
+    document.getElementById('exchangeRateInput').addEventListener('input', updateFxDiffIndicator);
 
     // Initial calculation
     recalculateBalance();

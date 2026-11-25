@@ -68,6 +68,37 @@ class AccChartOfAccountsSeeder extends Seeder
                 $codeToId[$code] = $record->id;
             }
 
+            // Ensure level-5 FX difference leaf accounts exist under 3355 and 4355
+            if (isset($codeToId['3355'])) {
+                Account::updateOrCreate(
+                    ['code' => '33551', 'company_id' => 1],
+                    [
+                        'name' => 'خسائر فروقات أسعار الصرف الأجنبي',
+                        'parent_id' => $codeToId['3355'],
+                        'level' => 5,
+                        'account_type' => 'expense',
+                        'nature' => 'debit',
+                        'is_postable' => true,
+                        'is_active' => true,
+                    ]
+                );
+            }
+
+            if (isset($codeToId['4355'])) {
+                Account::updateOrCreate(
+                    ['code' => '43551', 'company_id' => 1],
+                    [
+                        'name' => 'أرباح فروقات أسعار الصرف الأجنبي',
+                        'parent_id' => $codeToId['4355'],
+                        'level' => 5,
+                        'account_type' => 'revenue',
+                        'nature' => 'credit',
+                        'is_postable' => true,
+                        'is_active' => true,
+                    ]
+                );
+            }
+
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();

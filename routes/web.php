@@ -987,6 +987,7 @@ Route::middleware(['auth'])->group(function () {
 
         // مرفقات وأرشيف الطفل الخديج
         Route::post('/reservations/{reservation}/attachments', [\App\Http\Controllers\NicuController::class, 'storeAttachment'])->name('attachments.store');
+        Route::post('/reservations/{reservation}/admission-consent', [\App\Http\Controllers\NicuController::class, 'uploadAdmissionConsent'])->name('admission-consent.upload');
         Route::get('/attachments/{attachment}/download', [\App\Http\Controllers\NicuController::class, 'downloadAttachment'])->name('attachments.download');
         Route::delete('/attachments/{attachment}', [\App\Http\Controllers\NicuController::class, 'destroyAttachment'])->name('attachments.destroy');
 
@@ -996,6 +997,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/reservations/{reservation}/statement', [\App\Http\Controllers\NicuController::class, 'statement'])->name('statement');
         Route::get('/reservations/{reservation}/print-wristband', [\App\Http\Controllers\NicuController::class, 'wristbandPrint'])->name('print.wristband');
         Route::get('/reservations/{reservation}/print-crib-card', [\App\Http\Controllers\NicuController::class, 'cribCardPrint'])->name('print.crib-card');
+        Route::get('/reservations/{reservation}/print-admission-consent', [\App\Http\Controllers\NicuController::class, 'admissionConsentPrint'])->name('print.admission-consent');
 
         // إدارة وتسعير خدمات وباقات الخدج
         Route::get('/services', [\App\Http\Controllers\NicuServiceController::class, 'index'])->name('services.index');
@@ -1450,4 +1452,10 @@ Route::prefix('accounting')->name('accounting.')->middleware(['auth'])->group(fu
     Route::get('/vouchers/{entry}/print', [\App\Http\Controllers\Accounting\VoucherController::class, 'print'])->name('vouchers.print');
     Route::post('/vouchers/{entry}/reverse', [\App\Http\Controllers\Accounting\VoucherController::class, 'reverse'])->name('vouchers.reverse');
     Route::get('/vouchers/tafqeet/words', [\App\Http\Controllers\Accounting\VoucherController::class, 'tafqeet'])->name('vouchers.tafqeet');
+
+    // إعدادات المنظومة المالية والعملات وفروق الصرف
+    Route::get('/settings', [\App\Http\Controllers\Accounting\AccountingSettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings/currencies', [\App\Http\Controllers\Accounting\AccountingSettingsController::class, 'storeCurrency'])->name('settings.currencies.store');
+    Route::put('/settings/currencies/{currency}', [\App\Http\Controllers\Accounting\AccountingSettingsController::class, 'updateCurrency'])->name('settings.currencies.update');
+    Route::post('/settings/currencies/{currency}/revalue', [\App\Http\Controllers\Accounting\AccountingSettingsController::class, 'revalueCurrency'])->name('settings.currencies.revalue');
 });

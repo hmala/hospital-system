@@ -52,7 +52,17 @@ class Account extends Model
 
     public function scopePostable($query)
     {
-        return $query->where('is_postable', true);
+        return $query->where('is_postable', true)->doesntHave('children');
+    }
+
+    public function hasJournalLines(): bool
+    {
+        return $this->lines()->exists();
+    }
+
+    public function canReceiveEntries(): bool
+    {
+        return $this->is_postable && ! $this->children()->exists();
     }
 
     public function scopeHeaders($query)

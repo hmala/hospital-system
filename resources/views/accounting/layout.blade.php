@@ -57,6 +57,10 @@
                class="btn btn-sm rounded-pill px-3 py-2 fw-semibold {{ request()->routeIs('accounting.vouchers.*') ? 'btn-primary' : 'btn-light text-dark' }}">
                 <i class="fas fa-book me-1"></i> السندات والقيود اليومية
             </a>
+            <a href="{{ route('accounting.settings.index') }}" 
+               class="btn btn-sm rounded-pill px-3 py-2 fw-semibold {{ request()->routeIs('accounting.settings.*') ? 'btn-primary' : 'btn-light text-dark' }}">
+                <i class="fas fa-cog me-1"></i> الإعدادات
+            </a>
             <a href="{{ route('treasury.index') }}" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold btn-light text-muted ms-auto">
                 <i class="fas fa-arrow-left me-1"></i> عودة للخزينة المركزية
             </a>

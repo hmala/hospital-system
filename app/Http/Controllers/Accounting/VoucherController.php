@@ -65,9 +65,9 @@ class VoucherController extends Controller
             $type = 'journal';
         }
 
-        // Only postable accounts (Level 5 or 6)
+        // Only postable leaf accounts (Level 5 or 6 with no branches)
         $accounts = Account::where('company_id', 1)
-            ->where('is_postable', true)
+            ->postable()
             ->orderBy('code')
             ->get();
 
@@ -82,7 +82,7 @@ class VoucherController extends Controller
 
         // Cash / Bank accounts for quick receipt/payment selection
         $cashAccounts = Account::where('company_id', 1)
-            ->where('is_postable', true)
+            ->postable()
             ->where('code', 'LIKE', '134%')
             ->orderBy('code')
             ->get();
@@ -128,11 +128,11 @@ class VoucherController extends Controller
             $totalDebit += (float) $line['debit'];
             $totalCredit += (float) $line['credit'];
 
-            // Ensure account is postable
+            // Ensure account is postable and has no child branches
             $acc = Account::find($line['account_id']);
-            if ($acc && ! $acc->is_postable) {
+            if ($acc && ! $acc->canReceiveEntries()) {
                 return back()->withInput()->withErrors([
-                    'lines' => "الحساب ({$acc->name} - {$acc->code}) هو حساب تجميعي ولا يقبل التقييد المباشر. يرجى اختيار حساب فرعي تحليلي (مستوى 5 أو 6).",
+                    'lines' => "الحساب ({$acc->name} - {$acc->code}) هو حساب أصل تجميعي (أو متفرّع) ولا يقبل التقييد المباشر. يرجى اختيار فرع تحليلي نهائي (مستوى 5 أو 6 بدون فروع).",
                 ]);
             }
         }

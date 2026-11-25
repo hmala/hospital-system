@@ -56,6 +56,41 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 301: إعدادات المنظومة المالية، إدارة العملات وفروق الصرف وأرشفة التغييرات، والمخطط الشجري من الأعلى للأسفل Accounting Settings, FX Differences, Audit Archive & Top-to-Bottom Flowchart)
+
+### Done
+- **قاعدة البيانات والمتحكمات ([2026_11_26_100000_add_fx_difference_leaf_accounts.php](file:///C:/get/hospital-system/database/migrations/2026_11_26_100000_add_fx_difference_leaf_accounts.php), [AccountingSettingsController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/AccountingSettingsController.php), [ChartOfAccountsController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/ChartOfAccountsController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+  * إضافة الحسابين التحليليين `33551` (خسائر فروقات أسعار الصرف) و`43551` (أرباح فروقات أسعار الصرف).
+  * بناء صفحة الإعدادات لتعديل أسعار الصرف والعملة الأساسية مع أرشفة فورية في `acc_audit_logs` واحتساب وترحيل قيود تسوية فروق الصرف.
+- **الواجهات ([layout.blade.php](file:///C:/get/hospital-system/resources/views/accounting/layout.blade.php), [settings/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/settings/index.blade.php), [chart/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/chart/index.blade.php), [vouchers/create.blade.php](file:///C:/get/hospital-system/resources/views/accounting/vouchers/create.blade.php))**:
+  * إضافة تبويب **`الإعدادات`** في شريط `MedFinance IFRS` وربط بطاقة العملة الأساسية والسعر ديناميكياً من `acc_currencies`.
+  * تحويل المخطط الشجري للنافذة الكاملة إلى عرض **من الأعلى إلى الأسفل** مع شريط تحكم عائم ثابت (أسهم التحريك + تكبير/تصغير/توسيط) ودعم التمرير بإصبعين على التاتش باد واللمس/القرص على الآيباد (`100dvh` و`safe-area-inset-bottom`).
+- **الاختبارات وضمان الجودة ([AccountingVoucherAndChartTest.php](file:///C:/get/hospital-system/tests/Feature/AccountingVoucherAndChartTest.php))**:
+  * اجتياز `23 passed (136 assertions)` مع اجتياز `Pint` و`view:cache`.
+
+## Session log (2026-11-26 — المرحلة 300: شجرة الحسابات بالتركيز التدريجي ووضع النافذة الكاملة التفاعلي بالأسهم وتوحيد مصطلحات الأصل والفرع Drill-Down Chart of Accounts & Fullscreen Interactive Flowchart)
+
+### Done
+- **النماذج والمتحكمات ([Account.php](file:///C:/get/hospital-system/app/Models/Accounting/Account.php), [ChartOfAccountsController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/ChartOfAccountsController.php), [VoucherController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/VoucherController.php))**:
+  * تحسين `ChartOfAccountsController::index()` لجلب الدليل باستعلام واحد وتمرير JSON سريع، ومنع إضافة فروع تحت حساب مسجلة عليه قيود مسبقاً (`lines()->exists()`).
+  * تحديث `Account::scopePostable()` و`canReceiveEntries()` و`VoucherController` لمنع التقييد على أي حساب تفرع إلى أصل.
+- **الواجهة التفاعلية ([resources/views/accounting/chart/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/chart/index.blade.php))**:
+  * تحويل شجرة الحسابات لعرض كامل بنمط التركيز التدريجي (Drill-Down) مع شريط مسار Breadcrumb ودرج تفاصيل منزلق، وتوحيد مسميات **«الأصل»** و**«فرع»**.
+  * إضافة **وضع النافذة الكاملة (المخطط الشجري بالأسهم)** الذي يعرض أصلاً واحداً ويُظهر الفروع عند الضغط فقط، مع وضع **«التركيز الأحادي»** افتراضياً وزر التبديل الفوري لـ **«التوسيع الحر»** والبحث السريع والتكبير والسحب.
+- **الاختبارات وضمان الجودة ([AccountingVoucherAndChartTest.php](file:///C:/get/hospital-system/tests/Feature/AccountingVoucherAndChartTest.php))**:
+  * اجتياز `21 passed (106 assertions)` عبر `AccountingCoreTest` و`AccountingVoucherAndChartTest` و`NicuAccountingTest`، مع اجتياز `Pint` و`view:cache`.
+
+## Session log (2026-11-25 — المرحلة 299: منظومة تعهد دخول الخدج الخطي لولي الأمر A4 والطباعة المباشرة والأرشفة الاختيارية بالسكانر NICU Parental Admission Consent A4 Print & Optional Scanner Archiving)
+
+### Done
+- **قاعدة البيانات والنماذج ([2026_11_25_170000_add_guardian_name_and_document_type_for_nicu_consent.php](file:///C:/get/hospital-system/database/migrations/2026_11_25_170000_add_guardian_name_and_document_type_for_nicu_consent.php), [IncubatorReservation.php](file:///C:/get/hospital-system/app/Models/IncubatorReservation.php), [NicuAttachment.php](file:///C:/get/hospital-system/app/Models/NicuAttachment.php), [NicuSetting.php](file:///C:/get/hospital-system/app/Models/NicuSetting.php))**:
+  * إضافة `guardian_name` لجدول `incubator_reservations` و`document_type` لجدول `nicu_attachments`، وتوحيد الحفظ من الملف والسكانر عبر `NicuAttachment::storeForReservation()`.
+- **المتحكمات والمسارات والواجهات ([IncubatorReservationController.php](file:///C:/get/hospital-system/app/Http/Controllers/IncubatorReservationController.php), [NicuController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php), [admission_consent.blade.php](file:///C:/get/hospital-system/resources/views/nicu/print/admission_consent.blade.php), [create.blade.php](file:///C:/get/hospital-system/resources/views/incubator_reservations/create.blade.php), [show.blade.php](file:///C:/get/hospital-system/resources/views/nicu/show.blade.php))**:
+  * بناء استمارة التعهد A4 بشعار المستشفى والنص القانوني الكامل وتوقيع وبصمة ولي الأمر والممرضة، مع دعم تعديل اسم ولي الأمر قبل الطباعة.
+  * إضافة حقل اسم ولي الأمر وبطاقة مسح اختيارية وزر «حفظ وطباعة التعهد» في شاشة الحجز، ونافذة ما بعد الحجز + أزرار الطباعة والسكانر الاختياري في رأس ملف الطفل وتبويب الأرشيف والمرفقات.
+- **الاختبارات وضمان الجودة ([NicuAdmissionConsentTest.php](file:///C:/get/hospital-system/tests/Feature/NicuAdmissionConsentTest.php))**:
+  * اجتياز `18 passed (162 assertions)` في `NicuAdmissionConsentTest`, `NicuEnhancementsTest`, و`NicuTabAndStatePersistenceTest`، مع اجتياز `Pint` و`view:cache`.
+
 ## Session log (2026-11-25 — المرحلة 298: الدخول المباشر الديناميكي لمخزن الخدج المرتبط بصلاحية وموقع المستخدم، وبحث فوري لمدير القسم وحقول اختيارية لساعات العمل والحد الأقصى Dynamic User-Linked NICU Store, Department Manager Search & Optional Department Hours)
 
 ### Done

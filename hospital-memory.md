@@ -79,6 +79,46 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 301 (2026-11-26 — `main`) — إعدادات المنظومة المالية (`MedFinance IFRS`): إدارة العملة الأساسية وأسعار الصرف، تسوية فروق الصرف، وأرشفة التغييرات، مع تطوير المخطط الشجري للعرض العمودي (من الأعلى للأسفل) ودعم الآيباد والتاتش باد (Accounting Settings, Dynamic Currency & FX Revaluation IAS 21, Audit Archive & Top-to-Bottom iPad/Trackpad Flowchart)**:
+  * **قاعدة البيانات والحسابات ([2026_11_26_100000_add_fx_difference_leaf_accounts.php](file:///C:/get/hospital-system/database/migrations/2026_11_26_100000_add_fx_difference_leaf_accounts.php), [AccChartOfAccountsSeeder.php](file:///C:/get/hospital-system/database/seeders/AccChartOfAccountsSeeder.php))**:
+    - إضافة الحسابين التحليليين بمستوى 5: `33551` (**خسائر فروقات أسعار الصرف الأجنبي**) و`43551` (**أرباح فروقات أسعار الصرف الأجنبي**).
+  * **المتحكم والمسارات ([AccountingSettingsController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/AccountingSettingsController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php), [ChartOfAccountsController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/ChartOfAccountsController.php))**:
+    - إضافة مسارات `accounting.settings.index`, `accounting.settings.currencies.update`, `accounting.settings.currencies.store`, و`accounting.settings.currencies.revalue`.
+    - تعديل أسعار الصرف والعملة الأساسية مع إلزامية كتابة سبب التغيير وأرشفته آلياً في `acc_audit_logs` باسم الموظف والتاريخ والسعر القديم والجديد والفارق وIP.
+    - احتساب فروق أسعار الصرف غير المحققة للأرصدة النقدية والذمم بالعملات الأجنبية وترحيل قيد تسوية يومية متوازن (`33551` / `43551`).
+  * **الواجهات ([layout.blade.php](file:///C:/get/hospital-system/resources/views/accounting/layout.blade.php), [settings/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/settings/index.blade.php), [chart/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/chart/index.blade.php), [vouchers/create.blade.php](file:///C:/get/hospital-system/resources/views/accounting/vouchers/create.blade.php))**:
+    - إضافة تبويب **`الإعدادات`** داخل شريط `MedFinance IFRS`، وربط بطاقة **`العملة الأساسية والسعر`** ديناميكياً من `acc_currencies`، وإظهار مؤشر فارق الصرف بالسندات.
+    - ترقية المخطط الشجري بالنافذة الكاملة إلى اتجاه **من الأعلى إلى الأسفل** ونقله إلى `@push('modals')` (`100dvh` + `safe-area-inset-bottom`) مع شريط تحكم عائم ثابت (أسهم تحريك يمين/يسار/أعلى/أسفل، تكبير، تصغير، توسيط، إغلاق)، ودعم **التمرير بإصبعين على التاتش باد** و**القرص والتحريك باللمس على الآيباد**.
+  * **الاختبارات وضمان الجودة ([AccountingVoucherAndChartTest.php](file:///C:/get/hospital-system/tests/Feature/AccountingVoucherAndChartTest.php))**:
+    - اجتياز `23 passed (136 assertions)`، واجتياز `Laravel Pint` (`15 files`) و`view:cache`.
+
+- **المرحلة 300 (2026-11-26 — `hr`) — تطوير شجرة الحسابات التفاعلية بالتركيز التدريجي ووضع النافذة الكاملة التفاعلي بالأسهم وتوحيد مصطلحات الأصل والفرع (Drill-Down Chart of Accounts, Fullscreen Interactive Flowchart, Origin/Branch Terminology & Strict Leaf Posting Governance)**:
+  * **النماذج والمتحكمات ([Account.php](file:///C:/get/hospital-system/app/Models/Accounting/Account.php), [ChartOfAccountsController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/ChartOfAccountsController.php), [VoucherController.php](file:///C:/get/hospital-system/app/Http/Controllers/Accounting/VoucherController.php))**:
+    - تحديث `Account::scopePostable()` وأضاف `hasJournalLines()` و`canReceiveEntries()` لضمان عدم قبول القيود لأي حساب له فروع.
+    - جلب كامل الدليل باستعلام واحد سريع في `ChartOfAccountsController::index()` بدون `N+1` وبناء JSON مباشر للواجهة.
+    - منع إضافة فرع تحت أي حساب مسجلة عليه قيود محاسبية مسبقاً (`lines()->exists()`) في `store()` و`suggestCode()` و`getDetails()`.
+    - إبقاء المستويات 1–4 تجميعية، وتحويل أي حساب قابل للقيد (مستوى 5+) إلى `is_postable = false` تلقائياً عند إضافة أول فرع تحته.
+  * **الواجهة التفاعلية ([resources/views/accounting/chart/index.blade.php](file:///C:/get/hospital-system/resources/views/accounting/chart/index.blade.php))**:
+    - إعادة بناء الشاشة بعرض كامل مع تنقل تدريجي (Drill-Down): يختفي المستوى الأعلى ويتحول لمسار Breadcrumb وتظهر الفروع المباشرة فقط، مع درج جانبي منزلق للتفاصيل والرصيد والقيود.
+    - توحيد المسميات بالكامل إلى **«الأصل»** و**«فرع»** (`+ إضافة فرع`, `الحساب الأصل`) بدلاً من «الأب» و«ابن».
+    - إضافة **وضع النافذة الكاملة (المخطط الشجري التفاعلي)** بمربعات مترابطة بأسهم SVG ومنطق RTL: يبدأ بأصل واحد فقط ولا يفتح الفروع إلا عند الضغط، مع نمط **«التركيز الأحادي»** افتراضياً وزر تبديل فوري لـ **«التوسيع الحر»**، وبحث للقفز السريع مع التكبير والتصغير والسحب.
+  * **الاختبارات وضمان الجودة ([AccountingVoucherAndChartTest.php](file:///C:/get/hospital-system/tests/Feature/AccountingVoucherAndChartTest.php))**:
+    - اجتياز `21 passed (106 assertions)` عبر `AccountingCoreTest`, `AccountingVoucherAndChartTest`, و`NicuAccountingTest`، مع اجتياز `Laravel Pint` و`view:cache`.
+
+- **المرحلة 299 (2026-11-25 — `main`) — منظومة تعهد دخول الخدج الخطي لولي الأمر (A4) والطباعة المباشرة والأرشفة الاختيارية بالسكانر أو رفع الملفات (NICU Parental Admission Consent A4 Print, Post-Booking Prompt & Optional Scanner/File Archiving)**:
+  * **قاعدة البيانات والنماذج ([2026_11_25_170000_add_guardian_name_and_document_type_for_nicu_consent.php](file:///C:/get/hospital-system/database/migrations/2026_11_25_170000_add_guardian_name_and_document_type_for_nicu_consent.php), [IncubatorReservation.php](file:///C:/get/hospital-system/app/Models/IncubatorReservation.php), [NicuAttachment.php](file:///C:/get/hospital-system/app/Models/NicuAttachment.php), [NicuSetting.php](file:///C:/get/hospital-system/app/Models/NicuSetting.php))**:
+    - إضافة عمود `guardian_name` إلى `incubator_reservations` لتوثيق اسم ولي أمر المريض الموقّع، وعمود `document_type` إلى `nicu_attachments` (`admission_consent`, `birth_certificate`, `parent_id`, `referral_doc`, `general`).
+    - توحيد آلية حفظ المرفقات والصور الممسوحة بالسكانر في دالة مشتركة `NicuAttachment::storeForReservation()`.
+  * **المسارات والمتحكمات ([routes/web.php](file:///C:/get/hospital-system/routes/web.php), [IncubatorReservationController.php](file:///C:/get/hospital-system/app/Http/Controllers/IncubatorReservationController.php), [NicuController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuController.php))**:
+    - إضافة مساري `nicu.print.admission-consent` و`nicu.admission-consent.upload`.
+    - دعم خيار «حفظ وطباعة التعهد» أو «حفظ الحجز فقط» وإظهار نافذة ما بعد الحجز الفورية (`show_consent_prompt`)، مع بقاء رفع السكانر/الملف اختيارياً 100% دون أي تقييد لسير العمل.
+    - تفعيل المسح بالسكانر أيضاً داخل نموذج الأرشيف العام (`storeAttachment`) بملف الطفل.
+  * **الواجهات وقالب الطباعة A4 ([admission_consent.blade.php](file:///C:/get/hospital-system/resources/views/nicu/print/admission_consent.blade.php), [create.blade.php](file:///C:/get/hospital-system/resources/views/incubator_reservations/create.blade.php), [show.blade.php](file:///C:/get/hospital-system/resources/views/nicu/show.blade.php))**:
+    - بناء استمارة التعهد الخطي A4 بشعار مستشفى الكفاءات الأهلي وتضمين اسم ولي الأمر، الطبيب المعالج، بيانات الطفل والحاضنة، النص القانوني الكامل، التواقيع والبصمة، وتذييل المستشفى.
+    - إضافة حقل اسم ولي الأمر وبطاقة رابعة اختيارية في شاشة الحجز، وزر الطباعة وشارة الحالة ونافذة السكانر/الرفع وبطاقة الأرشيف في ملف الطفل.
+  * **الاختبارات وضمان الجودة ([NicuAdmissionConsentTest.php](file:///C:/get/hospital-system/tests/Feature/NicuAdmissionConsentTest.php))**:
+    - اجتياز `18 passed (162 assertions)` عبر `NicuAdmissionConsentTest` و`NicuEnhancementsTest` و`NicuTabAndStatePersistenceTest`، مع اجتياز `Pint` و`view:cache`.
+
 - **المرحلة 298 (2026-11-25 — `main`) — الدخول المباشر الديناميكي لمخزن وعُهدة الخدج المرتبط بصلاحية وموقع المستخدم بدون ID ثابت، وبحث فوري لمدير القسم وتحويل ساعات العمل والحد الأقصى لخيارات اختيارية (Dynamic User-Linked NICU Store Direct Access, Live Department Manager Autocomplete & Optional Department Hours)**:
   * **مخزن وعُهدة الخدج الديناميكي بدون ID ثابت ([Location.php](file:///C:/get/hospital-system/app/Models/Location.php), [NicuStoreController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuStoreController.php), [NicuController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuController.php), [StockTransferController.php](file:///C:/get/hospital-system/app/Http/Controllers/StockTransferController.php), [resources/views/nicu-store/show.blade.php](file:///C:/get/hospital-system/resources/views/nicu-store/show.blade.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
     - إضافة عمود `code` الفريد لجدول `locations` بالميجريشن [2026_11_25_150000_add_code_to_locations_and_configure_nicu_store.php](file:///C:/get/hospital-system/database/migrations/2026_11_25_150000_add_code_to_locations_and_configure_nicu_store.php) وتفعيل دالتي `Location::resolveNicuStoreForUser()` و `Location::resolveNicuStore()` (أولوية لمخزن المستخدم `user->location_id` ثم إعداد `nicu_settings.nicu_store_location_id` ثم كود `nicu` ثم الاكتشاف أو الإنشاء التلقائي).
