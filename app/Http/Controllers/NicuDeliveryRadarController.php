@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\NicuDeliveryObservation;
+use App\Models\NicuSetting;
 use App\Models\Surgery;
 use App\Models\SurgicalOperation;
 use Carbon\Carbon;
@@ -97,6 +99,7 @@ class NicuDeliveryRadarController extends Controller
             'operationTheater',
             'surgicalOperation',
             'additionalOperations.surgicalOperation',
+            'nicuDeliveryObservation.babies.incubatorReservation.incubator',
         ])
             ->whereDate('scheduled_date', $selectedDate)
             ->where('status', '!=', 'cancelled')
@@ -115,6 +118,7 @@ class NicuDeliveryRadarController extends Controller
                 'operationTheater',
                 'surgicalOperation',
                 'additionalOperations.surgicalOperation',
+                'nicuDeliveryObservation.babies.incubatorReservation.incubator',
             ])
                 ->whereIn('status', ['waiting', 'in_progress'])
                 ->whereDate('scheduled_date', '!=', $selectedDate)
@@ -147,7 +151,45 @@ class NicuDeliveryRadarController extends Controller
             'completed' => $surgeries->where('status', 'completed')->count(),
         ];
 
+        $observationSettings = NicuSetting::observationConfig();
+
+        $activeObservations = NicuDeliveryObservation::with([
+            'babies.incubatorReservation.incubator',
+            'surgery',
+            'patient.user',
+        ])
+            ->whereIn('status', [
+                NicuDeliveryObservation::STATUS_UNDER_OBSERVATION,
+                NicuDeliveryObservation::STATUS_READY_FOR_HANDOVER,
+                NicuDeliveryObservation::STATUS_PARTIAL,
+            ])
+            ->orderBy('started_at', 'asc')
+            ->get();
+
+        $archiveSearch = trim((string) $request->input('archive_search', ''));
+
+        $archiveObservations = NicuDeliveryObservation::with([
+            'babies.incubatorReservation.incubator',
+            'surgery',
+            'patient.user',
+        ])
+            ->when($archiveSearch !== '', function ($q) use ($archiveSearch) {
+                $q->where(function ($sub) use ($archiveSearch) {
+                    $sub->where('mother_name', 'like', "%{$archiveSearch}%")
+                        ->orWhere('recipient_name', 'like', "%{$archiveSearch}%")
+                        ->orWhere('recipient_id_number', 'like', "%{$archiveSearch}%")
+                        ->orWhere('recipient_phone', 'like', "%{$archiveSearch}%")
+                        ->orWhereHas('babies', fn ($b) => $b->where('born_name', 'like', "%{$archiveSearch}%"));
+                });
+            })
+            ->orderByDesc('created_at')
+            ->limit(50)
+            ->get();
+
+        $stats['observing'] = $activeObservations->count();
+
         $canManageSettings = $isAdmin || ($user && ($user->can('manage nicu delivery radar settings') || $user->hasRole('nicu_doctor')));
+        $canManageObservations = $isAdmin || ($user && $user->can('manage nicu delivery observations'));
 
         return view('nicu.delivery-radar', compact(
             'surgeries',
@@ -156,7 +198,12 @@ class NicuDeliveryRadarController extends Controller
             'parsedDate',
             'stats',
             'radarOperationNames',
-            'canManageSettings'
+            'canManageSettings',
+            'canManageObservations',
+            'observationSettings',
+            'activeObservations',
+            'archiveObservations',
+            'archiveSearch'
         ));
     }
 
@@ -178,11 +225,13 @@ class NicuDeliveryRadarController extends Controller
 
         $operationsByCategory = $operations->groupBy('category');
         $radarOperationsCount = $operations->where('show_in_nicu_radar', true)->count();
+        $observationSettings = NicuSetting::observationConfig();
 
         return view('nicu.delivery-radar-settings', compact(
             'operations',
             'operationsByCategory',
-            'radarOperationsCount'
+            'radarOperationsCount',
+            'observationSettings'
         ));
     }
 

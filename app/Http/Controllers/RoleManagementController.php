@@ -213,6 +213,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu store', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu admission history', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu delivery observations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nurse availability', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -308,6 +309,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu store', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu admission history', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu delivery observations', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nurse availability', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -732,6 +734,7 @@ class RoleManagementController extends Controller
             'manage nicu nursing' => ['label' => 'إجراءات التمريض العامة للخدج', 'action' => 'تمريض', 'badge' => 'success'],
             'manage nicu store' => ['label' => 'إدارة وصرف عهدة ومخزن قسم الخدج (NICU)', 'action' => 'مخزن', 'badge' => 'warning'],
             'manage nicu admission history' => ['label' => 'توثيق وتعديل معلومات الدخول والتاريخ المرضي للطفل والأم (NICU)', 'action' => 'سريري', 'badge' => 'info'],
+            'manage nicu delivery observations' => ['label' => 'استقبال ومعاينة المواليد (ساعتان) وتسليمهم أو تحويلهم للحاضنة (NICU)', 'action' => 'سريري', 'badge' => 'danger'],
 
             // 👥 12. الموارد البشرية والرواتب (HR)
             'view hr' => ['label' => 'دخول لوحة وقسم الموارد البشرية (HR)', 'action' => 'عرض', 'badge' => 'primary'],

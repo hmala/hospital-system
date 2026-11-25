@@ -32,11 +32,77 @@
     </div>
 
     {{-- رسالة نجاح عائمة (Toast) --}}
+    @if(session('success'))
+        <div class="alert alert-success border-0 shadow-sm rounded-3 mb-4">
+            <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+        </div>
+    @endif
     <div id="radarToast" class="alert alert-success border-0 shadow-lg position-fixed bottom-0 start-50 translate-middle-x mb-4 rounded-3 d-none" style="z-index: 1080; min-width: 320px;" role="alert">
         <div class="d-flex align-items-center">
             <i class="fas fa-check-circle fs-5 me-2"></i>
             <span id="radarToastMsg" class="fw-bold"></span>
         </div>
+    </div>
+
+    {{-- بطاقة الإعدادات الديناميكية لمعاينة الوليد (ساعتان) والتسعير والترويسة --}}
+    <div class="card border-0 shadow-sm rounded-4 bg-white p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 border-bottom pb-2">
+            <div>
+                <h5 class="fw-bold text-dark mb-0">
+                    <i class="fas fa-cogs text-primary me-2"></i>
+                    الإعدادات الديناميكية لمعاينة المواليد بعد الولادة (ساعتان) وترويسة الطباعة
+                </h5>
+                <small class="text-muted">تحكم بمدة المعاينة، خيار الفوترة/المجانية حسب سياسة المستشفى، وبيانات استمارة Obstetric Case Sheet</small>
+            </div>
+        </div>
+        <form action="{{ route('nicu.delivery-radar.observation-settings.update') }}" method="POST">
+            @csrf
+            <div class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">مدة المعاينة القياسية (بالدقائق)</label>
+                    <input type="number" name="observation_duration_minutes" min="15" max="720" class="form-control" value="{{ old('observation_duration_minutes', $observationSettings['duration_minutes'] ?? 120) }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold d-block">احتساب أجور معاينة مستقلة</label>
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" role="switch" id="observationBillableSwitch" name="observation_is_billable" value="1" {{ ($observationSettings['is_billable'] ?? false) ? 'checked' : '' }}>
+                        <label class="form-check-label small fw-bold" for="observationBillableSwitch">
+                            تفعيل الأجور (إلغاء التفعيل = مجانية)
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">مبلغ أجور المعاينة (د.ع)</label>
+                    <input type="number" name="observation_fee" step="500" min="0" class="form-control" value="{{ old('observation_fee', $observationSettings['fee'] ?? 0) }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">اسم المستشفى بالطباعة (عربي)</label>
+                    <input type="text" name="hospital_print_name_ar" class="form-control" value="{{ old('hospital_print_name_ar', $observationSettings['hospital_name_ar'] ?? '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">اسم المستشفى بالطباعة (إنجليزي)</label>
+                    <input type="text" name="hospital_print_name_en" class="form-control" value="{{ old('hospital_print_name_en', $observationSettings['hospital_name_en'] ?? '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">البريد الإلكتروني بالترويسة</label>
+                    <input type="text" name="hospital_print_email" class="form-control" value="{{ old('hospital_print_email', $observationSettings['hospital_email'] ?? '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">الهاتف بالترويسة</label>
+                    <input type="text" name="hospital_print_phone" class="form-control" value="{{ old('hospital_print_phone', $observationSettings['hospital_phone'] ?? '') }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">العنوان بالترويسة</label>
+                    <input type="text" name="hospital_print_address" class="form-control" value="{{ old('hospital_print_address', $observationSettings['hospital_address'] ?? '') }}">
+                </div>
+                <div class="col-12 d-flex justify-content-end mt-2">
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">
+                        <i class="fas fa-save me-1"></i>
+                        حفظ إعدادات المعاينة والطباعة
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 
     {{-- بطاقات المؤشرات السريعة --}}

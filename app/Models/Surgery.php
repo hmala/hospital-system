@@ -172,6 +172,11 @@ class Surgery extends Model
         return $this->belongsTo(Visit::class);
     }
 
+    public function nicuDeliveryObservation()
+    {
+        return $this->hasOne(NicuDeliveryObservation::class, 'surgery_id');
+    }
+
     public function surgeryTypeChanges()
     {
         return $this->hasMany(SurgeryTypeChange::class);

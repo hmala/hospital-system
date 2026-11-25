@@ -54,6 +54,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 293: بناء منظومة معاينة المواليد بعد الولادة (ساعتين) وربطها برادار العمليات مع استمارة Obstetric Case Sheet والطباعة والأرشفة والتحويل للحاضنة Dynamic 2-Hour Newborn Observation, Delivery Radar Hub, Obstetric Case Sheet A4 Print, Signed Archive & NICU Handoff)
+
+### Done
+- **قاعدة البيانات والنماذج ([2026_11_25_140000_create_nicu_delivery_observations_and_settings.php](file:///C:/get/hospital-system/database/migrations/2026_11_25_140000_create_nicu_delivery_observations_and_settings.php), [NicuSetting.php](file:///C:/get/hospital-system/app/Models/NicuSetting.php), [NicuDeliveryObservation.php](file:///C:/get/hospital-system/app/Models/NicuDeliveryObservation.php), [NicuDeliveryObservationBaby.php](file:///C:/get/hospital-system/app/Models/NicuDeliveryObservationBaby.php), [Surgery.php](file:///C:/get/hospital-system/app/Models/Surgery.php))**:
+  * إنشاء جداول `nicu_settings` و`nicu_delivery_observations` و`nicu_delivery_observation_babies` مع دعم التوائم واستقلال قرار كل مولود (تسليم للأهل أو تحويل لحاضنة).
+  * تهيئة الإعدادات الديناميكية الافتراضية للمعاينة (المدة 120 دقيقة، مجانية/بدون أجور افتراضياً `observation_is_billable=0`، وقابلة للتفعيل والتسعير أو تعديل الترويسة لأي مستشفى).
+  * إنشاء صلاحية `manage nicu delivery observations` ومنحها افتراضياً لكادر الخدج والإدارة وتسجيلها في [RoleManagementController.php](file:///C:/get/hospital-system/app/Http/Controllers/RoleManagementController.php).
+- **المتحكمات والمسارات ([NicuDeliveryObservationController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuDeliveryObservationController.php), [NicuDeliveryRadarController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuDeliveryRadarController.php), [IncubatorReservationController.php](file:///C:/get/hospital-system/app/Http/Controllers/IncubatorReservationController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+  * دعم بدء المعاينة مباشرة من عملية برادار الولادات (`startFromSurgery`) أو الإدخال اليدوي للولادات الطبيعية (`storeManual`).
+  * دعم استمارة المعاينة، توثيق التسليم القانوني للأهل، رفع ومعاينة الورقة الموقعة والمبصمة، وطباعة A4 الرسمية.
+  * ربط زر `تحويل لحاضنة NICU` لكل مولود بتعبئة شاشة دخول الحاضنة تلقائياً وربط `incubator_reservation_id` مع تحديث حالة الملاحظة تلقائياً.
+- **الواجهات والاختبارات ([delivery-radar.blade.php](file:///C:/get/hospital-system/resources/views/nicu/delivery-radar.blade.php), [delivery-radar-settings.blade.php](file:///C:/get/hospital-system/resources/views/nicu/delivery-radar-settings.blade.php), [show.blade.php](file:///C:/get/hospital-system/resources/views/nicu/observations/show.blade.php), [print.blade.php](file:///C:/get/hospital-system/resources/views/nicu/observations/print.blade.php), [create.blade.php](file:///C:/get/hospital-system/resources/views/incubator_reservations/create.blade.php), [NicuDeliveryObservationTest.php](file:///C:/get/hospital-system/tests/Feature/NicuDeliveryObservationTest.php))**:
+  * تحويل رادار الولادات إلى مركز متكامل من 3 تبويبات: (رادار العمليات + لوحة المعاينات الحية بمؤقت حي + أرشيف التسليم والتحويل القابل للبحث)، وإصلاح خطأ الصياغة `in_progress` في القالب.
+  * اجتياز `Laravel Pint` و`view:cache` وحزمة الاختبارات (`28 passed, 368 assertions`).
+
 ## Session log (2026-11-25 — المرحلة 292: تطوير تبويب «باقة الخدمة والتبديل ومعلومات الدخول» في ملف الخديج مع صلاحية مستقلة لمعلومات الدخول والتاريخ المرضي للطفل والأم NICU Admission Info & Medical History with Granular Permission)
 
 ### Done

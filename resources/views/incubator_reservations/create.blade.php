@@ -245,6 +245,28 @@ label.incubator-card {
                 <div class="card-body">
                     <form action="{{ route('incubator-reservations.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
+                        @if(isset($prefillObservationBaby) && $prefillObservationBaby)
+                            <input type="hidden" name="observation_baby_id" value="{{ $prefillObservationBaby->id }}">
+                            @if($prefillObservationBaby->weight_grams)
+                                <input type="hidden" name="birth_weight" value="{{ old('birth_weight', $prefillObservationBaby->weight_grams) }}">
+                            @endif
+                            <div class="alert alert-info border-0 shadow-sm rounded-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <i class="fas fa-baby-carriage me-2"></i>
+                                    <strong>تحويل مباشر من معاينة المواليد (ساعتان):</strong>
+                                    <span class="ms-1">{{ $prefillObservationBaby->born_name }}</span>
+                                    @if($prefillObservationBaby->weight_grams)
+                                        <span class="badge bg-primary ms-2">الوزن: {{ $prefillObservationBaby->weight_grams }} غم</span>
+                                    @endif
+                                    @if($prefillObservationBaby->gender)
+                                        <span class="badge bg-secondary ms-1">{{ $prefillObservationBaby->gender }}</span>
+                                    @endif
+                                </div>
+                                <a href="{{ route('nicu.observations.show', $prefillObservationBaby->observation_id) }}" class="btn btn-sm btn-outline-primary rounded-3">
+                                    العودة لملف المعاينة
+                                </a>
+                            </div>
+                        @endif
 
                         <!-- بيانات المريض (الأم أو المسؤول) والطفل الخديج -->
                         <div class="row mb-4">
@@ -388,7 +410,7 @@ label.incubator-card {
                                     <input type="text" name="baby_name" id="baby_name" 
                                            class="form-control @error('baby_name') is-invalid @enderror" 
                                            placeholder="مثال: طفل مريم علي / يوسف كرار" 
-                                           value="{{ old('baby_name') }}">
+                                           value="{{ old('baby_name', $prefillObservationBaby?->born_name ?? '') }}">
                                 </div>
                                 @error('baby_name')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -660,12 +682,15 @@ label.incubator-card {
                                 @enderror
                             </div>
 
+                            @php
+                                $defaultSource = old('admission_source', isset($prefillObservationBaby) && $prefillObservationBaby ? ($prefillObservationBaby->observation?->surgery_id ? 'c_section' : 'internal') : '');
+                            @endphp
                             <div class="col-md-6 mb-3">
                                 <label for="admission_source" class="form-label fw-bold">مصدر الحالة</label>
                                 <select name="admission_source" id="admission_source" class="form-select">
-                                    <option value="internal" {{ old('admission_source') == 'internal' ? 'selected' : '' }}>ولادة طبيعية / داخلية (IN)</option>
-                                    <option value="c_section" {{ old('admission_source') == 'c_section' ? 'selected' : '' }}>صالة عمليات قيصرية</option>
-                                    <option value="external" {{ old('admission_source') == 'external' ? 'selected' : '' }}>محال من خارج المستشفى (OUT)</option>
+                                    <option value="internal" {{ $defaultSource == 'internal' ? 'selected' : '' }}>ولادة طبيعية / داخلية (IN)</option>
+                                    <option value="c_section" {{ $defaultSource == 'c_section' ? 'selected' : '' }}>صالة عمليات قيصرية</option>
+                                    <option value="external" {{ $defaultSource == 'external' ? 'selected' : '' }}>محال من خارج المستشفى (OUT)</option>
                                 </select>
                             </div>
 

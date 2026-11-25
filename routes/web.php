@@ -1016,7 +1016,18 @@ Route::middleware(['auth'])->group(function () {
         // رادار صالات العمليات والولادة لحضانة الخدج (NICU Delivery & C-Section Operations Radar)
         Route::get('/delivery-radar', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'index'])->name('delivery-radar.index');
         Route::get('/delivery-radar/settings', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'settings'])->name('delivery-radar.settings');
+        Route::post('/delivery-radar/settings/observation', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'updateSettings'])->name('delivery-radar.observation-settings.update');
         Route::post('/delivery-radar/toggle/{surgicalOperation}', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'toggleOperation'])->name('delivery-radar.toggle');
+
+        // معاينة المواليد بعد الولادة (ساعتان) واستمارة Obstetric Case Sheet
+        Route::post('/observations/from-surgery/{surgery}', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'startFromSurgery'])->name('observations.from-surgery');
+        Route::post('/observations/manual', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'storeManual'])->name('observations.store-manual');
+        Route::get('/observations/{observation}', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'show'])->name('observations.show');
+        Route::put('/observations/{observation}', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'update'])->name('observations.update');
+        Route::post('/observations/{observation}/handover', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'handover'])->name('observations.handover');
+        Route::post('/observations/{observation}/signed-form', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'uploadSignedForm'])->name('observations.signed-form.upload');
+        Route::get('/observations/{observation}/signed-form', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'downloadSignedForm'])->name('observations.signed-form.download');
+        Route::get('/observations/{observation}/print', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'print'])->name('observations.print');
     });
 
     // وحدة العناية المركزة (ICU Module)

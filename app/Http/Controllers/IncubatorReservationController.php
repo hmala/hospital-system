@@ -51,12 +51,20 @@ class IncubatorReservationController extends Controller
             abort(403, 'غير مصرح لك بإنشاء حجز حاضنة خدج');
         }
 
-        // الحصول على المريض إذا تم تمريره مسبقاً في الرابط
+        // الحصول على المريض إذا تم تمريره مسبقاً في الرابط أو عبر تحويل من معاينة الساعتين للوليد
         $patient = null;
         $existingReservation = null;
+        $prefillObservationBaby = null;
 
-        if ($request->filled('patient_id')) {
-            $patient = Patient::with(['user', 'healthInsuranceCategory'])->find($request->patient_id);
+        if ($request->filled('observation_baby_id')) {
+            $prefillObservationBaby = \App\Models\NicuDeliveryObservationBaby::with(['observation.patient.user', 'observation.surgery'])
+                ->find($request->observation_baby_id);
+        }
+
+        $targetPatientId = $request->input('patient_id') ?: $prefillObservationBaby?->observation?->patient_id;
+
+        if ($targetPatientId) {
+            $patient = Patient::with(['user', 'healthInsuranceCategory'])->find($targetPatientId);
 
             if ($patient) {
                 // تحقق سريع: هل للطفل/الأم حجز نشط بالفعل؟ (حتى نظهر تحذير فور دخول الصفحة)
@@ -106,7 +114,8 @@ class IncubatorReservationController extends Controller
             'incubatorTypes',
             'existingReservation',
             'nicuServices',
-            'healthInsuranceCategories'
+            'healthInsuranceCategories',
+            'prefillObservationBaby'
         ));
     }
 
@@ -150,7 +159,26 @@ class IncubatorReservationController extends Controller
             'scanned_parent_id' => 'nullable|string',
             'referral_doc_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
             'scanned_referral_doc' => 'nullable|string',
+            'observation_baby_id' => 'nullable|integer|exists:nicu_delivery_observation_babies,id',
         ]);
+
+        $observationBabyId = $validated['observation_baby_id'] ?? null;
+        unset($validated['observation_baby_id']);
+
+        if ($observationBabyId) {
+            $obsBabyPrefill = \App\Models\NicuDeliveryObservationBaby::with('observation')->find($observationBabyId);
+            if ($obsBabyPrefill) {
+                if (empty($validated['birth_weight']) && $obsBabyPrefill->weight_grams) {
+                    $validated['birth_weight'] = $obsBabyPrefill->weight_grams;
+                }
+                if (empty($validated['admission_reason']) && $obsBabyPrefill->observation?->assessment) {
+                    $validated['admission_reason'] = $obsBabyPrefill->observation->assessment;
+                }
+                if (empty($validated['maternal_history']) && $obsBabyPrefill->observation?->history_of_illness) {
+                    $validated['maternal_history'] = $obsBabyPrefill->observation->history_of_illness;
+                }
+            }
+        }
 
         // سحب وتوليد اسم الطفل وتحديد صفة المريض (طفل مستقل أو تابع للأم/الأب)
         $patientUser = Patient::with('user')->findOrFail($validated['patient_id']);
@@ -241,6 +269,17 @@ class IncubatorReservationController extends Controller
 
         // إنشاء الحجز
         $reservation = IncubatorReservation::create($validated);
+
+        if ($observationBabyId) {
+            $obsBaby = \App\Models\NicuDeliveryObservationBaby::with('observation')->find($observationBabyId);
+            if ($obsBaby) {
+                $obsBaby->update([
+                    'disposition' => \App\Models\NicuDeliveryObservationBaby::DISPOSITION_ADMITTED_TO_NICU,
+                    'incubator_reservation_id' => $reservation->id,
+                ]);
+                $obsBaby->observation?->recalculateStatus();
+            }
+        }
 
         // حفظ الوثائق والمرفقات الرسمية المرفوعة أو الممسوحة بالسكانر
         if ($request->hasFile('birth_certificate_file') || $request->filled('scanned_birth_certificate')) {
