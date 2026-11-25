@@ -1998,6 +1998,9 @@ syncRadiologyQueue();
 </div>
 @if(isset($nicuRadiologyRequests) && $nicuRadiologyRequests->count() > 0)
     @foreach($nicuRadiologyRequests as $nicuRad)
+        @if($nicuRad instanceof \App\Models\Request)
+            @continue
+        @endif
         <div class="modal fade" id="completeNicuRadModal{{ $nicuRad->id }}" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content border-0 shadow">
@@ -2030,11 +2033,11 @@ syncRadiologyQueue();
                             <div class="row g-3">
                                 <div class="col-md-12">
                                     <label class="form-label fw-bold text-dark small">{{ __("التقرير الشعاعي / النتائج والمشاهدات التشخيصية (Findings & Impression)") }} <span class="text-danger">*</span></label>
-                                    <textarea name="result" class="form-control" rows="5" placeholder="{{ __("اكتب تقرير الفحص الطبي بالتفصيل والمشاهدات السريرية...") }}" required>{{ $nicuRad->result }}</textarea>
+                                    <textarea name="result" class="form-control" rows="5" placeholder="{{ __("اكتب تقرير الفحص الطبي بالتفصيل والمشاهدات السريرية...") }}" required>{{ is_array($nicuRad->result) ? ($nicuRad->result['report'] ?? json_encode($nicuRad->result, JSON_UNESCAPED_UNICODE)) : $nicuRad->result }}</textarea>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label fw-bold text-dark small">{{ __("توصيات أخصائي الأشعة / ملاحظات فنية إضافية") }}</label>
-                                    <textarea name="technician_notes" class="form-control" rows="2" placeholder="{{ __("اكتب أي توصيات للمتابعة أو إعادة الفحص...") }}">{{ $nicuRad->technician_notes }}</textarea>
+                                    <textarea name="technician_notes" class="form-control" rows="2" placeholder="{{ __("اكتب أي توصيات للمتابعة أو إعادة الفحص...") }}">{{ is_array($nicuRad->technician_notes) ? json_encode($nicuRad->technician_notes, JSON_UNESCAPED_UNICODE) : $nicuRad->technician_notes }}</textarea>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label fw-bold text-dark small">{{ __("إرفاق صورة الأشعة / السونار أو ملف DICOM/PDF (اختياري)") }}</label>

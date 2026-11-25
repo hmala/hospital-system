@@ -1005,6 +1005,9 @@
 
     @if(isset($nicuLabRequests) && $nicuLabRequests->count() > 0)
         @foreach($nicuLabRequests as $nicuRequest)
+            @if($nicuRequest instanceof \App\Models\Request)
+                @continue
+            @endif
             <div class="modal fade" id="completeNicuLabModal{{ $nicuRequest->id }}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content border-0 shadow">
@@ -1037,7 +1040,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold text-dark small">{{ __("قيمة النتيجة (Result Value)") }} <span class="text-danger">*</span></label>
-                                        <input type="text" name="result" class="form-control fw-bold font-monospace" placeholder="{{ __("مثال: 12.5 أو Negative أو 7.35") }}" value="{{ $nicuRequest->result }}" required>
+                                        <input type="text" name="result" class="form-control fw-bold font-monospace" placeholder="{{ __("مثال: 12.5 أو Negative أو 7.35") }}" value="{{ is_array($nicuRequest->result) ? ($nicuRequest->result['value'] ?? '') : $nicuRequest->result }}" required>
                                     </div>
                                     <div class="col-md-3">
                                         <label class="form-label fw-bold text-dark small">{{ __("الوحدة (Unit)") }}</label>

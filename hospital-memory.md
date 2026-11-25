@@ -79,6 +79,15 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 297 (2026-11-25 — `main`) — إصلاح خطأ TypeError: htmlspecialchars(): Argument #1 must be string, array given في شاشتي الأشعة والمختبر عند طلبات الخدج (Fix Array Result htmlspecialchars TypeError in Radiology & Lab Views)**:
+  * **إصلاح الخطأ في الواجهات ([resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php), [resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php))**:
+    - المشكلة: كانت حلقة المودال السفلية (`#completeNicuRadModal` و `#completeNicuLabModal`) تستدعي موديلات `\App\Models\Request` والتي تحتوي على كاستنج لمصفوفة `'result' => 'array'`، مما تسبب في تمرير مصفوفة إلى دالة `htmlspecialchars()` داخل `{{ $nicuRad->result }}` وانهيار الصفحة برمز 500.
+    - الحل الجذري: حصر المودال في موديلات `NicuMedicalOrder` واستبعاد `\App\Models\Request` باستخدام `@if($nicuRad instanceof \App\Models\Request) @continue @endif` (لأن طلبات `Request` تُفتح عبر شاشة التقرير المخصصة لها `radiology-staff.show`).
+    - الأمان المزدوج: تحصين طباعة `result` و `technician_notes` بفحص `is_array()` لضمان عدم حدوث أي خطأ طباعة مستقبلاً.
+  * **الاختبارات وضمان الجودة ([tests/Feature/RadiologyStaffCallNextTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RadiologyStaffCallNextTest.php))**:
+    - كتابة اختبار انحدار آلي لمحاكاة وجود طلب أشعة للخدج من نوع `MedicalRequest` يحمل نتيجة كمصفوفة `result => [...]` والتحقق من فتح شاشة الأشعة بنجاح بدون أخطاء (`5 passed, 13 assertions`).
+    - اجتياز فحص `view:cache` و `Pint`.
+
 - **المرحلة 296 (2026-11-25 — `main`) — توحيد وترقية واجهة إضافة مستخدم جديد وحصر دليل المستخدمين في كادر وموظفي المستشفى واستبعاد المرضى تماماً (Modern Create User Screen Unified with Edit, Live Preview & Complete Patient Exclusion from Staff Directory)**:
   * **استبعاد حسابات المرضى من دليل كادر المستشفى ([UserManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/UserManagementController.php))**:
     - حصر استعلام شاشة المستخدمين وإحصائياتها وبطاقات الـ KPI في كادر وموظفي المستشفى فقط.

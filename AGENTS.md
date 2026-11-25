@@ -56,6 +56,17 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 297: إصلاح خطأ TypeError في شاشتي الأشعة والمختبر عند التعامل مع نتائج طلبات الخدج Fix htmlspecialchars Array Argument Error in Radiology & Lab Views)
+
+### Done
+- **إصلاح الخطأ البرمجي في واجهتي الأشعة والمختبر ([resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php), [resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php))**:
+  * سبب الخطأ: كانت حلقة المودال السفلية (`#completeNicuRadModal` و `#completeNicuLabModal`) تستدعي موديلات `\App\Models\Request` والتي تحتوي على كاستنج لمصفوفة `'result' => 'array'`، مما تسبب في تمرير مصفوفة إلى دالة `htmlspecialchars()` داخل `{{ $nicuRad->result }}` وتوقف الصفحة بـ 500.
+  * المعالجة: حصر المودال في موديلات أوامر الخدج `NicuMedicalOrder` واستثناء `\App\Models\Request` باستخدام `@if($nicuRad instanceof \App\Models\Request) @continue @endif` (لأن طلبات `Request` تُفتح عبر شاشة التقرير المخصصة لها `radiology-staff.show`).
+  * الأمان المزدوج: تحصين طباعة `result` و `technician_notes` بفحص `is_array()` لضمان عدم حدوث أي خطأ طباعة مستقبلاً.
+- **الاختبارات وضمان الجودة ([tests/Feature/RadiologyStaffCallNextTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/RadiologyStaffCallNextTest.php))**:
+  * كتابة اختبار انحدار آلي لمحاكاة وجود طلب أشعة للخدج من نوع `MedicalRequest` يحمل نتيجة كمصفوفة `result => [...]` والتحقق من فتح شاشة الأشعة بنجاح بدون أخطاء (`5 passed, 13 assertions`).
+  * اجتياز فحص `view:cache` و `Pint`.
+
 ## Session log (2026-11-25 — المرحلة 296: توحيد وترقية واجهة إضافة مستخدم جديد وحصر دليل المستخدمين في كادر وموظفي المستشفى واستبعاد المرضى تماماً Modern Create User Screen Unified with Edit, Live Preview & Complete Patient Exclusion from Staff Directory)
 
 ### Done

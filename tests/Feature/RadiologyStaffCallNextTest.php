@@ -2,16 +2,15 @@
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Patient;
-use App\Models\Visit;
-use App\Models\Request as MedicalRequest;
 use App\Models\Department;
 use App\Models\Doctor;
+use App\Models\Patient;
+use App\Models\Request as MedicalRequest;
+use App\Models\User;
+use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
+use Tests\TestCase;
 
 class RadiologyStaffCallNextTest extends TestCase
 {
@@ -99,7 +98,7 @@ class RadiologyStaffCallNextTest extends TestCase
             'department_id' => $dept->id,
             'specialization' => 'أشعة وسونار',
             'qualification' => 'بورد عربي',
-            'license_number' => 'DOC-RAD-' . uniqid(),
+            'license_number' => 'DOC-RAD-'.uniqid(),
             'consultation_fee' => 30000,
             'type' => 'consultant',
             'is_active' => true,
@@ -137,5 +136,77 @@ class RadiologyStaffCallNextTest extends TestCase
             'id' => $req->id,
             'status' => 'calling',
         ]);
+    }
+
+    public function test_radiology_index_page_renders_with_nicu_medical_request_having_array_result()
+    {
+        $staffUser = User::factory()->create();
+        $staffUser->givePermissionTo('view radiology');
+
+        $patientUser = User::factory()->create(['name' => 'أم الطفل']);
+        $patient = Patient::create(['user_id' => $patientUser->id]);
+
+        $room = \App\Models\Room::create(['room_number' => 'NICU-9', 'room_type' => 'incubator', 'status' => 'available']);
+        $incubator = \App\Models\Incubator::create([
+            'incubator_number' => 'INC-09',
+            'incubator_type' => 'normal',
+            'status' => 'available',
+            'room_id' => $room->id,
+            'daily_fee' => 100000,
+            'is_active' => true,
+        ]);
+
+        $hosp = \App\Models\Hospital::first();
+        $dept = Department::create([
+            'hospital_id' => $hosp->id,
+            'name' => 'قسم الخدج',
+            'type' => 'other',
+            'room_number' => '105',
+            'consultation_fee' => 20000,
+            'working_hours_start' => '08:00',
+            'working_hours_end' => '16:00',
+            'is_active' => true,
+        ]);
+        $doctorUser = User::factory()->create(['name' => 'طبيب خبير']);
+        $doctor = Doctor::create([
+            'user_id' => $doctorUser->id,
+            'department_id' => $dept->id,
+            'specialization' => 'أطفال',
+            'qualification' => 'بورد',
+            'license_number' => 'DOC-NICU-'.uniqid(),
+            'consultation_fee' => 20000,
+            'type' => 'consultant',
+            'is_active' => true,
+        ]);
+
+        $reservation = \App\Models\IncubatorReservation::create([
+            'incubator_id' => $incubator->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $doctor->id,
+            'baby_name' => 'طفل مصطفى',
+            'admission_date' => now()->toDateString(),
+            'admission_time' => '08:00',
+            'status' => 'admitted',
+        ]);
+
+        // Create MedicalRequest with incubator_reservation_id and array result (which previously crashed Blade htmlspecialchars)
+        MedicalRequest::create([
+            'type' => 'radiology',
+            'subtype' => 'xray',
+            'description' => 'أشعة صدر خديج',
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'incubator_reservation_id' => $reservation->id,
+            'result' => [
+                'radiologist_report' => 'Normal chest findings with no pneumothorax',
+                'findings' => 'Clear lung fields',
+            ],
+            'created_at' => now(),
+        ]);
+
+        $response = $this->actingAs($staffUser)->get(route('radiology-staff.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('طفل مصطفى');
     }
 }
