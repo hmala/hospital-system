@@ -15,6 +15,7 @@ class Payment extends Model
         'request_id',
         'emergency_id',
         'surgery_id',
+        'pharmacy_sale_id',
         'patient_id',
         'cashier_id',
         'receipt_number',
@@ -132,6 +133,14 @@ class Payment extends Model
     public function surgery()
     {
         return $this->belongsTo(Surgery::class);
+    }
+
+    /**
+     * العلاقة مع فاتورة الصيدلية
+     */
+    public function pharmacySale()
+    {
+        return $this->belongsTo(PharmacySale::class, 'pharmacy_sale_id');
     }
 
     /**

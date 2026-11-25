@@ -573,6 +573,8 @@ class RoleManagementController extends Controller
             'process ultrasound payments' => ['label' => 'قبض وتسديد طلبات السونار الخارجي المباشر فقط', 'action' => 'معالجة', 'badge' => 'primary'],
             'process medical requests payments' => ['label' => 'قبض وتسديد رسوم الفحوصات (مختبر وأشعة)', 'action' => 'معالجة', 'badge' => 'success'],
             'process emergency payments' => ['label' => 'قبض وتسديد فواتير وإجراءات الطوارئ', 'action' => 'معالجة', 'badge' => 'success'],
+            'process pharmacy payments' => ['label' => 'قبض وتسديد فواتير ومبيعات الصيدلية والعلاج', 'action' => 'معالجة', 'badge' => 'success'],
+            'view cashier pharmacy' => ['label' => 'عرض تبويب فواتير الصيدلية بالكاشير', 'action' => 'عرض', 'badge' => 'info'],
             'view cashier surgeries' => ['label' => 'عرض كاشير قسم العمليات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
             'process surgery payments' => ['label' => 'قبض وتثبيت دفعات العمليات وأجور الغرف', 'action' => 'معالجة', 'badge' => 'success'],
             'process refunds' => ['label' => 'استرجاع مبالغ العمليات الملغاة وفوارق الغرف للمرضى', 'action' => 'معالجة', 'badge' => 'warning'],

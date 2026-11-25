@@ -206,12 +206,14 @@
                                 $canUltrasoundOnly = !$canFullMedical && auth()->user()->can('process ultrasound payments');
                                 $canMedicalRequests = $canFullMedical || $canUltrasoundOnly;
                                 $canEmergency = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process emergency payments');
+                                $canPharmacy = auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('process pharmacy payments') || auth()->user()->can('view cashier pharmacy');
 
                                 $appointmentsCount = ($canConsultation && isset($pendingAppointments)) ? $pendingAppointments->total() : 0;
                                 $requestsCount = ($canMedicalRequests && isset($pendingMedicalRequests)) ? $pendingMedicalRequests->total() : 0;
                                 $postponedCount = ($canMedicalRequests && isset($postponedMedicalRequests)) ? $postponedMedicalRequests->total() : ($postponedRequestsCount ?? 0);
                                 $emergencyCount = ($canEmergency && isset($pendingEmergencyPayments)) ? $pendingEmergencyPayments->total() : 0;
-                                $combinedCount = $appointmentsCount + $requestsCount + $emergencyCount;
+                                $pharmacyCount = ($canPharmacy && isset($pendingPharmacySales)) ? (is_object($pendingPharmacySales) && method_exists($pendingPharmacySales, 'total') ? $pendingPharmacySales->total() : $pendingPharmacySales->count()) : ($pendingPharmacyCount ?? 0);
+                                $combinedCount = $appointmentsCount + $requestsCount + $emergencyCount + $pharmacyCount;
                             @endphp
 
                             @if(($pendingRefundCount ?? 0) > 0)
@@ -291,6 +293,14 @@
                                                 <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-emergency-btn" data-bs-toggle="pill" data-bs-target="#tab-emergency" type="button" role="tab">
                                                     <i class="fas fa-ambulance me-1 text-danger"></i> {{ __("الطوارئ") }}
                                                     <span class="badge bg-danger ms-1 rounded-pill">{{ $emergencyCount }}</span>
+                                                </button>
+                                            </li>
+                                            @endif
+                                            @if($canPharmacy)
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link fw-bold px-3 py-1-5 rounded-pill" id="tab-pharmacy-btn" data-bs-toggle="pill" data-bs-target="#tab-pharmacy" type="button" role="tab">
+                                                    <i class="fas fa-pills me-1 text-success"></i> {{ __("الصيدلية والعلاج") }}
+                                                    <span class="badge bg-success ms-1 rounded-pill">{{ $pharmacyCount }}</span>
                                                 </button>
                                             </li>
                                             @endif
@@ -669,6 +679,58 @@
                                                                 @endforeach
                                                             @endif
 
+                                                            {{-- فواتير الصيدلية --}}
+                                                            @if($canPharmacy)
+                                                                @foreach($pendingPharmacySales ?? [] as $sale)
+                                                                    @php
+                                                                        $pName = $sale->patient_name ?? optional(optional($sale->patient)->user)->name ?? __('مريض مباشر OTC');
+                                                                        $pNatId = optional($sale->patient)->national_id ?? '---';
+                                                                        $saleIns = $sale->insurance_type ?? 'none';
+                                                                        $isIns = in_array($saleIns, ['health_insurance', 'interior_ministry', 'hi', 'moi']);
+                                                                        $copay = (float)($sale->copay_percentage ?? 0);
+                                                                        $pShare = (float)$sale->patient_share;
+                                                                        $itemsCount = $sale->items->count();
+                                                                    @endphp
+                                                                    <tr class="pending-all-row" data-financial-type="{{ $isIns ? 'insurance' : 'cash' }}">
+                                                                        <td><strong>{{ $sale->invoice_number }}</strong></td>
+                                                                        <td><span class="badge bg-success"><i class="fas fa-pills me-1"></i> {{ __("صيدلية") }}</span></td>
+                                                                        <td>
+                                                                            <div class="fw-semibold">{{ $pName }}
+                                                                                @if($saleIns === 'interior_ministry' || $saleIns === 'moi')
+                                                                                    <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>{{ __("داخليّة") }}</span>
+                                                                                @elseif($saleIns === 'health_insurance' || $saleIns === 'hi')
+                                                                                    <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>{{ __("ضمان صحي") }}</span>
+                                                                                @else
+                                                                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1" title="{{ __("دفع نقدي كامل (خارج الضمان)") }}"><i class="fas fa-money-bill-wave me-1"></i>{{ __("نقدي (كاش)") }}</span>
+                                                                                @endif
+                                                                            </div>
+                                                                            <small class="text-muted">{{ $pNatId }}</small>
+                                                                        </td>
+                                                                        <td>
+                                                                            <span class="badge bg-light text-dark border">{{ $sale->sale_type === 'prescription' ? __('وصفة عيادة') : ($sale->sale_type === 'emergency' ? __('طوارئ') : __('مباشر OTC')) }}</span>
+                                                                            <small class="text-muted d-block mt-1">{{ __('أصناف:') }} {{ $itemsCount }}</small>
+                                                                        </td>
+                                                                        <td class="text-end">
+                                                                            @if($isIns)
+                                                                                <div class="text-success fw-bold">{{ number_format($pShare) }} {{ __('د.ع') }} <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ $copay }}%</span></div>
+                                                                                <small class="text-muted d-block" style="font-size:0.72rem;">{{ __("إجمالي:") }} {{ number_format($sale->total_amount) }} {{ __('د.ع') }}</small>
+                                                                            @else
+                                                                                <span class="text-success fw-bold">{{ number_format($pShare) }} {{ __('د.ع') }}</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td>
+                                                                            <small>{{ $sale->created_at->format('Y-m-d') }}</small><br>
+                                                                            <small class="text-muted">{{ $sale->created_at->format('H:i') }}</small>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <a href="{{ route('cashier.pharmacy.payment.form', $sale->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                                <i class="fas fa-money-bill-wave me-1"></i> {{ __("تسديد") }}
+                                                                            </a>
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            @endif
+
 
                                                         </tbody>
                                                     </table>
@@ -692,6 +754,11 @@
                                                         @if($canEmergency)
                                                             <button type="button" class="btn btn-outline-danger btn-sm fw-bold px-2 py-1" onclick="document.getElementById('tab-emergency-btn').click()">
                                                                 <i class="fas fa-ambulance me-1"></i> {{ __("الطوارئ") }} ({{ $emergencyCount }})
+                                                            </button>
+                                                        @endif
+                                                        @if($canPharmacy)
+                                                            <button type="button" class="btn btn-outline-success btn-sm fw-bold px-2 py-1" onclick="document.getElementById('tab-pharmacy-btn').click()">
+                                                                <i class="fas fa-pills me-1"></i> {{ __("الصيدلية والعلاج") }} ({{ $pharmacyCount }})
                                                             </button>
                                                         @endif
                                                         @if($canSurgeries ?? true)
@@ -1222,6 +1289,107 @@
                                                     </div>
                                                     <h6 class="fw-bold text-dark mb-1">{{ __("لا توجد فحوصات أو خدمات مؤجلة حالياً") }}</h6>
                                                     <p class="text-muted mb-0 small">{{ __("جميع طلبات المرضى إما مسددة بالكامل أو قيد المتابعة النشطة.") }}</p>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        @endif
+
+                                        <!-- تبويب الصيدلية والعلاج -->
+                                        @if($canPharmacy)
+                                        <div class="tab-pane fade" id="tab-pharmacy" role="tabpanel">
+                                            @if($pharmacyCount > 0)
+                                                <div class="table-responsive">
+                                                    <table class="table table-hover align-middle mb-0">
+                                                        <thead class="table-light">
+                                                            <tr>
+                                                                <th>{{ __("رقم الفاتورة") }}</th>
+                                                                <th>{{ __("النوع") }}</th>
+                                                                <th>{{ __("المريض") }}</th>
+                                                                <th>{{ __("الأدوية والخدمات") }}</th>
+                                                                <th>{{ __("الطبيب / المصدر") }}</th>
+                                                                <th class="text-end">{{ __("المبلغ المطلوب") }}</th>
+                                                                <th>{{ __("التاريخ والوقت") }}</th>
+                                                                <th class="text-center">{{ __("الإجراء") }}</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach($pendingPharmacySales ?? [] as $sale)
+                                                                @php
+                                                                    $pName = $sale->patient_name ?? optional(optional($sale->patient)->user)->name ?? __('مريض مباشر OTC');
+                                                                    $pNatId = optional($sale->patient)->national_id ?? '---';
+                                                                    $saleIns = $sale->insurance_type ?? 'none';
+                                                                    $isIns = in_array($saleIns, ['health_insurance', 'interior_ministry', 'hi', 'moi']);
+                                                                    $copay = (float)($sale->copay_percentage ?? 0);
+                                                                    $pShare = (float)$sale->patient_share;
+                                                                    $itemsSummary = $sale->items->map(fn($it) => $it->item_type === 'medicine' ? ($it->medicine?->name ?? __('دواء')) : ($it->service?->name ?? __('خدمة')))->join('، ');
+                                                                @endphp
+                                                                <tr>
+                                                                    <td><strong class="font-monospace text-primary">{{ $sale->invoice_number }}</strong></td>
+                                                                    <td>
+                                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                                                                            <i class="fas fa-pills me-1"></i>
+                                                                            {{ $sale->sale_type === 'prescription' ? __('وصفة عيادة') : ($sale->sale_type === 'emergency' ? __('طوارئ') : __('مباشر OTC')) }}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <div class="fw-semibold">{{ $pName }}
+                                                                            @if($saleIns === 'interior_ministry' || $saleIns === 'moi')
+                                                                                <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>{{ __("داخليّة") }}</span>
+                                                                            @elseif($saleIns === 'health_insurance' || $saleIns === 'hi')
+                                                                                <span class="badge bg-info text-dark fs-8 ms-1"><i class="fas fa-heartbeat me-1"></i>{{ __("ضمان صحي") }}</span>
+                                                                            @else
+                                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle fs-8 ms-1"><i class="fas fa-money-bill-wave me-1"></i>{{ __("نقدي") }}</span>
+                                                                            @endif
+                                                                        </div>
+                                                                        <small class="text-muted">{{ $pNatId }}</small>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="badge bg-light text-dark border px-2 py-1" title="{{ $itemsSummary }}">
+                                                                            {{ $sale->items->count() }} {{ __('أصناف') }}
+                                                                        </span>
+                                                                        <small class="text-muted d-block text-truncate mt-1" style="max-width: 200px;">
+                                                                            {{ $itemsSummary }}
+                                                                        </small>
+                                                                    </td>
+                                                                    <td>
+                                                                        @if($sale->prescription && $sale->prescription->doctor && $sale->prescription->doctor->user)
+                                                                            <small class="text-muted">{{ __('د.') }} {{ $sale->prescription->doctor->user->name }}</small>
+                                                                        @else
+                                                                            <small class="text-muted">{{ __('صيدلية المستشفى') }}</small>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if($isIns)
+                                                                            <div class="text-success fw-bold font-monospace">{{ number_format($pShare) }} {{ __('د.ع') }} <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-0 px-1" style="font-size:0.68rem;">{{ __("تحمل") }} {{ $copay }}%</span></div>
+                                                                            <small class="text-muted d-block font-monospace" style="font-size:0.72rem;">{{ __("إجمالي:") }} {{ number_format($sale->total_amount) }} {{ __('د.ع') }}</small>
+                                                                        @else
+                                                                            <span class="text-success fw-bold font-monospace">{{ number_format($pShare) }} {{ __('د.ع') }}</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td>
+                                                                        <small>{{ $sale->created_at->format('Y-m-d') }}</small><br>
+                                                                        <small class="text-muted">{{ $sale->created_at->format('H:i') }}</small>
+                                                                    </td>
+                                                                    <td class="text-center">
+                                                                        <a href="{{ route('cashier.pharmacy.payment.form', $sale->id) }}" class="btn btn-success btn-sm px-3 shadow-sm">
+                                                                            <i class="fas fa-money-bill-wave me-1"></i> {{ __("تسديد وقبض") }}
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                                @if(isset($pendingPharmacySales) && method_exists($pendingPharmacySales, 'hasPages') && $pendingPharmacySales->hasPages())
+                                                    <div class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
+                                                        <span class="small text-muted">{{ __('عرض') }} {{ $pendingPharmacySales->firstItem() }} {{ __('إلى') }} {{ $pendingPharmacySales->lastItem() }} {{ __('من أصل') }} {{ $pendingPharmacySales->total() }} {{ __('فاتورة') }}</span>
+                                                        {{ $pendingPharmacySales->links() }}
+                                                    </div>
+                                                @endif
+                                            @else
+                                                <div class="text-center py-5">
+                                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                                    <p class="text-muted mb-0">{{ __('لا توجد فواتير صيدلية معلقة بانتظار الدفع حالياً') }}</p>
                                                 </div>
                                             @endif
                                         </div>

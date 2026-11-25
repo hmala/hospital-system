@@ -45,8 +45,9 @@ class CashierController extends Controller
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         $canFullMedical = $isAdmin || ($user && $user->can('process medical requests payments'));
         $canUltrasoundOnly = ! $canFullMedical && ($user && $user->can('process ultrasound payments'));
+        $canPharmacy = $isAdmin || ($user && ($user->can('process pharmacy payments') || $user->can('view cashier pharmacy')));
 
-        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process consultation payments') && ! $canFullMedical && ! $canUltrasoundOnly && ! $user->can('process emergency payments')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process consultation payments') && ! $canFullMedical && ! $canUltrasoundOnly && ! $user->can('process emergency payments') && ! $canPharmacy))) {
             abort(403, 'غير مصرح لك بالوصول إلى لوحة الكاشير');
         }
 
@@ -85,7 +86,14 @@ class CashierController extends Controller
 
         $previousPendingReqsCount = $previousPendingReqsQuery->count();
 
-        $previousPendingCount = $previousPendingAptsCount + $previousPendingReqsCount;
+        $previousPendingPharmacyCount = $canPharmacy
+            ? \App\Models\PharmacySale::where('payment_status', 'pending_cashier')
+                ->where('is_held', false)
+                ->whereDate('created_at', '<', $today)
+                ->count()
+            : 0;
+
+        $previousPendingCount = $previousPendingAptsCount + $previousPendingReqsCount + $previousPendingPharmacyCount;
 
         // جلب المواعيد المعلقة (غير المدفوعة)
         $pendingAppointmentsQuery = Appointment::with(['patient.user', 'doctor.user', 'department'])
@@ -499,6 +507,51 @@ class CashierController extends Controller
 
         $pendingRefundCount = $pendingRefundRequests->count() + $pendingEmergencyRefunds->count() + $pendingNicuRefundCount + $pendingCcuRefundCount;
 
+        // جلب فواتير الصيدلية المعلقة الدفع
+        $pendingPharmacySalesQuery = \App\Models\PharmacySale::with([
+            'patient.user',
+            'items.medicine',
+            'items.service',
+            'user',
+            'prescription.doctor.user',
+        ])
+            ->where('payment_status', 'pending_cashier')
+            ->where('is_held', false);
+
+        if ($dateFilter === 'today') {
+            $pendingPharmacySalesQuery->whereDate('created_at', $today);
+        } elseif ($dateFilter === 'previous') {
+            $pendingPharmacySalesQuery->whereDate('created_at', '<', $today);
+        } elseif ($dateFilter === 'custom' && $customDate) {
+            $pendingPharmacySalesQuery->whereDate('created_at', $customDate);
+        }
+
+        if ($search) {
+            $pendingPharmacySalesQuery->where(function ($q) use ($search) {
+                $q->where('id', $search)
+                    ->orWhere('invoice_number', 'like', "%{$search}%")
+                    ->orWhere('patient_name', 'like', "%{$search}%")
+                    ->orWhere('patient_phone', 'like', "%{$search}%")
+                    ->orWhereHas('patient.user', function ($qu) use ($search) {
+                        $qu->where('name', 'like', "%{$search}%")
+                            ->orWhere('phone', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('patient', function ($qp) use ($search) {
+                        $qp->where('national_id', 'like', "%{$search}%")
+                            ->orWhere('medical_number', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $pendingPharmacySales = $canPharmacy
+            ? $pendingPharmacySalesQuery->orderBy('created_at', 'desc')->paginate(15, ['*'], 'pharmacy_page')->appends(request()->query())
+            : collect();
+        $pendingPharmacyCount = $canPharmacy && is_object($pendingPharmacySales) && method_exists($pendingPharmacySales, 'total')
+            ? $pendingPharmacySales->total()
+            : 0;
+
+        $todayStats['pending_pharmacy_count'] = $pendingPharmacyCount;
+
         // كاشير العمليات المتقدم يدار في شاشة تخصصية منفصلة (cashier.surgeries.index)
         $canSurgeries = $isAdmin || ($user && ($user->can('view cashier surgeries') || $user->can('process surgery payments')));
         $pendingSurgeriesList = collect();
@@ -514,6 +567,9 @@ class CashierController extends Controller
             'postponedMedicalRequests',
             'postponedRequestsCount',
             'pendingEmergencyPayments',
+            'pendingPharmacySales',
+            'pendingPharmacyCount',
+            'canPharmacy',
             'pendingRefundRequests',
             'pendingEmergencyRefunds',
             'pendingEmergencyRadRefunds',
@@ -797,10 +853,124 @@ class CashierController extends Controller
             'surgery.department',
             'surgery.labTests.labTest',
             'surgery.radiologyTests.radiologyType',
+            'pharmacySale.items.medicine',
+            'pharmacySale.items.service',
             'cashier',
         ]);
 
         return view('cashier.receipt-print', compact('payment'));
+    }
+
+    /**
+     * عرض صفحة تسديد فاتورة صيدلية
+     */
+    public function showPharmacyPaymentForm(\App\Models\PharmacySale $sale)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process pharmacy payments'))) {
+            abort(403, 'غير مصرح لك بقبض وتسديد فواتير الصيدلية');
+        }
+
+        if ($sale->payment_status === 'paid') {
+            return redirect()->route('cashier.index')
+                ->with('warning', 'هذه الفاتورة تم تسديدها مسبقاً');
+        }
+
+        $sale->load([
+            'patient.user',
+            'patient.healthInsuranceCategory',
+            'items.medicine',
+            'items.service',
+            'user',
+            'prescription.doctor.user',
+        ]);
+
+        return view('cashier.pharmacy-payment-form', compact('sale'));
+    }
+
+    /**
+     * معالجة تسديد فاتورة الصيدلية وإصدار وصل القبض
+     */
+    public function processPharmacyPayment(Request $request, \App\Models\PharmacySale $sale)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('process pharmacy payments'))) {
+            abort(403, 'غير مصرح لك بقبض وتسديد فواتير الصيدلية');
+        }
+
+        if ($sale->payment_status === 'paid') {
+            return redirect()->route('cashier.index')
+                ->with('error', 'هذه الفاتورة تم تسديدها مسبقاً');
+        }
+
+        $request->validate([
+            'payment_method' => 'required|in:cash,card,split,insurance',
+            'amount' => 'required|numeric|min:0',
+            'cash_amount' => 'nullable|numeric|min:0',
+            'card_amount' => 'nullable|numeric|min:0',
+            'notes' => 'nullable|string|max:500',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'discount_reason' => 'nullable|string|max:255',
+        ]);
+
+        $paymentMethod = $request->input('payment_method');
+        $patientPaidAmount = (float) $request->input('amount');
+        $cashAmount = (float) $request->input('cash_amount', 0);
+        $cardAmount = (float) $request->input('card_amount', 0);
+        $discountAmount = (float) $request->input('discount_amount', 0);
+        $discountReason = $request->input('discount_reason');
+
+        if ($paymentMethod === 'split') {
+            if (abs(($cashAmount + $cardAmount) - $patientPaidAmount) > 0.01) {
+                return back()->withInput()->with('error', 'مجموع المبلغ النقدي ومبلغ البطاقة يجب أن يساوي المبلغ الإجمالي المطلوب دفعه.');
+            }
+        }
+
+        DB::beginTransaction();
+        try {
+            $receiptNumber = Payment::generateReceiptNumber();
+
+            $payment = Payment::create([
+                'patient_id' => $sale->patient_id,
+                'cashier_id' => $user->id,
+                'pharmacy_sale_id' => $sale->id,
+                'receipt_number' => $receiptNumber,
+                'payment_type' => 'pharmacy',
+                'payment_method' => $paymentMethod,
+                'amount' => $patientPaidAmount,
+                'cash_amount' => $paymentMethod === 'split' ? $cashAmount : ($paymentMethod === 'cash' ? $patientPaidAmount : 0),
+                'card_amount' => $paymentMethod === 'split' ? $cardAmount : ($paymentMethod === 'card' ? $patientPaidAmount : 0),
+                'total_amount' => $sale->total_amount,
+                'patient_share' => $sale->patient_share,
+                'insurance_share' => $sale->insurance_share,
+                'insurance_type' => $sale->insurance_type ?? 'none',
+                'copay_percentage' => $sale->copay_percentage ?? 0,
+                'insurance_card_no' => $sale->insurance_card_no,
+                'discount_amount' => $discountAmount,
+                'discount_reason' => $discountReason,
+                'discount_by' => $discountAmount > 0 ? $user->id : null,
+                'paid_at' => now(),
+                'notes' => $request->notes ?? "تسديد فاتورة صيدلية رقم {$sale->invoice_number}",
+                'description' => "تسديد أدوية صيدلية - فاتورة {$sale->invoice_number}",
+            ]);
+
+            $sale->update([
+                'payment_status' => 'paid',
+                'payment_id' => $payment->id,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('cashier.receipt.print', $payment->id)
+                ->with('success', "تم تسديد فاتورة الصيدلية «{$sale->invoice_number}» بنجاح وإصدار الإيصال رقم {$receiptNumber}.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withInput()->with('error', 'حدث خطأ أثناء معالجة دفع فاتورة الصيدلية: '.$e->getMessage());
+        }
     }
 
     /**

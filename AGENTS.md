@@ -56,6 +56,27 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 298: تفعيل مركزية الدفع لكافة فواتير ووصفات الصيدلية في الكاشير المركزي وحظر الدفع بالصيدلية مع صلاحية مستقلة ورادار التسليم التفاعلي Central Cashier Pharmacy Routing, Permission-gated Tab & Real-time Dispensing Handoff)
+
+### Done
+- **منع الدفع النقدي في الصيدلية وتوجيهه للكاشير المركزي ([app/Http/Controllers/Pharmacy/PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php), [resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
+  * حظر أي استلام نقدي أو دفع في نافذة الصيدلية، وتوجيه 100% من مبيعات الرف (OTC) والوصفات الطبية (`prescriptions`) إلى الكاشير المركزي (`payment_route = 'central_cashier'`, `payment_status = 'pending_cashier'`).
+  * تحويل أزرار نقطة البيع في الصيدلية إلى `إرسال للكاشير المركزي للدفع (F9)`.
+  * ربط محرك احتساب الضمان الصحي والتحمل المالي للمريض تلقائياً حسب نوع التأمين والتعاقد.
+- **صلاحيات مخصصة للتحكم بظهور تبويب الصيدلية في الكاشير المركزي ([app/Http/Controllers/RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php), [database/seeders/RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php))**:
+  * إنشاء صلاحيتين دقيقتين: `process pharmacy payments` (تسديد مدفوعات الصيدلية) و `view cashier pharmacy` (عرض تبويب الصيدلية في الكاشير).
+  * تسجيل الصلاحيتين ضمن الفئة الثالثة (الصندوق والكاشير)، ومنحهما افتراضياً للأدوار الإدارية وأمناء الصندوق، مع إمكانية منحها وسحبها من أي دور بدقة عبر إدارة الأدوار.
+- **تبويب ونافذة تسديد الصيدلية في الكاشير المركزي ([app/Http/Controllers/CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php), [resources/views/cashier/pharmacy-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/pharmacy-payment-form.blade.php), [resources/views/cashier/receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+  * إضافة تبويب مخصص «الصيدلية والعلاج» مع عداد لحظي وزر فلترة سريع في جدول الكاشير العام.
+  * بناء واجهة تسديد فواتير الصيدلية المستقلة `cashier.pharmacy.payment.form` تدعم النقد، والبطاقة الإلكترونية، والدفع المختلط (Split Payment)، وحساب الخصم وتوثيق السندات المالية رسمياً وتوليد رقم الوصل.
+  * دعم طباعة الوصل المالي A4/الحراري مع تفاصيل الأدوية والكميات والأسعار والحصص التأمينية.
+- **رادار الصيدلية اللحظي والتسليم بعد التحقق المالي (Post-Payment Handoff)**:
+  * تحديث رادار طابور الصيدلية ليعرض وسام `🟢 مدفوعة بالكاشير - جاهز للتسليم` بمجرد السداد عند الكاشير المركزي، أو `🟡 بانتظار الكاشير`.
+  * مسار مستقل لتسليم الدواء `POST /pharmacy/pos/sales/{sale}/handoff` يتحقق أمنياً من `payment_status === 'paid'` ويمنع صرف أي دواء غير مسدد مالياً برمز 422، مع توثيق `dispensed_by` و `dispensed_at` وتحديث حالة الوصفة إلى `dispensed`.
+- **الاختبارات وضمان الجودة ([tests/Feature/PharmacyCentralCashierWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyCentralCashierWorkflowTest.php), [tests/Feature/PharmacyPosTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyPosTest.php))**:
+  * 6 اختبارات ميزة آلية جديدة شاملة لدورة الصيدلية والكاشير المركزي (30 assertions) ونجاح اختبارات نقاط البيع (30 assertions).
+  * اجتياز فحص `view:cache` و `Laravel Pint` بالكامل.
+
 ## Session log (2026-11-25 — المرحلة 297: إصلاح خطأ TypeError في شاشتي الأشعة والمختبر عند التعامل مع نتائج طلبات الخدج Fix htmlspecialchars Array Argument Error in Radiology & Lab Views)
 
 ### Done

@@ -79,6 +79,25 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 298 (2026-11-25 — `main`) — تفعيل مركزية الدفع لكافة فواتير ووصفات الصيدلية في الكاشير المركزي وحظر الدفع بالصيدلية مع صلاحية مستقلة ورادار التسليم التفاعلي (Central Cashier Pharmacy Routing, Permission-gated Tab & Real-time Dispensing Handoff)**:
+  * **منع الدفع النقدي في الصيدلية وتوجيهه للكاشير المركزي ([PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php), [pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
+    - حظر أي استلام نقدي أو دفع في نافذة الصيدلية، وتوجيه 100% من مبيعات الرف (OTC) والوصفات الطبية (`prescriptions`) إلى الكاشير المركزي (`payment_route = 'central_cashier'`, `payment_status = 'pending_cashier'`).
+    - تحويل أزرار نقطة البيع في الصيدلية إلى `إرسال للكاشير المركزي للدفع (F9)`.
+    - ربط محرك احتساب الضمان الصحي والتحمل المالي للمريض تلقائياً حسب نوع التأمين والتعاقد.
+  * **صلاحيات مخصصة للتحكم بظهور تبويب الصيدلية في الكاشير المركزي ([RoleManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RoleManagementController.php), [RolesAndPermissionsSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RolesAndPermissionsSeeder.php))**:
+    - إنشاء صلاحيتين دقيقتين: `process pharmacy payments` (تسديد مدفوعات الصيدلية) و `view cashier pharmacy` (عرض تبويب الصيدلية في الكاشير).
+    - تسجيل الصلاحيتين ضمن الفئة الثالثة (الصندوق والكاشير)، ومنحهما افتراضياً للأدوار الإدارية وأمناء الصندوق، مع إمكانية منحها وسحبها من أي دور بدقة.
+  * **تبويب ونافذة تسديد الصيدلية في الكاشير المركزي ([CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php), [cashier/pharmacy-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/pharmacy-payment-form.blade.php), [receipt-print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/receipt-print.blade.php))**:
+    - إضافة تبويب مخصص «الصيدلية والعلاج» مع عداد لحظي وزر فلترة سريع في جدول الكاشير العام.
+    - بناء واجهة تسديد فواتير الصيدلية المستقلة `cashier.pharmacy.payment.form` تدعم النقد، والبطاقة الإلكترونية، والدفع المختلط (Split Payment)، وحساب الخصم وتوثيق السندات المالية رسمياً وتوليد رقم الوصل.
+    - دعم طباعة الوصل المالي A4/الحراري مع تفاصيل الأدوية والكميات والأسعار والحصص التأمينية.
+  * **رادار الصيدلية اللحظي والتسليم بعد التحقق المالي (Post-Payment Handoff)**:
+    - تحديث رادار طابور الصيدلية ليعرض وسام `🟢 مدفوعة بالكاشير - جاهز للتسليم` بمجرد السداد عند الكاشير المركزي، أو `🟡 بانتظار الكاشير`.
+    - مسار مستقل لتسليم الدواء `POST /pharmacy/pos/sales/{sale}/handoff` يتحقق أمنياً من `payment_status === 'paid'` ويمنع صرف أي دواء غير مسدد مالياً برمز 422، مع توثيق `dispensed_by` و `dispensed_at` وتحديث حالة الوصفة إلى `dispensed`.
+  * **الاختبارات وضمان الجودة ([PharmacyCentralCashierWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyCentralCashierWorkflowTest.php), [PharmacyPosTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyPosTest.php))**:
+    - 6 اختبارات ميزة آلية جديدة شاملة لدورة الصيدلية والكاشير المركزي (30 assertions) ونجاح اختبارات نقاط البيع (30 assertions).
+    - اجتياز فحص `view:cache` و `Laravel Pint` بالكامل.
+
 - **المرحلة 297 (2026-11-25 — `main`) — إصلاح خطأ TypeError: htmlspecialchars(): Argument #1 must be string, array given في شاشتي الأشعة والمختبر عند طلبات الخدج (Fix Array Result htmlspecialchars TypeError in Radiology & Lab Views)**:
   * **إصلاح الخطأ في الواجهات ([resources/views/radiology-staff/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/radiology-staff/index.blade.php), [resources/views/lab/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/lab/index.blade.php))**:
     - المشكلة: كانت حلقة المودال السفلية (`#completeNicuRadModal` و `#completeNicuLabModal`) تستدعي موديلات `\App\Models\Request` والتي تحتوي على كاستنج لمصفوفة `'result' => 'array'`، مما تسبب في تمرير مصفوفة إلى دالة `htmlspecialchars()` داخل `{{ $nicuRad->result }}` وانهيار الصفحة برمز 500.

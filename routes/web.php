@@ -498,6 +498,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/surgeries/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryLabTest'])->name('surgeries.lab-tests.remove');
         Route::delete('/surgeries/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryRadiologyTest'])->name('surgeries.radiology-tests.remove');
         Route::delete('/surgeries/{surgery}/consultations/{consultation}', [\App\Http\Controllers\CashierController::class, 'cancelSurgeryConsultation'])->name('surgeries.consultations.cancel');
+        Route::get('/pharmacy/{sale}/payment', [\App\Http\Controllers\CashierController::class, 'showPharmacyPaymentForm'])->name('pharmacy.payment.form');
+        Route::post('/pharmacy/{sale}/payment', [\App\Http\Controllers\CashierController::class, 'processPharmacyPayment'])->name('pharmacy.payment.process');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');
@@ -1293,6 +1295,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('pos/sales/{sale}/print', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'printReceipt'])->name('pos.sales.print');
         Route::get('pos/sales', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'history'])->name('pos.sales.history');
         Route::get('pos/sales/{sale}', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'showSale'])->name('pos.sales.show');
+        Route::post('pos/sales/{sale}/handoff', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'completeHandoff'])->name('pos.sales.handoff');
     });
 
     // مسارات التحكم بالطابور والاستدعاء (تحتاج تسجيل دخول)

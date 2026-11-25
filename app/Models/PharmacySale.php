@@ -72,6 +72,16 @@ class PharmacySale extends Model
         return $this->belongsTo(Payment::class, 'payment_id');
     }
 
+    public function payments()
+    {
+        return $this->hasMany(Payment::class, 'pharmacy_sale_id');
+    }
+
+    public function prescription()
+    {
+        return $this->hasOne(Prescription::class, 'sale_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
@@ -117,7 +127,7 @@ class PharmacySale extends Model
      */
     public static function generateInvoiceNumber(): string
     {
-        $prefix = 'PH-' . date('Ymd') . '-';
+        $prefix = 'PH-'.date('Ymd').'-';
         $lastSale = self::where('invoice_number', 'like', "{$prefix}%")
             ->orderBy('id', 'desc')
             ->first();
@@ -128,6 +138,6 @@ class PharmacySale extends Model
             $nextNumber = $lastSequence + 1;
         }
 
-        return $prefix . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        return $prefix.str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
     }
 }

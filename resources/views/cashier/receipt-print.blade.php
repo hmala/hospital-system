@@ -686,6 +686,26 @@
                 ];
             }
 
+            // 6. Pharmacy Sale (فواتير وأدوية الصيدلية المسددة بالكاشير المركزي)
+            if ($payment->pharmacySale || $payment->payment_type === 'pharmacy') {
+                $sale = $payment->pharmacySale ?? \App\Models\PharmacySale::where('payment_id', $payment->id)->first();
+                if ($sale) {
+                    $sale->load(['items.medicine', 'items.service', 'prescription.doctor.user']);
+                    if ($sale->prescription && $sale->prescription->doctor && $sale->prescription->doctor->user) {
+                        $doctorName = $sale->prescription->doctor->user->name;
+                    }
+                    foreach ($sale->items as $sItem) {
+                        $name = $sItem->item_type === 'medicine' ? ($sItem->medicine?->name ?? __('دواء')) : ($sItem->service?->name ?? __('خدمة صيدلانية'));
+                        $unit = $sItem->unit_type === 'sub_unit' ? ' (' . __('شريط') . ')' : ' (' . __('علبة') . ')';
+                        $lineItems[] = [
+                            'name' => __('صيدلية:') . ' ' . $name . $unit,
+                            'qty' => (float)$sItem->quantity,
+                            'price' => (float)$sItem->subtotal,
+                        ];
+                    }
+                }
+            }
+
             // Fallback if no item matched or refund
             if ((float)$payment->amount < 0) {
                 $lineItems = [
