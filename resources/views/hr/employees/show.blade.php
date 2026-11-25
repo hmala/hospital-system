@@ -201,7 +201,7 @@
                     </div>
                     <div class="card-body p-3">
                         @if($employee->user)
-                            <div class="d-flex align-items-center">
+                            <div class="d-flex align-items-center mb-2">
                                 <div class="rounded-circle bg-success bg-opacity-10 text-success p-2 me-2">
                                     <i class="fas fa-check"></i>
                                 </div>
@@ -216,9 +216,29 @@
                         @else
                             <div class="text-center py-2 text-muted small">
                                 <i class="fas fa-user-slash fa-lg mb-1 text-secondary opacity-50"></i>
-                                <p class="mb-0 small">الموظف غير مرتبط بأي حساب دخول.</p>
+                                <p class="mb-2 small">الموظف غير مرتبط بأي حساب دخول.</p>
                             </div>
                         @endif
+
+                        @can('edit employees')
+                            <form action="{{ route('hr.employees.link-user', $employee->id) }}" method="POST" class="mt-2 pt-2 border-top">
+                                @csrf
+                                <label class="form-label small fw-bold mb-1">ربط / تغيير حساب الموظف:</label>
+                                <div class="input-group input-group-sm">
+                                    <select name="user_id" class="form-select form-select-sm">
+                                        <option value="">— فك الارتباط —</option>
+                                        @foreach($availableStaffUsers ?? [] as $staffUser)
+                                            <option value="{{ $staffUser->id }}" {{ $employee->user_id == $staffUser->id ? 'selected' : '' }}>
+                                                {{ $staffUser->name }} ({{ $staffUser->role ?? $staffUser->email }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <button type="submit" class="btn btn-outline-primary btn-sm" title="حفظ الربط">
+                                        <i class="fas fa-link"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        @endcan
                     </div>
                 </div>
             </div>
@@ -562,8 +582,21 @@
                         <div class="card-body p-0">
                             <div class="row g-0 text-center">
                                 <div class="col-md-3 border-end p-3">
-                                    <div class="text-muted small">الراتب الأساسي</div>
-                                    <div class="fw-bold fs-5 text-primary">{{ number_format($employee->basic_salary, 0) }} <small class="text-muted">د.ع</small></div>
+                                    <div class="text-muted small">
+                                        {{ $employee->isPerCall() ? 'نمط الأجر (Call / شفتات)' : 'الراتب الأساسي' }}
+                                    </div>
+                                    @if($employee->isPerCall())
+                                        <div class="fw-bold fs-6 text-info">
+                                            <i class="fas fa-phone-volume me-1"></i> بالـ Call / الشفت
+                                        </div>
+                                        @if($employee->custom_call_rate > 0)
+                                            <div class="small text-muted mt-1">سعر خاص: {{ number_format($employee->custom_call_rate, 0) }} د.ع</div>
+                                        @else
+                                            <div class="small text-muted mt-1">حسب تسعيرة الشفت</div>
+                                        @endif
+                                    @else
+                                        <div class="fw-bold fs-5 text-primary">{{ number_format($employee->basic_salary, 0) }} <small class="text-muted">د.ع</small></div>
+                                    @endif
                                 </div>
                                 <div class="col-md-3 border-end p-3">
                                     <div class="text-muted small">إجمالي المخصصات الثابتة</div>
@@ -900,10 +933,18 @@
                                         </tr>
                                     </thead>
                                     <tbody class="small">
-                                        @forelse($employee->actions()->with(['actionSetting', 'creator', 'cancelledBy', 'payrollCycle'])->latest('action_date')->get() as $action)
+                                        @forelse($employee->actions()->with(['actionSetting', 'creator', 'cancelledBy', 'cancelRequester', 'cancelApprover', 'batch', 'payrollCycle'])->latest('action_date')->get() as $action)
+                                            @php
+                                                $within48 = $action->isWithin48Hours();
+                                                $deadline = $action->cancellable_until ?? $action->created_at?->copy()->addHours(48);
+                                                $canAdminCancel = auth()->user()->can('approve hr action cancellation');
+                                            @endphp
                                             <tr class="{{ $action->isCancelled() ? 'table-light text-muted' : '' }}">
                                                 <td>
                                                     <span class="{{ $action->isCancelled() ? 'text-decoration-line-through text-muted' : '' }}">{{ $action->action_date->format('Y-m-d') }}</span>
+                                                    @if($action->batch)
+                                                        <div><a href="{{ route('hr.bulk-actions.show', $action->batch->id) }}" class="badge bg-dark text-decoration-none" style="font-size: 0.65rem;">قرار جماعي #{{ $action->batch->id }}</a></div>
+                                                    @endif
                                                 </td>
                                                 <td>
                                                     @if($action->isCancelled())
@@ -919,6 +960,21 @@
                                                 <td class="text-start">
                                                     <strong class="{{ $action->isCancelled() ? 'text-muted text-decoration-line-through' : '' }}">{{ $action->actionSetting->title ?? '—' }}</strong><br>
                                                     <span class="text-muted">{{ Str::limit($action->reason, 50) }}</span>
+                                                    @if($action->status === 'pending' && !$action->isCancelled())
+                                                        <div class="mt-1" style="font-size: 0.72rem;">
+                                                            @if($within48)
+                                                                <span class="badge bg-info-subtle text-info border border-info">مهلة 48 ساعة سارية حتى {{ $deadline?->format('m-d H:i') }}</span>
+                                                            @else
+                                                                <span class="badge bg-dark">تجاوز 48 ساعة (يتطلب موافقة مدير الإدارة للإلغاء)</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                    @if($action->hasPendingCancellationRequest())
+                                                        <div class="mt-1 small text-warning bg-warning bg-opacity-10 p-1 rounded-2" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            طلب إلغاء مرفوع من <strong>{{ $action->cancelRequester->name ?? 'HR' }}</strong>: {{ $action->cancel_request_reason }}
+                                                        </div>
+                                                    @endif
                                                     @if($action->isCancelled())
                                                         <div class="mt-1 small text-danger bg-danger bg-opacity-10 p-1 rounded-2" style="font-size: 0.72rem;">
                                                             <i class="fas fa-ban me-1"></i>
@@ -952,42 +1008,80 @@
                                                 <td>{{ $action->creator->name ?? 'النظام' }}</td>
                                                 <td>
                                                     @if($action->status == 'pending')
-                                                        <button type="button" class="btn btn-sm btn-outline-danger border-0 py-1 px-2" data-bs-toggle="modal" data-bs-target="#cancelActionModal{{ $action->id }}" title="إلغاء الخصم/المكافأة مع حفظها في السجل">
-                                                            <i class="fas fa-ban me-1"></i> إلغاء
-                                                        </button>
+                                                        @if($within48 || $canAdminCancel)
+                                                            <button type="button" class="btn btn-sm btn-outline-danger border-0 py-1 px-2" data-bs-toggle="modal" data-bs-target="#cancelActionModal{{ $action->id }}" title="إلغاء الخصم/المكافأة مع حفظها في السجل">
+                                                                <i class="fas fa-ban me-1"></i> إلغاء
+                                                            </button>
 
-                                                        <!-- Modal تأكيد الإلغاء والأرشفة -->
-                                                        <div class="modal fade" id="cancelActionModal{{ $action->id }}" tabindex="-1" aria-hidden="true">
-                                                            <div class="modal-dialog modal-dialog-centered">
-                                                                <div class="modal-content border-0 shadow">
-                                                                    <form action="{{ route('hr.employees.actions.cancel', $action->id) }}" method="POST">
-                                                                        @csrf
-                                                                        <div class="modal-header bg-danger bg-opacity-10 py-2">
-                                                                            <h6 class="modal-title fw-bold text-danger"><i class="fas fa-ban me-2"></i> تأكيد إلغاء الإجراء وأرشفته</h6>
-                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                                        </div>
-                                                                        <div class="modal-body text-start p-3">
-                                                                            <div class="alert alert-light border small mb-3">
-                                                                                <i class="fas fa-info-circle text-primary me-1"></i>
-                                                                                <strong>ملاحظة:</strong> لن يتم حذف هذا الإجراء نهائياً، بل سيبقى محفوظاً في السجل الرسمي للموظف مع وسمه كـ <strong>"ملغي"</strong>، وسيتم استبعاده تماماً من مسير الرواتب.
+                                                            <!-- Modal تأكيد الإلغاء والأرشفة -->
+                                                            <div class="modal fade" id="cancelActionModal{{ $action->id }}" tabindex="-1" aria-hidden="true">
+                                                                <div class="modal-dialog modal-dialog-centered">
+                                                                    <div class="modal-content border-0 shadow">
+                                                                        <form action="{{ route('hr.employees.actions.cancel', $action->id) }}" method="POST">
+                                                                            @csrf
+                                                                            <div class="modal-header bg-danger bg-opacity-10 py-2">
+                                                                                <h6 class="modal-title fw-bold text-danger"><i class="fas fa-ban me-2"></i> تأكيد إلغاء الإجراء وأرشفته</h6>
+                                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                                             </div>
-                                                                            <div class="mb-2">
-                                                                                <strong>نوع الإجراء:</strong> {{ $action->actionSetting->title ?? '—' }} ({{ $action->actionSetting->category == 'penalty' ? 'خصم/عقوبة' : 'مكافأة' }})<br>
-                                                                                <strong>المبلغ:</strong> {{ number_format(abs($action->financial_amount), 0) }} د.ع
+                                                                            <div class="modal-body text-start p-3">
+                                                                                <div class="alert alert-light border small mb-3">
+                                                                                    <i class="fas fa-info-circle text-primary me-1"></i>
+                                                                                    <strong>ملاحظة:</strong> لن يتم حذف هذا الإجراء نهائياً، بل سيبقى محفوظاً في السجل الرسمي للموظف مع وسمه كـ <strong>"ملغي"</strong>، وسيتم استبعاده تماماً من مسير الرواتب.
+                                                                                </div>
+                                                                                <div class="mb-2">
+                                                                                    <strong>نوع الإجراء:</strong> {{ $action->actionSetting->title ?? '—' }} ({{ $action->actionSetting->category == 'penalty' ? 'خصم/عقوبة' : 'مكافأة' }})<br>
+                                                                                    <strong>المبلغ:</strong> {{ number_format(abs($action->financial_amount), 0) }} د.ع
+                                                                                </div>
+                                                                                <div class="mt-3">
+                                                                                    <label class="form-label fw-bold small">سبب الإلغاء (اختياري / للتوثيق):</label>
+                                                                                    <input type="text" name="cancellation_reason" class="form-control form-control-sm" placeholder="مثال: تسوية إدارية، قرار الإدارة، خطأ في الإدخال...">
+                                                                                </div>
                                                                             </div>
-                                                                            <div class="mt-3">
-                                                                                <label class="form-label fw-bold small">سبب الإلغاء (اختياري / للتوثيق):</label>
-                                                                                <input type="text" name="cancellation_reason" class="form-control form-control-sm" placeholder="مثال: تسوية إدارية، قرار الإدارة، خطأ في الإدخال...">
+                                                                            <div class="modal-footer bg-light py-2">
+                                                                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">تراجع</button>
+                                                                                <button type="submit" class="btn btn-sm btn-danger fw-bold"><i class="fas fa-ban me-1"></i> تأكيد الإلغاء والأرشفة</button>
                                                                             </div>
-                                                                        </div>
-                                                                        <div class="modal-footer bg-light py-2">
-                                                                            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">تراجع</button>
-                                                                            <button type="submit" class="btn btn-sm btn-danger fw-bold"><i class="fas fa-ban me-1"></i> تأكيد الإلغاء والأرشفة</button>
-                                                                        </div>
-                                                                    </form>
+                                                                        </form>
+                                                                    </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
+                                                        @elseif($action->hasPendingCancellationRequest())
+                                                            <span class="badge bg-warning text-dark">بانتظار مدير الإدارة</span>
+                                                        @else
+                                                            <button type="button" class="btn btn-sm btn-outline-warning text-dark py-1 px-2" data-bs-toggle="modal" data-bs-target="#requestCancelActionModal{{ $action->id }}">
+                                                                <i class="fas fa-paper-plane me-1"></i> طلب إلغاء
+                                                            </button>
+                                                            <div class="modal fade" id="requestCancelActionModal{{ $action->id }}" tabindex="-1" aria-hidden="true">
+                                                                <div class="modal-dialog modal-dialog-centered">
+                                                                    <div class="modal-content border-0 shadow">
+                                                                        <form action="{{ route('hr.employees.actions.request-cancel', $action->id) }}" method="POST">
+                                                                            @csrf
+                                                                            <div class="modal-header bg-warning bg-opacity-10 py-2">
+                                                                                <h6 class="modal-title fw-bold">رفع طلب إلغاء بعد الـ 48 ساعة لمدير الإدارة</h6>
+                                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                                            </div>
+                                                                            <div class="modal-body text-start p-3">
+                                                                                <label class="form-label fw-bold small">سبب طلب الإلغاء <span class="text-danger">*</span></label>
+                                                                                <textarea name="cancel_request_reason" class="form-control form-control-sm" rows="3" required></textarea>
+                                                                            </div>
+                                                                            <div class="modal-footer bg-light py-2">
+                                                                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">تراجع</button>
+                                                                                <button type="submit" class="btn btn-sm btn-warning fw-bold text-dark">إرسال لمدير الإدارة</button>
+                                                                            </div>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        @endif
+
+                                                        @if($canAdminCancel && $action->hasPendingCancellationRequest())
+                                                            <form action="{{ route('hr.employees.actions.approve-cancel', $action->id) }}" method="POST" class="d-inline">
+                                                                @csrf
+                                                                <button type="submit" class="btn btn-sm btn-success py-1 px-2 mt-1" onclick="return confirm('اعتماد طلب الإلغاء؟')">
+                                                                    <i class="fas fa-check"></i> موافقة
+                                                                </button>
+                                                            </form>
+                                                        @endif
                                                     @elseif($action->isCancelled())
                                                         <form action="{{ route('hr.employees.actions.restore', $action->id) }}" method="POST" class="d-inline-block">
                                                             @csrf
@@ -1236,6 +1330,17 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">نمط احتساب الراتب</label>
+                            <select name="salary_calculation_mode" class="form-select">
+                                <option value="fixed_salary" {{ ($employee->salary_calculation_mode ?? 'fixed_salary') == 'fixed_salary' ? 'selected' : '' }}>راتب شهري ثابت</option>
+                                <option value="per_call" {{ $employee->salary_calculation_mode == 'per_call' ? 'selected' : '' }}>أجر حسب الـ Call / الشفتات</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">سعر Call خاص (اختياري)</label>
+                            <input type="number" name="custom_call_rate" class="form-control" value="{{ $employee->custom_call_rate }}" step="1000" min="0" placeholder="اتركه فارغاً لاعتماد سعر الشفت">
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">طريقة صرف الراتب</label>
                             <select name="payment_method" class="form-select" id="paymentMethodSelect">

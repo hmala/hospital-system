@@ -2256,8 +2256,32 @@
                         </div>
                         @endcanany
 
+                        <!-- بوابة الموظف الشخصية (إجازاتي وجدولي) -->
+                        @if(auth()->check() && auth()->user()->employee)
+                        @php
+                            $isPortalActive = request()->routeIs('my.*');
+                        @endphp
+                        <div class="sidebar-divider"></div>
+                        <div class="sidebar-section-title {{ $isPortalActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#myPortalSection" aria-expanded="{{ $isPortalActive ? 'true' : 'false' }}">
+                            <span><i class="fas fa-user-check"></i> {{ __('بوابتي الوظيفية') }}</span>
+                            <i class="fas fa-chevron-down toggle-icon"></i>
+                        </div>
+                        <div class="collapse collapse-section {{ $isPortalActive ? 'show' : '' }}" id="myPortalSection">
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('my.leaves.*') ? 'active' : '' }}" href="{{ route('my.leaves.index') }}">
+                                    <i class="fas fa-plane-departure"></i><span> {{ __('طلب إجازة إلكترونية') }}</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('my.roster') ? 'active' : '' }}" href="{{ route('my.roster') }}">
+                                    <i class="fas fa-calendar-check"></i><span> {{ __('جدولي الشهري') }}</span>
+                                </a>
+                            </li>
+                        </div>
+                        @endif
+
                         <!-- قسم الموارد البشرية (HR) -->
-                        @canany(['view hr', 'view employees', 'view hr payroll', 'manage hr shifts', 'manage hr schedules'])
+                        @canany(['view hr', 'view employees', 'view hr payroll', 'manage hr shifts', 'manage hr schedules', 'manage department schedules', 'final approve hr schedules', 'approve department leaves', 'approve admin leaves', 'manage hr bulk actions'])
                         @php
                             $isHrActive = request()->routeIs('hr.*');
                         @endphp
@@ -2302,6 +2326,20 @@
                                 </a>
                             </li>
                             @endcan
+                            @canany(['manage hr bulk actions', 'manage hr actions', 'approve hr action cancellation'])
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.bulk-actions.*') ? 'active' : '' }}" href="{{ route('hr.bulk-actions.index') }}">
+                                    <i class="fas fa-gavel"></i><span> {{ __('العقوبات والمكافآت الجماعية') }}</span>
+                                </a>
+                            </li>
+                            @endcanany
+                            @if(auth()->user()->isAdminDirector() || auth()->user()->canany(['approve department leaves', 'approve admin leaves', 'manage hr actions']) || auth()->user()->managedDepartments()->exists())
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('hr.leaves.*') ? 'active' : '' }}" href="{{ route('hr.leaves.index') }}">
+                                    <i class="fas fa-calendar-minus"></i><span> {{ __('إدارة واعتماد الإجازات') }}</span>
+                                </a>
+                            </li>
+                            @endif
                             @can('view hr payroll')
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('hr.payrolls.*') ? 'active' : '' }}" href="{{ route('hr.payrolls.index') }}">
@@ -2311,7 +2349,7 @@
                             @endcan
 
                             <!-- Submenu: الدوام والخفارات -->
-                            @canany(['manage hr shifts', 'manage hr schedules'])
+                            @canany(['manage hr shifts', 'manage hr schedules', 'manage department schedules', 'final approve hr schedules'])
                             @php
                                 $isAttendanceActive = request()->routeIs('hr.shifts.*') || request()->routeIs('hr.schedules.*');
                             @endphp
@@ -2327,13 +2365,13 @@
                                     </a>
                                 </li>
                                 @endcan
-                                @can('manage hr schedules')
+                                @canany(['manage hr schedules', 'manage department schedules', 'final approve hr schedules'])
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('hr.schedules.*') ? 'active' : '' }}" href="{{ route('hr.schedules.index') }}">
-                                        <i class="fas fa-calendar-alt"></i><span> {{ __('جدول الدوام الأسبوعي') }}</span>
+                                        <i class="fas fa-calendar-alt"></i><span> {{ __('جدول الدوام والروستر') }}</span>
                                     </a>
                                 </li>
-                                @endcan
+                                @endcanany
                             </div>
                             @endcanany
 

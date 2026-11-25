@@ -30,7 +30,10 @@ class HrEmployee extends Model
         'hire_date',
         'contract_end_date',
         'basic_salary',
+        'salary_calculation_mode',
+        'custom_call_rate',
         'status',
+        'annual_leave_balance',
         'medical_license_number',
         'license_expiry_date',
         'syndicate_card_number',
@@ -59,6 +62,8 @@ class HrEmployee extends Model
         'contract_end_date' => 'date',
         'license_expiry_date' => 'date',
         'basic_salary' => 'decimal:2',
+        'custom_call_rate' => 'decimal:2',
+        'annual_leave_balance' => 'integer',
         'overtime_hourly_rate' => 'decimal:2',
         'social_security_percentage' => 'decimal:2',
         'tax_percentage' => 'decimal:2',
@@ -213,6 +218,30 @@ class HrEmployee extends Model
     public function actions()
     {
         return $this->hasMany(HrEmployeeAction::class, 'hr_employee_id');
+    }
+
+    public function leaveRequests()
+    {
+        return $this->hasMany(HrLeaveRequest::class, 'hr_employee_id');
+    }
+
+    public function isPerCall(): bool
+    {
+        return $this->salary_calculation_mode === 'per_call';
+    }
+
+    public function getSalaryCalculationModeLabelAttribute(): string
+    {
+        return $this->isPerCall() ? 'أجر حسب الـ Call / الشفتات' : 'راتب شهري ثابت';
+    }
+
+    public function resolveCallRateForShift(?HrShift $shift): float
+    {
+        if (! is_null($this->custom_call_rate) && (float) $this->custom_call_rate > 0) {
+            return (float) $this->custom_call_rate;
+        }
+
+        return (float) ($shift?->call_rate ?? 0);
     }
 
     public function getScheduleTypeNameAttribute(): string

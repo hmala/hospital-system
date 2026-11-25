@@ -1,4 +1,5 @@
 <?php
+
 // app/Http/Controllers/DepartmentController.php
 
 namespace App\Http\Controllers;
@@ -13,7 +14,7 @@ class DepartmentController extends Controller
     {
         $departments = Department::with(['hospital', 'doctors'])
             ->where('is_active', true)
-            ->withCount(['appointments as today_appointments_count' => function($query) {
+            ->withCount(['appointments as today_appointments_count' => function ($query) {
                 $query->whereDate('appointment_date', today());
             }])
             ->latest()
@@ -26,12 +27,12 @@ class DepartmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view departments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view departments'))) {
             abort(403, 'غير مصرح لك بعرض قائمة العيادات والأقسام');
         }
 
-        $departments = Department::with(['hospital', 'doctors'])
-            ->withCount(['appointments as today_appointments_count' => function($query) {
+        $departments = Department::with(['hospital', 'doctors', 'manager'])
+            ->withCount(['appointments as today_appointments_count' => function ($query) {
                 $query->whereDate('appointment_date', today());
             }])
             ->latest()
@@ -44,19 +45,21 @@ class DepartmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('create departments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('create departments'))) {
             abort(403, 'غير مصرح لك بإضافة عيادة أو قسم جديد');
         }
 
         $hospitals = Hospital::all();
-        return view('departments.create', compact('hospitals'));
+        $managers = $this->getStaffManagers();
+
+        return view('departments.create', compact('hospitals', 'managers'));
     }
 
     public function store(Request $request)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('create departments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('create departments'))) {
             abort(403, 'غير مصرح لك بإضافة عيادة أو قسم جديد');
         }
 
@@ -72,11 +75,13 @@ class DepartmentController extends Controller
             'working_hours_start' => 'required|date_format:H:i',
             'working_hours_end' => 'required|date_format:H:i|after:working_hours_start',
             'max_patients_per_day' => 'required|integer|min:1',
+            'manager_id' => 'nullable|exists:users,id',
         ]);
 
         $hospital = Hospital::first();
         Department::create([
             'hospital_id' => $hospital ? $hospital->id : 1,
+            'manager_id' => $request->manager_id ?: null,
             'name' => $request->name,
             'type' => $request->type,
             'room_number' => $request->room_number,
@@ -88,7 +93,7 @@ class DepartmentController extends Controller
             'working_hours_start' => $request->working_hours_start,
             'working_hours_end' => $request->working_hours_end,
             'max_patients_per_day' => $request->max_patients_per_day,
-            'is_active' => $request->has('is_active')
+            'is_active' => $request->has('is_active'),
         ]);
 
         return redirect()->route('departments.admin')
@@ -99,11 +104,11 @@ class DepartmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('view departments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('view departments'))) {
             abort(403, 'غير مصرح لك بعرض بيانات العيادة');
         }
 
-        $department->load(['doctors', 'appointments' => function($query) {
+        $department->load(['doctors', 'appointments' => function ($query) {
             $query->whereDate('appointment_date', today());
         }]);
 
@@ -114,19 +119,21 @@ class DepartmentController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit departments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit departments'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات العيادة');
         }
 
         $hospitals = Hospital::all();
-        return view('departments.edit', compact('department', 'hospitals'));
+        $managers = $this->getStaffManagers();
+
+        return view('departments.edit', compact('department', 'hospitals', 'managers'));
     }
 
     public function update(Request $request, Department $department)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('edit departments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('edit departments'))) {
             abort(403, 'غير مصرح لك بتعديل بيانات العيادة');
         }
 
@@ -142,9 +149,11 @@ class DepartmentController extends Controller
             'working_hours_start' => 'required|date_format:H:i',
             'working_hours_end' => 'required|date_format:H:i|after:working_hours_start',
             'max_patients_per_day' => 'required|integer|min:1',
+            'manager_id' => 'nullable|exists:users,id',
         ]);
 
         $data = $request->all();
+        $data['manager_id'] = $request->manager_id ?: null;
         $data['is_active'] = $request->has('is_active');
         $data['is_moi_active'] = $request->has('is_moi_active');
         $data['is_hi_active'] = $request->has('is_hi_active');
@@ -155,11 +164,24 @@ class DepartmentController extends Controller
             ->with('success', 'تم تحديث العيادة بنجاح');
     }
 
+    private function getStaffManagers()
+    {
+        return \App\Models\User::query()
+            ->where(function ($q) {
+                $q->whereNull('role')->orWhere('role', '!=', 'patient');
+            })
+            ->whereDoesntHave('roles', function ($rq) {
+                $rq->where('name', 'patient');
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'role']);
+    }
+
     public function destroy(Department $department)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || !$user->can('delete departments'))) {
+        if (! $isAdmin && (! $user || ! $user->can('delete departments'))) {
             abort(403, 'غير مصرح لك بحذف العيادة');
         }
 

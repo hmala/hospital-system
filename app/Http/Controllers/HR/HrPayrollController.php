@@ -6,10 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\HrAbsence;
 use App\Models\HrEmployee;
 use App\Models\HrEmployeeAction;
+use App\Models\HrLeaveRequest;
 use App\Models\HrLoan;
 use App\Models\HrOvertime;
 use App\Models\HrPayroll;
 use App\Models\HrPayrollCycle;
+use App\Models\HrSchedule;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class HrPayrollController extends Controller
@@ -60,11 +63,51 @@ class HrPayrollController extends Controller
             'created_by' => auth()->id(),
         ]);
 
+        $cycleStart = Carbon::parse($request->start_date);
+        $cycleEnd = Carbon::parse($request->end_date);
+
         $employees = HrEmployee::where('status', 'active')
             ->with(['activeAllowances', 'activeLoans', 'actions', 'absences', 'overtimes'])
             ->get();
 
         foreach ($employees as $emp) {
+            $isPerCall = $emp->isPerCall();
+            $callsCount = 0;
+            $callsAmount = 0.0;
+            $basicSalary = $isPerCall ? 0.0 : (float) $emp->basic_salary;
+
+            if ($isPerCall) {
+                $approvedSchedules = HrSchedule::with('shift')
+                    ->where('hr_employee_id', $emp->id)
+                    ->whereDate('shift_date', '>=', $cycleStart->format('Y-m-d'))
+                    ->whereDate('shift_date', '<=', $cycleEnd->format('Y-m-d'))
+                    ->where('is_off_day', false)
+                    ->where('is_leave', false)
+                    ->where('attendance_status', '!=', 'absent')
+                    ->whereNotNull('hr_shift_id')
+                    ->where(function ($q) use ($emp) {
+                        $q->whereHas('rosterApproval', fn ($rq) => $rq->where('status', 'approved'))
+                            ->orWhere(function ($sq) use ($emp) {
+                                if ($emp->department_id) {
+                                    $sq->whereExists(function ($sub) use ($emp) {
+                                        $sub->selectRaw('1')
+                                            ->from('hr_roster_approvals')
+                                            ->where('department_id', $emp->department_id)
+                                            ->where('status', 'approved')
+                                            ->whereColumn('hr_roster_approvals.start_date', '<=', 'hr_schedules.shift_date')
+                                            ->whereColumn('hr_roster_approvals.end_date', '>=', 'hr_schedules.shift_date');
+                                    });
+                                }
+                            });
+                    })
+                    ->get();
+
+                $callsCount = $approvedSchedules->count();
+                foreach ($approvedSchedules as $callSch) {
+                    $callsAmount += $emp->resolveCallRateForShift($callSch->shift);
+                }
+                $callsAmount = round($callsAmount, 2);
+            }
 
             // ① المخصصات الثابتة
             $totalAllowances = $emp->activeAllowances->sum('amount');
@@ -82,6 +125,31 @@ class HrPayrollController extends Controller
                 ->get();
             $absenceDeduction = $pendingAbsences->sum('deduction_amount');
 
+            // ③-ب الإجازات المعتمدة بدون راتب للموظف ذي الراتب الثابت
+            $unpaidLeaves = collect();
+            $unpaidLeaveDeduction = 0.0;
+            if (! $isPerCall && $basicSalary > 0) {
+                $unpaidLeaves = HrLeaveRequest::where('hr_employee_id', $emp->id)
+                    ->where('status', 'approved')
+                    ->where('is_paid', false)
+                    ->whereNull('hr_payroll_cycle_id')
+                    ->whereDate('start_date', '<=', $cycleEnd->format('Y-m-d'))
+                    ->whereDate('end_date', '>=', $cycleStart->format('Y-m-d'))
+                    ->get();
+
+                $unpaidDays = 0;
+                foreach ($unpaidLeaves as $ul) {
+                    $overlapStart = $ul->start_date->gt($cycleStart) ? $ul->start_date : $cycleStart;
+                    $overlapEnd = $ul->end_date->lt($cycleEnd) ? $ul->end_date : $cycleEnd;
+                    if ($overlapEnd->gte($overlapStart)) {
+                        $unpaidDays += $overlapStart->diffInDays($overlapEnd) + 1;
+                    }
+                }
+                if ($unpaidDays > 0) {
+                    $unpaidLeaveDeduction = round(($basicSalary / 30) * $unpaidDays, 2);
+                }
+            }
+
             // ④ العمل الإضافي (pending)
             $pendingOvertimes = HrOvertime::where('hr_employee_id', $emp->id)
                 ->where('status', 'pending')
@@ -98,23 +166,25 @@ class HrPayrollController extends Controller
 
             // ⑥ الضمان الاجتماعي
             $socialSecurity = 0;
-            if ($emp->subject_to_social_security) {
-                $socialSecurity = round($emp->basic_salary * ($emp->social_security_percentage / 100), 2);
+            if (! $isPerCall && $emp->subject_to_social_security) {
+                $socialSecurity = round($basicSalary * ($emp->social_security_percentage / 100), 2);
             }
 
             // ⑦ الضريبة
             $tax = 0;
-            if ($emp->subject_to_tax) {
-                $tax = round($emp->basic_salary * ($emp->tax_percentage / 100), 2);
+            if (! $isPerCall && $emp->subject_to_tax) {
+                $tax = round($basicSalary * ($emp->tax_percentage / 100), 2);
             }
 
             // ⑧ الراتب الصافي النهائي
-            $netSalary = $emp->basic_salary
+            $netSalary = $basicSalary
+                + $callsAmount
                 + $totalAllowances
                 + $bonuses
                 + $overtimeAmount
                 - $penalties
                 - $absenceDeduction
+                - $unpaidLeaveDeduction
                 - $loanDeduction
                 - $socialSecurity
                 - $tax;
@@ -123,12 +193,16 @@ class HrPayrollController extends Controller
             $slip = HrPayroll::create([
                 'hr_payroll_cycle_id' => $cycle->id,
                 'hr_employee_id' => $emp->id,
-                'basic_salary' => $emp->basic_salary,
+                'salary_calculation_mode' => $emp->salary_calculation_mode ?? 'fixed_salary',
+                'basic_salary' => $basicSalary,
+                'calls_count' => $callsCount,
+                'calls_amount' => $callsAmount,
                 'allowances' => $totalAllowances,
                 'bonuses_amount' => $bonuses,
                 'penalties_amount' => $penalties,
                 'overtime_amount' => $overtimeAmount,
                 'absence_deduction' => $absenceDeduction,
+                'unpaid_leave_deduction' => $unpaidLeaveDeduction,
                 'loan_deduction' => $loanDeduction,
                 'social_security_amount' => $socialSecurity,
                 'tax_amount' => $tax,
@@ -146,6 +220,11 @@ class HrPayrollController extends Controller
             // ترحيل الغيابات
             $pendingAbsences->each(fn ($a) => $a->update([
                 'status' => 'processed',
+                'hr_payroll_cycle_id' => $cycle->id,
+            ]));
+
+            // ترحيل الإجازات بدون راتب
+            $unpaidLeaves->each(fn ($ul) => $ul->update([
                 'hr_payroll_cycle_id' => $cycle->id,
             ]));
 
@@ -172,11 +251,14 @@ class HrPayrollController extends Controller
 
         $summary = [
             'total_basic' => $payroll->payrolls->sum('basic_salary'),
+            'total_calls_count' => $payroll->payrolls->sum('calls_count'),
+            'total_calls_amount' => $payroll->payrolls->sum('calls_amount'),
             'total_allowances' => $payroll->payrolls->sum('allowances'),
             'total_bonuses' => $payroll->payrolls->sum('bonuses_amount'),
             'total_overtime' => $payroll->payrolls->sum('overtime_amount'),
             'total_penalties' => $payroll->payrolls->sum('penalties_amount'),
             'total_absence' => $payroll->payrolls->sum('absence_deduction'),
+            'total_unpaid_leaves' => $payroll->payrolls->sum('unpaid_leave_deduction'),
             'total_loans' => $payroll->payrolls->sum('loan_deduction'),
             'total_social' => $payroll->payrolls->sum('social_security_amount'),
             'total_tax' => $payroll->payrolls->sum('tax_amount'),
@@ -216,11 +298,13 @@ class HrPayrollController extends Controller
         // إعادة حساب الصافي
         $slip->net_salary = max(0,
             $slip->basic_salary
+            + $slip->calls_amount
             + $slip->allowances
             + $slip->bonuses_amount
             + $slip->overtime_amount
             - $slip->penalties_amount
             - $slip->absence_deduction
+            - $slip->unpaid_leave_deduction
             - $slip->loan_deduction
             - $slip->social_security_amount
             - $slip->tax_amount
@@ -246,6 +330,11 @@ class HrPayrollController extends Controller
         // إرجاع حالة الغيابات إلى pending
         HrAbsence::where('hr_payroll_cycle_id', $payroll->id)->update([
             'status' => 'pending',
+            'hr_payroll_cycle_id' => null,
+        ]);
+
+        // فك ارتباط الإجازات بدون راتب
+        HrLeaveRequest::where('hr_payroll_cycle_id', $payroll->id)->update([
             'hr_payroll_cycle_id' => null,
         ]);
 

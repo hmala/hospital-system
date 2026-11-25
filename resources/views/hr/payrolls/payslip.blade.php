@@ -331,13 +331,25 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- سطر 1: الأساسي مقابل الغياب -->
+                    <!-- سطر 1: الأساسي / الـ Call مقابل الغياب -->
                     <tr>
-                        <td class="fw-semibold">الراتب الأساسي الشهري</td>
-                        <td class="text-end fw-bold font-monospace">{{ number_format($slip->basic_salary, 0) }}</td>
-                        <td class="fw-semibold">استقطاع الغياب والتأخير</td>
-                        <td class="text-end font-monospace {{ $slip->absence_deduction > 0 ? 'text-danger fw-bold' : 'text-muted' }}">
-                            {{ $slip->absence_deduction > 0 ? number_format($slip->absence_deduction, 0) : '0' }}
+                        <td class="fw-semibold">
+                            @if($slip->salary_calculation_mode === 'per_call')
+                                أجور الخفارات والـ Call ({{ $slip->calls_count }} Call)
+                            @else
+                                الراتب الأساسي الشهري
+                            @endif
+                        </td>
+                        <td class="text-end fw-bold font-monospace">
+                            @if($slip->salary_calculation_mode === 'per_call')
+                                {{ number_format($slip->calls_amount, 0) }}
+                            @else
+                                {{ number_format($slip->basic_salary, 0) }}
+                            @endif
+                        </td>
+                        <td class="fw-semibold">استقطاع الغياب / الإجازة بدون راتب</td>
+                        <td class="text-end font-monospace {{ ($slip->absence_deduction + ($slip->unpaid_leave_deduction ?? 0)) > 0 ? 'text-danger fw-bold' : 'text-muted' }}">
+                            {{ ($slip->absence_deduction + ($slip->unpaid_leave_deduction ?? 0)) > 0 ? number_format($slip->absence_deduction + ($slip->unpaid_leave_deduction ?? 0), 0) : '0' }}
                         </td>
                     </tr>
 

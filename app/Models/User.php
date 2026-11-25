@@ -79,6 +79,22 @@ class User extends Authenticatable
         return $this->hasOne(\App\Models\HrEmployee::class);
     }
 
+    public function managedDepartments()
+    {
+        return $this->hasMany(\App\Models\Department::class, 'manager_id');
+    }
+
+    public function managedDepartmentIds(): array
+    {
+        return $this->managedDepartments()->pluck('id')->all();
+    }
+
+    public function isAdminDirector(): bool
+    {
+        return $this->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $this->can('approve admin leaves');
+    }
+
     public function visits()
     {
         return $this->hasMany(\App\Models\Visit::class, 'doctor_id');

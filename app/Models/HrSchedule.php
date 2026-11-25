@@ -7,15 +7,28 @@ use Illuminate\Database\Eloquent\Model;
 class HrSchedule extends Model
 {
     protected $fillable = [
-        'hr_employee_id', 'hr_shift_id', 'shift_date', 'is_off_day',
-        'attendance_status', 'actual_check_in', 'actual_check_out',
-        'notes', 'created_by',
+        'hr_employee_id',
+        'hr_shift_id',
+        'shift_date',
+        'is_off_day',
+        'is_leave',
+        'hr_leave_request_id',
+        'hr_roster_approval_id',
+        'attendance_status',
+        'actual_check_in',
+        'actual_check_out',
+        'notes',
+        'created_by',
     ];
 
-    protected $casts = [
-        'shift_date' => 'date',
-        'is_off_day' => 'boolean',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'shift_date' => 'date',
+            'is_off_day' => 'boolean',
+            'is_leave' => 'boolean',
+        ];
+    }
 
     public function setShiftDateAttribute($value)
     {
@@ -30,6 +43,16 @@ class HrSchedule extends Model
     public function shift()
     {
         return $this->belongsTo(HrShift::class, 'hr_shift_id');
+    }
+
+    public function leaveRequest()
+    {
+        return $this->belongsTo(HrLeaveRequest::class, 'hr_leave_request_id');
+    }
+
+    public function rosterApproval()
+    {
+        return $this->belongsTo(HrRosterApproval::class, 'hr_roster_approval_id');
     }
 
     public function creator()

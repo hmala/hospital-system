@@ -1191,8 +1191,31 @@ Route::middleware(['auth'])->group(function () {
         // سجل العقوبات والمكافآت للموظف
         Route::post('employees/{employee}/actions', [\App\Http\Controllers\HR\HrEmployeeController::class, 'storeAction'])->name('employees.actions.store');
         Route::post('employees/actions/{action}/cancel', [\App\Http\Controllers\HR\HrEmployeeController::class, 'cancelAction'])->name('employees.actions.cancel');
+        Route::post('employees/actions/{action}/request-cancel', [\App\Http\Controllers\HR\HrEmployeeController::class, 'requestCancelAction'])->name('employees.actions.request-cancel');
+        Route::post('employees/actions/{action}/approve-cancel', [\App\Http\Controllers\HR\HrEmployeeController::class, 'approveCancelAction'])->name('employees.actions.approve-cancel');
+        Route::post('employees/actions/{action}/reject-cancel', [\App\Http\Controllers\HR\HrEmployeeController::class, 'rejectCancelAction'])->name('employees.actions.reject-cancel');
         Route::post('employees/actions/{action}/restore', [\App\Http\Controllers\HR\HrEmployeeController::class, 'restoreAction'])->name('employees.actions.restore');
         Route::delete('employees/actions/{action}', [\App\Http\Controllers\HR\HrEmployeeController::class, 'destroyAction'])->name('employees.actions.destroy');
+
+        // العقوبات والمكافآت الجماعية وحوكمة الـ 48 ساعة
+        Route::get('bulk-actions', [\App\Http\Controllers\HR\HrBulkActionController::class, 'index'])->name('bulk-actions.index');
+        Route::post('bulk-actions', [\App\Http\Controllers\HR\HrBulkActionController::class, 'store'])->name('bulk-actions.store');
+        Route::get('bulk-actions/{batch}', [\App\Http\Controllers\HR\HrBulkActionController::class, 'show'])->name('bulk-actions.show');
+        Route::post('bulk-actions/{batch}/cancel', [\App\Http\Controllers\HR\HrBulkActionController::class, 'cancelBatch'])->name('bulk-actions.cancel');
+        Route::post('bulk-actions/{batch}/request-cancel', [\App\Http\Controllers\HR\HrBulkActionController::class, 'requestCancelBatch'])->name('bulk-actions.request-cancel');
+        Route::post('bulk-actions/{batch}/approve-cancel', [\App\Http\Controllers\HR\HrBulkActionController::class, 'approveCancelBatch'])->name('bulk-actions.approve-cancel');
+        Route::post('bulk-actions/{batch}/reject-cancel', [\App\Http\Controllers\HR\HrBulkActionController::class, 'rejectCancelBatch'])->name('bulk-actions.reject-cancel');
+
+        // طلبات الإجازات (لوحة الإدارة ومديري الأقسام)
+        Route::get('leaves', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'index'])->name('leaves.index');
+        Route::post('leaves', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'store'])->name('leaves.store');
+        Route::post('leaves/{leaveRequest}/dept-approve', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'deptApprove'])->name('leaves.dept-approve');
+        Route::post('leaves/{leaveRequest}/dept-reject', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'deptReject'])->name('leaves.dept-reject');
+        Route::post('leaves/{leaveRequest}/admin-approve', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'adminApprove'])->name('leaves.admin-approve');
+        Route::post('leaves/{leaveRequest}/admin-reject', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'adminReject'])->name('leaves.admin-reject');
+
+        // ربط حساب دخول الموظف
+        Route::post('employees/{employee}/link-user', [\App\Http\Controllers\HR\HrEmployeeController::class, 'linkUser'])->name('employees.link-user');
 
         // طباعة باجة وهوية الموظف (ID Badge)
         Route::get('employees/{employee}/badge', [\App\Http\Controllers\HR\HrEmployeeController::class, 'badge'])->name('employees.badge');
@@ -1218,6 +1241,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('schedules/auto-fill-defaults', [\App\Http\Controllers\HR\HrScheduleController::class, 'autoFillDefaults'])->name('schedules.auto-fill-defaults');
         Route::post('schedules/clear-range', [\App\Http\Controllers\HR\HrScheduleController::class, 'clearRange'])->name('schedules.clear-range');
         Route::post('schedules/update-cell', [\App\Http\Controllers\HR\HrScheduleController::class, 'updateCell'])->name('schedules.update-cell');
+        Route::post('schedules/toggle-attendance', [\App\Http\Controllers\HR\HrScheduleController::class, 'toggleAttendance'])->name('schedules.toggle-attendance');
+        Route::post('schedules/submit-approval', [\App\Http\Controllers\HR\HrScheduleController::class, 'submitApproval'])->name('schedules.submit-approval');
+        Route::post('schedules/approvals/{approval}/final-approve', [\App\Http\Controllers\HR\HrScheduleController::class, 'finalApprove'])->name('schedules.final-approve');
+        Route::post('schedules/approvals/{approval}/reopen', [\App\Http\Controllers\HR\HrScheduleController::class, 'reopenApproval'])->name('schedules.reopen-approval');
         Route::resource('schedules', \App\Http\Controllers\HR\HrScheduleController::class);
 
         // المخصصات الثابتة
@@ -1248,6 +1275,12 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/options/{option}', [\App\Http\Controllers\HR\HrSettingsController::class, 'destroyLookupOption'])->name('destroy-option');
         });
     });
+
+    // بوابة الموظف الشخصية (إجازاتي وجدولي - متاحة لأي موظف مربوط بحساب دخول)
+    Route::get('my-leaves', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'myLeaves'])->name('my.leaves.index');
+    Route::post('my-leaves', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'submitMyLeave'])->name('my.leaves.store');
+    Route::post('my-leaves/{leaveRequest}/cancel', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'cancelMyLeave'])->name('my.leaves.cancel');
+    Route::get('my-roster', [\App\Http\Controllers\HR\HrLeaveRequestController::class, 'myRoster'])->name('my.roster');
 
     // إدارة الصيدلية (Pharmacy Management)
     Route::prefix('pharmacy')->name('pharmacy.')->middleware(['permission:view pharmacy'])->group(function () {

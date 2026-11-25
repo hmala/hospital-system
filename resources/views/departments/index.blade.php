@@ -33,6 +33,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>اسم العيادة</th>
+                                    <th>مدير القسم</th>
                                     <th>النوع</th>
                                     <th>رقم الغرفة</th>
                                     <th>أجر الكشف</th>
@@ -47,6 +48,15 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td><strong>{{ $department->name }}</strong></td>
+                                    <td>
+                                        @if($department->manager)
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
+                                                <i class="fas fa-user-tie me-1"></i>{{ $department->manager->name }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted small">— غير محدد —</span>
+                                        @endif
+                                    </td>
                                     <td><span class="badge bg-info">{{ $department->getTypeText() }}</span></td>
                                     <td>{{ $department->room_number }}</td>
                                     <td><span class="text-success">{{ number_format($department->consultation_fee) }} د.ع</span></td>
@@ -72,7 +82,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted py-4">
+                                    <td colspan="10" class="text-center text-muted py-4">
                                         <i class="fas fa-clinic-medical fa-3x mb-3"></i><br>لا توجد عيادات مضافة حتى الآن
                                     </td>
                                 </tr>

@@ -226,6 +226,14 @@
                             </div>
 
                             <div class="col-md-4">
+                                <label class="form-label small fw-bold">نمط احتساب الراتب <span class="text-danger">*</span></label>
+                                <select name="salary_calculation_mode" class="form-select border-success">
+                                    <option value="fixed_salary" {{ old('salary_calculation_mode', $employee->salary_calculation_mode ?? 'fixed_salary') == 'fixed_salary' ? 'selected' : '' }}>راتب شهري ثابت</option>
+                                    <option value="per_call" {{ old('salary_calculation_mode', $employee->salary_calculation_mode) == 'per_call' ? 'selected' : '' }}>أجر حسب الـ Call / الشفتات</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
                                 <label class="form-label small fw-bold">
                                     الراتب الأساسي (د.ع)
                                     {!! ($reqMap['basic_salary'] ?? false) ? '<span class="text-danger">*</span>' : '' !!}
@@ -234,6 +242,32 @@
                                     <input type="number" step="1000" name="basic_salary" class="form-control" value="{{ old('basic_salary', $employee->basic_salary) }}" {{ ($reqMap['basic_salary'] ?? false) ? 'required' : '' }}>
                                     <span class="input-group-text bg-light">د.ع</span>
                                 </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">سعر Call خاص بالموظف (اختياري)</label>
+                                <div class="input-group">
+                                    <input type="number" step="1000" min="0" name="custom_call_rate" class="form-control" value="{{ old('custom_call_rate', $employee->custom_call_rate) }}" placeholder="يُترك فارغاً لاعتماد سعر الشفت">
+                                    <span class="input-group-text bg-light">د.ع</span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">ربط حساب الدخول للنظام (اختياري)</label>
+                                <select name="user_id" class="form-select">
+                                    <option value="">— بدون ربط بحساب —</option>
+                                    @foreach($users as $u)
+                                        <option value="{{ $u->id }}" {{ old('user_id', $employee->user_id) == $u->id ? 'selected' : '' }}>
+                                            {{ $u->name }} ({{ $u->email }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text small">يتيح للموظف تقديم طلبات الإجازة إلكترونياً ومتابعة جدوله.</div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">رصيد الإجازات السنوي (استرشادي)</label>
+                                <input type="number" min="0" max="365" name="annual_leave_balance" class="form-control" value="{{ old('annual_leave_balance', $employee->annual_leave_balance ?? 21) }}">
                             </div>
 
                             <div class="col-md-4">

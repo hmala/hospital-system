@@ -282,6 +282,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage hr shifts',
             'manage hr schedules',
             'manage hr settings',
+            'manage hr bulk actions',
+            'approve hr action cancellation',
+            'approve department leaves',
+            'approve admin leaves',
+            'manage department schedules',
+            'final approve hr schedules',
         ];
 
         foreach ($permissions as $permission) {
@@ -768,7 +774,18 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage hr shifts',
             'manage hr schedules',
             'manage hr settings',
+            'manage hr bulk actions',
+            'final approve hr schedules',
             'view departments',
+        ]);
+
+        // دور مدير القسم (Department Manager)
+        $deptManagerRole = Role::firstOrCreate(['name' => 'department_manager']);
+        $deptManagerRole->syncPermissions([
+            'view hr',
+            'view employees',
+            'manage department schedules',
+            'approve department leaves',
         ]);
 
         // دور طبيب / مقيم التخدير (Anesthesiologist)

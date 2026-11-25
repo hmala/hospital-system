@@ -157,6 +157,23 @@
                         </div>
 
                         <div class="row mb-3">
+                            <label for="manager_id" class="col-md-4 col-form-label text-md-end">مدير القسم</label>
+                            <div class="col-md-6">
+                                <select id="manager_id" name="manager_id" class="form-select @error('manager_id') is-invalid @enderror">
+                                    <option value="">— بدون تحديد —</option>
+                                    @foreach($managers ?? [] as $mgr)
+                                        <option value="{{ $mgr->id }}" {{ old('manager_id') == $mgr->id ? 'selected' : '' }}>
+                                            {{ $mgr->name }} ({{ $mgr->email }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('manager_id')
+                                    <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
                             <div class="col-md-6 offset-md-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ old('is_active', true) ? 'checked' : '' }}>

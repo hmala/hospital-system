@@ -12,10 +12,14 @@ class HrPayroll extends Model
     protected $fillable = [
         'hr_payroll_cycle_id',
         'hr_employee_id',
+        'salary_calculation_mode',
         'basic_salary',
+        'calls_count',
+        'calls_amount',
         'allowances',
         'overtime_amount',
         'absence_deduction',
+        'unpaid_leave_deduction',
         'loan_deduction',
         'social_security_amount',
         'tax_amount',
@@ -30,21 +34,27 @@ class HrPayroll extends Model
         'notes',
     ];
 
-    protected $casts = [
-        'basic_salary' => 'decimal:2',
-        'allowances' => 'decimal:2',
-        'overtime_amount' => 'decimal:2',
-        'absence_deduction' => 'decimal:2',
-        'loan_deduction' => 'decimal:2',
-        'social_security_amount' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
-        'bonuses_amount' => 'decimal:2',
-        'penalties_amount' => 'decimal:2',
-        'net_salary' => 'decimal:2',
-        'is_paid' => 'boolean',
-        'paid_at' => 'datetime',
-        'payment_date' => 'date',
-    ];
+    protected function casts(): array
+    {
+        return [
+            'basic_salary' => 'decimal:2',
+            'calls_count' => 'integer',
+            'calls_amount' => 'decimal:2',
+            'allowances' => 'decimal:2',
+            'overtime_amount' => 'decimal:2',
+            'absence_deduction' => 'decimal:2',
+            'unpaid_leave_deduction' => 'decimal:2',
+            'loan_deduction' => 'decimal:2',
+            'social_security_amount' => 'decimal:2',
+            'tax_amount' => 'decimal:2',
+            'bonuses_amount' => 'decimal:2',
+            'penalties_amount' => 'decimal:2',
+            'net_salary' => 'decimal:2',
+            'is_paid' => 'boolean',
+            'paid_at' => 'datetime',
+            'payment_date' => 'date',
+        ];
+    }
 
     public function cycle()
     {
@@ -63,11 +73,11 @@ class HrPayroll extends Model
 
     public function getTotalEarningsAttribute(): float
     {
-        return (float) ($this->basic_salary + $this->allowances + $this->overtime_amount + $this->bonuses_amount);
+        return (float) ($this->basic_salary + $this->calls_amount + $this->allowances + $this->overtime_amount + $this->bonuses_amount);
     }
 
     public function getTotalDeductionsAttribute(): float
     {
-        return (float) ($this->penalties_amount + $this->absence_deduction + $this->loan_deduction + $this->social_security_amount + $this->tax_amount);
+        return (float) ($this->penalties_amount + $this->absence_deduction + $this->unpaid_leave_deduction + $this->loan_deduction + $this->social_security_amount + $this->tax_amount);
     }
 }

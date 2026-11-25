@@ -13,6 +13,7 @@ class Department extends Model
 
     protected $fillable = [
         'hospital_id',
+        'manager_id',
         'name',
         'type',
         'room_number',
@@ -41,6 +42,11 @@ class Department extends Model
     public function hospital()
     {
         return $this->belongsTo(Hospital::class);
+    }
+
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'manager_id');
     }
 
     public function doctors()

@@ -63,8 +63,19 @@
                     </div>
 
                     @if($shift->description)
-                        <p class="text-muted small mb-3">{{ Str::limit($shift->description, 50) }}</p>
+                        <p class="text-muted small mb-2">{{ Str::limit($shift->description, 50) }}</p>
                     @endif
+
+                    <div class="d-flex justify-content-between align-items-center bg-primary bg-opacity-10 rounded-3 p-2 mb-3 small">
+                        <div>
+                            <span class="text-muted">الساعات:</span>
+                            <strong>{{ rtrim(rtrim(number_format($shift->duration_hours ?? 8, 2), '0'), '.') }} س</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted">سعر الـ Call:</span>
+                            <strong class="text-primary">{{ number_format($shift->call_rate ?? 0, 0) }} د.ع</strong>
+                        </div>
+                    </div>
 
                     <div class="d-flex gap-2 mt-auto pt-2 border-top">
                         <button class="btn btn-sm btn-outline-primary flex-fill" data-bs-toggle="modal" data-bs-target="#editShiftModal{{ $shift->id }}">
@@ -107,6 +118,25 @@
                                     <label class="form-label">وقت النهاية <span class="text-danger">*</span></label>
                                     <input type="time" name="end_time" class="form-control" value="{{ \Carbon\Carbon::parse($shift->end_time)->format('H:i') }}" required>
                                 </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label">عدد الساعات</label>
+                                    <input type="number" step="0.5" min="0.5" max="24" name="duration_hours" class="form-control" value="{{ $shift->duration_hours ?? 8 }}">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">سعر الشفت / Call (د.ع)</label>
+                                    <input type="number" step="1000" min="0" name="call_rate" class="form-control" value="{{ (int) ($shift->call_rate ?? 0) }}">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الفئة المستهدفة</label>
+                                <select name="shift_category" class="form-select">
+                                    <option value="general" {{ ($shift->shift_category ?? 'general') === 'general' ? 'selected' : '' }}>عام</option>
+                                    <option value="nursing" {{ $shift->shift_category === 'nursing' ? 'selected' : '' }}>تمريض (8 ساعات - 30,000 د.ع)</option>
+                                    <option value="resident" {{ $shift->shift_category === 'resident' ? 'selected' : '' }}>أطباء مقيمين (12 ساعة - 70,000 د.ع)</option>
+                                    <option value="emergency_doctor" {{ $shift->shift_category === 'emergency_doctor' ? 'selected' : '' }}>طبيب طوارئ (Call - 150,000 د.ع)</option>
+                                </select>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">لون التمييز في الجدول <span class="text-danger">*</span></label>
@@ -163,6 +193,25 @@
                             <label class="form-label">وقت النهاية <span class="text-danger">*</span></label>
                             <input type="time" name="end_time" class="form-control" required>
                         </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label">عدد الساعات (يحسب تلقائياً)</label>
+                            <input type="number" step="0.5" min="0.5" max="24" name="duration_hours" class="form-control" placeholder="8 أو 12 أو 9">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">سعر الشفت / Call (د.ع)</label>
+                            <input type="number" step="1000" min="0" name="call_rate" class="form-control" value="0" placeholder="30000 / 70000 / 150000">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الفئة المستهدفة</label>
+                        <select name="shift_category" class="form-select">
+                            <option value="general">عام</option>
+                            <option value="nursing">تمريض (8 ساعات)</option>
+                            <option value="resident">أطباء مقيمين (12 ساعة)</option>
+                            <option value="emergency_doctor">طبيب طوارئ (Call)</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">لون التمييز في الجدول <span class="text-danger">*</span></label>

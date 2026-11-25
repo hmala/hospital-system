@@ -27,9 +27,17 @@ class HrShiftController extends Controller
             'name' => 'required|string|max:100',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
+            'duration_hours' => 'nullable|numeric|min:0.5|max:24',
+            'call_rate' => 'nullable|numeric|min:0',
+            'shift_category' => 'nullable|in:general,nursing,resident,emergency_doctor',
             'color_code' => 'required|string|max:20',
             'description' => 'nullable|string',
         ]);
+        $validated['duration_hours'] = $request->filled('duration_hours')
+            ? $request->duration_hours
+            : HrShift::calculateHoursBetween($validated['start_time'], $validated['end_time']);
+        $validated['call_rate'] = $validated['call_rate'] ?? 0;
+        $validated['shift_category'] = $validated['shift_category'] ?? 'general';
         $validated['is_active'] = $request->has('is_active');
 
         HrShift::create($validated);
@@ -43,9 +51,17 @@ class HrShiftController extends Controller
             'name' => 'required|string|max:100',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
+            'duration_hours' => 'nullable|numeric|min:0.5|max:24',
+            'call_rate' => 'nullable|numeric|min:0',
+            'shift_category' => 'nullable|in:general,nursing,resident,emergency_doctor',
             'color_code' => 'required|string|max:20',
             'description' => 'nullable|string',
         ]);
+        $validated['duration_hours'] = $request->filled('duration_hours')
+            ? $request->duration_hours
+            : HrShift::calculateHoursBetween($validated['start_time'], $validated['end_time']);
+        $validated['call_rate'] = $validated['call_rate'] ?? 0;
+        $validated['shift_category'] = $validated['shift_category'] ?? 'general';
         $validated['is_active'] = $request->has('is_active');
 
         $shift->update($validated);

@@ -79,6 +79,80 @@
         </div>
     @endif
 
+    {{-- شريط طلبات اعتماد الروستر المعلقة للمراجعة النهائية --}}
+    @if(($canFinalApprove ?? false) && isset($pendingApprovals) && $pendingApprovals->isNotEmpty())
+        <div class="alert alert-warning border-0 shadow-sm py-2 px-3 mb-2 no-print small">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <i class="fas fa-clipboard-check me-1"></i>
+                    <strong>روسترات بانتظار المراجعة والاعتماد النهائي للصرف ({{ $pendingApprovals->count() }}):</strong>
+                    @foreach($pendingApprovals as $pApp)
+                        <a href="{{ route('hr.schedules.index', ['department_id' => $pApp->department_id, 'view_mode' => $pApp->period_type, 'start_date' => $pApp->start_date->format('Y-m-d')]) }}"
+                           class="badge bg-dark text-white text-decoration-none ms-1">
+                            {{ $pApp->department->name ?? 'قسم' }} ({{ $pApp->start_date->format('m/d') }} - {{ $pApp->end_date->format('m/d') }})
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- شريط حالة اعتماد روستر القسم للفترة الحالية --}}
+    @if($departmentId)
+        <div class="card border-0 shadow-xs rounded-3 mb-2 no-print {{ ($isRosterLocked ?? false) ? 'bg-success bg-opacity-10 border border-success' : 'bg-white border' }}">
+            <div class="card-body py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2 small">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-shield-alt {{ ($isRosterLocked ?? false) ? 'text-success' : 'text-primary' }}"></i>
+                    <span>حالة اعتماد روستر القسم لهذه الفترة:</span>
+                    @if(isset($rosterApproval) && $rosterApproval)
+                        <span class="badge {{ $rosterApproval->status_badge_class }}">{{ $rosterApproval->status_label }}</span>
+                        @if($rosterApproval->submittedBy)
+                            <span class="text-muted">({{ $rosterApproval->submittedBy->name }})</span>
+                        @endif
+                    @else
+                        <span class="badge bg-secondary">مسودة قيد الإعداد</span>
+                    @endif
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    @if(!($isRosterLocked ?? false))
+                        <form action="{{ route('hr.schedules.submit-approval') }}" method="POST" class="d-inline">
+                            @csrf
+                            <input type="hidden" name="department_id" value="{{ $departmentId }}">
+                            <input type="hidden" name="period_type" value="{{ $viewMode }}">
+                            <input type="hidden" name="start_date" value="{{ $startDate->format('Y-m-d') }}">
+                            <input type="hidden" name="end_date" value="{{ $endDate->format('Y-m-d') }}">
+                            <button type="submit" class="btn btn-sm btn-warning fw-bold text-dark" onclick="return confirm('تأكيد مراجعة واعتماد جدول القسم وإرساله لـ HR/الإدارة للصرف؟')">
+                                <i class="fas fa-paper-plane me-1"></i> اعتماد وإرسال روستر القسم
+                            </button>
+                        </form>
+                    @endif
+
+                    @if(($canFinalApprove ?? false) && isset($rosterApproval) && $rosterApproval && $rosterApproval->status !== 'approved')
+                        <form action="{{ route('hr.schedules.final-approve', $rosterApproval->id) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-success fw-bold" onclick="return confirm('الاعتماد النهائي وإقفال الروستر للصرف بالرواتب؟')">
+                                <i class="fas fa-check-double me-1"></i> اعتماد نهائي للصرف
+                            </button>
+                        </form>
+                    @endif
+
+                    @if(($canFinalApprove ?? false) && isset($rosterApproval) && $rosterApproval && $rosterApproval->status === 'approved')
+                        <form action="{{ route('hr.schedules.reopen-approval', $rosterApproval->id) }}" method="POST" class="d-inline">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('إعادة فتح الروستر للتعديل؟')">
+                                <i class="fas fa-unlock me-1"></i> إعادة فتح
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="alert alert-light border shadow-xs py-1 px-3 mb-2 no-print small text-muted">
+            <i class="fas fa-info-circle text-primary me-1"></i> اختر قسماً محدداً من القائمة لتفعيل أزرار اعتماد ومراجعة روستر القسم.
+        </div>
+    @endif
+
     <!-- Compact KPI & Summary Strip -->
     <div class="d-flex flex-wrap align-items-center justify-content-between bg-white border rounded-3 px-3 py-1 mb-2 no-print small shadow-xs">
         <div class="d-flex align-items-center gap-3">
@@ -281,6 +355,14 @@
                                         @elseif($emp->defaultShift)
                                             <span class="text-secondary ms-1">({{ $emp->defaultShift->name }})</span>
                                         @endif
+                                        @if($emp->isPerCall())
+                                            @php $callSum = $employeeCallSummaries[$emp->id] ?? ['calls' => 0, 'amount' => 0]; @endphp
+                                            <div class="mt-1">
+                                                <span class="badge bg-info bg-opacity-10 text-info border border-info" style="font-size: 0.65rem;">
+                                                    {{ $callSum['calls'] }} Call = {{ number_format($callSum['amount'], 0) }} د.ع
+                                                </span>
+                                            </div>
+                                        @endif
                                     </div>
                                 </td>
 
@@ -296,8 +378,17 @@
                                         $color1 = '';
                                         $val2 = '';
                                         $color2 = '';
+                                        $isDayLeave = false;
+                                        $leaveLabel = 'إجازة معتمدة';
+                                        $attendanceStatus = 'present';
 
                                         if ($daySchedules->isNotEmpty()) {
+                                            $isDayLeave = $daySchedules->contains('is_leave', true);
+                                            if ($isDayLeave) {
+                                                $leaveSch = $daySchedules->firstWhere('is_leave', true);
+                                                $leaveLabel = $leaveSch?->leaveRequest?->leave_type_label ?? 'إجازة معتمدة';
+                                            }
+                                            $attendanceStatus = $daySchedules->first()->attendance_status ?? 'present';
                                             $isOff = $daySchedules->contains('is_off_day', true);
                                             if ($isOff) {
                                                 $val1 = 'off';
@@ -335,7 +426,11 @@
                                         }
                                     @endphp
                                     <td class="p-1 roster-cell position-relative" data-date="{{ $dateStr }}" data-emp-id="{{ $emp->id }}" data-is-split="{{ $isSplit ? '1' : '0' }}">
-                                        @if($isSplit)
+                                        @if($isDayLeave)
+                                            <div class="badge bg-info bg-opacity-25 text-dark border border-info w-100 py-2" style="font-size: 0.7rem;" title="إجازة إلكترونية معتمدة">
+                                                <i class="fas fa-plane-departure me-1"></i>{{ Str::limit($leaveLabel, 14) }}
+                                            </div>
+                                        @elseif($isSplit)
                                             <!-- Double Shift / Split Shift Box (الوجبتين) -->
                                             <div class="split-shift-box d-flex flex-column gap-1">
                                                 <!-- Slot 1 (الوجبة الأولى) -->
@@ -346,6 +441,7 @@
                                                             data-emp-id="{{ $emp->id }}"
                                                             data-date="{{ $dateStr }}"
                                                             data-slot="slot1"
+                                                            {{ ($isRosterLocked ?? false) ? 'disabled' : '' }}
                                                             style="color: {{ $color1 ? '#fff' : 'inherit' }}; background-color: {{ $color1 ? $color1 : 'transparent' }}; border-color: {{ $color1 ? $color1 : '#dee2e6' }}; font-size: 0.72rem; height: 24px;"
                                                             onchange="updateSelectColor(this, true)"
                                                             onclick="handleCellSlotStampClick(this, event)">
@@ -367,6 +463,7 @@
                                                             data-emp-id="{{ $emp->id }}"
                                                             data-date="{{ $dateStr }}"
                                                             data-slot="slot2"
+                                                            {{ ($isRosterLocked ?? false) ? 'disabled' : '' }}
                                                             style="color: {{ $color2 ? '#fff' : 'inherit' }}; background-color: {{ $color2 ? $color2 : 'transparent' }}; border-color: {{ $color2 ? $color2 : '#dee2e6' }}; font-size: 0.72rem; height: 24px;"
                                                             onchange="updateSelectColor(this, true)"
                                                             onclick="handleCellSlotStampClick(this, event)">
@@ -387,6 +484,7 @@
                                                     data-emp-id="{{ $emp->id }}"
                                                     data-date="{{ $dateStr }}"
                                                     data-slot="slot1"
+                                                    {{ ($isRosterLocked ?? false) ? 'disabled' : '' }}
                                                     style="color: {{ $color1 ? '#fff' : 'inherit' }}; background-color: {{ $color1 ? $color1 : 'transparent' }}; border-color: {{ $color1 ? $color1 : '#dee2e6' }}; font-size: 0.75rem; height: 28px;"
                                                     onchange="updateSelectColor(this, true)"
                                                     onclick="handleCellSlotStampClick(this, event)">
@@ -398,6 +496,18 @@
                                                     </option>
                                                 @endforeach
                                             </select>
+                                        @endif
+
+                                        @if(!$isDayLeave && ($val1 && $val1 !== 'off') && !($isRosterLocked ?? false))
+                                            <button type="button"
+                                                    class="btn btn-xs w-100 mt-1 py-0 no-print {{ $attendanceStatus === 'absent' ? 'btn-danger' : 'btn-outline-success' }}"
+                                                    style="font-size: 0.62rem;"
+                                                    onclick="toggleRosterAttendance('{{ $emp->id }}', '{{ $dateStr }}', this)"
+                                                    title="تأكيد الحضور أو الغياب للشفت">
+                                                {{ $attendanceStatus === 'absent' ? 'غائب (لا يُصرف)' : 'حاضر ✓' }}
+                                            </button>
+                                        @elseif(!$isDayLeave && ($val1 && $val1 !== 'off') && $attendanceStatus === 'absent')
+                                            <span class="badge bg-danger w-100 mt-1" style="font-size: 0.62rem;">غائب</span>
                                         @endif
 
                                         <!-- Print-only View -->
@@ -1040,6 +1150,38 @@
             if (cell) cell.style.zIndex = '5';
         }
     });
+
+    function toggleRosterAttendance(empId, dateStr, btn) {
+        fetch(`{{ route("hr.schedules.toggle-attendance") }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                hr_employee_id: empId,
+                shift_date: dateStr
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.message || 'تعذر تحديث حالة الحضور.');
+                return;
+            }
+            if (data.attendance_status === 'absent') {
+                btn.classList.remove('btn-outline-success');
+                btn.classList.add('btn-danger');
+                btn.textContent = 'غائب (لا يُصرف)';
+            } else {
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-outline-success');
+                btn.textContent = 'حاضر ✓';
+            }
+        })
+        .catch(() => alert('تعذر الاتصال بالخادم لتحديث الحضور.'));
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         checkFatigue();

@@ -150,6 +150,22 @@
                             </div>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="manager_id" class="form-label fw-semibold">مدير القسم المسؤول</label>
+                            <select id="manager_id" name="manager_id" class="form-select rounded-3 @error('manager_id') is-invalid @enderror">
+                                <option value="">— بدون مدير قسم معين —</option>
+                                @foreach($managers ?? [] as $mgr)
+                                    <option value="{{ $mgr->id }}" {{ old('manager_id', $department->manager_id) == $mgr->id ? 'selected' : '' }}>
+                                        {{ $mgr->name }} ({{ $mgr->email }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            <div class="form-text small">مدير القسم يملك صلاحية اعتماد إجازات موظفي هذا القسم وإدارة واعتماد جدول دوامهم.</div>
+                            @error('manager_id')
+                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
+                            @enderror
+                        </div>
+
                         <div class="mb-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active"

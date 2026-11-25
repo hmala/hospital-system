@@ -36,9 +36,9 @@
 
     <!-- ملخص مالي -->
     <div class="row g-3 mb-3 text-center">
-        <div class="col-md-2"><div class="card border-0 shadow-sm bg-light"><div class="card-body p-2"><div class="text-muted small">الأساسي</div><div class="fw-bold">{{ number_format($summary['total_basic']) }}</div></div></div></div>
+        <div class="col-md-2"><div class="card border-0 shadow-sm bg-light"><div class="card-body p-2"><div class="text-muted small">الأساسي + الـ Calls</div><div class="fw-bold">{{ number_format($summary['total_basic'] + ($summary['total_calls_amount'] ?? 0)) }}</div></div></div></div>
         <div class="col-md-2"><div class="card border-0 shadow-sm bg-success bg-opacity-10"><div class="card-body p-2"><div class="text-success small">إجمالي المخصصات</div><div class="fw-bold text-success">{{ number_format($summary['total_allowances'] + $summary['total_bonuses'] + $summary['total_overtime']) }}</div></div></div></div>
-        <div class="col-md-2"><div class="card border-0 shadow-sm bg-danger bg-opacity-10"><div class="card-body p-2"><div class="text-danger small">إجمالي الاستقطاعات</div><div class="fw-bold text-danger">{{ number_format($summary['total_penalties'] + $summary['total_absence'] + $summary['total_loans'] + $summary['total_social'] + $summary['total_tax']) }}</div></div></div></div>
+        <div class="col-md-2"><div class="card border-0 shadow-sm bg-danger bg-opacity-10"><div class="card-body p-2"><div class="text-danger small">إجمالي الاستقطاعات</div><div class="fw-bold text-danger">{{ number_format($summary['total_penalties'] + $summary['total_absence'] + ($summary['total_unpaid_leaves'] ?? 0) + $summary['total_loans'] + $summary['total_social'] + $summary['total_tax']) }}</div></div></div></div>
         <div class="col-md-3"><div class="card border-0 shadow-sm bg-primary text-white"><div class="card-body p-2"><div class="small opacity-75">إجمالي الصافي للموظفين</div><div class="fw-bold fs-5">{{ number_format($summary['total_net']) }} د.ع</div></div></div></div>
         <div class="col-md-3"><div class="card border-0 shadow-sm bg-dark text-white"><div class="card-body p-2"><div class="small opacity-75">طرق الدفع (نقداً / بنك)</div><div class="fw-bold fs-6">{{ number_format($summary['total_cash_amount']) }} / {{ number_format($summary['total_bank_amount']) }}</div></div></div></div>
     </div>
@@ -59,8 +59,9 @@
                         <th rowspan="2" class="align-middle bg-light">الرقم الوظيفي</th>
                         <th rowspan="2" class="align-middle bg-light text-start">اسم الموظف / القسم</th>
                         <th rowspan="2" class="align-middle bg-light">الأساسي</th>
+                        <th rowspan="2" class="align-middle bg-info bg-opacity-10 text-info border-info">أجور الـ Call</th>
                         <th colspan="3" class="bg-success bg-opacity-10 text-success border-success">الاستحقاقات والمكافآت (+)</th>
-                        <th colspan="5" class="bg-danger bg-opacity-10 text-danger border-danger">الاستقطاعات والخصومات (-)</th>
+                        <th colspan="6" class="bg-danger bg-opacity-10 text-danger border-danger">الاستقطاعات والخصومات (-)</th>
                         <th rowspan="2" class="align-middle bg-primary bg-opacity-10 text-primary border-primary">الصافي للدفع</th>
                         <th rowspan="2" class="align-middle bg-light">طريقة الدفع</th>
                         <th rowspan="2" class="align-middle bg-light" style="width: 110px;">قسيمة الراتب</th>
@@ -71,6 +72,7 @@
                         <th class="bg-success bg-opacity-10 text-success border-success">المكافآت</th>
                         
                         <th class="bg-danger bg-opacity-10 text-danger border-danger">الغيابات</th>
+                        <th class="bg-danger bg-opacity-10 text-danger border-danger">إجازة بدون راتب</th>
                         <th class="bg-danger bg-opacity-10 text-danger border-danger">العقوبات</th>
                         <th class="bg-danger bg-opacity-10 text-danger border-danger">السلف</th>
                         <th class="bg-danger bg-opacity-10 text-danger border-danger">ضمان</th>
@@ -86,6 +88,14 @@
                             <div class="small text-muted fw-normal">{{ $slip->employee->department->name ?? '—' }}</div>
                         </td>
                         <td class="fw-bold">{{ number_format($slip->basic_salary) }}</td>
+                        <td class="bg-info bg-opacity-10 fw-bold text-info">
+                            @if($slip->calls_count > 0 || $slip->salary_calculation_mode === 'per_call')
+                                {{ number_format($slip->calls_amount) }}
+                                <div class="small text-muted fw-normal">({{ $slip->calls_count }} Call)</div>
+                            @else
+                                —
+                            @endif
+                        </td>
                         
                         <!-- (+) -->
                         <td class="bg-success bg-opacity-10">
@@ -101,6 +111,7 @@
                         
                         <!-- (-) -->
                         <td class="text-danger">{{ $slip->absence_deduction > 0 ? number_format($slip->absence_deduction) : '—' }}</td>
+                        <td class="text-danger">{{ ($slip->unpaid_leave_deduction ?? 0) > 0 ? number_format($slip->unpaid_leave_deduction) : '—' }}</td>
                         <td class="text-danger">{{ $slip->penalties_amount > 0 ? number_format($slip->penalties_amount) : '—' }}</td>
                         <td class="text-danger fw-bold">{{ $slip->loan_deduction > 0 ? number_format($slip->loan_deduction) : '—' }}</td>
                         <td class="text-danger small">{{ $slip->social_security_amount > 0 ? number_format($slip->social_security_amount) : '—' }}</td>

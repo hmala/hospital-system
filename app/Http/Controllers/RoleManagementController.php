@@ -85,7 +85,7 @@ class RoleManagementController extends Controller
                 'icon' => 'procedures',
                 'color' => 'primary',
             ],
-            'admin', 'admin-hsop', 'hospital_admin', 'staff', 'hr_manager' => [
+            'admin', 'admin-hsop', 'hospital_admin', 'staff', 'hr_manager', 'department_manager' => [
                 'key' => 'admin_system',
                 'name' => 'الإدارة والأنظمة العامة',
                 'icon' => 'crown',
@@ -135,6 +135,7 @@ class RoleManagementController extends Controller
             'gh&est' => ['label' => 'كادر الجراحة والاستشارية', 'icon' => 'hospital', 'color' => 'dark'],
             'staff' => ['label' => 'كادر إداري عام', 'icon' => 'user', 'color' => 'dark'],
             'hr_manager' => ['label' => 'مدير الموارد البشرية (HR)', 'icon' => 'user-tie', 'color' => 'primary'],
+            'department_manager' => ['label' => 'مدير قسم (Department Manager)', 'icon' => 'user-cog', 'color' => 'info'],
             default => [
                 'label' => ucwords(str_replace(['_', '-'], ' ', $roleName)),
                 'icon' => 'user-shield',
@@ -756,13 +757,19 @@ class RoleManagementController extends Controller
             'manage hr shifts' => ['label' => 'إدارة وتحديد أنواع الشفتات وأوقاتها', 'action' => 'إدارة', 'badge' => 'info'],
             'manage hr schedules' => ['label' => 'بناء وتعديل وتبادل جداول الروستر الأسبوعي', 'action' => 'إدارة', 'badge' => 'primary'],
             'manage hr settings' => ['label' => 'إدارة حقول الإدخال الإجبارية وقوائم HR المنسدلة', 'action' => 'إعدادات', 'badge' => 'dark'],
+            'manage hr bulk actions' => ['label' => 'تطبيق العقوبات والمكافآت الجماعية على قسم أو المستشفى', 'action' => 'جماعي', 'badge' => 'warning'],
+            'approve hr action cancellation' => ['label' => 'موافقة مدير الإدارة على إلغاء العقوبات/المكافآت بعد 48 ساعة', 'action' => 'اعتماد', 'badge' => 'danger'],
+            'approve department leaves' => ['label' => 'موافقة مدير القسم على طلبات إجازات موظفي قسمه', 'action' => 'موافقة', 'badge' => 'info'],
+            'approve admin leaves' => ['label' => 'الاعتماد النهائي لمدير الإدارة على طلبات الإجازات', 'action' => 'اعتماد', 'badge' => 'success'],
+            'manage department schedules' => ['label' => 'تنظيم واعتماد جدول الدوام الأسبوعي والشهري للقسم فقط', 'action' => 'إدارة', 'badge' => 'info'],
+            'final approve hr schedules' => ['label' => 'المراجعة والاعتماد النهائي لجداول الدوام للصرف', 'action' => 'اعتماد', 'badge' => 'success'],
         ];
     }
 
     public function permissionGroup(string $permissionName): string
     {
         // 0. HR & Payroll
-        if (str_contains($permissionName, 'hr') || str_contains($permissionName, 'employee') || str_contains($permissionName, 'payroll') || str_contains($permissionName, 'shift') || str_contains($permissionName, 'schedule') || str_contains($permissionName, 'payslip') || $permissionName === 'manage hr settings') {
+        if (str_contains($permissionName, 'hr') || str_contains($permissionName, 'employee') || str_contains($permissionName, 'payroll') || str_contains($permissionName, 'shift') || str_contains($permissionName, 'schedule') || str_contains($permissionName, 'payslip') || str_contains($permissionName, 'leave') || $permissionName === 'manage hr settings') {
             return 'hr';
         }
 

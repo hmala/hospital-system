@@ -23,7 +23,9 @@ class HrEmployeeController extends Controller
         $this->middleware('permission:edit employees')->only(['edit', 'update']);
         $this->middleware('permission:delete employees')->only(['destroy']);
         $this->middleware('permission:manage hr documents')->only(['uploadDocument', 'downloadDocument', 'destroyDocument']);
-        $this->middleware('permission:manage hr actions')->only(['storeAction', 'destroyAction', 'cancelAction', 'restoreAction']);
+        $this->middleware('permission:manage hr actions')->only(['storeAction', 'destroyAction', 'cancelAction', 'restoreAction', 'requestCancelAction']);
+        $this->middleware('permission:approve hr action cancellation')->only(['approveCancelAction', 'rejectCancelAction']);
+        $this->middleware('permission:edit employees')->only(['linkUser']);
         $this->middleware('permission:print employee badges')->only(['badge']);
     }
 
@@ -105,8 +107,7 @@ class HrEmployeeController extends Controller
     public function create()
     {
         $departments = Department::orderBy('name')->get();
-        $linkedUserIds = HrEmployee::whereNotNull('user_id')->pluck('user_id')->toArray();
-        $users = User::whereNotIn('id', $linkedUserIds)->orderBy('name')->get();
+        $users = $this->getAvailableStaffUsers();
 
         // جلب خيارات القوائم المنسدلة النشطة
         $employmentTypes = HrLookupOption::where('category', 'employment_type')->where('is_active', true)->orderBy('sort_order')->get();
@@ -152,6 +153,9 @@ class HrEmployeeController extends Controller
             'hire_date' => ($reqMap['hire_date'] ?? true) ? 'required|date' : 'nullable|date',
             'contract_end_date' => ($reqMap['contract_end_date'] ?? false) ? 'required|date|after_or_equal:hire_date' : 'nullable|date|after_or_equal:hire_date',
             'basic_salary' => ($reqMap['basic_salary'] ?? false) ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+            'salary_calculation_mode' => 'nullable|in:fixed_salary,per_call',
+            'custom_call_rate' => 'nullable|numeric|min:0',
+            'annual_leave_balance' => 'nullable|integer|min:0|max:365',
             'status' => 'required|in:active,on_leave,suspended,resigned,terminated',
             'medical_license_number' => ($reqMap['medical_license_number'] ?? false) ? 'required|string|max:100' : 'nullable|string|max:100',
             'license_expiry_date' => ($reqMap['license_expiry_date'] ?? false) ? 'required|date' : 'nullable|date',
@@ -206,6 +210,8 @@ class HrEmployeeController extends Controller
             $validated['nationality'] = 'عراقي';
         }
 
+        $validated['salary_calculation_mode'] = $validated['salary_calculation_mode'] ?? 'fixed_salary';
+        $validated['annual_leave_balance'] = $validated['annual_leave_balance'] ?? 21;
         $validated['schedule_type'] = $validated['schedule_type'] ?? 'fixed';
         $validated['is_split_shift'] = $request->boolean('is_split_shift');
         if (! $validated['is_split_shift']) {
@@ -233,8 +239,9 @@ class HrEmployeeController extends Controller
         $employee->load(['department', 'user', 'documents.uploader', 'defaultShift', 'secondShift']);
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
         $actionSettings = \App\Models\HrActionSetting::where('is_active', true)->orderBy('category')->get();
+        $availableStaffUsers = $this->getAvailableStaffUsers($employee->id);
 
-        return view('hr.employees.show', compact('employee', 'documentTypes', 'actionSettings'));
+        return view('hr.employees.show', compact('employee', 'documentTypes', 'actionSettings', 'availableStaffUsers'));
     }
 
     /**
@@ -244,11 +251,7 @@ class HrEmployeeController extends Controller
     {
         $employee->load('documents');
         $departments = Department::orderBy('name')->get();
-        $linkedUserIds = HrEmployee::whereNotNull('user_id')
-            ->where('id', '!=', $employee->id)
-            ->pluck('user_id')
-            ->toArray();
-        $users = User::whereNotIn('id', $linkedUserIds)->orderBy('name')->get();
+        $users = $this->getAvailableStaffUsers($employee->id);
 
         $employmentTypes = HrLookupOption::where('category', 'employment_type')->where('is_active', true)->orderBy('sort_order')->get();
         $documentTypes = HrLookupOption::where('category', 'document_type')->where('is_active', true)->orderBy('sort_order')->get();
@@ -269,11 +272,15 @@ class HrEmployeeController extends Controller
                 'payment_method' => 'required|in:cash,bank',
                 'bank_name' => 'nullable|string|max:255',
                 'bank_account_number' => 'nullable|string|max:255',
+                'salary_calculation_mode' => 'nullable|in:fixed_salary,per_call',
+                'custom_call_rate' => 'nullable|numeric|min:0',
                 'overtime_hourly_rate' => 'required|numeric|min:0',
                 'social_security_percentage' => 'nullable|numeric|min:0|max:100',
                 'tax_percentage' => 'nullable|numeric|min:0|max:100',
             ]);
 
+            $validated['salary_calculation_mode'] = $validated['salary_calculation_mode'] ?? ($employee->salary_calculation_mode ?? 'fixed_salary');
+            $validated['custom_call_rate'] = $request->filled('custom_call_rate') ? $request->custom_call_rate : null;
             $validated['subject_to_social_security'] = $request->boolean('subject_to_social_security');
             $validated['subject_to_tax'] = $request->boolean('subject_to_tax');
 
@@ -309,6 +316,9 @@ class HrEmployeeController extends Controller
             'hire_date' => ($reqMap['hire_date'] ?? true) ? 'required|date' : 'nullable|date',
             'contract_end_date' => ($reqMap['contract_end_date'] ?? false) ? 'required|date|after_or_equal:hire_date' : 'nullable|date|after_or_equal:hire_date',
             'basic_salary' => ($reqMap['basic_salary'] ?? false) ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+            'salary_calculation_mode' => 'nullable|in:fixed_salary,per_call',
+            'custom_call_rate' => 'nullable|numeric|min:0',
+            'annual_leave_balance' => 'nullable|integer|min:0|max:365',
             'status' => 'required|in:active,on_leave,suspended,resigned,terminated',
             'medical_license_number' => ($reqMap['medical_license_number'] ?? false) ? 'required|string|max:100' : 'nullable|string|max:100',
             'license_expiry_date' => ($reqMap['license_expiry_date'] ?? false) ? 'required|date' : 'nullable|date',
@@ -350,6 +360,9 @@ class HrEmployeeController extends Controller
             $validated['nationality'] = 'عراقي';
         }
 
+        $validated['salary_calculation_mode'] = $validated['salary_calculation_mode'] ?? ($employee->salary_calculation_mode ?? 'fixed_salary');
+        $validated['custom_call_rate'] = $request->filled('custom_call_rate') ? $request->custom_call_rate : null;
+        $validated['annual_leave_balance'] = $validated['annual_leave_balance'] ?? ($employee->annual_leave_balance ?? 21);
         $validated['schedule_type'] = $validated['schedule_type'] ?? ($employee->schedule_type ?? 'fixed');
         $validated['is_split_shift'] = $request->boolean('is_split_shift');
         if (! $validated['is_split_shift']) {
@@ -462,6 +475,7 @@ class HrEmployeeController extends Controller
             'applied_effect_value' => $setting->effect_value,
             'financial_amount' => $financial_amount,
             'status' => 'pending',
+            'cancellable_until' => now()->addHours(48),
             'created_by' => auth()->id(),
         ]);
 
@@ -474,14 +488,83 @@ class HrEmployeeController extends Controller
             return back()->with('error', 'لا يمكن إلغاء إجراء تم ترحيله بالفعل في مسير الرواتب.');
         }
 
-        $action->update([
+        $isAdminApprover = auth()->user()->can('approve hr action cancellation');
+        if (! $action->isWithin48Hours() && ! $isAdminApprover) {
+            return back()->with('error', 'انتهت مهلة الـ 48 ساعة للإلغاء المباشر. يرجى رفع طلب إلغاء لاعتماده من مدير الإدارة.');
+        }
+
+        $updateData = [
             'status' => 'cancelled',
             'cancelled_by' => auth()->id(),
             'cancelled_at' => now(),
             'cancellation_reason' => $request->input('cancellation_reason') ?: 'إلغاء إداري',
-        ]);
+        ];
+
+        if (! $action->isWithin48Hours() && $isAdminApprover) {
+            $updateData['cancel_approved_by'] = auth()->id();
+            $updateData['cancel_approved_at'] = now();
+        }
+
+        $action->update($updateData);
+        $action->batch?->refreshStatusFromActions();
 
         return back()->with('success', 'تم إلغاء الإجراء بنجاح مع الاحتفاظ به في الأرشيف والسجل الرسمي للموظف.');
+    }
+
+    public function requestCancelAction(\Illuminate\Http\Request $request, \App\Models\HrEmployeeAction $action)
+    {
+        if ($action->status === 'processed') {
+            return back()->with('error', 'لا يمكن طلب إلغاء إجراء تم ترحيله بالفعل في مسير الرواتب.');
+        }
+
+        if ($action->isCancelled()) {
+            return back()->with('error', 'هذا الإجراء ملغي مسبقاً.');
+        }
+
+        $request->validate([
+            'cancel_request_reason' => 'required|string|max:1000',
+        ], [
+            'cancel_request_reason.required' => 'يرجى كتابة سبب طلب الإلغاء لمدير الإدارة.',
+        ]);
+
+        $action->update([
+            'cancel_requested_by' => auth()->id(),
+            'cancel_requested_at' => now(),
+            'cancel_request_reason' => $request->cancel_request_reason,
+        ]);
+
+        return back()->with('success', 'تم إرسال طلب الإلغاء إلى مدير الإدارة للموافقة.');
+    }
+
+    public function approveCancelAction(\Illuminate\Http\Request $request, \App\Models\HrEmployeeAction $action)
+    {
+        if ($action->status === 'processed') {
+            return back()->with('error', 'لا يمكن إلغاء إجراء تم ترحيله بالفعل في مسير الرواتب.');
+        }
+
+        $action->update([
+            'status' => 'cancelled',
+            'cancelled_by' => auth()->id(),
+            'cancelled_at' => now(),
+            'cancellation_reason' => $action->cancel_request_reason ?: ($request->input('cancellation_reason') ?: 'موافقة مدير الإدارة على الإلغاء'),
+            'cancel_approved_by' => auth()->id(),
+            'cancel_approved_at' => now(),
+        ]);
+
+        $action->batch?->refreshStatusFromActions();
+
+        return back()->with('success', 'تمت موافقة مدير الإدارة وإلغاء الإجراء بنجاح.');
+    }
+
+    public function rejectCancelAction(\App\Models\HrEmployeeAction $action)
+    {
+        $action->update([
+            'cancel_requested_by' => null,
+            'cancel_requested_at' => null,
+            'cancel_request_reason' => null,
+        ]);
+
+        return back()->with('success', 'تم رفض طلب الإلغاء وبقي الإجراء سارياً.');
     }
 
     public function restoreAction(\App\Models\HrEmployeeAction $action)
@@ -495,7 +578,14 @@ class HrEmployeeController extends Controller
             'cancelled_by' => null,
             'cancelled_at' => null,
             'cancellation_reason' => null,
+            'cancel_requested_by' => null,
+            'cancel_requested_at' => null,
+            'cancel_request_reason' => null,
+            'cancel_approved_by' => null,
+            'cancel_approved_at' => null,
         ]);
+
+        $action->batch?->refreshStatusFromActions();
 
         return back()->with('success', 'تم استعادة الإجراء وإعادة تفعيله بنجاح.');
     }
@@ -506,6 +596,10 @@ class HrEmployeeController extends Controller
             return back()->with('error', 'لا يمكن حذف إجراء تم ترحيله بالفعل في مسير الرواتب.');
         }
 
+        if (! $action->isWithin48Hours() && ! auth()->user()->can('approve hr action cancellation')) {
+            return back()->with('error', 'انتهت مهلة الـ 48 ساعة للإلغاء المباشر. يرجى رفع طلب إلغاء لاعتماده من مدير الإدارة.');
+        }
+
         // إلغاء الإجراء بدلاً من حذفه نهائياً للحفاظ على السجل الإداري
         $action->update([
             'status' => 'cancelled',
@@ -514,7 +608,47 @@ class HrEmployeeController extends Controller
             'cancellation_reason' => 'تم الإلغاء عبر الحذف',
         ]);
 
+        $action->batch?->refreshStatusFromActions();
+
         return back()->with('success', 'تم إلغاء الإجراء بنجاح وحفظه في الأرشيف والسجل.');
+    }
+
+    public function linkUser(Request $request, HrEmployee $employee)
+    {
+        $validated = $request->validate([
+            'user_id' => 'nullable|exists:users,id|unique:hr_employees,user_id,'.$employee->id,
+        ], [
+            'user_id.unique' => 'هذا الحساب مرتبط بموظف آخر بالفعل.',
+        ]);
+
+        $employee->update([
+            'user_id' => $validated['user_id'] ?: null,
+        ]);
+
+        $msg = $validated['user_id']
+            ? 'تم ربط حساب الموظف بنجاح، ويمكنه الآن تقديم طلبات الإجازة ومتابعة جدوله.'
+            : 'تم فك ارتباط حساب الدخول عن الموظف.';
+
+        return back()->with('success', $msg);
+    }
+
+    private function getAvailableStaffUsers(?int $exceptEmployeeId = null)
+    {
+        $linkedUserIds = HrEmployee::whereNotNull('user_id')
+            ->when($exceptEmployeeId, fn ($q) => $q->where('id', '!=', $exceptEmployeeId))
+            ->pluck('user_id')
+            ->toArray();
+
+        return User::query()
+            ->whereNotIn('id', $linkedUserIds)
+            ->where(function ($q) {
+                $q->whereNull('role')->orWhere('role', '!=', 'patient');
+            })
+            ->whereDoesntHave('roles', function ($rq) {
+                $rq->where('name', 'patient');
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email', 'role']);
     }
 
     /**
