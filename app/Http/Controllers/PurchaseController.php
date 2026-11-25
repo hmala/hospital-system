@@ -61,12 +61,10 @@ class PurchaseController extends Controller
             'supplier_id' => 'required|exists:suppliers,id',
             'invoice_number' => 'required|string|unique:purchases,invoice_number',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|distinct|exists:products,id',
+            'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|integer|min:1',
             'items.*.cost_price' => 'required|numeric|min:0',
             'items.*.expiry_date' => 'nullable|date',
-        ], [
-            'items.*.product_id.distinct' => 'لا يمكن تكرار نفس المادة في الفاتورة أكثر من مرة. يرجى تعديل الكمية في السطر الأصلي بدلاً من تكرارها.',
         ]);
 
         DB::beginTransaction();
@@ -160,12 +158,10 @@ class PurchaseController extends Controller
             'supplier_id' => 'required|exists:suppliers,id',
             'invoice_number' => 'required|string|unique:purchases,invoice_number,'.$purchase->id,
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|distinct|exists:products,id',
+            'items.*.product_id' => 'required|exists:products,id',
             'items.*.qty' => 'required|integer|min:1',
             'items.*.cost_price' => 'required|numeric|min:0',
             'items.*.expiry_date' => 'nullable|date',
-        ], [
-            'items.*.product_id.distinct' => 'لا يمكن تكرار نفس المادة في الفاتورة أكثر من مرة. يرجى تعديل الكمية في السطر الأصلي بدلاً من تكرارها.',
         ]);
 
         DB::beginTransaction();

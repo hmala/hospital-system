@@ -26,7 +26,7 @@ class PurchaseDuplicateAndBatchSyncTest extends TestCase
         ]);
     }
 
-    public function test_purchase_creation_rejects_duplicate_products()
+    public function test_purchase_creation_supports_multiple_lines_for_same_product_with_independent_batches()
     {
         $user = User::factory()->create();
         $user->assignRole('admin');
@@ -51,15 +51,26 @@ class PurchaseDuplicateAndBatchSyncTest extends TestCase
                 [
                     'product_id' => $product->id,
                     'qty' => 20,
-                    'cost_price' => 100,
+                    'cost_price' => 120,
                 ],
             ],
         ]);
 
-        $response->assertSessionHasErrors(['items.0.product_id', 'items.1.product_id']);
-        $this->assertDatabaseMissing('purchases', [
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('purchases', [
             'invoice_number' => 'INV-DUP-TEST-01',
         ]);
+
+        $purchase = Purchase::where('invoice_number', 'INV-DUP-TEST-01')->first();
+        $response->assertRedirect(route('purchases.show', $purchase->id));
+        $this->assertCount(2, $purchase->items);
+
+        foreach ($purchase->items as $item) {
+            $this->assertEquals($product->id, $item->product_id);
+            $this->assertNotNull($item->stockBatch);
+            $this->assertEquals($product->id, $item->stockBatch->product_id);
+            $this->assertEquals($item->id, $item->stockBatch->purchase_item_id);
+        }
     }
 
     public function test_purchase_creation_succeeds_and_creates_matching_stock_batches()

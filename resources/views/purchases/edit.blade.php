@@ -304,9 +304,10 @@ function initSelect2OnRow(rowElement) {
 
                 if (duplicateTr) {
                     const rowNumber = duplicateTr.find('.row-index').text().trim() || 'آخر';
-                    alert(`⚠️ تنبيه: هذه المادة مضافة مسبقاً في السطر رقم (${rowNumber})! يرجى زيادة الكمية في ذلك السطر بدلاً من تكرارها.`);
-                    $(this).val('').trigger('change.select2');
-                    return;
+                    if (!confirm(`⚠️ تنبيه: هذه المادة مضافة مسبقاً في السطر رقم (${rowNumber})!\n\nهل تريد الاستمرار بإضافتها كسطر منفصل (لوجبة أو سعر مختلف)؟`)) {
+                        $(this).val('').trigger('change.select2');
+                        return;
+                    }
                 }
             }
 
