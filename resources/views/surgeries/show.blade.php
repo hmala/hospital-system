@@ -983,7 +983,7 @@
                                                         <label for="quickDurationInput" class="form-label text-dark fw-bold small mb-1">{{ __('المدة بالدقائق (رقم):') }}</label>
                                                         <div class="input-group input-group-sm">
                                                             <span class="input-group-text bg-light text-primary"><i class="fas fa-stopwatch"></i></span>
-                                                            <input type="number" min="1" step="5" class="form-control fw-bold text-center border-primary" id="quickDurationInput" name="estimated_duration_minutes" value="{{ $durationMinutes ?? '' }}" placeholder="{{ __('أدخل المدة (مثلاً: 60)') }}" oninput="updateQuickDurationHelper(this.value)">
+                                                            <input type="number" min="1" step="1" class="form-control fw-bold text-center border-primary" id="quickDurationInput" name="estimated_duration_minutes" value="{{ $durationMinutes ?? '' }}" placeholder="{{ __('أدخل المدة (مثلاً: 60)') }}" oninput="updateQuickDurationHelper(this.value)">
                                                             <span class="input-group-text bg-light text-muted">{{ __('دقيقة') }}</span>
                                                         </div>
                                                     </div>
