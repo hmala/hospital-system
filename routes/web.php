@@ -172,6 +172,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('departments.admin');
     Route::get('/departments/list', [DepartmentController::class, 'index'])
         ->name('departments.index');
+    Route::get('/departments/managers/search', [DepartmentController::class, 'searchManagers'])
+        ->name('departments.managers.search');
     Route::resource('departments', DepartmentController::class)->except(['index']);
 
     // إدارة الأطباء
@@ -286,10 +288,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{location}', [\App\Http\Controllers\SurgeryStoreController::class, 'show'])->name('show');
     });
 
-    // إدارة ورقابة مخزن وعُهد قسم الخدج والحاضنات المربوط بالمخزن الرئيسي
+    // إدارة ورقابة مخزن وعُهد قسم الخدج والحاضنات المربوط بالمخزن الرئيسي (دخول مباشر ديناميكي)
     Route::prefix('nicu-store')->name('nicu-store.')->group(function () {
         Route::get('/', [\App\Http\Controllers\NicuStoreController::class, 'index'])->name('index');
+        Route::post('/store-location', [\App\Http\Controllers\NicuStoreController::class, 'updateStoreLocation'])->name('update-location');
         Route::post('/{location}/assign-custodian', [\App\Http\Controllers\NicuStoreController::class, 'assignCustodian'])->name('assign-custodian');
+        Route::post('/{location}/dispense', [\App\Http\Controllers\NicuStoreController::class, 'dispenseDepartmentItem'])->name('dispense');
         Route::get('/{location}', [\App\Http\Controllers\NicuStoreController::class, 'show'])->name('show');
     });
 

@@ -48,7 +48,11 @@
                                     <div class="row">
                                         <div class="col-12">
                                             <strong>ساعات العمل:</strong><br>
-                                            {{ $department->working_hours_start }} - {{ $department->working_hours_end }}
+                                            @if($department->working_hours_start || $department->working_hours_end)
+                                                {{ $department->working_hours_start ? $department->working_hours_start->format('h:i A') : 'غير محدد' }} - {{ $department->working_hours_end ? $department->working_hours_end->format('h:i A') : 'غير محدد' }}
+                                            @else
+                                                غير محدد
+                                            @endif
                                         </div>
                                     </div>
                                     @if($department->doctors->count() > 0)
@@ -70,7 +74,7 @@
                                 </div>
                                 <div class="card-footer text-center">
                                     <small class="text-muted">
-                                        الحد الأقصى للمرضى يومياً: {{ $department->max_patients_per_day }}
+                                        الحد الأقصى للمرضى يومياً: {{ $department->max_patients_per_day ?? 'غير محدد' }}
                                     </small>
                                 </div>
                             </div>

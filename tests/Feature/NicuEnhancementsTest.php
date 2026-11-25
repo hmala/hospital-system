@@ -496,4 +496,191 @@ class NicuEnhancementsTest extends TestCase
             'admission_reason' => 'خداجة مبكرة مع ضائقة تنفسية خفيفة - محدث',
         ]);
     }
+
+    public function test_nicu_store_direct_entry_strict_permission_and_dynamic_location_resolution(): void
+    {
+        $otherFloor = Location::create(['name' => 'ردهة الطابق الرابع', 'type' => 'sub']);
+        $product = Product::create([
+            'name' => 'شاش معقم للخدج',
+            'code' => 'GAUZE-NICU',
+            'unit' => 'علبة',
+            'alert_quantity' => 5,
+        ]);
+
+        $batch = StockBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $this->nicuLocation->id,
+            'internal_barcode' => 'NICU-DIRECT-01',
+            'initial_qty' => 15,
+            'current_qty' => 15,
+            'cost_price' => 500,
+            'received_at' => now(),
+            'expiry_date' => now()->addMonths(6)->toDateString(),
+        ]);
+
+        // 1. مستخدم بدور nicu_nurse لكن بدون صلاحية manage nicu store يُمنع بـ 403
+        $restrictedNurseRole = Role::firstOrCreate(['name' => 'nicu_nurse_no_store', 'guard_name' => 'web']);
+        $restrictedNurseRole->givePermissionTo(['view incubator reservations', 'manage nicu nursing']);
+
+        $nurseWithoutStorePerm = User::factory()->create(['name' => 'ممرضة بدون مخزن', 'role' => 'nicu_nurse']);
+        $nurseWithoutStorePerm->assignRole($restrictedNurseRole);
+
+        $this->actingAs($nurseWithoutStorePerm)
+            ->get(route('nicu-store.index'))
+            ->assertStatus(403);
+
+        // 2. مستخدم مخصص بصلاحية manage nicu store فقط (بدون location_id) يدخل مباشرة على شاشة المخزن بدون جدول وسيط
+        $nicuStoreUser = User::factory()->create(['name' => 'أمين مخزن الخدج', 'role' => 'nicu_staff', 'location_id' => null]);
+        $nicuStoreUser->givePermissionTo('manage nicu store');
+
+        $this->actingAs($nicuStoreUser)
+            ->get(route('nicu-store.index'))
+            ->assertStatus(200)
+            ->assertSee('الأرصدة والوجبات المتوفرة')
+            ->assertSee('شاش معقم للخدج')
+            ->assertDontSee('سجل مخازن وعُهد قسم الخدج والحاضنات');
+
+        // 3. يمنع حامل manage nicu store من فتح مخزن طابق آخر
+        $this->actingAs($nicuStoreUser)
+            ->get(route('nicu-store.show', $otherFloor))
+            ->assertStatus(403);
+
+        // 4. صرف مستهلك عام لقسم الخدج يخصم من الرصيد ويوثق حركة dispense
+        $this->actingAs($nicuStoreUser)
+            ->post(route('nicu-store.dispense', $this->nicuLocation), [
+                'batch_id' => $batch->id,
+                'quantity' => 4,
+                'notes' => 'مستهلكات الشفت الصباحي',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertEquals(11, $batch->fresh()->current_qty);
+        $this->assertDatabaseHas('stock_movements', [
+            'batch_id' => $batch->id,
+            'from_location_id' => $this->nicuLocation->id,
+            'incubator_reservation_id' => null,
+            'quantity' => 4,
+            'type' => 'dispense',
+        ]);
+
+        // 5. حامل manage nicu store مقيد تلقائياً بمخزن الخدج في طلبات التحويل ويُمنع من طلب مواد لطابق آخر
+        $this->actingAs($nicuStoreUser)
+            ->post(route('stock-transfers.requests.store'), [
+                'to_location_id' => $otherFloor->id,
+                'items' => [['product_id' => $product->id, 'qty' => 2]],
+            ])
+            ->assertSessionHasErrors('to_location_id');
+
+        $this->actingAs($nicuStoreUser)
+            ->post(route('stock-transfers.requests.store'), [
+                'to_location_id' => $this->nicuLocation->id,
+                'items' => [['product_id' => $product->id, 'qty' => 5]],
+            ])
+            ->assertRedirect(route('stock-transfers.requests.index'));
+
+        // 6. تغيير الموقع المعتمد للخدج ديناميكياً (للإدارة فقط - بدون الاعتماد على ID ثابت)
+        $this->actingAs($nicuStoreUser)
+            ->post(route('nicu-store.update-location'), ['location_id' => $otherFloor->id])
+            ->assertStatus(403);
+
+        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $adminUser = User::factory()->create(['name' => 'مدير النظام', 'role' => 'admin']);
+        $adminUser->assignRole($adminRole);
+
+        $customNicuStore = Location::create(['name' => 'مخزن الطابق السادس - حديثي الولادة', 'type' => 'sub']);
+
+        $this->actingAs($adminUser)
+            ->post(route('nicu-store.update-location'), ['location_id' => $customNicuStore->id])
+            ->assertRedirect(route('nicu-store.index'))
+            ->assertSessionHas('success');
+
+        $resolved = Location::resolveNicuStore(false);
+        $this->assertNotNull($resolved);
+        $this->assertEquals($customNicuStore->id, $resolved->id);
+        $this->assertEquals(Location::CODE_NICU_STORE, $customNicuStore->fresh()->code);
+        $this->assertNull($this->nicuLocation->fresh()->code);
+
+        // 7. التحقق من الإنشاء التلقائي في قاعدة بيانات لا تحتوي على موقع خدج مسبق
+        \App\Models\NicuSetting::where('key', 'nicu_store_location_id')->delete();
+        Location::where('type', 'sub')->update(['code' => null, 'name' => 'مخزن طابق عام']);
+
+        $autoCreated = Location::resolveNicuStore(true);
+        $this->assertNotNull($autoCreated);
+        $this->assertEquals('sub', $autoCreated->type);
+        $this->assertEquals(Location::CODE_NICU_STORE, $autoCreated->code);
+        $this->assertNotEquals($customNicuStore->id, $autoCreated->id);
+    }
+
+    public function test_nicu_store_prioritizes_user_assigned_location_id_with_role_permission(): void
+    {
+        // سيناريو المستخدم الفعلي: من شاشة /users/{id}/edit نربط اليوزر بمخزن فرعي معين (location_id)
+        // ومن شاشة /roles/{id}/edit نعطي دوره صلاحية manage nicu store
+        $userAssignedNicuSubStore = Location::create([
+            'name' => 'مخزن خدج الجناح الجديد - داتا بيس ثانية',
+            'type' => 'sub',
+        ]);
+
+        $product = Product::create([
+            'name' => 'قناع أكسجين خديج',
+            'code' => 'OXY-NICU-99',
+            'unit' => 'قطعة',
+            'alert_quantity' => 5,
+        ]);
+
+        $assignedBatch = StockBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $userAssignedNicuSubStore->id,
+            'internal_barcode' => 'USER-LOC-BATCH-01',
+            'initial_qty' => 25,
+            'current_qty' => 25,
+            'cost_price' => 1500,
+            'received_at' => now(),
+            'expiry_date' => now()->addYear()->toDateString(),
+        ]);
+
+        $assignedUser = User::factory()->create([
+            'name' => 'مسؤولة مخزن الخدج المعينة',
+            'role' => 'nicu_nurse',
+            'location_id' => $userAssignedNicuSubStore->id,
+        ]);
+        $assignedUser->assignRole('nicu_nurse'); // يحمل صلاحية manage nicu store
+
+        // 1. فتح /nicu-store يفتح مباشرةً المخزن المرتبط باليوزر (location_id) وليس المخزن الافتراضي الآخر
+        $this->actingAs($assignedUser)
+            ->get(route('nicu-store.index'))
+            ->assertStatus(200)
+            ->assertSee('مخزن خدج الجناح الجديد - داتا بيس ثانية')
+            ->assertSee('قناع أكسجين خديج');
+
+        // 2. يُمنع من فتح مخزن آخر غير المخزن المرتبط به
+        $this->actingAs($assignedUser)
+            ->get(route('nicu-store.show', $this->nicuLocation))
+            ->assertStatus(403);
+
+        // 3. طلبات التعزيز من المخزن الرئيسي تُقفل تلقائياً على مخزن اليوزر
+        $this->actingAs($assignedUser)
+            ->get(route('stock-transfers.create'))
+            ->assertStatus(200)
+            ->assertSee('مخزن خدج الجناح الجديد - داتا بيس ثانية')
+            ->assertSee('type="hidden" name="to_location_id" value="'.$userAssignedNicuSubStore->id.'"', false);
+
+        // 4. الصرف داخل إضبارة الطفل الخديج يخصم من مخزن اليوزر المرتبط به (location_id)
+        $this->actingAs($assignedUser)
+            ->post(route('nicu.store-dispense.store', $this->reservation), [
+                'batch_id' => $assignedBatch->id,
+                'quantity' => 2,
+                'notes' => 'صرف من عهدة المخزن المرتبط بالمستخدم',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertEquals(23, $assignedBatch->fresh()->current_qty);
+        $this->assertDatabaseHas('stock_movements', [
+            'batch_id' => $assignedBatch->id,
+            'from_location_id' => $userAssignedNicuSubStore->id,
+            'incubator_reservation_id' => $this->reservation->id,
+            'quantity' => 2,
+        ]);
+    }
 }

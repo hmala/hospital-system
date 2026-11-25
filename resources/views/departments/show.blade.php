@@ -37,13 +37,19 @@
                         <div class="col-md-3">
                             <div class="p-3 bg-light rounded-3">
                                 <div class="text-muted small">ساعات العمل</div>
-                                <div class="fw-bold fs-6">{{ substr($department->working_hours_start, 0, 5) }} - {{ substr($department->working_hours_end, 0, 5) }}</div>
+                                <div class="fw-bold fs-6">
+                                    @if($department->working_hours_start || $department->working_hours_end)
+                                        {{ $department->working_hours_start ? $department->working_hours_start->format('H:i') : '—' }} - {{ $department->working_hours_end ? $department->working_hours_end->format('H:i') : '—' }}
+                                    @else
+                                        غير محدد
+                                    @endif
+                                </div>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="p-3 bg-light rounded-3">
                                 <div class="text-muted small">الحد الأقصى يومياً</div>
-                                <div class="fw-bold fs-6">{{ $department->max_patients_per_day }} مريض</div>
+                                <div class="fw-bold fs-6">{{ $department->max_patients_per_day ? $department->max_patients_per_day.' مريض' : 'غير محدد' }}</div>
                             </div>
                         </div>
                     </div>

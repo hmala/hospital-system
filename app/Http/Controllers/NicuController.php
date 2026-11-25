@@ -349,14 +349,8 @@ class NicuController extends Controller
                 ->get();
         }
 
-        // موقع مخزن الخدج الفرعي والمستلزمات المتوفرة فيه (مربوط بالمخزن الرئيسي - بدون أثر مالي)
-        $nicuStoreLocation = Location::where('type', 'sub')
-            ->where(function ($q) {
-                $q->where('name', 'like', '%خدج%')
-                    ->orWhere('name', 'like', '%حاضن%')
-                    ->orWhere('name', 'like', '%NICU%');
-            })
-            ->first();
+        // موقع مخزن الخدج الفرعي والمستلزمات المتوفرة فيه (يحترم location_id الخاص بالمستخدم أولاً ثم المعتمد ديناميكياً)
+        $nicuStoreLocation = Location::resolveNicuStoreForUser(Auth::user(), false);
 
         $nicuStockBatches = collect();
         if ($nicuStoreLocation) {
@@ -1242,13 +1236,7 @@ class NicuController extends Controller
             'quantity.min' => 'الكمية المصروفة يجب أن تكون 1 على الأقل.',
         ]);
 
-        $nicuLocation = Location::where('type', 'sub')
-            ->where(function ($q) {
-                $q->where('name', 'like', '%خدج%')
-                    ->orWhere('name', 'like', '%حاضن%')
-                    ->orWhere('name', 'like', '%NICU%');
-            })
-            ->first();
+        $nicuLocation = Location::resolveNicuStoreForUser(Auth::user(), false);
 
         if (! $nicuLocation) {
             return $this->redirectBackWithActiveState($request, 'storeSuppliesPane')

@@ -4,16 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Location;
 use App\Models\LocationCustodianHistory;
+use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\StockTransferRequest;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\View\View;
 
 class NicuStoreController extends Controller
 {
     /**
-     * التحقق من صلاحية إدارة والاطلاع على مخزن وعُهدة الخدج
+     * التحقق الصارم من صلاحية إدارة والاطلاع على مخزن وعُهدة الخدج.
+     * محصورة بصلاحية manage nicu store أو manage inventory أو الإدارة العليا فقط.
      */
     protected function authorizeNicuStore(): User
     {
@@ -23,109 +28,69 @@ class NicuStoreController extends Controller
         }
 
         $canAccess = $user->can('manage nicu store')
-            || $user->can('manage nicu nursing')
-            || $user->can('manage nicu clinical')
             || $user->can('manage inventory')
-            || $user->hasRole(['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'head_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
-            || in_array($user->role, ['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'head_nurse', 'admin']);
+            || $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->role === 'admin';
 
         if (! $canAccess) {
-            abort(403, 'غير مصرح لك بالوصول لإدارة ورقابة مخزن وعُهدة قسم الخدج (NICU).');
+            abort(403, 'غير مصرح لك بالوصول لمخزن وعُهدة قسم الخدج (NICU). تتطلب هذه الشاشة صلاحية «إدارة وصرف عهدة ومخزن قسم الخدج».');
         }
 
         return $user;
     }
 
     /**
-     * لوحة القيادة الرئيسية لمخزن وعُهدة قسم الخدج المربوط بالمخزن الرئيسي
+     * هل المستخدم مدير نظام أو مدير مخازن عام
      */
-    public function index(Request $request)
+    protected function isStoreAdmin(User $user): bool
     {
-        $this->authorizeNicuStore();
-
-        $search = trim((string) $request->query('search', ''));
-
-        $query = Location::where('type', 'sub')
-            ->where(function ($q) {
-                $q->where('name', 'like', '%خدج%')
-                    ->orWhere('name', 'like', '%حاضن%')
-                    ->orWhere('name', 'like', '%NICU%');
-            })
-            ->with([
-                'custodian',
-                'staff',
-                'stockBatches' => function ($q) {
-                    $q->where('current_qty', '>', 0);
-                },
-            ]);
-
-        if ($search !== '') {
-            $query->where('name', 'like', "%{$search}%");
-        }
-
-        $subStores = $query->orderBy('id')->get();
-        $storeIds = $subStores->pluck('id')->toArray();
-
-        $currentMonth = now()->month;
-        $currentYear = now()->year;
-
-        // حركات الصرف للأطفال الخدج خلال الشهر الحالي
-        $monthlyConsumptions = StockMovement::whereIn('from_location_id', $storeIds)
-            ->whereIn('type', ['dispense', 'issue_to_patient'])
-            ->whereMonth('created_at', $currentMonth)
-            ->whereYear('created_at', $currentYear)
-            ->selectRaw('from_location_id, count(*) as count, sum(quantity) as total_qty')
-            ->groupBy('from_location_id')
-            ->get()
-            ->keyBy('from_location_id');
-
-        // طلبيات التزويد الجارية من المخزن الرئيسي
-        $pendingTransfers = StockTransferRequest::whereIn('to_location_id', $storeIds)
-            ->whereIn('status', ['pending', 'approved'])
-            ->selectRaw('to_location_id, count(*) as count')
-            ->groupBy('to_location_id')
-            ->get()
-            ->keyBy('to_location_id');
-
-        $mainLocation = Location::where('type', 'main')->first();
-
-        // كادر الخدج والتمريض المتاح لتكليف العهدة
-        $availableStaff = User::where(function ($q) {
-            $q->whereHas('roles', fn ($rq) => $rq->whereIn('name', ['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'nurse', 'head_nurse', 'admin', 'hospital_admin']))
-                ->orWhereIn('role', ['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'nurse', 'head_nurse']);
-        })
-            ->where('is_active', true)
-            ->with('location')
-            ->orderBy('name')
-            ->get();
-
-        $stats = [
-            'total_stores' => $subStores->count(),
-            'assigned_custodians' => $subStores->whereNotNull('custodian_id')->count(),
-            'unassigned_custodians' => $subStores->whereNull('custodian_id')->count(),
-            'total_items_in_stock' => $subStores->sum(fn ($s) => $s->stockBatches->sum('current_qty')),
-            'total_monthly_consumptions' => $monthlyConsumptions->sum('count'),
-            'total_pending_requests' => $pendingTransfers->sum('count'),
-        ];
-
-        return view('nicu-store.index', compact(
-            'subStores',
-            'monthlyConsumptions',
-            'pendingTransfers',
-            'availableStaff',
-            'mainLocation',
-            'stats',
-            'search'
-        ));
+        return $user->can('manage inventory')
+            || $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->role === 'admin';
     }
 
     /**
-     * تفاصيل مخزن الخدج: الأرصدة، صرفيات الأطفال الخدج، سجل العهدة، وطلبيات المخزن الرئيسي
+     * التحقق من أن الموقع المطلوب هو فعلاً مخزن عهدة المستخدم أو مخزن الخدج المعتمد لغير المدراء
      */
-    public function show(Request $request, Location $location)
+    protected function ensureAuthorizedNicuLocation(User $user, Location $location): void
     {
-        $this->authorizeNicuStore();
+        if ($this->isStoreAdmin($user)) {
+            return;
+        }
 
+        $allowedStore = Location::resolveNicuStoreForUser($user, false);
+        if (! $allowedStore || $location->id !== $allowedStore->id) {
+            abort(403, 'غير مصرح لك بالوصول لمخازن أقسام أخرى خارج مخزن عهدتك المعتمد.');
+        }
+    }
+
+    /**
+     * الدخول المباشر إلى مخزن وعُهدة الخدج المرتبط بالمستخدم (location_id) أو المعتمد ديناميكياً
+     */
+    public function index(Request $request): View
+    {
+        $user = $this->authorizeNicuStore();
+        $location = Location::resolveNicuStoreForUser($user, true);
+
+        return $this->renderStoreView($request, $location, $user);
+    }
+
+    /**
+     * عرض تفاصيل موقع مخزن الخدج مباشرة (للتوافق الخلفي والوصول المباشر)
+     */
+    public function show(Request $request, Location $location): View
+    {
+        $user = $this->authorizeNicuStore();
+        $this->ensureAuthorizedNicuLocation($user, $location);
+
+        return $this->renderStoreView($request, $location, $user);
+    }
+
+    /**
+     * تجهيز وعرض لوحة مخزن وعُهدة الخدج المتكاملة
+     */
+    protected function renderStoreView(Request $request, Location $location, User $user): View
+    {
         $location->load([
             'custodian',
             'staff',
@@ -139,15 +104,27 @@ class NicuStoreController extends Controller
             ->sortBy('expiry_date')
             ->values();
 
-        $movements = StockMovement::with([
+        $fromDate = trim((string) $request->query('from_date', ''));
+        $toDate = trim((string) $request->query('to_date', ''));
+
+        $movementsQuery = StockMovement::with([
             'batch.product',
             'user',
             'incubatorReservation.patient.user',
             'incubatorReservation.incubator',
         ])
             ->where('from_location_id', $location->id)
-            ->latest()
-            ->paginate(20);
+            ->whereIn('type', ['dispense', 'issue_to_patient', 'transfer']);
+
+        if ($fromDate !== '') {
+            $movementsQuery->whereDate('created_at', '>=', $fromDate);
+        }
+
+        if ($toDate !== '') {
+            $movementsQuery->whereDate('created_at', '<=', $toDate);
+        }
+
+        $movements = $movementsQuery->latest()->paginate(20)->withQueryString();
 
         $transferRequests = StockTransferRequest::with(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy', 'receivedBy'])
             ->where(function ($q) use ($location) {
@@ -155,7 +132,7 @@ class NicuStoreController extends Controller
                     ->orWhere('from_location_id', $location->id);
             })
             ->latest()
-            ->take(20)
+            ->take(25)
             ->get();
 
         $mainLocation = Location::where('type', 'main')->first();
@@ -169,22 +146,157 @@ class NicuStoreController extends Controller
             ->orderBy('name')
             ->get();
 
+        $monthlyConsumptionStats = StockMovement::where('from_location_id', $location->id)
+            ->whereIn('type', ['dispense', 'issue_to_patient'])
+            ->whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)
+            ->selectRaw('count(*) as count, COALESCE(sum(quantity), 0) as total_qty')
+            ->first();
+
+        $pendingTransfersCount = $transferRequests
+            ->where('to_location_id', $location->id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->count();
+
+        $lowStockCount = $activeBatches->filter(function ($batch) {
+            $threshold = max(1, (int) ($batch->product?->alert_quantity ?? 5));
+
+            return $batch->current_qty <= $threshold;
+        })->count();
+
+        $expiringSoonCount = $activeBatches->filter(function ($batch) {
+            return $batch->expiry_date && \Carbon\Carbon::parse($batch->expiry_date)->lte(now()->addDays(60));
+        })->count();
+
+        $canManageStoreLocation = $this->isStoreAdmin($user);
+        $allSubLocations = $canManageStoreLocation
+            ? Location::where('type', 'sub')->excludePharmacy()->orderBy('name')->get()
+            : collect();
+
+        $stats = [
+            'total_items_in_stock' => (int) $activeBatches->sum('current_qty'),
+            'unique_products' => $activeBatches->pluck('product_id')->unique()->count(),
+            'low_stock_count' => $lowStockCount,
+            'expiring_soon_count' => $expiringSoonCount,
+            'monthly_consumptions_count' => (int) ($monthlyConsumptionStats->count ?? 0),
+            'monthly_consumptions_qty' => (int) ($monthlyConsumptionStats->total_qty ?? 0),
+            'pending_transfers_count' => $pendingTransfersCount,
+        ];
+
         return view('nicu-store.show', compact(
             'location',
             'activeBatches',
             'movements',
             'transferRequests',
             'mainLocation',
-            'availableStaff'
+            'availableStaff',
+            'stats',
+            'canManageStoreLocation',
+            'allSubLocations',
+            'fromDate',
+            'toDate'
         ));
+    }
+
+    /**
+     * صرف مستهلك عام لقسم الخدج (بدون ربطه بطفل محدد وبدون أثر مالي)
+     */
+    public function dispenseDepartmentItem(Request $request, Location $location): RedirectResponse
+    {
+        $user = $this->authorizeNicuStore();
+        $this->ensureAuthorizedNicuLocation($user, $location);
+
+        $validated = $request->validate([
+            'batch_id' => 'required|exists:stock_batches,id',
+            'quantity' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:500',
+        ], [
+            'batch_id.required' => 'يرجى اختيار المادة من رصيد مخزن الخدج.',
+            'quantity.required' => 'يرجى تحديد الكمية المصروفة.',
+            'quantity.min' => 'الكمية المصروفة يجب أن تكون 1 على الأقل.',
+        ]);
+
+        try {
+            DB::transaction(function () use ($validated, $location, $user) {
+                $batch = StockBatch::with('product')
+                    ->where('id', $validated['batch_id'])
+                    ->where('location_id', $location->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $batch) {
+                    throw new \Exception('الوجبة المحددة غير موجودة في رصيد مخزن الخدج.');
+                }
+
+                if ($batch->current_qty < $validated['quantity']) {
+                    throw new \Exception("الكمية المطلوبة ({$validated['quantity']}) تتجاوز الرصيد المتوفر في مخزن الخدج ({$batch->current_qty}).");
+                }
+
+                $batch->decrement('current_qty', $validated['quantity']);
+
+                $notes = 'صرف مستهلك عام لقسم الخدج (NICU) - توثيق عهدة بدون أثر مالي';
+                if (! empty($validated['notes'])) {
+                    $notes .= ' | '.trim($validated['notes']);
+                }
+
+                StockMovement::create([
+                    'batch_id' => $batch->id,
+                    'from_location_id' => $location->id,
+                    'to_location_id' => null,
+                    'quantity' => $validated['quantity'],
+                    'type' => 'dispense',
+                    'user_id' => $user->id,
+                    'incubator_reservation_id' => null,
+                    'notes' => $notes,
+                ]);
+            });
+
+            return redirect()->back()
+                ->with('success', 'تم تسجيل صرف المستهلك العام لقسم الخدج وخصمه من العهدة بنجاح.');
+        } catch (\Throwable $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * تغيير وربط الموقع الفرعي المعتمد كمخزن لقسم الخدج (للإدارة العليا / مدير المخازن)
+     */
+    public function updateStoreLocation(Request $request): RedirectResponse
+    {
+        $user = $this->authorizeNicuStore();
+
+        if (! $this->isStoreAdmin($user)) {
+            abort(403, 'صلاحية تغيير موقع مخزن الخدج المعتمد مخصصة للإدارة أو مدير المخازن فقط.');
+        }
+
+        $validated = $request->validate([
+            'location_id' => 'required|exists:locations,id',
+        ], [
+            'location_id.required' => 'يرجى اختيار الموقع المخزني الفرعي المعتمد لقسم الخدج.',
+            'location_id.exists' => 'الموقع المختار غير موجود في جدول المواقع.',
+        ]);
+
+        $newLocation = Location::where('type', 'sub')->find($validated['location_id']);
+        if (! $newLocation) {
+            return redirect()->back()
+                ->with('error', 'يجب اختيار مخزن فرعي (Sub Location) وليس المخزن الرئيسي.');
+        }
+
+        Location::setNicuStore($newLocation);
+
+        return redirect()->route('nicu-store.index')
+            ->with('success', "تم اعتماد وربط الموقع ({$newLocation->name}) كمخزن وعُهدة قسم الخدج (NICU) بنجاح.");
     }
 
     /**
      * تعيين أو تغيير أمين عهدة مخزن الخدج
      */
-    public function assignCustodian(Request $request, Location $location)
+    public function assignCustodian(Request $request, Location $location): RedirectResponse
     {
         $user = $this->authorizeNicuStore();
+        $this->ensureAuthorizedNicuLocation($user, $location);
 
         $validated = $request->validate([
             'custodian_id' => 'required|exists:users,id',

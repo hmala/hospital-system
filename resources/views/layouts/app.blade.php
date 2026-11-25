@@ -1920,7 +1920,7 @@
                                     <i class="fas fa-archive text-secondary"></i><span> {{ __('السجلات وأرشفة المرضى') }}</span>
                                 </a>
                             </li>
-                            @if(auth()->user()->can('manage nicu store') || auth()->user()->hasAnyRole(['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'head_nurse', 'admin', 'admin-hsop', 'hospital_admin']))
+                            @if(auth()->user()->can('manage nicu store') || auth()->user()->can('manage inventory') || auth()->user()->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu-store.*') ? 'active' : '' }}" href="{{ route('nicu-store.index') }}">
                                     <i class="fas fa-boxes text-warning"></i><span> {{ __('مخزن وعُهدة الخدج') }}</span>

@@ -8,12 +8,36 @@ use App\Models\Purchase;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\StockTransferRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class StockTransferController extends Controller
 {
+    /**
+     * تحديد المخزن الفرعي الفعّال للمستخدم (إما موقعه المباشر أو مخزن الخدج الديناميكي لحامل صلاحية manage nicu store).
+     */
+    protected function resolveEffectiveSubLocation(?User $user): ?Location
+    {
+        if (! $user) {
+            return null;
+        }
+
+        if ($user->location_id) {
+            $location = Location::find($user->location_id);
+            if ($location && $location->type === 'sub') {
+                return $location;
+            }
+        }
+
+        if ($user->can('manage nicu store')) {
+            return Location::resolveNicuStore(false);
+        }
+
+        return null;
+    }
+
     public function indexRequests(Request $request)
     {
         $user = Auth::user();
@@ -26,9 +50,10 @@ class StockTransferController extends Controller
         // إذا كان المستخدم كادر تمريضي أو عهدة قسم وليس مديراً عاماً أو أمين مخزن، نحصر الطلبات بما يخص عهدته أو ما رفعه هو
         $userLocation = null;
         if (! $isAdmin) {
-            $userLocationId = $user?->location_id ?: $request->query('location_id');
+            $effectiveSubLocation = $this->resolveEffectiveSubLocation($user);
+            $userLocationId = $effectiveSubLocation?->id ?: ($user?->location_id ?: $request->query('location_id'));
             if ($userLocationId) {
-                $userLocation = Location::find($userLocationId);
+                $userLocation = $effectiveSubLocation ?: Location::find($userLocationId);
             }
 
             $query->where(function ($q) use ($user, $userLocationId) {
@@ -52,8 +77,14 @@ class StockTransferController extends Controller
         $subLocations = Location::where('type', 'sub')->excludePharmacy()->orderBy('name')->get();
         $products = Product::orderBy('name')->get();
 
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory'));
+        $effectiveSubLocation = $this->resolveEffectiveSubLocation($user);
+
         // تحديد ما إذا كان المستخدم مقيداً بمخزنه الفرعي
-        $targetLocationId = $request->query('to_location_id') ?: ($user?->location_id ?: null);
+        $targetLocationId = (! $isAdmin && $effectiveSubLocation)
+            ? $effectiveSubLocation->id
+            : ($request->query('to_location_id') ?: ($user?->location_id ?: null));
         $lockedLocation = null;
         $isLockedToLocation = false;
 
@@ -62,7 +93,6 @@ class StockTransferController extends Controller
         }
 
         // إذا كان المستخدم ليس مديراً عاماً ولديه مخزن أو تم تمرير مخزن من محطة التمريض، يُقفل الاختيار
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
         if ($lockedLocation && (! $isAdmin || $request->has('to_location_id'))) {
             $isLockedToLocation = true;
         }
@@ -79,10 +109,12 @@ class StockTransferController extends Controller
     public function storeRequest(Request $request)
     {
         $user = Auth::user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory'));
+        $effectiveLocationId = $this->resolveEffectiveSubLocation($user)?->id ?: $user?->location_id;
 
-        // إذا كان المستخدم كادر تمريضي ولديه مخزن فرعي محدد، نلزم الطلب بمخزنه لمنع التلاعب
-        if (! $isAdmin && $user?->location_id && $request->to_location_id != $user->location_id) {
+        // إذا كان المستخدم كادر تمريضي أو مسؤول عهدة قسم، نلزم الطلب بمخزنه لمنع التلاعب
+        if (! $isAdmin && $effectiveLocationId && $request->to_location_id != $effectiveLocationId) {
             return back()->withInput()->withErrors(['to_location_id' => 'غير مصرح لك بطلب مواد لغير مخزن عهدتك المعتمد.']);
         }
 
@@ -128,8 +160,9 @@ class StockTransferController extends Controller
     {
         $user = Auth::user();
         $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
+        $effectiveLocationId = $this->resolveEffectiveSubLocation($user)?->id ?: $user?->location_id;
         $isOwnerOrCustodian = ($stockTransferRequest->requested_by == $user?->id)
-            || ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id);
+            || ($effectiveLocationId && $stockTransferRequest->to_location_id == $effectiveLocationId);
 
         if (! $isSuperAdmin && ! $isOwnerOrCustodian) {
             abort(403, 'غير مصرح لك بتعديل هذا الطلب. التعديل متاح فقط لمقدم الطلب أو مسؤول عهدة الطابق المستلم.');
@@ -185,8 +218,9 @@ class StockTransferController extends Controller
     {
         $user = Auth::user();
         $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
+        $effectiveLocationId = $this->resolveEffectiveSubLocation($user)?->id ?: $user?->location_id;
         $isOwnerOrCustodian = ($stockTransferRequest->requested_by == $user?->id)
-            || ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id);
+            || ($effectiveLocationId && $stockTransferRequest->to_location_id == $effectiveLocationId);
 
         if (! $isSuperAdmin && ! $isOwnerOrCustodian) {
             abort(403, 'غير مصرح لك بتعديل هذا الطلب. التعديل متاح فقط لمقدم الطلب أو مسؤول عهدة الطابق المستلم.');
@@ -244,8 +278,9 @@ class StockTransferController extends Controller
     {
         $user = Auth::user();
         $isSuperAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'super_admin']);
+        $effectiveLocationId = $this->resolveEffectiveSubLocation($user)?->id ?: $user?->location_id;
         $isOwnerOrCustodian = ($stockTransferRequest->requested_by == $user?->id)
-            || ($user?->location_id && $stockTransferRequest->to_location_id == $user->location_id);
+            || ($effectiveLocationId && $stockTransferRequest->to_location_id == $effectiveLocationId);
 
         if (! $isSuperAdmin && ! $isOwnerOrCustodian) {
             abort(403, 'غير مصرح لك بإلغاء هذا الطلب. الإلغاء متاح فقط لمقدم الطلب أو مسؤول عهدة الطابق المستلم.');
@@ -267,7 +302,7 @@ class StockTransferController extends Controller
         $mainLocations = Location::where('type', 'main')->orderBy('name')->get();
         $subLocations = Location::where('type', 'sub')->excludePharmacy()->orderBy('name')->get();
 
-        $userLocation = $user?->location_id ? Location::find($user->location_id) : null;
+        $userLocation = $this->resolveEffectiveSubLocation($user);
         $isSubLocationUser = $userLocation && $userLocation->type === 'sub';
         $isAdminRole = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
             || $user->can('manage inventory'));
@@ -358,7 +393,7 @@ class StockTransferController extends Controller
         $toLocationId = $request->to_location_id;
 
         // التحقق الأمني: إذا كان المستخدم مرتبطاً بمخزن فرعي وليس مديراً أو أمين مخزن رئيسي
-        $userLocation = $user?->location_id ? Location::find($user->location_id) : null;
+        $userLocation = $this->resolveEffectiveSubLocation($user);
         $isSubLocationUser = $userLocation && $userLocation->type === 'sub';
         $isAdminRole = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
             || $user->can('manage inventory'));
@@ -566,10 +601,11 @@ class StockTransferController extends Controller
         $user = Auth::user();
         $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
             || $user->can('manage inventory'));
+        $effectiveLocationId = $this->resolveEffectiveSubLocation($user)?->id ?: $user?->location_id;
 
-        if (! $isAdmin && $user?->location_id) {
-            if ($stockTransferRequest->to_location_id != $user->location_id
-                && $stockTransferRequest->from_location_id != $user->location_id
+        if (! $isAdmin && $effectiveLocationId) {
+            if ($stockTransferRequest->to_location_id != $effectiveLocationId
+                && $stockTransferRequest->from_location_id != $effectiveLocationId
                 && $stockTransferRequest->requested_by != $user->id) {
                 abort(403, 'غير مصرح لك بالاطلاع على طلبات مخازن الطوابق الأخرى.');
             }
@@ -604,10 +640,11 @@ class StockTransferController extends Controller
         $user = Auth::user();
         $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
             || $user->can('manage inventory'));
+        $effectiveLocationId = $this->resolveEffectiveSubLocation($user)?->id ?: $user?->location_id;
 
-        if (! $isAdmin && $user?->location_id) {
-            if ($stockTransferRequest->to_location_id != $user->location_id
-                && $stockTransferRequest->from_location_id != $user->location_id
+        if (! $isAdmin && $effectiveLocationId) {
+            if ($stockTransferRequest->to_location_id != $effectiveLocationId
+                && $stockTransferRequest->from_location_id != $effectiveLocationId
                 && $stockTransferRequest->requested_by != $user->id) {
                 abort(403, 'غير مصرح لك بطباعة مستندات طلبات مخازن الطوابق الأخرى.');
             }
@@ -794,8 +831,10 @@ class StockTransferController extends Controller
             || $user->can('manage inventory');
 
         $isRequester = $stockTransferRequest->requested_by == $user->id;
-        $isDestinationStaff = $user->location_id && $stockTransferRequest->to_location_id == $user->location_id;
+        $effectiveLocationId = $this->resolveEffectiveSubLocation($user)?->id ?: $user->location_id;
+        $isDestinationStaff = $effectiveLocationId && $stockTransferRequest->to_location_id == $effectiveLocationId;
         $isWardOrORStaff = $user->hasRole(['head_nurse', 'nurse', 'nicu_nurse', 'icu_nurse', 'surgery_staff', 'surgery_nurse', 'anesthesia', 'surgeon'])
+            || $user->can('manage nicu store')
             || in_array($user->role, ['nurse', 'head_nurse', 'doctor', 'surgery_staff']);
 
         if (! $isAdmin && ! $isRequester && ! ($isDestinationStaff && $isWardOrORStaff)) {

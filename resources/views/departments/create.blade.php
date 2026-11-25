@@ -118,10 +118,10 @@
                         </div>
 
                         <div class="row mb-3">
-                            <label for="working_hours_start" class="col-md-4 col-form-label text-md-end">ساعات العمل - من</label>
+                            <label for="working_hours_start" class="col-md-4 col-form-label text-md-end">ساعات العمل - من <span class="text-muted small">(اختياري)</span></label>
                             <div class="col-md-6">
                                 <input id="working_hours_start" type="time" class="form-control @error('working_hours_start') is-invalid @enderror"
-                                       name="working_hours_start" value="{{ old('working_hours_start') }}" required>
+                                       name="working_hours_start" value="{{ old('working_hours_start') }}">
                                 @error('working_hours_start')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -131,10 +131,10 @@
                         </div>
 
                         <div class="row mb-3">
-                            <label for="working_hours_end" class="col-md-4 col-form-label text-md-end">ساعات العمل - إلى</label>
+                            <label for="working_hours_end" class="col-md-4 col-form-label text-md-end">ساعات العمل - إلى <span class="text-muted small">(اختياري)</span></label>
                             <div class="col-md-6">
                                 <input id="working_hours_end" type="time" class="form-control @error('working_hours_end') is-invalid @enderror"
-                                       name="working_hours_end" value="{{ old('working_hours_end') }}" required>
+                                       name="working_hours_end" value="{{ old('working_hours_end') }}">
                                 @error('working_hours_end')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -144,10 +144,10 @@
                         </div>
 
                         <div class="row mb-3">
-                            <label for="max_patients_per_day" class="col-md-4 col-form-label text-md-end">الحد الأقصى للمرضى يومياً</label>
+                            <label for="max_patients_per_day" class="col-md-4 col-form-label text-md-end">الحد الأقصى للمرضى يومياً <span class="text-muted small">(اختياري)</span></label>
                             <div class="col-md-6">
-                                <input id="max_patients_per_day" type="number" class="form-control @error('max_patients_per_day') is-invalid @enderror"
-                                       name="max_patients_per_day" value="{{ old('max_patients_per_day', 30) }}" required>
+                                <input id="max_patients_per_day" type="number" min="1" class="form-control @error('max_patients_per_day') is-invalid @enderror"
+                                       name="max_patients_per_day" value="{{ old('max_patients_per_day') }}" placeholder="غير محدد">
                                 @error('max_patients_per_day')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -157,19 +157,9 @@
                         </div>
 
                         <div class="row mb-3">
-                            <label for="manager_id" class="col-md-4 col-form-label text-md-end">مدير القسم</label>
+                            <label for="managerSearchInput" class="col-md-4 col-form-label text-md-end">مدير القسم</label>
                             <div class="col-md-6">
-                                <select id="manager_id" name="manager_id" class="form-select @error('manager_id') is-invalid @enderror">
-                                    <option value="">— بدون تحديد —</option>
-                                    @foreach($managers ?? [] as $mgr)
-                                        <option value="{{ $mgr->id }}" {{ old('manager_id') == $mgr->id ? 'selected' : '' }}>
-                                            {{ $mgr->name }} ({{ $mgr->email }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('manager_id')
-                                    <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
-                                @enderror
+                                @include('departments.partials.manager-picker', ['department' => null, 'managers' => $managers ?? collect()])
                             </div>
                         </div>
 

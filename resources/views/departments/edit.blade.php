@@ -117,9 +117,9 @@
 
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label for="working_hours_start" class="form-label fw-semibold">ساعات العمل - من <span class="text-danger">*</span></label>
+                                <label for="working_hours_start" class="form-label fw-semibold">ساعات العمل - من <span class="text-muted small fw-normal">(اختياري)</span></label>
                                 <input id="working_hours_start" type="time" class="form-control rounded-3 @error('working_hours_start') is-invalid @enderror"
-                                       name="working_hours_start" value="{{ old('working_hours_start', substr($department->working_hours_start, 0, 5)) }}" required>
+                                       name="working_hours_start" value="{{ old('working_hours_start', $department->working_hours_start ? $department->working_hours_start->format('H:i') : '') }}">
                                 @error('working_hours_start')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -128,9 +128,9 @@
                             </div>
 
                             <div class="col-md-4">
-                                <label for="working_hours_end" class="form-label fw-semibold">ساعات العمل - إلى <span class="text-danger">*</span></label>
+                                <label for="working_hours_end" class="form-label fw-semibold">ساعات العمل - إلى <span class="text-muted small fw-normal">(اختياري)</span></label>
                                 <input id="working_hours_end" type="time" class="form-control rounded-3 @error('working_hours_end') is-invalid @enderror"
-                                       name="working_hours_end" value="{{ old('working_hours_end', substr($department->working_hours_end, 0, 5)) }}" required>
+                                       name="working_hours_end" value="{{ old('working_hours_end', $department->working_hours_end ? $department->working_hours_end->format('H:i') : '') }}">
                                 @error('working_hours_end')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -139,9 +139,9 @@
                             </div>
 
                             <div class="col-md-4">
-                                <label for="max_patients_per_day" class="form-label fw-semibold">الحد الأقصى للمرضى يومياً <span class="text-danger">*</span></label>
-                                <input id="max_patients_per_day" type="number" class="form-control rounded-3 @error('max_patients_per_day') is-invalid @enderror"
-                                       name="max_patients_per_day" value="{{ old('max_patients_per_day', $department->max_patients_per_day) }}" required>
+                                <label for="max_patients_per_day" class="form-label fw-semibold">الحد الأقصى للمرضى يومياً <span class="text-muted small fw-normal">(اختياري)</span></label>
+                                <input id="max_patients_per_day" type="number" min="1" class="form-control rounded-3 @error('max_patients_per_day') is-invalid @enderror"
+                                       name="max_patients_per_day" value="{{ old('max_patients_per_day', $department->max_patients_per_day) }}" placeholder="غير محدد">
                                 @error('max_patients_per_day')
                                     <span class="invalid-feedback" role="alert">
                                         <strong>{{ $message }}</strong>
@@ -151,19 +151,9 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="manager_id" class="form-label fw-semibold">مدير القسم المسؤول</label>
-                            <select id="manager_id" name="manager_id" class="form-select rounded-3 @error('manager_id') is-invalid @enderror">
-                                <option value="">— بدون مدير قسم معين —</option>
-                                @foreach($managers ?? [] as $mgr)
-                                    <option value="{{ $mgr->id }}" {{ old('manager_id', $department->manager_id) == $mgr->id ? 'selected' : '' }}>
-                                        {{ $mgr->name }} ({{ $mgr->email }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            <div class="form-text small">مدير القسم يملك صلاحية اعتماد إجازات موظفي هذا القسم وإدارة واعتماد جدول دوامهم.</div>
-                            @error('manager_id')
-                                <span class="invalid-feedback" role="alert"><strong>{{ $message }}</strong></span>
-                            @enderror
+                            <label for="managerSearchInput" class="form-label fw-semibold">مدير القسم المسؤول</label>
+                            @include('departments.partials.manager-picker', ['department' => $department, 'managers' => $managers ?? collect()])
+                            <div class="form-text small">ابحث بالاسم أو البريد الإلكتروني لتحديد مدير القسم. مدير القسم يملك صلاحية اعتماد إجازات موظفي هذا القسم وإدارة واعتماد جدول دوامهم.</div>
                         </div>
 
                         <div class="mb-4">

@@ -72,9 +72,9 @@ class DepartmentController extends Controller
             'is_moi_active' => 'nullable|boolean',
             'hi_price' => 'nullable|numeric|min:0',
             'is_hi_active' => 'nullable|boolean',
-            'working_hours_start' => 'required|date_format:H:i',
-            'working_hours_end' => 'required|date_format:H:i|after:working_hours_start',
-            'max_patients_per_day' => 'required|integer|min:1',
+            'working_hours_start' => 'nullable|date_format:H:i',
+            'working_hours_end' => 'nullable|date_format:H:i'.($request->filled('working_hours_start') ? '|after:working_hours_start' : ''),
+            'max_patients_per_day' => 'nullable|integer|min:1',
             'manager_id' => 'nullable|exists:users,id',
         ]);
 
@@ -90,9 +90,9 @@ class DepartmentController extends Controller
             'is_moi_active' => $request->has('is_moi_active'),
             'hi_price' => $request->hi_price,
             'is_hi_active' => $request->has('is_hi_active'),
-            'working_hours_start' => $request->working_hours_start,
-            'working_hours_end' => $request->working_hours_end,
-            'max_patients_per_day' => $request->max_patients_per_day,
+            'working_hours_start' => $request->filled('working_hours_start') ? $request->working_hours_start : null,
+            'working_hours_end' => $request->filled('working_hours_end') ? $request->working_hours_end : null,
+            'max_patients_per_day' => $request->filled('max_patients_per_day') ? (int) $request->max_patients_per_day : null,
             'is_active' => $request->has('is_active'),
         ]);
 
@@ -123,6 +123,7 @@ class DepartmentController extends Controller
             abort(403, 'غير مصرح لك بتعديل بيانات العيادة');
         }
 
+        $department->loadMissing('manager');
         $hospitals = Hospital::all();
         $managers = $this->getStaffManagers();
 
@@ -146,14 +147,17 @@ class DepartmentController extends Controller
             'is_moi_active' => 'nullable|boolean',
             'hi_price' => 'nullable|numeric|min:0',
             'is_hi_active' => 'nullable|boolean',
-            'working_hours_start' => 'required|date_format:H:i',
-            'working_hours_end' => 'required|date_format:H:i|after:working_hours_start',
-            'max_patients_per_day' => 'required|integer|min:1',
+            'working_hours_start' => 'nullable|date_format:H:i',
+            'working_hours_end' => 'nullable|date_format:H:i'.($request->filled('working_hours_start') ? '|after:working_hours_start' : ''),
+            'max_patients_per_day' => 'nullable|integer|min:1',
             'manager_id' => 'nullable|exists:users,id',
         ]);
 
         $data = $request->all();
         $data['manager_id'] = $request->manager_id ?: null;
+        $data['working_hours_start'] = $request->filled('working_hours_start') ? $request->working_hours_start : null;
+        $data['working_hours_end'] = $request->filled('working_hours_end') ? $request->working_hours_end : null;
+        $data['max_patients_per_day'] = $request->filled('max_patients_per_day') ? (int) $request->max_patients_per_day : null;
         $data['is_active'] = $request->has('is_active');
         $data['is_moi_active'] = $request->has('is_moi_active');
         $data['is_hi_active'] = $request->has('is_hi_active');
@@ -164,7 +168,45 @@ class DepartmentController extends Controller
             ->with('success', 'تم تحديث العيادة بنجاح');
     }
 
-    private function getStaffManagers()
+    public function searchManagers(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('edit departments') && ! $user->can('create departments') && ! $user->can('view departments')))) {
+            abort(403, 'غير مصرح لك بالبحث في قائمة مدراء الأقسام');
+        }
+
+        $q = trim((string) $request->query('q', ''));
+
+        $query = $this->staffManagersBaseQuery()->with('roles');
+
+        if ($q !== '') {
+            $query->where(function ($sub) use ($q) {
+                $sub->where('name', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%")
+                    ->orWhere('phone', 'like', "%{$q}%");
+            });
+        }
+
+        $users = $query->orderBy('name')->limit(15)->get(['id', 'name', 'email', 'phone', 'role']);
+
+        return response()->json([
+            'data' => $users->map(function ($staff) {
+                $roleNames = $staff->roles->pluck('name')->filter(fn ($r) => $r !== 'patient')->values()->all();
+                $primaryRole = $roleNames[0] ?? $staff->role;
+
+                return [
+                    'id' => $staff->id,
+                    'name' => $staff->name,
+                    'email' => $staff->email,
+                    'phone' => $staff->phone,
+                    'role' => $primaryRole,
+                ];
+            })->values(),
+        ]);
+    }
+
+    private function staffManagersBaseQuery()
     {
         return \App\Models\User::query()
             ->where(function ($q) {
@@ -173,8 +215,14 @@ class DepartmentController extends Controller
             ->whereDoesntHave('roles', function ($rq) {
                 $rq->where('name', 'patient');
             })
+            ->whereDoesntHave('patient');
+    }
+
+    private function getStaffManagers()
+    {
+        return $this->staffManagersBaseQuery()
             ->orderBy('name')
-            ->get(['id', 'name', 'email', 'role']);
+            ->get(['id', 'name', 'email', 'phone', 'role']);
     }
 
     public function destroy(Department $department)
