@@ -220,7 +220,7 @@
             <ul class="nav nav-tabs card-header-tabs" id="nicuTabs" role="tablist">
                 <li class="nav-item">
                     <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'servicePane' ? 'active' : '' }}" id="service-tab" data-bs-toggle="tab" data-bs-target="#servicePane" type="button">
-                        <i class="fas fa-cogs text-primary me-1"></i> باقة الخدمة والتبديل (12:00 ظهراً)
+                        <i class="fas fa-cogs text-primary me-1"></i> باقة الخدمة والتبديل ومعلومات الدخول
                     </button>
                 </li>
                 <li class="nav-item">
@@ -432,6 +432,133 @@
                             @endif
                         </div>
                     </div>
+
+                    @php
+                        $currentUser = Auth::user();
+                        $canEditAdmissionHistory = $currentUser && (
+                            $currentUser->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+                            || $currentUser->can('manage nicu admission history')
+                            || $currentUser->hasRole(['nicu_doctor', 'doctor', 'resident'])
+                        );
+                    @endphp
+
+                    <!-- بطاقة معلومات الدخول والتاريخ المرضي (سبب الدخول، التاريخ المرضي للطفل، التاريخ المرضي للأم) -->
+                    <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px; border-right: 4px solid #0dcaf0 !important;">
+                        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-info bg-opacity-10 text-info p-2 rounded-circle fs-6">
+                                    <i class="fas fa-notes-medical"></i>
+                                </span>
+                                <div>
+                                    <h5 class="mb-0 fw-bold text-dark">معلومات الدخول والتاريخ المرضي</h5>
+                                    <small class="text-muted">توثيق سبب دخول الحاضنة، التاريخ المرضي للطفل، والتاريخ المرضي للأم</small>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                @if($reservation->admission_info_updated_at)
+                                    <span class="badge bg-light text-dark border px-2.5 py-1.5 small">
+                                        <i class="fas fa-user-md text-info me-1"></i>
+                                        آخر تحديث: {{ $reservation->admissionInfoUpdatedBy?->name ?? 'طبيب' }} ({{ $reservation->admission_info_updated_at->format('Y-m-d H:i') }})
+                                    </span>
+                                @endif
+                                @if($isDischarged)
+                                    <span class="badge bg-secondary px-2.5 py-1.5">
+                                        <i class="fas fa-lock me-1"></i> للقراءة فقط
+                                    </span>
+                                @elseif(! $canEditAdmissionHistory)
+                                    <span class="badge bg-light text-muted border px-2.5 py-1.5">
+                                        <i class="fas fa-eye me-1"></i> عرض فقط (صلاحية الطبيب)
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="card-body pt-0 pb-3">
+                            <!-- شريط ملخص معلومات الدخول الأساسية -->
+                            <div class="row g-2 mb-3 p-2.5 bg-light rounded-3 border small">
+                                <div class="col-md-3 col-6">
+                                    <span class="text-muted d-block">تاريخ ووقت الدخول:</span>
+                                    <strong class="text-dark font-monospace">
+                                        {{ $reservation->admission_date ? $reservation->admission_date->format('Y-m-d') : '—' }}
+                                        {{ $reservation->admission_time ? \Carbon\Carbon::parse($reservation->admission_time)->format('H:i') : '' }}
+                                    </strong>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <span class="text-muted d-block">مصدر الدخول:</span>
+                                    <strong class="text-dark">{{ $reservation->admission_source_name }}</strong>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <span class="text-muted d-block">الطبيب المشرف:</span>
+                                    <strong class="text-primary">{{ $reservation->doctor?->user?->name ?? 'غير محدد' }}</strong>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <span class="text-muted d-block">ملاحظات الاستعلامات عند الدخول:</span>
+                                    <strong class="text-dark">{{ $reservation->admission_notes ?: '—' }}</strong>
+                                </div>
+                            </div>
+
+                            @if(! $isDischarged && $canEditAdmissionHistory)
+                                <form action="{{ route('nicu.admission-history.update', $reservation) }}" method="POST">
+                                    @csrf
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label for="input_admission_reason" class="form-label small fw-bold text-dark">
+                                                <i class="fas fa-stethoscope text-danger me-1"></i> سبب الدخول للحاضنة:
+                                            </label>
+                                            <textarea name="admission_reason" id="input_admission_reason" rows="3" class="form-control" style="resize: vertical;" placeholder="اكتب سبب دخول الطفل للحاضنة والحالة السريرية عند الاستقبال...">{{ old('admission_reason', $reservation->admission_reason) }}</textarea>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="input_medical_history" class="form-label small fw-bold text-dark">
+                                                <i class="fas fa-file-medical text-primary me-1"></i> التاريخ المرضي للطفل:
+                                            </label>
+                                            <textarea name="medical_history" id="input_medical_history" rows="4" class="form-control" style="resize: vertical;" placeholder="اكتب التاريخ المرضي للطفل، تفاصيل الولادة والإنعاش، أو أي حالات وعلاجات سابقة...">{{ old('medical_history', $reservation->medical_history) }}</textarea>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label for="input_maternal_history" class="form-label small fw-bold text-dark">
+                                                <i class="fas fa-female text-info me-1"></i> التاريخ المرضي للأم:
+                                            </label>
+                                            <textarea name="maternal_history" id="input_maternal_history" rows="4" class="form-control" style="resize: vertical;" placeholder="اكتب التاريخ المرضي للأم، أمراض الحمل، طريقة الولادة، فصيلة الدم، أو أي مضاعفات...">{{ old('maternal_history', $reservation->maternal_history) }}</textarea>
+                                        </div>
+
+                                        <div class="col-12 d-flex justify-content-end pt-1">
+                                            <button type="submit" class="btn btn-info text-white fw-bold shadow-sm px-4">
+                                                <i class="fas fa-save me-1"></i> حفظ معلومات الدخول والتاريخ المرضي
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            @else
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="p-3 bg-light rounded-3 border">
+                                            <span class="small fw-bold text-muted d-block mb-1">
+                                                <i class="fas fa-stethoscope text-danger me-1"></i> سبب الدخول للحاضنة:
+                                            </span>
+                                            <div class="text-dark" style="white-space: pre-line;">{{ $reservation->admission_reason ?: 'لم يتم التدوين بعد.' }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3 bg-light rounded-3 border h-100">
+                                            <span class="small fw-bold text-muted d-block mb-1">
+                                                <i class="fas fa-file-medical text-primary me-1"></i> التاريخ المرضي للطفل:
+                                            </span>
+                                            <div class="text-dark" style="white-space: pre-line;">{{ $reservation->medical_history ?: 'لم يتم التدوين بعد.' }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3 bg-light rounded-3 border h-100">
+                                            <span class="small fw-bold text-muted d-block mb-1">
+                                                <i class="fas fa-female text-info me-1"></i> التاريخ المرضي للأم:
+                                            </span>
+                                            <div class="text-dark" style="white-space: pre-line;">{{ $reservation->maternal_history ?: 'لم يتم التدوين بعد.' }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
                     <div class="row g-4">
                         <div class="col-lg-5">
                             <div class="card border-0 bg-light p-4 rounded-3 h-100">

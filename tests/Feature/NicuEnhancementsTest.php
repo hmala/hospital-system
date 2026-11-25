@@ -52,6 +52,7 @@ class NicuEnhancementsTest extends TestCase
             'manage nicu care plans',
             'manage nicu doctor notes',
             'manage nicu store',
+            'manage nicu admission history',
             'view medicine groups',
             'create medicine groups',
             'edit medicine groups',
@@ -420,5 +421,79 @@ class NicuEnhancementsTest extends TestCase
             ->get(route('nicu.show', $this->reservation))
             ->assertStatus(200)
             ->assertSee('ملاحظة سريرية مفصلة لمتابعة حالة الخديج');
+    }
+
+    public function test_admission_history_tab_permissions_doctor_nurse_and_discharged_lock(): void
+    {
+        // 1. التبويب الأول يحمل الاسم الجديد ويعرض بطاقة معلومات الدخول والتاريخ المرضي
+        $this->actingAs($this->nicuDoctor)
+            ->get(route('nicu.show', $this->reservation))
+            ->assertStatus(200)
+            ->assertSee('باقة الخدمة والتبديل ومعلومات الدخول')
+            ->assertSee('معلومات الدخول والتاريخ المرضي');
+
+        // 2. الطبيب يحفظ سبب الدخول + التاريخ المرضي للطفل + التاريخ المرضي للأم
+        $this->actingAs($this->nicuDoctor)
+            ->post(route('nicu.admission-history.update', $this->reservation), [
+                'admission_reason' => 'خداجة مبكرة مع ضائقة تنفسية خفيفة',
+                'medical_history' => 'تم الإنعاش الأولي في صالة الولادة ووضع على CPAP',
+                'maternal_history' => 'ولادة قيصرية في الأسبوع 32، سكري حمل مسيطر عليه',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('incubator_reservations', [
+            'id' => $this->reservation->id,
+            'admission_reason' => 'خداجة مبكرة مع ضائقة تنفسية خفيفة',
+            'medical_history' => 'تم الإنعاش الأولي في صالة الولادة ووضع على CPAP',
+            'maternal_history' => 'ولادة قيصرية في الأسبوع 32، سكري حمل مسيطر عليه',
+            'admission_info_updated_by' => $this->nicuDoctor->id,
+        ]);
+
+        // 3. التمريض بدون صلاحية manage nicu admission history يرى البيانات للقراءة فقط ويُمنع من التعديل (403)
+        $this->actingAs($this->nicuNurse)
+            ->get(route('nicu.show', $this->reservation))
+            ->assertStatus(200)
+            ->assertSee('عرض فقط (صلاحية الطبيب)')
+            ->assertSee('خداجة مبكرة مع ضائقة تنفسية خفيفة');
+
+        $this->actingAs($this->nicuNurse)
+            ->post(route('nicu.admission-history.update', $this->reservation), [
+                'admission_reason' => 'محاولة تعديل بدون صلاحية',
+            ])
+            ->assertStatus(403);
+
+        // 4. عند منح التمريض صلاحية manage nicu admission history من الأدوار يتمكن من الحفظ بنجاح
+        $this->nicuNurse->givePermissionTo('manage nicu admission history');
+
+        $this->actingAs($this->nicuNurse)
+            ->post(route('nicu.admission-history.update', $this->reservation), [
+                'admission_reason' => 'خداجة مبكرة مع ضائقة تنفسية خفيفة - محدث',
+                'medical_history' => 'تم الإنعاش الأولي في صالة الولادة ووضع على CPAP',
+                'maternal_history' => 'ولادة قيصرية في الأسبوع 32، سكري حمل مسيطر عليه',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('incubator_reservations', [
+            'id' => $this->reservation->id,
+            'admission_reason' => 'خداجة مبكرة مع ضائقة تنفسية خفيفة - محدث',
+            'admission_info_updated_by' => $this->nicuNurse->id,
+        ]);
+
+        // 5. عند خروج الطفل وأرشفة الإضبارة يُقفل التعديل
+        $this->reservation->update(['status' => IncubatorReservation::STATUS_DISCHARGED]);
+
+        $this->actingAs($this->nicuDoctor)
+            ->post(route('nicu.admission-history.update', $this->reservation), [
+                'admission_reason' => 'محاولة بعد الخروج',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('error');
+
+        $this->assertDatabaseHas('incubator_reservations', [
+            'id' => $this->reservation->id,
+            'admission_reason' => 'خداجة مبكرة مع ضائقة تنفسية خفيفة - محدث',
+        ]);
     }
 }

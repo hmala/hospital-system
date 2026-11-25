@@ -30,6 +30,11 @@ class IncubatorReservation extends Model
         'total_cost',
         'medical_notes',
         'admission_notes',
+        'admission_reason',
+        'medical_history',
+        'maternal_history',
+        'admission_info_updated_by',
+        'admission_info_updated_at',
         'discharge_notes',
         'birth_weight',
         'current_weight',
@@ -62,6 +67,7 @@ class IncubatorReservation extends Model
         'current_weight' => 'integer',
         'camera_active' => 'boolean',
         'is_independent_patient' => 'boolean',
+        'admission_info_updated_at' => 'datetime',
     ];
 
     /**
@@ -265,6 +271,11 @@ class IncubatorReservation extends Model
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class);
+    }
+
+    public function admissionInfoUpdatedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'admission_info_updated_by');
     }
 
     /**

@@ -79,6 +79,18 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 292 (2026-11-25 — `main`) — تطوير تبويب «باقة الخدمة والتبديل ومعلومات الدخول» في ملف الخديج مع صلاحية مستقلة لمعلومات الدخول والتاريخ المرضي للطفل والأم (NICU Admission Info, Reason, Infant & Maternal Medical History with Granular Permission)**:
+  * **قاعدة البيانات والمودل ([2026_11_25_130000_add_admission_history_fields_to_incubator_reservations.php](file:///C:/get/hospital-system/database/migrations/2026_11_25_130000_add_admission_history_fields_to_incubator_reservations.php), [IncubatorReservation.php](file:///C:/get/hospital-system/app/Models/IncubatorReservation.php))**:
+    - إضافة الأعمدة (`admission_reason`, `medical_history`, `maternal_history`, `admission_info_updated_by`, `admission_info_updated_at`) إلى جدول `incubator_reservations`.
+    - إنشاء صلاحية Spatie مستقلة: `manage nicu admission history` ومُنحت تلقائياً لأدوار الأطباء والإدارة (`nicu_doctor`, `doctor`, `resident`, `admin`, `admin-hsop`, `hospital_admin`, `super_admin`) دون التمريض بحيث يمكن للإدارة منحها لأي ممرض أو مستخدم عبر شاشة الأدوار ([RoleManagementController.php](file:///C:/get/hospital-system/app/Http/Controllers/RoleManagementController.php)).
+  * **الكنترولر والمسار ([NicuController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php))**:
+    - إضافة دالة `updateAdmissionHistory()` ومسار `POST /nicu/reservations/{reservation}/admission-history` (`nicu.admission-history.update`) مع قفل التعديل التلقائي عند خروج الطفل (`discharged`).
+  * **الواجهة ([resources/views/nicu/show.blade.php](file:///C:/get/hospital-system/resources/views/nicu/show.blade.php))**:
+    - تعديل اسم التبويب الأول إلى: **`باقة الخدمة والتبديل ومعلومات الدخول`**.
+    - إضافة بطاقة منظمة لـ **«معلومات الدخول والتاريخ المرضي»** تتضمن ملخص الدخول الأساسي و3 حقول كتابة صافية وموسّعة (**سبب الدخول للحاضنة**، **التاريخ المرضي للطفل**، **التاريخ المرضي للأم**) مع وضع القراءة فقط لمن لا يملك الصلاحية أو بعد الخروج.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php))**:
+    - اجتياز `23 passed (328 assertions)` عبر `NicuEnhancementsTest`, `NicuDischargedChartAndClinicalProfileTest`, و `RolePermissionsMatrixTest`، وتوافق تام مع `Laravel Pint` و `view:cache`.
+
 - **المرحلة 291 (2026-11-25 — `main`) — تطوير المنظومة السريرية والمخزنية لقسم الخدج والحاضنات: مخزن وعُهدة الخدج المربوط بالمخزن الرئيسي بدون أثر مالي، دليل الأدوية المضافة للخدج، عداد أيام العلاج (`Day X of Y`)، باقات المفضلات السريعة العامة والخاصة، وخانة الملاحظات السريرية الموسّعة (NICU Store & Custody Governance, Custom NICU Medicines Directory, Therapy Day Counter, Isolated NICU Favorite Medicine Packs, & Expanded Clinical Notes)**:
   * **مخزن وعُهدة قسم الخدج المربوط بالمخزن الرئيسي ([app/Http/Controllers/NicuStoreController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuStoreController.php), [resources/views/nicu-store/index.blade.php](file:///C:/get/hospital-system/resources/views/nicu-store/index.blade.php), [resources/views/nicu-store/show.blade.php](file:///C:/get/hospital-system/resources/views/nicu-store/show.blade.php))**:
     - لوحة مستقلة لمخزن وعُهدة الخدج (`Location #18`) مرتبطة مباشرة بالمخزن الرئيسي (`Location #1`) عبر أزرار طلب التعزيز وإرجاع الفائض وسجل الطلبيات (`stock-transfers.*`).

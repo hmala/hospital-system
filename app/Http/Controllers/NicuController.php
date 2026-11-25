@@ -277,6 +277,7 @@ class NicuController extends Controller
             'doctorNotes.doctor',
             'stockMovements.batch.product',
             'stockMovements.user',
+            'admissionInfoUpdatedBy',
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);
@@ -433,6 +434,36 @@ class NicuController extends Controller
 
         return $this->redirectBackWithActiveState($request, 'servicePane')
             ->with('success', 'تم حفظ وتثبيت البيانات السريرية للطفل (عمر الحمل ووزن الدخول) بنجاح.');
+    }
+
+    /**
+     * حفظ وتحديث معلومات الدخول والتاريخ المرضي للطفل والأم
+     */
+    public function updateAdmissionHistory(Request $request, IncubatorReservation $reservation)
+    {
+        $this->authorizeNicuAction(['manage nicu admission history'], ['nicu_doctor', 'doctor', 'resident']);
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'servicePane')
+                ->with('error', '⛔ تم تسجيل الخروج الطبي للطفل وأرشفة إضبارته. لا يمكن تعديل معلومات الدخول والتاريخ المرضي.');
+        }
+
+        $validated = $request->validate([
+            'admission_reason' => 'nullable|string|max:5000',
+            'medical_history' => 'nullable|string|max:5000',
+            'maternal_history' => 'nullable|string|max:5000',
+        ]);
+
+        $reservation->update([
+            'admission_reason' => $validated['admission_reason'] ?? null,
+            'medical_history' => $validated['medical_history'] ?? null,
+            'maternal_history' => $validated['maternal_history'] ?? null,
+            'admission_info_updated_by' => Auth::id(),
+            'admission_info_updated_at' => now(),
+        ]);
+
+        return $this->redirectBackWithActiveState($request, 'servicePane')
+            ->with('success', 'تم حفظ وتوثيق معلومات الدخول والتاريخ المرضي بنجاح.');
     }
 
     /**

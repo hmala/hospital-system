@@ -54,6 +54,17 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 292: تطوير تبويب «باقة الخدمة والتبديل ومعلومات الدخول» في ملف الخديج مع صلاحية مستقلة لمعلومات الدخول والتاريخ المرضي للطفل والأم NICU Admission Info & Medical History with Granular Permission)
+
+### Done
+- **تعديل التبويب الأول وإضافة بطاقة معلومات الدخول والتاريخ المرضي ([resources/views/nicu/show.blade.php](file:///C:/get/hospital-system/resources/views/nicu/show.blade.php))**:
+  * تغيير مسمى التبويب الأول إلى `باقة الخدمة والتبديل ومعلومات الدخول`.
+  * إضافة بطاقة `معلومات الدخول والتاريخ المرضي` تعرض ملخص الدخول و3 مربعات كتابة صافية ومرتبة: `سبب الدخول للحاضنة` (`admission_reason`)، `التاريخ المرضي للطفل` (`medical_history`)، و`التاريخ المرضي للأم` (`maternal_history`) مع عرض اسم وتاريخ آخر محدث.
+- **قاعدة البيانات والمودل والصلاحية المستقلة ([2026_11_25_130000_add_admission_history_fields_to_incubator_reservations.php](file:///C:/get/hospital-system/database/migrations/2026_11_25_130000_add_admission_history_fields_to_incubator_reservations.php), [app/Models/IncubatorReservation.php](file:///C:/get/hospital-system/app/Models/IncubatorReservation.php), [app/Http/Controllers/RoleManagementController.php](file:///C:/get/hospital-system/app/Http/Controllers/RoleManagementController.php))**:
+  * إنشاء صلاحية `manage nicu admission history` ومُنحت تلقائياً لأدوار الأطباء والإدارة فقط مع إتاحتها في شاشة الأدوار لمنحها للتمريض أو أي مستخدم حسب الحاجة.
+- **الكنترولر والمسار والاختبارات ([app/Http/Controllers/NicuController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php), [tests/Feature/NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php))**:
+  * إضافة `updateAdmissionHistory()` ومسار `nicu.admission-history.update`، واجتياز `23 passed (328 assertions)` وتوافق `Laravel Pint` و`view:cache`.
+
 ## Session log (2026-11-25 — المرحلة 291: تطوير المنظومة السريرية والمخزنية لقسم الخدج والحاضنات NICU Store Governance, Custom Medicines Directory, Therapy Day Counter, Favorite Packs & Large Clinical Notes)
 
 ### Done
