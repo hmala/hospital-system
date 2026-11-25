@@ -2856,3 +2856,32 @@
     - تضمين `hi_price` و `barcode` ضمن استعلام الأدوية في `create()`.
   * **الاختبارات الآلية وضمان الجودة ([tests/Feature/PharmacyMultiItemBatchSupplyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PharmacyMultiItemBatchSupplyTest.php))**:
     - اجتياز كامل حزمة الاختبارات الآلية (`5 passed, 28 assertions`)، وتوافق تام مع `Laravel Pint`.
+
+- **المرحلة 288:** الربط الآلي المقفل لتصنيف المريض التأميني من الاستعلامات بنقطة البيع والصرف والتسعير المزدوج للصيدلية المتعاقدة (Contracted Pharmacy Dual Cash/Insurance POS Engine & Automated Reception Patient Profile Lock):
+  * قفل الوضع المالي للمريض من شاشة الاستعلامات ومنع التغيير اليدوي داخل الصيدلية.
+  * تسعير مزدوج (كاش وضمان صحي) واشتقاق أسعار أشرطة الضمان بدقة.
+
+- **المرحلة 289 / 290:** التعديل اللحظي المباشر لأسعار الكاش داخل جدول دليل الأدوية مع الحفظ التلقائي والاشتقاق الذكي (Medicines Directory Inline Quick-Pricing & Auto-Save Derivation Engine):
+  * إضافة مسار `PATCH /pharmacy/medicines/{medicine}/quick-price` ودالة `updateQuickPrice` في `MedicineController`.
+  * حقول إدخال أنيقة لأسعار بيع العلبة والشريط كاش مع حفظ لحظي عبر AJAX دون إعادة تحميل الصفحة.
+
+- **المرحلة 291:** معالجة تضخم حمولة الجلسة لفواتير الشراء الضخمة والسماح بوجبات شراء متعددة لنفس الصنف (Large Purchase Session Payload Fix & Multi-Batch Purchase Lines):
+  * ترقية حقل `sessions.payload` إلى `LONGTEXT` محلياً وسحابياً عبر المايجريشن لمنع خطأ `1406 Data too long for column 'payload'`.
+  * إزالة قيد منع تكرار نفس المادة في الفاتورة للسماح بشراء عدة وجبات بأسعار صلاحية أو تكلفة مختلفة.
+  * تصحيح خطوة مدة العملية `min="1" step="1"` في `surgeries/show.blade.php`.
+
+- **المرحلة 292:** استكمال إبراز أسماء كافة أطباء ومساعدي التخدير والجراحة وتوحيد طباعة التقرير الجراحي في صفحة واحدة A4 (Surgery Official Print Report Complete Medical Team & Strict Single-Page A4 Layout):
+  * **معالجة حجب أسماء الكادر الطبي ([resources/views/surgeries/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/print.blade.php))**:
+    - إلغاء استبدال طبيب التخدير الثاني بمساعد التخدير، وإبراز كامل الفريق الطبي المشرف (5 أعضاء متزامنين):
+      1. الطبيب الجراح الرئيسي: `د. {{ $surgeonName }}`
+      2. مساعد الجراح: `{{ $surgicalAssistantName }}`
+      3. طبيب التخدير الأول: `د. {{ $primaryAnesthName }}`
+      4. طبيب التخدير الثاني (إذا وجد): `د. {{ $secondaryAnesthName }}`
+      5. مساعد / تقني التخدير: `{{ $anesthesiaAssistantName }}`
+    - توثيق كلا طبيبي التخدير في خانة التوقيعات والاعتماد الرسمي للتقرير.
+  * **هندسة الطباعة في صفحة A4 واحدة مقفلة ومحكمة**:
+    - إضافة توجيه الطباعة المعياري العالمي `@page { size: A4 portrait; margin: 4mm 6mm !important; }`.
+    - إزالة التمدد الطولي الافتراضي (`min-height: 296mm`) وحصر ارتفاع الصفحة في `max-height: 288mm` مع `page-break-after: avoid` و `break-inside: avoid`.
+    - ضغط هوامش وبادينغ الأقسام وشعار المستشفى وختم الصالة والباركود لضمان نزول كامل التقرير من الهيدر حتى الفوتر في صفحة ورقية واحدة متناسقة 100%.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/SurgeryStatusPostOpAndPrintReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryStatusPostOpAndPrintReportTest.php))**:
+    - بناء واجتياز اختبار التحقق من ظهور كافة أطباء ومساعدي التخدير والجراحة مع قواعد الطباعة A4 بنجاح 100% (`4 passed, 46 assertions`)، واجتياز اختبار الترجمة للغتين (`7 passed, 76 assertions`)، وتوافق تام مع `Laravel Pint`.

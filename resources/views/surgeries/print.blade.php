@@ -20,7 +20,7 @@
 
         $primaryAnesthName = $surgery->anesthesiaStation?->anesthesiologist?->user?->name
             ?? $surgery->anesthesiologist?->user?->name
-            ?? 'غير محدد';
+            ?? null;
         $secondaryAnesthName = $surgery->anesthesiaStation?->anesthesiologist2?->user?->name
             ?? $surgery->anesthesiologist2?->user?->name
             ?? null;
@@ -95,6 +95,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        @page {
+            size: A4 portrait;
+            margin: 4mm 6mm !important;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -107,24 +112,24 @@
             direction: {{ app()->getLocale() == 'ar' ? 'rtl' : 'ltr' }};
             text-align: {{ app()->getLocale() == 'ar' ? 'right' : 'left' }};
             background-color: #f1f5f9;
-            padding: 20px 10px;
-            font-size: 11.5px;
-            line-height: 1.45;
+            padding: 12px 10px;
+            font-size: 11px;
+            line-height: 1.4;
         }
 
         /* Top Action Toolbar (Screen Only) */
         .no-print {
             max-width: 210mm;
-            margin: 0 auto 16px auto;
+            margin: 0 auto 12px auto;
             background: #ffffff;
-            padding: 12px 20px;
-            border-radius: 10px;
+            padding: 10px 16px;
+            border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 10px;
             border: 1px solid #e2e8f0;
         }
 
@@ -136,15 +141,15 @@
         }
 
         .btn {
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
+            padding: 7px 14px;
+            border-radius: 7px;
+            font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
             border: 1px solid transparent;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             transition: all 0.2s ease;
             text-decoration: none;
         }
@@ -175,10 +180,11 @@
 
         .report-page {
             width: 210mm;
-            min-height: 296mm;
-            margin: 0 auto 25px auto;
+            min-height: 275mm;
+            max-height: 295mm;
+            margin: 0 auto 20px auto;
             background: #ffffff;
-            padding: 10mm 14mm 10mm 14mm;
+            padding: 6mm 10mm 5mm 10mm;
             box-shadow: 0 4px 20px rgba(0,0,0,0.12);
             position: relative;
             box-sizing: border-box;
@@ -192,10 +198,10 @@
         /* Outer Frame Lines */
         .page-border-inner {
             position: absolute;
-            top: 4mm;
-            right: 4mm;
-            bottom: 4mm;
-            left: 4mm;
+            top: 3mm;
+            right: 3mm;
+            bottom: 3mm;
+            left: 3mm;
             border: 0.8px solid #7dd3fc;
             pointer-events: none;
             border-radius: 2px;
@@ -209,8 +215,8 @@
             background-image: url('{!! $hospitalLogoSrc !!}');
             background-repeat: no-repeat;
             background-position: center 48%;
-            background-size: 45% auto;
-            opacity: 0.04;
+            background-size: 42% auto;
+            opacity: 0.035;
             pointer-events: none;
             z-index: 0;
         }
@@ -225,9 +231,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 8px;
-            margin-bottom: 10px;
-            border-bottom: 2px solid #005a9c;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+            border-bottom: 1.5px solid #005a9c;
         }
 
         .header-hospital-ar {
@@ -235,32 +241,32 @@
             flex: 1;
         }
         .header-hospital-ar h2 {
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 900;
             color: #005a9c;
-            margin-bottom: 2px;
-            line-height: 1.2;
+            margin-bottom: 1px;
+            line-height: 1.15;
         }
         .header-hospital-ar h4 {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 800;
             color: #0284c7;
             margin-bottom: 1px;
         }
         .header-hospital-ar p {
-            font-size: 9.5px;
+            font-size: 8.5px;
             color: #64748b;
             font-weight: 600;
         }
 
         .header-logo {
             text-align: center;
-            width: 110px;
-            padding: 0 8px;
+            width: 85px;
+            padding: 0 6px;
         }
         .header-logo img {
-            max-width: 95px;
-            max-height: 75px;
+            max-width: 80px;
+            max-height: 50px;
             object-fit: contain;
         }
 
@@ -270,20 +276,20 @@
             flex: 1;
         }
         .header-hospital-en h2 {
-            font-size: 15px;
+            font-size: 13.5px;
             font-weight: 900;
             color: #005a9c;
-            margin-bottom: 2px;
-            line-height: 1.2;
+            margin-bottom: 1px;
+            line-height: 1.15;
         }
         .header-hospital-en h4 {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
             color: #0284c7;
             margin-bottom: 1px;
         }
         .header-hospital-en p {
-            font-size: 9px;
+            font-size: 8px;
             color: #64748b;
             font-weight: 600;
         }
@@ -293,30 +299,30 @@
             background: linear-gradient(90deg, #005a9c 0%, #0284c7 100%);
             color: #ffffff;
             text-align: center;
-            padding: 6px 14px;
-            border-radius: 6px;
-            margin-bottom: 10px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            margin-bottom: 5px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .document-title-banner h3 {
-            font-size: 13.5px;
+            font-size: 12px;
             font-weight: 900;
             color: #ffffff;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         }
         .banner-badges {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         .report-code-badge {
             background: rgba(255, 255, 255, 0.2);
             color: #ffffff;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 800;
-            padding: 2px 10px;
+            padding: 1px 8px;
             border-radius: 20px;
             direction: ltr;
             border: 1px solid rgba(255, 255, 255, 0.35);
@@ -324,45 +330,46 @@
         .report-status-badge {
             background: #ffffff;
             color: {{ $statusColor }};
-            font-size: 10.5px;
+            font-size: 9.5px;
             font-weight: 800;
-            padding: 2px 9px;
+            padding: 1px 8px;
             border-radius: 20px;
         }
 
         /* Patient Info Section */
         .patient-card {
             border: 1px solid #cbd5e1;
-            border-radius: 8px;
+            border-radius: 6px;
             background-color: #f8fafc;
-            padding: 9px 12px;
-            margin-bottom: 10px;
+            padding: 5px 10px;
+            margin-bottom: 5px;
         }
         .patient-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 7px 12px;
+            gap: 4px 10px;
         }
         .p-field {
             display: flex;
             flex-direction: column;
         }
         .p-label {
-            font-size: 9.5px;
+            font-size: 8.5px;
             font-weight: 700;
             color: #64748b;
             margin-bottom: 1px;
         }
         .p-val {
-            font-size: 11.5px;
+            font-size: 10.5px;
             font-weight: 800;
             color: #0f172a;
+            line-height: 1.25;
         }
         .badge-coverage {
             display: inline-block;
-            padding: 2px 7px;
+            padding: 1px 6px;
             border-radius: 4px;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 800;
             width: fit-content;
         }
@@ -380,16 +387,16 @@
         /* Section Cards */
         .section-box {
             border: 1px solid #cbd5e1;
-            border-radius: 7px;
-            margin-bottom: 9px;
+            border-radius: 6px;
+            margin-bottom: 5px;
             overflow: hidden;
             background: #ffffff;
         }
         .section-header {
             background-color: #f1f5f9;
             border-bottom: 1px solid #cbd5e1;
-            padding: 5px 12px;
-            font-size: 11.5px;
+            padding: 3px 8px;
+            font-size: 10.5px;
             font-weight: 800;
             color: #005a9c;
             display: flex;
@@ -399,12 +406,12 @@
         .section-header-title {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
         }
         .section-body {
-            padding: 8px 12px;
-            font-size: 11px;
-            line-height: 1.55;
+            padding: 5px 8px;
+            font-size: 10px;
+            line-height: 1.4;
             color: #1e293b;
         }
 
@@ -412,65 +419,68 @@
         .grid-2col {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 9px;
-            margin-bottom: 9px;
+            gap: 6px;
+            margin-bottom: 5px;
         }
 
         /* Medical Team Grid */
         .team-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            padding: 6px 10px;
+            gap: 6px;
+            padding: 4px 8px;
             background: #f8fafc;
-            border-radius: 6px;
+            border-radius: 5px;
         }
         .team-member {
             display: flex;
             flex-direction: column;
         }
         .team-role {
-            font-size: 9px;
+            font-size: 8.5px;
             font-weight: 700;
             color: #64748b;
         }
         .team-name {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
             color: #0f172a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         /* Highlight Boxes */
         .highlight-box-blue {
-            border-right: 3.5px solid #005a9c;
+            border-right: 3px solid #005a9c;
             background-color: #f8fafc;
-            padding: 7px 10px;
-            border-radius: 5px;
-            margin-bottom: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
             border-top: 1px solid #e2e8f0;
             border-bottom: 1px solid #e2e8f0;
             border-left: 1px solid #e2e8f0;
         }
         .highlight-title {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 800;
             color: #005a9c;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
         .highlight-text {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             color: #0f172a;
             white-space: pre-wrap;
             word-break: break-word;
+            line-height: 1.35;
         }
 
         .highlight-box-green {
-            border-right: 3.5px solid #059669;
+            border-right: 3px solid #059669;
             background-color: #f0fdf4;
-            padding: 7px 10px;
-            border-radius: 5px;
-            margin-bottom: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
             border-top: 1px solid #bbf7d0;
             border-bottom: 1px solid #bbf7d0;
             border-left: 1px solid #bbf7d0;
@@ -483,11 +493,11 @@
         }
 
         .highlight-box-amber {
-            border-right: 3.5px solid #d97706;
+            border-right: 3px solid #d97706;
             background-color: #fffbeb;
-            padding: 7px 10px;
-            border-radius: 5px;
-            margin-bottom: 6px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
             border-top: 1px solid #fde68a;
             border-bottom: 1px solid #fde68a;
             border-left: 1px solid #fde68a;
@@ -503,18 +513,18 @@
         .report-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10.5px;
+            font-size: 9.5px;
         }
         .report-table th {
             background-color: #f1f5f9;
             color: #334155;
             font-weight: 700;
-            padding: 5px 8px;
+            padding: 3px 6px;
             border: 1px solid #cbd5e1;
             text-align: right;
         }
         .report-table td {
-            padding: 5px 8px;
+            padding: 3px 6px;
             border: 1px solid #e2e8f0;
             color: #0f172a;
         }
@@ -522,13 +532,13 @@
         /* Signatures Block */
         .auth-block {
             border: 1px solid #cbd5e1;
-            border-radius: 7px;
-            padding: 10px 14px;
+            border-radius: 6px;
+            padding: 5px 8px;
             background-color: #ffffff;
-            margin-top: 8px;
+            margin-top: 5px;
             display: grid;
             grid-template-columns: 1.5fr 1.5fr 1fr 1fr;
-            gap: 12px;
+            gap: 8px;
             align-items: center;
         }
         .auth-cell {
@@ -539,33 +549,34 @@
         }
         .sig-empty-line {
             width: 85%;
-            height: 38px;
+            height: 22px;
             border-bottom: 1.5px dashed #005a9c;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
             display: flex;
             align-items: flex-end;
             justify-content: center;
             color: #94a3b8;
-            font-size: 10px;
+            font-size: 9px;
             font-style: italic;
         }
         .sig-title {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 800;
             color: #005a9c;
             margin-bottom: 1px;
+            white-space: nowrap;
         }
         .sig-subtitle {
-            font-size: 9.5px;
+            font-size: 8.5px;
             color: #64748b;
             font-weight: 600;
         }
 
         /* Hospital Stamp */
         .stamp-circle-box {
-            width: 76px;
-            height: 76px;
-            border: 2px dashed #005a9c;
+            width: 54px;
+            height: 54px;
+            border: 1.5px dashed #005a9c;
             border-radius: 50%;
             display: flex;
             flex-direction: column;
@@ -574,12 +585,16 @@
             text-align: center;
             color: #005a9c;
             background: #f8fafc;
-            padding: 3px;
+            padding: 2px;
+        }
+        .stamp-circle-box i {
+            font-size: 13px !important;
+            margin-bottom: 1px !important;
         }
         .stamp-circle-box span {
-            font-size: 8px;
+            font-size: 7.5px;
             font-weight: 800;
-            line-height: 1.15;
+            line-height: 1.1;
         }
 
         /* QR Placeholder */
@@ -590,10 +605,10 @@
             text-align: center;
         }
         .qr-code-stub {
-            width: 65px;
-            height: 65px;
+            width: 46px;
+            height: 46px;
             border: 1px solid #cbd5e1;
-            padding: 3px;
+            padding: 2px;
             border-radius: 4px;
             background: #ffffff;
             display: flex;
@@ -602,57 +617,75 @@
             justify-content: center;
         }
         .qr-code-stub i {
-            font-size: 32px;
+            font-size: 24px;
             color: #005a9c;
         }
         .qr-label {
-            font-size: 8px;
+            font-size: 7.5px;
             font-weight: 700;
             color: #005a9c;
-            margin-top: 2px;
+            margin-top: 1px;
             direction: ltr;
         }
 
         /* Report Footer */
         .report-footer {
-            margin-top: 10px;
-            padding-top: 6px;
+            margin-top: 4px;
+            padding-top: 4px;
             border-top: 1px solid #cbd5e1;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 9px;
+            font-size: 8.5px;
             color: #64748b;
             font-weight: 600;
         }
         .footer-contacts {
             display: flex;
-            gap: 14px;
+            gap: 12px;
         }
 
         /* Print Media Queries */
         @media print {
-            body {
-                background: #ffffff !important;
+            html, body {
+                width: 210mm !important;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                margin: 0 !important;
                 padding: 0 !important;
+                background: #ffffff !important;
+                overflow: hidden !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
             .no-print {
                 display: none !important;
             }
             .sheet-container {
                 max-width: 100% !important;
+                width: 100% !important;
                 margin: 0 !important;
+                padding: 0 !important;
             }
             .report-page {
                 box-shadow: none !important;
-                border: 1.5px solid #005a9c !important;
-                margin: 0 auto !important;
-                padding: 10mm 12mm 8mm 12mm !important;
-                page-break-after: avoid;
-                page-break-inside: avoid;
+                border: 1.2px solid #005a9c !important;
+                margin: 0 !important;
+                padding: 4mm 8mm 3mm 8mm !important;
+                width: 100% !important;
+                min-height: auto !important;
+                max-height: 288mm !important;
+                height: auto !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
             .page-border-inner {
                 border-color: #7dd3fc !important;
+                top: 2mm !important;
+                right: 2mm !important;
+                bottom: 2mm !important;
+                left: 2mm !important;
             }
         }
     </style>
@@ -780,7 +813,7 @@
                         </div>
                     </div>
                     <div class="section-body">
-                        <div class="team-grid">
+                        <div class="team-grid" style="grid-template-columns: repeat({{ $secondaryAnesthName ? 5 : 4 }}, 1fr);">
                             <div class="team-member">
                                 <span class="team-role">{{ __('الطبيب الجراح الرئيسي:') }}</span>
                                 <span class="team-name" style="color: #005a9c;">{{ __('د.') }} {{ $surgeonName }}</span>
@@ -790,14 +823,18 @@
                                 <span class="team-name">{{ $surgicalAssistantName ?: '—' }}</span>
                             </div>
                             <div class="team-member">
-                                <span class="team-role">{{ __('طبيب التخدير المشرف:') }}</span>
-                                <span class="team-name" style="color: #0284c7;">{{ __('د.') }} {{ $primaryAnesthName }}</span>
+                                <span class="team-role">{{ $secondaryAnesthName ? __('طبيب التخدير الأول:') : __('طبيب التخدير المشرف:') }}</span>
+                                <span class="team-name" style="color: #0284c7;">{{ $primaryAnesthName ? (__('د.') . ' ' . $primaryAnesthName) : '—' }}</span>
                             </div>
+                            @if($secondaryAnesthName)
+                                <div class="team-member">
+                                    <span class="team-role">{{ __('طبيب التخدير الثاني:') }}</span>
+                                    <span class="team-name" style="color: #0284c7;">{{ __('د.') }} {{ $secondaryAnesthName }}</span>
+                                </div>
+                            @endif
                             <div class="team-member">
-                                <span class="team-role">{{ __('مساعد / كادر التخدير:') }}</span>
-                                <span class="team-name">
-                                    {{ $secondaryAnesthName ? ('د. ' . $secondaryAnesthName) : ($anesthesiaAssistantName ?: '—') }}
-                                </span>
+                                <span class="team-role">{{ __('مساعد / تقني التخدير:') }}</span>
+                                <span class="team-name">{{ $anesthesiaAssistantName ?: '—' }}</span>
                             </div>
                         </div>
                     </div>
@@ -957,7 +994,14 @@
                         <div class="sig-empty-line">
                             <span>{{ __('توقيع طبيب التخدير') }}</span>
                         </div>
-                        <div class="sig-title">{{ __('د.') }} {{ $primaryAnesthName }}</div>
+                        <div class="sig-title">
+                            {{ $primaryAnesthName ? (__('د.') . ' ' . $primaryAnesthName) : '—' }}
+                            @if($secondaryAnesthName)
+                                <div style="font-size: 8.5px; color: #475569; font-weight: 700; margin-top: 1px;">
+                                    • {{ __('د.') }} {{ $secondaryAnesthName }}
+                                </div>
+                            @endif
+                        </div>
                         <div class="sig-subtitle">{{ __('أخصائي التخدير والعناية المركزة') }}</div>
                     </div>
 

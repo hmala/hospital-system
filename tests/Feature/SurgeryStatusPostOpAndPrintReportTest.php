@@ -171,4 +171,60 @@ class SurgeryStatusPostOpAndPrintReportTest extends TestCase
         $response->assertSee('ختم صالة العمليات');
         $response->assertSee('OR-#'.$surgery->id);
     }
+
+    public function test_surgery_print_report_displays_all_anesthesiologists_and_assistants_in_single_page_layout(): void
+    {
+        [$adminUser, , , $surgery] = $this->createTestData('completed');
+
+        // Create secondary anesthesiologist and assign both
+        $anesth1User = User::factory()->create(['name' => 'زينب سمير']);
+        $anesth1 = Doctor::create([
+            'user_id' => $anesth1User->id,
+            'department_id' => $surgery->department_id,
+            'specialization' => 'Anesthesia',
+            'phone' => '07711223344',
+            'qualification' => 'FICMS Anesthesia',
+            'license_number' => 'LIC-AN-1',
+            'type' => 'anesthesiologist',
+        ]);
+
+        $anesth2User = User::factory()->create(['name' => 'رند عبدالرحمن']);
+        $anesth2 = Doctor::create([
+            'user_id' => $anesth2User->id,
+            'department_id' => $surgery->department_id,
+            'specialization' => 'Anesthesia',
+            'phone' => '07722334455',
+            'qualification' => 'CABAMS Anesthesia',
+            'license_number' => 'LIC-AN-2',
+            'type' => 'anesthesiologist',
+        ]);
+
+        $surgery->update([
+            'anesthesiologist_id' => $anesth1->id,
+            'anesthesiologist_2_id' => $anesth2->id,
+            'surgical_assistant_name' => 'حسين ناهي',
+            'anesthesia_assistant_name' => 'محمد حلبي',
+        ]);
+
+        $response = $this->actingAs($adminUser)->get(route('surgeries.print', $surgery));
+
+        $response->assertStatus(200);
+
+        // 1. Verify all team members are simultaneously rendered without overwriting
+        $response->assertSee('د. Dr. Ahmed Surgeon');
+        $response->assertSee('حسين ناهي');
+        $response->assertSee('طبيب التخدير الأول:');
+        $response->assertSee('زينب سمير');
+        $response->assertSee('طبيب التخدير الثاني:');
+        $response->assertSee('رند عبدالرحمن');
+        $response->assertSee('مساعد / تقني التخدير:');
+        $response->assertSee('محمد حلبي');
+
+        // 2. Verify dual anesthesiologist signatures
+        $response->assertSee('• د. رند عبدالرحمن');
+
+        // 3. Verify A4 single page CSS directives
+        $response->assertSee('@page');
+        $response->assertSee('size: A4 portrait');
+    }
 }
