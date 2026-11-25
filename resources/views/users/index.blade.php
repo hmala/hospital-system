@@ -207,7 +207,7 @@
             <form action="{{ route('users.index') }}" method="GET" id="usersFilterForm" class="row g-3 align-items-end">
 
                 <!-- 1. البحث النصي الفوري اللحظي -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-6 col-md-12">
                     <label for="search" class="form-label small fw-bold text-secondary mb-1">
                         <i class="fas fa-magnifying-glass me-1 text-primary"></i> البحث السريع (الاسم، البريد، الهاتف، الاختصاص)
                     </label>
@@ -255,26 +255,8 @@
                     </select>
                 </div>
 
-                <!-- 3. فلتر الموقع / الردهة / المخزن (لحظي فوري) -->
+                <!-- 3. فلتر الحالة (لحظي فوري) -->
                 <div class="col-lg-3 col-md-6">
-                    <label for="location_id" class="form-label small fw-bold text-secondary mb-1">
-                        <i class="fas fa-location-dot me-1 text-warning"></i> الموقع / القسم / المخزن
-                    </label>
-                    <select name="location_id" 
-                            id="location_id" 
-                            class="form-select form-select-lg rounded-pill border shadow-xs fs-6" 
-                            onchange="this.form.submit()">
-                        <option value="">جميع المواقع والأقسام</option>
-                        @foreach($locations as $loc)
-                            <option value="{{ $loc->id }}" {{ request('location_id') == $loc->id ? 'selected' : '' }}>
-                                {{ $loc->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- 4. فلتر الحالة (لحظي فوري) -->
-                <div class="col-lg-2 col-md-6">
                     <label for="status" class="form-label small fw-bold text-secondary mb-1">
                         <i class="fas fa-toggle-on me-1 text-success"></i> حالة الحساب
                     </label>
@@ -291,7 +273,7 @@
 
             <!-- وسوم الفلاتر النشطة وزر مسح كل الفلاتر -->
             @php
-                $activeFiltersCount = collect(['search', 'role', 'location_id', 'status'])->filter(fn($k) => request()->filled($k))->count();
+                $activeFiltersCount = collect(['search', 'role', 'status'])->filter(fn($k) => request()->filled($k))->count();
             @endphp
             @if($activeFiltersCount > 0)
                 <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top">
@@ -310,16 +292,6 @@
                         @endphp
                         <a href="{{ route('users.index', request()->except('role')) }}" class="active-filter-chip" title="حذف هذا الفلتر">
                             <span>الصلاحية: {{ $roleLabel }}</span>
-                            <i class="fas fa-times"></i>
-                        </a>
-                    @endif
-
-                    @if(request('location_id'))
-                        @php
-                            $locName = $locations->firstWhere('id', request('location_id'))?->name ?? '#' . request('location_id');
-                        @endphp
-                        <a href="{{ route('users.index', request()->except('location_id')) }}" class="active-filter-chip" title="حذف هذا الفلتر">
-                            <span>الموقع: {{ $locName }}</span>
                             <i class="fas fa-times"></i>
                         </a>
                     @endif
