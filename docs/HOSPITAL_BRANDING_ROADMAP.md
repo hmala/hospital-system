@@ -145,3 +145,12 @@ Route::middleware(['role_or_permission:admin|super_admin|hospital_admin'])->pref
 * `$department`: اسم القسم المختص (مثلاً: قسم إدارة المخازن والإمداد الطبي).
 
 ويقوم المكون تلقائياً بقراءة الشعار واسم المستشفى من `Hospital::current()` ليتم تحديث كل تقارير المستشفى لحظياً بمجرد تغييرها من الواجهة!
+
+---
+
+## 5. المشاريع وخارطة الطريق المرتبطة (Related Roadmaps)
+
+* **[منظومة النقحرة الصوتية والترجمة التلقائية لأسماء المرضى](file:///c:/wamp64/www/hospital-system/docs/PATIENT_NAME_AUTO_TRANSLITERATION_ROADMAP.md):**  
+  المخطط الهندسي لترجمة ونقحرة أسماء المرضى تلقائياً إلى الإنجليزية (أوفلاين 100%) للتكامل مع ترويسة وسندات المستشفى باللغتين.
+* **[دليل النظام والذاكرة البرمجية للمشروع](file:///c:/wamp64/www/hospital-system/hospital-memory.md)**.
+

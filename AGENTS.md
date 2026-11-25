@@ -42,6 +42,8 @@ The `composer.json` scripts also define:
 Consult these files before making changes or proposing fixes:
 - `hospital-memory.md` — Primary memory, architecture map, and current project status.
 - `.agents/rules/hospital-core.md` — Core system rules and quick domain controller/model map.
+- `docs/HOSPITAL_BRANDING_ROADMAP.md` — Comprehensive blueprint for dynamic hospital identity, logo upload, and official print header.
+- `docs/PATIENT_NAME_AUTO_TRANSLITERATION_ROADMAP.md` — Comprehensive blueprint for automated patient name transliteration (Arabic to English) offline.
 - `docs/SESSION_ARCHIVE.md` — Complete historical session archive (Phases 1 to 30).
 - `docs/المرجع_الشامل_للنظام.md` — Comprehensive Arabic system reference.
 - `docs/legacy/` — Archived transition notes (`next_step.md`, `MODIFIED_FILES.md`, `RADIOLOGY_STAFF_ACCESS.md`, `SURGERY_TESTS_FIX.md`).
