@@ -79,6 +79,24 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 290 (2026-11-25 — `main`) — التعديل اللحظي المباشر لأسعار الكاش (العلبة والشريط) داخل جدول دليل الأدوية مع الحفظ التلقائي والاشتقاق الذكي (Medicines Directory Inline Quick-Pricing & Auto-Save Derivation Engine)**:
+  * **المسار السريع وصلاحيات التعديل ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - إضافة مسار: `PATCH /pharmacy/medicines/{medicine}/quick-price` باسم `pharmacy.medicines.quick-price`.
+    - تقييد المسار بصلاحيات `edit medicines` وأدوار الإدارة وكادر الصيدلية عبر `role_or_permission`.
+  * **متحكم الأسعار السريعة ([app/Http/Controllers/Pharmacy/MedicineController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/MedicineController.php))**:
+    - إضافة دالة `updateQuickPrice(Request $request, Medicine $medicine)`.
+    - التحقق الصارم من الأرقام الموجبة `min:0` للعلبة والشريط.
+    - اشتقاق سعر الشريط تلقائياً في حال إهماله: `round($salePrice / max(1, $medicine->sub_units_count), 2)`.
+    - إرجاع رد JSON فوري بالأرقام المحدثة وصيغتها المعربة.
+  * **الواجهة التفاعلية والاشتقاق والحفظ اللحظي ([resources/views/pharmacy/medicines/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/medicines/index.blade.php))**:
+    - تحويل نصوص أسعار العلبة والشريط لكادر الصيدلية إلى حقول إدخال رقمية صغيرة وأنيقة.
+    - اشتقاق فوري بالمتصفح لسعر الشريط بمجرد كتابة سعر العلبة استناداً إلى معامل تعبئة الدواء (`sub_units_count`).
+    - حفظ تلقائي بـ AJAX عند الضغط على Enter أو الخروج من الحقل (Blur) دون أي إعادة تحميل للصفحة.
+    - وميض أخضر تفاعلي وظهور شارة `✓ تم الحفظ` الفورية، مع تنبيه بالخطأ في حال إدخال قيم سالبة.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/MedicineQuickPricingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/MedicineQuickPricingTest.php))**:
+    - بناء واجتياز اختبارات التعديل السريع، الاشتقاق التلقائي، رفض القيم السالبة (422)، منع غير المصرحين (403)، وظهور الحقول التفاعلية بنسبة 100% (`5 passed, 15 assertions`).
+    - اجتياز كامل حزمة اختبارات الصيدلية (`33 passed, 208 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 - **المرحلة 289 (2026-11-25 — `main`) — تصحيح ومزامنة وجبات المخزن المرتبطة بفواتير المشتريات ومنع تكرار المواد بقوائم التوريد (Purchase Stock Batches Alignment & Duplicate Items Prevention Engine)**:
   * **معالجة التزحيف والانزياح في قاعدة البيانات بالميجريشن ([database/migrations/2026_11_25_100000_sync_stock_batches_with_purchase_items.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_25_100000_sync_stock_batches_with_purchase_items.php))**:
     - تشغيل استعلام تصحيحي لمزامنة `stock_batches.product_id = purchase_items.product_id` عبر كامل قاعدة البيانات.

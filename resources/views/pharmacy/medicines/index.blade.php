@@ -187,15 +187,39 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="fw-bold text-dark">{{ number_format($medicine->sale_price) }} د.ع</div>
-                                    @if($medicine->is_insurance_covered)
-                                        <div class="text-success small"><i class="fas fa-shield-alt me-1"></i>ضمان: {{ number_format($medicine->hi_price ?? $medicine->sale_price) }} د.ع</div>
+                                    @can('edit medicines')
+                                        <div class="input-group input-group-sm mb-1" style="max-width: 140px;">
+                                            <input type="number" step="any" min="0" 
+                                                class="form-control form-control-sm text-end fw-bold quick-sale-price quick-price-input" 
+                                                value="{{ (float) $medicine->sale_price }}" 
+                                                data-id="{{ $medicine->id }}"
+                                                data-pack-size="{{ max(1, (int) $medicine->sub_units_count) }}"
+                                                title="سعر بيع العلبة نقداً (اضغط Enter أو انتقل للحفظ)">
+                                            <span class="input-group-text bg-light small px-1 text-muted" style="font-size: 0.72rem;">د.ع</span>
+                                        </div>
+                                        <div class="quick-status-badge text-nowrap" id="status-{{ $medicine->id }}" style="font-size: 0.72rem; min-height: 16px;"></div>
                                     @else
-                                        <span class="badge bg-warning bg-opacity-10 text-warning small">غير مشمول</span>
+                                        <div class="fw-bold text-dark">{{ number_format($medicine->sale_price) }} د.ع</div>
+                                    @endcan
+                                    @if($medicine->is_insurance_covered)
+                                        <div class="text-success small" style="font-size: 0.75rem;"><i class="fas fa-shield-alt me-1"></i>ضمان: {{ number_format($medicine->hi_price ?? $medicine->sale_price) }} د.ع</div>
+                                    @else
+                                        <span class="badge bg-warning bg-opacity-10 text-warning small" style="font-size: 0.7rem;">غير مشمول</span>
                                     @endif
                                 </td>
                                 <td>
-                                    <span class="text-dark">{{ number_format($medicine->sub_unit_sale_price) }} د.ع</span>
+                                    @can('edit medicines')
+                                        <div class="input-group input-group-sm" style="max-width: 130px;">
+                                            <input type="number" step="any" min="0" 
+                                                class="form-control form-control-sm text-end quick-sub-price quick-price-input" 
+                                                value="{{ (float) $medicine->sub_unit_sale_price }}" 
+                                                data-id="{{ $medicine->id }}"
+                                                title="سعر بيع الشريط نقداً (اضغط Enter أو انتقل للحفظ)">
+                                            <span class="input-group-text bg-light small px-1 text-muted" style="font-size: 0.72rem;">د.ع</span>
+                                        </div>
+                                    @else
+                                        <span class="text-dark">{{ number_format($medicine->sub_unit_sale_price) }} د.ع</span>
+                                    @endcan
                                 </td>
                                 <td>
                                     @php
@@ -278,3 +302,145 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<style>
+.quick-price-input {
+    transition: all 0.2s ease-in-out;
+}
+.quick-price-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15) !important;
+}
+.quick-saved {
+    border-color: #198754 !important;
+    background-color: #f0fff4 !important;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    // اشتقاق سعر الشريط تلقائياً بمجرد تعديل سعر العلبة
+    document.querySelectorAll('.quick-sale-price').forEach(boxInput => {
+        const id = boxInput.dataset.id;
+        const packSize = parseFloat(boxInput.dataset.packSize) || 1;
+        const subInput = document.querySelector(`.quick-sub-price[data-id="${id}"]`);
+
+        let originalBoxValue = boxInput.value;
+
+        boxInput.addEventListener('input', function () {
+            const boxVal = parseFloat(this.value);
+            if (!isNaN(boxVal) && boxVal >= 0 && packSize > 0 && subInput) {
+                subInput.value = Math.round(boxVal / packSize);
+            }
+        });
+
+        boxInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveQuickPrice(id);
+                this.blur();
+            }
+        });
+
+        boxInput.addEventListener('blur', function () {
+            if (this.value !== originalBoxValue) {
+                saveQuickPrice(id);
+                originalBoxValue = this.value;
+            }
+        });
+    });
+
+    // التعامل مع حقل سعر الشريط عند التعديل اليدوي
+    document.querySelectorAll('.quick-sub-price').forEach(subInput => {
+        const id = subInput.dataset.id;
+        let originalSubValue = subInput.value;
+
+        subInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveQuickPrice(id);
+                this.blur();
+            }
+        });
+
+        subInput.addEventListener('blur', function () {
+            if (this.value !== originalSubValue) {
+                saveQuickPrice(id);
+                originalSubValue = this.value;
+            }
+        });
+    });
+
+    function saveQuickPrice(medicineId) {
+        const boxInput = document.querySelector(`.quick-sale-price[data-id="${medicineId}"]`);
+        const subInput = document.querySelector(`.quick-sub-price[data-id="${medicineId}"]`);
+        const statusEl = document.getElementById(`status-${medicineId}`);
+
+        if (!boxInput) return;
+
+        const salePrice = parseFloat(boxInput.value);
+        const subUnitPrice = subInput ? parseFloat(subInput.value) : null;
+
+        if (isNaN(salePrice) || salePrice < 0) {
+            if (statusEl) {
+                statusEl.innerHTML = '<span class="text-danger fw-bold"><i class="fas fa-times-circle"></i> سعر غير صالح</span>';
+            }
+            boxInput.classList.add('is-invalid');
+            return;
+        }
+
+        if (statusEl) {
+            statusEl.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin"></i> جار الحفظ...</span>';
+        }
+
+        fetch(`{{ url('pharmacy/medicines') }}/${medicineId}/quick-price`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                sale_price: salePrice,
+                sub_unit_sale_price: (subUnitPrice !== null && !isNaN(subUnitPrice)) ? subUnitPrice : null
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.message || 'فشل تحديث السعر');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                boxInput.classList.remove('is-invalid');
+                boxInput.classList.add('quick-saved');
+                if (subInput) {
+                    subInput.classList.remove('is-invalid');
+                    subInput.classList.add('quick-saved');
+                }
+
+                if (statusEl) {
+                    statusEl.innerHTML = '<span class="text-success fw-bold"><i class="fas fa-check-circle"></i> تم الحفظ</span>';
+                    setTimeout(() => {
+                        statusEl.innerHTML = '';
+                        boxInput.classList.remove('quick-saved');
+                        if (subInput) subInput.classList.remove('quick-saved');
+                    }, 2000);
+                }
+            }
+        })
+        .catch(err => {
+            boxInput.classList.add('is-invalid');
+            if (subInput) subInput.classList.add('is-invalid');
+            if (statusEl) {
+                statusEl.innerHTML = `<span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> ${err.message}</span>`;
+            }
+        });
+    }
+});
+</script>
+@endpush

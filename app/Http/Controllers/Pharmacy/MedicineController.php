@@ -25,10 +25,10 @@ class MedicineController extends Controller
             $search = trim($request->search);
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('generic_name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%")
-                  ->orWhere('sub_barcode', 'like', "%{$search}%")
-                  ->orWhere('national_code', 'like', "%{$search}%");
+                    ->orWhere('generic_name', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%")
+                    ->orWhere('sub_barcode', 'like', "%{$search}%")
+                    ->orWhere('national_code', 'like', "%{$search}%");
             });
         }
 
@@ -78,6 +78,7 @@ class MedicineController extends Controller
     public function create()
     {
         $existingMedicines = Medicine::where('is_active', true)->orderBy('name')->get();
+
         return view('pharmacy.medicines.create', compact('existingMedicines'));
     }
 
@@ -137,7 +138,7 @@ class MedicineController extends Controller
             $medicine = Medicine::create($medicineData);
 
             // إذا تم تزويد بيانات شحنة افتتاحية أولية
-            if (!empty($validated['initial_batch_number']) && !empty($validated['initial_expiry_date']) && !empty($validated['initial_quantity'])) {
+            if (! empty($validated['initial_batch_number']) && ! empty($validated['initial_expiry_date']) && ! empty($validated['initial_quantity'])) {
                 MedicineBatch::create([
                     'medicine_id' => $medicine->id,
                     'batch_number' => $validated['initial_batch_number'],
@@ -157,7 +158,8 @@ class MedicineController extends Controller
                 ->with('success', "تمت إضافة الدواء «{$medicine->name}» بنجاح في دليل الصيدلية.");
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withInput()->with('error', 'حدث خطأ أثناء الحفظ: ' . $e->getMessage());
+
+            return back()->withInput()->with('error', 'حدث خطأ أثناء الحفظ: '.$e->getMessage());
         }
     }
 
@@ -250,6 +252,41 @@ class MedicineController extends Controller
     }
 
     /**
+     * تحديث سريع لأسعار البيع النقدي (العلبة والشريط) عبر AJAX من جدول الأدوية
+     */
+    public function updateQuickPrice(Request $request, Medicine $medicine)
+    {
+        $validated = $request->validate([
+            'sale_price' => 'required|numeric|min:0',
+            'sub_unit_sale_price' => 'nullable|numeric|min:0',
+        ]);
+
+        $salePrice = (float) $validated['sale_price'];
+        $packSize = max(1, (int) $medicine->sub_units_count);
+
+        if (! isset($validated['sub_unit_sale_price']) || $validated['sub_unit_sale_price'] === null) {
+            $subUnitPrice = round($salePrice / $packSize, 2);
+        } else {
+            $subUnitPrice = (float) $validated['sub_unit_sale_price'];
+        }
+
+        $medicine->update([
+            'sale_price' => $salePrice,
+            'sub_unit_sale_price' => $subUnitPrice,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تم تحديث أسعار البيع بنجاح.',
+            'medicine_id' => $medicine->id,
+            'sale_price' => (float) $medicine->sale_price,
+            'sub_unit_sale_price' => (float) $medicine->sub_unit_sale_price,
+            'formatted_sale_price' => number_format($medicine->sale_price),
+            'formatted_sub_unit_sale_price' => number_format($medicine->sub_unit_sale_price),
+        ]);
+    }
+
+    /**
      * ربط بديل دوائي مكافئ
      */
     public function addAlternative(Request $request, Medicine $medicine)
@@ -276,6 +313,7 @@ class MedicineController extends Controller
     public function removeAlternative(Medicine $medicine, Medicine $alternative)
     {
         $medicine->alternatives()->detach($alternative->id);
+
         return back()->with('success', 'تمت إزالة البديل الدوائي بنجاح.');
     }
 
@@ -316,7 +354,7 @@ class MedicineController extends Controller
             } else {
                 // استخدام maatwebsite/excel لقراءة جداول xlsx
                 $sheets = Excel::toArray([], $file);
-                if (!empty($sheets) && !empty($sheets[0])) {
+                if (! empty($sheets) && ! empty($sheets[0])) {
                     $sheet = $sheets[0];
                     $header = array_shift($sheet); // أول سطر رؤوس الأعمدة
                     $data = $sheet;
@@ -335,30 +373,30 @@ class MedicineController extends Controller
                 // 0: national_code, 1: name, 2: generic_name, 3: dosage_form, 4: strength,
                 // 5: barcode, 6: main_unit, 7: sub_unit, 8: sub_units_count, 9: cost_price,
                 // 10: sale_price, 11: sub_unit_sale_price, 12: hi_price, 13: is_insurance_covered
-                $nationalCode = !empty($row[0]) ? trim((string)$row[0]) : null;
-                $name = !empty($row[1]) ? trim((string)$row[1]) : (!empty($nationalCode) ? "دواء {$nationalCode}" : 'صنف غير مسمى');
-                $genericName = !empty($row[2]) ? trim((string)$row[2]) : null;
-                $dosageForm = !empty($row[3]) ? trim((string)$row[3]) : 'حبوب';
-                $strength = !empty($row[4]) ? trim((string)$row[4]) : null;
-                $barcode = !empty($row[5]) ? trim((string)$row[5]) : null;
-                $mainUnit = !empty($row[6]) ? trim((string)$row[6]) : 'علبة';
-                $subUnit = !empty($row[7]) ? trim((string)$row[7]) : 'شريط';
-                $subUnitsCount = !empty($row[8]) ? max(1, (int)$row[8]) : 1;
-                $costPrice = !empty($row[9]) ? (float)$row[9] : 0.00;
-                $salePrice = !empty($row[10]) ? (float)$row[10] : 0.00;
-                $subUnitSalePrice = !empty($row[11]) ? (float)$row[11] : round($salePrice / $subUnitsCount, 2);
-                $hiPrice = !empty($row[12]) ? (float)$row[12] : $salePrice;
-                $isCovered = isset($row[13]) ? (in_array(strtolower(trim((string)$row[13])), ['1', 'yes', 'true', 'نعم'])) : true;
+                $nationalCode = ! empty($row[0]) ? trim((string) $row[0]) : null;
+                $name = ! empty($row[1]) ? trim((string) $row[1]) : (! empty($nationalCode) ? "دواء {$nationalCode}" : 'صنف غير مسمى');
+                $genericName = ! empty($row[2]) ? trim((string) $row[2]) : null;
+                $dosageForm = ! empty($row[3]) ? trim((string) $row[3]) : 'حبوب';
+                $strength = ! empty($row[4]) ? trim((string) $row[4]) : null;
+                $barcode = ! empty($row[5]) ? trim((string) $row[5]) : null;
+                $mainUnit = ! empty($row[6]) ? trim((string) $row[6]) : 'علبة';
+                $subUnit = ! empty($row[7]) ? trim((string) $row[7]) : 'شريط';
+                $subUnitsCount = ! empty($row[8]) ? max(1, (int) $row[8]) : 1;
+                $costPrice = ! empty($row[9]) ? (float) $row[9] : 0.00;
+                $salePrice = ! empty($row[10]) ? (float) $row[10] : 0.00;
+                $subUnitSalePrice = ! empty($row[11]) ? (float) $row[11] : round($salePrice / $subUnitsCount, 2);
+                $hiPrice = ! empty($row[12]) ? (float) $row[12] : $salePrice;
+                $isCovered = isset($row[13]) ? (in_array(strtolower(trim((string) $row[13])), ['1', 'yes', 'true', 'نعم'])) : true;
 
                 // مطابقة بالرمز الوطني أولاً، ثم بالباركود، ثم بالاسم
                 $medicine = null;
-                if (!empty($nationalCode)) {
+                if (! empty($nationalCode)) {
                     $medicine = Medicine::where('national_code', $nationalCode)->first();
                 }
-                if (!$medicine && !empty($barcode)) {
+                if (! $medicine && ! empty($barcode)) {
                     $medicine = Medicine::where('barcode', $barcode)->first();
                 }
-                if (!$medicine) {
+                if (! $medicine) {
                     $medicine = Medicine::where('name', $name)->first();
                 }
 
@@ -395,7 +433,8 @@ class MedicineController extends Controller
                 ->with('success', "تمت المعالجة بنجاح: تم استيراد {$importedCount} صنف جديد، وتحديث {$updatedCount} صنف موجود.");
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'فشل استيراد الملف: ' . $e->getMessage());
+
+            return back()->with('error', 'فشل استيراد الملف: '.$e->getMessage());
         }
     }
 
@@ -446,7 +485,7 @@ class MedicineController extends Controller
         $callback = function () use ($columns, $sampleRow) {
             $file = fopen('php://output', 'w');
             // إضافة BOM لدعم اللغة العربية في Excel
-            fputs($file, "\xEF\xBB\xBF");
+            fwrite($file, "\xEF\xBB\xBF");
             fputcsv($file, $columns);
             fputcsv($file, $sampleRow);
             fclose($file);
@@ -468,10 +507,10 @@ class MedicineController extends Controller
         $medicines = Medicine::where('is_active', true)
             ->where(function ($query) use ($q) {
                 $query->where('name', 'like', "%{$q}%")
-                      ->orWhere('generic_name', 'like', "%{$q}%")
-                      ->orWhere('barcode', 'like', "%{$q}%")
-                      ->orWhere('sub_barcode', 'like', "%{$q}%")
-                      ->orWhere('national_code', 'like', "%{$q}%");
+                    ->orWhere('generic_name', 'like', "%{$q}%")
+                    ->orWhere('barcode', 'like', "%{$q}%")
+                    ->orWhere('sub_barcode', 'like', "%{$q}%")
+                    ->orWhere('national_code', 'like', "%{$q}%");
             })
             ->with(['activeBatches', 'alternatives:id,name,sale_price,sub_unit_sale_price'])
             ->limit(15)

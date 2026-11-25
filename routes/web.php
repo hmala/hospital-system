@@ -1238,6 +1238,11 @@ Route::middleware(['auth'])->group(function () {
         // البحث السريع عبر الباركود والاسم
         Route::get('medicines/search', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'searchApi'])->name('medicines.search');
 
+        // التعديل اللحظي المباشر لأسعار البيع النقدي (العلبة والشريط)
+        Route::patch('medicines/{medicine}/quick-price', [\App\Http\Controllers\Pharmacy\MedicineController::class, 'updateQuickPrice'])
+            ->name('medicines.quick-price')
+            ->middleware('role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage medicines|edit medicines|pharmacy_staff');
+
         // إدارة الأدوية والمستلزمات
         Route::resource('medicines', \App\Http\Controllers\Pharmacy\MedicineController::class);
 

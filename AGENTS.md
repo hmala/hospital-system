@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 290: التعديل اللحظي المباشر لأسعار الكاش داخل جدول دليل الأدوية مع الحفظ التلقائي والاشتقاق الذكي Medicines Directory Inline Quick-Pricing & Auto-Save Derivation Engine)
+
+### Done
+- **المسار وصلاحيات التعديل السريع ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة مسار `PATCH /pharmacy/medicines/{medicine}/quick-price` باسم `pharmacy.medicines.quick-price`.
+  * حمايته بصلاحيات `edit medicines` ودور `pharmacy_staff` وأدوار الإدارة.
+- **متحكم الأسعار السريعة ([app/Http/Controllers/Pharmacy/MedicineController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/MedicineController.php))**:
+  * إضافة دالة `updateQuickPrice` للتحقق وتحديث `sale_price` و `sub_unit_sale_price` واشتقاق سعر الشريط تلقائياً ورد JSON الفوري.
+- **واجهة جدول دليل الأدوية التفاعلية ([resources/views/pharmacy/medicines/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/medicines/index.blade.php))**:
+  * تحويل نصوص أسعار العلبة والشريط لكادر الصيدلية إلى حقول إدخال رقمية صغيرة وأنيقة.
+  * اشتقاق فوري بالمتصفح لسعر الشريط بمجرد كتابة سعر العلبة استناداً لسعة العلبة (`sub_units_count`).
+  * حفظ تلقائي بـ AJAX عند الضغط على Enter أو الخروج من الحقل (Blur) دون إعادة تحميل الصفحة.
+  * وميض أخضر تفاعلي وشارة `✓ تم الحفظ` الفورية، وتنبيه بالخطأ في حال إدخال قيم سالبة.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/MedicineQuickPricingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/MedicineQuickPricingTest.php))**:
+  * اجتياز كامل حزمة الاختبارات الآلية (`5 passed, 15 assertions`)، واجتياز حزمة الصيدلية الشاملة (`33 passed, 208 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 ## Session log (2026-11-25 — المرحلة 288: الربط الآلي المقفل لتصنيف المريض التأميني من الاستعلامات بنقطة البيع والصرف والتسعير المزدوج للصيدلية المتعاقدة Contracted Pharmacy Dual Cash/Insurance POS Engine & Automated Reception Patient Profile Lock)
 
 ### Done
