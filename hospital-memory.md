@@ -79,6 +79,21 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 296 (2026-11-25 — `main`) — توحيد وترقية واجهة إضافة مستخدم جديد وحصر دليل المستخدمين في كادر وموظفي المستشفى واستبعاد المرضى تماماً (Modern Create User Screen Unified with Edit, Live Preview & Complete Patient Exclusion from Staff Directory)**:
+  * **استبعاد حسابات المرضى من دليل كادر المستشفى ([UserManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/UserManagementController.php))**:
+    - حصر استعلام شاشة المستخدمين وإحصائياتها وبطاقات الـ KPI في كادر وموظفي المستشفى فقط.
+    - استبعاد أي مستخدم يحمل دور `patient`، أو مرتبط بسجل في جدول المرضى `patients`، أو يقتصر دوره على مريض بدون أدوار وظيفية.
+    - استبعاد دور `patient` من قائمة الأدوار المتاحة للاختيار في شاشتي الإضافة والتعديل ومنع تعيينه لكادر المستشفى.
+  * **الواجهة التفاعلية العصرية ([resources/views/users/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/users/create.blade.php))**:
+    - إعادة بناء الشاشة كلياً لتتطابق مع شاشة التعديل بنسق العمودين (Two-column layout).
+    - إضافة بطاقة جانبية تفاعلية للمعاينة الحية الفورية (Live Profile Preview Card) تتحدث لحظياً بمجرد كتابة الاسم والبريد وتحديد الموقع وعدد الصلاحيات.
+    - تقسيم الصلاحيات والأدوار إلى فئات وتصنيفات وظيفية ملونة بأيقونات معبرة (الإدارة العليا، الأطباء، التمريض والطوارئ، الصيدلية، الكاشير والمحاسبة...).
+    - دعم حقل البحث اللحظي السريع داخل أسماء الصلاحيات وأزرار «تحديد القسم / إلغاء».
+    - حقول كلمة المرور والتأكيد مع أزرار إظهار وإخفاء كلمة المرور (Show/Hide Password).
+  * **الاختبارات وضمان الجودة ([UserEditModernViewTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserEditModernViewTest.php), [UserManagementIndexTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserManagementIndexTest.php))**:
+    - إضافة اختبارات ميزة آلية لعرض شاشة الإضافة العصرية بكافة أقسامها وتصنيفاتها وإنشاء مستخدم جديد بنجاح (`4 passed, 28 assertions`).
+    - اختبار استبعاد حسابات المرضى بالكامل من الدليل وإحصائيات النظام واجتياز كافة الفلاتر والبحث اللحظي (`5 passed, 22 assertions`) واجتياز `Pint`.
+
 - **المرحلة 295 (2026-11-25 — `main`) — تحديث وتطوير واجهة إدارة المستخدمين إلى تصميم عصري Enterprise مع البحث والفلترة الفورية اللحظية التلقائية (Modern Users Directory & Instant Real-time Debounced Filter)**:
   * **الكنترولر ([UserManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/UserManagementController.php))**:
     - حساب وتمرير إحصائيات سريعة (`stats`): إجمالي الحسابات، الحسابات النشطة، الحسابات المعطلة، وعدد الأدوار الوظيفية.

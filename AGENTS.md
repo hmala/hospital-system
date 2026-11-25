@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 296: توحيد وترقية واجهة إضافة مستخدم جديد وحصر دليل المستخدمين في كادر وموظفي المستشفى واستبعاد المرضى تماماً Modern Create User Screen Unified with Edit, Live Preview & Complete Patient Exclusion from Staff Directory)
+
+### Done
+- **استبعاد حسابات المرضى من دليل كادر المستشفى ([app/Http/Controllers/UserManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/UserManagementController.php))**:
+  * حصر استعلام شاشة المستخدمين وإحصائياتها وبطاقات الـ KPI في كادر وموظفي المستشفى فقط.
+  * استبعاد أي مستخدم يحمل دور `patient`، أو مرتبط بسجل في جدول المرضى `patients`، أو يقتصر دوره على مريض بدون أدوار وظيفية.
+  * استبعاد دور `patient` من قائمة الأدوار المتاحة للاختيار في شاشتي الإضافة والتعديل ومنع تعيينه لكادر المستشفى.
+- **الواجهة التفاعلية العصرية ([resources/views/users/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/users/create.blade.php))**:
+  * إعادة بناء شاشة الإضافة بالكامل لتتطابق مع شاشة التعديل وتعتمد تصميم العمودين (Two-column layout).
+  * بطاقة جانبية للمعاينة الحية الفورية (Live Profile Preview Card) تعرض الأفاتار، الاسم، البريد، المخزن/الردهة، وعدد الأدوار المحددة لحظياً أثناء الكتابة.
+  * تقسيم الأدوار والصلاحيات الوظيفية إلى فئات وأقسام ملونة بأيقونات معبرة مع حقل بحث سريع داخل الأدوار وزري «تحديد القسم / إلغاء».
+  * حقول كلمات المرور مع أزرار إظهار وإخفاء كلمة المرور (Show/Hide Password).
+- **الاختبارات وضمان الجودة ([tests/Feature/UserEditModernViewTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserEditModernViewTest.php), [tests/Feature/UserManagementIndexTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserManagementIndexTest.php))**:
+  * بناء اختبارات ميزة آلية لعرض الشاشة العصرية الجديدة بكافة أقسامها وتصنيفاتها وإنشاء مستخدم جديد بنجاح (`4 passed, 28 assertions`).
+  * اختبار استبعاد حسابات المرضى بالكامل من الدليل وإحصائيات النظام واجتياز كافة الفلاتر والبحث اللحظي (`5 passed, 22 assertions`) واجتياز `Pint`.
+
 ## Session log (2026-11-25 — المرحلة 295: تحديث وتطوير واجهة إدارة المستخدمين لتصميم عصري Enterprise مع البحث والفلترة الفورية اللحظية Modern Users Directory & Instant Real-time Debounced Filter)
 
 ### Done

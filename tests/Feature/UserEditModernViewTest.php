@@ -92,4 +92,48 @@ class UserEditModernViewTest extends TestCase
         $this->assertTrue($targetUser->hasRole('nurse'));
         $this->assertTrue($targetUser->hasRole('anesthesia'));
     }
+
+    public function test_admin_can_view_modern_create_user_screen(): void
+    {
+        $admin = User::factory()->create(['email' => 'admin_create_view@hospital.com']);
+        $admin->assignRole('admin');
+
+        $location = Location::create([
+            'name' => 'ردهة الطابق الثالث',
+            'code' => 'FL-03',
+            'type' => 'sub',
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('users.create'));
+
+        $response->assertStatus(200);
+        $response->assertSee('إضافة مستخدم جديد');
+        $response->assertSee('معاينة الحساب الفورية');
+        $response->assertSee('ردهة الطابق الثالث');
+        $response->assertSee('الصلاحيات والأدوار الممنوحة');
+        $response->assertSee('حفظ وإنشاء الحساب');
+    }
+
+    public function test_admin_can_create_new_user_successfully(): void
+    {
+        $admin = User::factory()->create(['email' => 'admin_create_action@hospital.com']);
+        $admin->assignRole('admin');
+
+        $response = $this->actingAs($admin)->post(route('users.store'), [
+            'name' => 'د. مصطفى الجراح',
+            'email' => 'mustafa_surgeon@hospital.com',
+            'password' => 'Password123!',
+            'password_confirmation' => 'Password123!',
+            'roles' => ['doctor'],
+        ]);
+
+        $response->assertRedirect(route('users.index'));
+        $response->assertSessionHas('success', 'تم إضافة المستخدم بنجاح');
+
+        $createdUser = User::where('email', 'mustafa_surgeon@hospital.com')->first();
+        $this->assertNotNull($createdUser);
+        $this->assertEquals('د. مصطفى الجراح', $createdUser->name);
+        $this->assertTrue($createdUser->hasRole('doctor'));
+    }
 }

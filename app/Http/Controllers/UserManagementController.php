@@ -18,7 +18,19 @@ class UserManagementController extends Controller
 
     public function index(Request $request)
     {
-        $query = User::with(['roles', 'location']);
+        // استبعاد حسابات المرضى لحصر الشاشة في كادر وموظفي المستشفى فقط
+        $staffBase = User::whereDoesntHave('roles', function ($q) {
+            $q->where('name', 'patient');
+        })
+            ->whereDoesntHave('patient')
+            ->where(function ($q) {
+                $q->whereHas('roles')
+                    ->orWhere(function ($sub) {
+                        $sub->whereNull('role')->orWhere('role', '!=', 'patient');
+                    });
+            });
+
+        $query = (clone $staffBase)->with(['roles', 'location']);
 
         if ($request->filled('search')) {
             $search = trim($request->input('search'));
@@ -51,13 +63,13 @@ class UserManagementController extends Controller
         }
 
         $users = $query->paginate(20)->appends($request->query());
-        $roles = Role::all();
+        $roles = Role::where('name', '!=', 'patient')->get();
         $locations = Location::orderBy('name')->get();
 
         $stats = [
-            'total' => User::count(),
-            'active' => User::where('is_active', true)->count(),
-            'inactive' => User::where('is_active', false)->count(),
+            'total' => (clone $staffBase)->count(),
+            'active' => (clone $staffBase)->where('is_active', true)->count(),
+            'inactive' => (clone $staffBase)->where('is_active', false)->count(),
             'roles_count' => $roles->count(),
         ];
 
@@ -66,7 +78,9 @@ class UserManagementController extends Controller
 
     public function create()
     {
-        $roles = auth()->user()->hasRole('admin') ? Role::all() : Role::where('name', '!=', 'admin')->get();
+        $roles = auth()->user()->hasRole('admin')
+            ? Role::where('name', '!=', 'patient')->get()
+            : Role::whereNotIn('name', ['admin', 'patient'])->get();
         $locations = Location::orderBy('name')->get();
 
         return view('users.create', compact('roles', 'locations'));
@@ -76,6 +90,10 @@ class UserManagementController extends Controller
     {
         if (! auth()->user()->hasRole('admin') && in_array('admin', (array) $request->roles)) {
             abort(403, 'غير مصرح لك بمنح صلاحية مدير النظام الرئيسي (Admin).');
+        }
+
+        if (in_array('patient', (array) $request->roles)) {
+            return back()->withInput()->withErrors(['roles' => 'لا يمكن تعيين دور مريض من شاشة إدارة كادر المستشفى.']);
         }
 
         $request->validate([
@@ -115,7 +133,13 @@ class UserManagementController extends Controller
             return redirect()->route('users.index')->with('error', 'غير مصرح لك بتعديل حساب مدير النظام الرئيسي.');
         }
 
-        $roles = auth()->user()->hasRole('admin') ? Role::all() : Role::where('name', '!=', 'admin')->get();
+        if ($user->hasRole('patient') || $user->isPatient()) {
+            return redirect()->route('users.index')->with('error', 'حسابات المرضى غير مخصصة للإدارة من هنا.');
+        }
+
+        $roles = auth()->user()->hasRole('admin')
+            ? Role::where('name', '!=', 'patient')->get()
+            : Role::whereNotIn('name', ['admin', 'patient'])->get();
         $locations = Location::orderBy('name')->get();
 
         return view('users.edit', compact('user', 'roles', 'locations'));

@@ -117,4 +117,25 @@ class UserManagementIndexTest extends TestCase
         $response->assertSee('مستخدم طابق 4');
         $response->assertDontSee('مستخدم العمليات');
     }
+
+    public function test_patients_are_completely_excluded_from_users_index(): void
+    {
+        $admin = User::factory()->create(['email' => 'admin@hospital.com']);
+        $admin->assignRole('admin');
+
+        Role::firstOrCreate(['name' => 'patient', 'guard_name' => 'web']);
+
+        $patientUser = User::factory()->create(['name' => 'مريض راقد بالردهة', 'email' => 'inpatient@example.com']);
+        $patientUser->assignRole('patient');
+
+        $staffUser = User::factory()->create(['name' => 'موظف استقبال المستشفى', 'email' => 'reception_staff@hospital.com']);
+        $staffUser->assignRole('nurse');
+
+        $response = $this->actingAs($admin)->get(route('users.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('موظف استقبال المستشفى');
+        $response->assertDontSee('مريض راقد بالردهة');
+        $response->assertDontSee('inpatient@example.com');
+    }
 }
