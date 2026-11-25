@@ -79,6 +79,20 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 295 (2026-11-25 — `main`) — تحديث وتطوير واجهة إدارة المستخدمين إلى تصميم عصري Enterprise مع البحث والفلترة الفورية اللحظية التلقائية (Modern Users Directory & Instant Real-time Debounced Filter)**:
+  * **الكنترولر ([UserManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/UserManagementController.php))**:
+    - حساب وتمرير إحصائيات سريعة (`stats`): إجمالي الحسابات، الحسابات النشطة، الحسابات المعطلة، وعدد الأدوار الوظيفية.
+    - دعم الفلترة المتزامنة بالبحث، الصلاحيات، مواقع التعيين/المخازن (`location_id`)، والحالة التشغيلية.
+  * **الواجهة التفاعلية العصرية ([resources/views/users/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/users/index.blade.php))**:
+    - ترقية التصميم إلى نمط Enterprise حديث بـ 4 بطاقات إحصائيات علوية (KPI Cards).
+    - حقل بحث سريع ذكي بمؤقت Debounce لحظي (420ms) يفلتر البيانات تلقائياً بمجرد الكتابة وبدون الحاجة لزر بحث، مع مؤشر تحميل تفاعلي (Spinner) وزر مسح سريع `(✕)` وحفظ موضع المؤشر.
+    - قوائم منسدلة تفاعلية فورية للصلاحيات، المواقع/الأقسام، والحالة تتحدث تلقائياً بـ `onchange`.
+    - شارات الفلاتر النشطة (Filter Chips) مع إمكانية حذف أي فلتر بضغطة زر أو مسح كل الفلاتر.
+    - جدول مستخدمين عصري بأفاتار ملون (User Initials)، شارات أدوار وأقسام دقيقة، ونقاط حالة نابضة (Active/Inactive Pulse).
+    - أزرار إجراءات مستديرة ناعمة بتلميحات Tooltips وحماية حسابات الإدارة العليا.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/UserManagementIndexTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserManagementIndexTest.php))**:
+    - بناء حزمة اختبارات شاملة للواجهة الجديدة والفلترة اللحظية بحسب الصلاحية والبحث والموقع والحالة (`4 passed, 18 assertions`) مع اجتياز كامل لـ `Pint`.
+
 - **المرحلة 294 (2026-11-25 — `main`) — تطوير سند تحويل وصرف واستلام الشحنات المخزنية الرسمي A4 مع شعار مستشفى الكفاءات الأهلي المعتمد وتوقيعين رسميين وتوثيق خارطة طريق إدارة الهوية والشعار ديناميكياً (Stock Transfer Request Official A4 Voucher, Al-Kafa'at Hospital Emblem, Dual Sign-off & Hospital Branding Roadmap)**:
   * **المسار والكنترولر ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
     - إضافة مسار `GET /stock-transfers/requests/{stockTransferRequest}/print` باسم `stock-transfers.requests.print`.

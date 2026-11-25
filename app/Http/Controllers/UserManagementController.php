@@ -7,7 +7,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
 
 class UserManagementController extends Controller
 {
@@ -25,9 +24,9 @@ class UserManagementController extends Controller
             $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('specialization', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('specialization', 'like', "%{$search}%");
             });
         }
 
@@ -55,19 +54,27 @@ class UserManagementController extends Controller
         $roles = Role::all();
         $locations = Location::orderBy('name')->get();
 
-        return view('users.index', compact('users', 'roles', 'locations'));
+        $stats = [
+            'total' => User::count(),
+            'active' => User::where('is_active', true)->count(),
+            'inactive' => User::where('is_active', false)->count(),
+            'roles_count' => $roles->count(),
+        ];
+
+        return view('users.index', compact('users', 'roles', 'locations', 'stats'));
     }
 
     public function create()
     {
         $roles = auth()->user()->hasRole('admin') ? Role::all() : Role::where('name', '!=', 'admin')->get();
         $locations = Location::orderBy('name')->get();
+
         return view('users.create', compact('roles', 'locations'));
     }
 
     public function store(Request $request)
     {
-        if (!auth()->user()->hasRole('admin') && in_array('admin', (array)$request->roles)) {
+        if (! auth()->user()->hasRole('admin') && in_array('admin', (array) $request->roles)) {
             abort(403, 'غير مصرح لك بمنح صلاحية مدير النظام الرئيسي (Admin).');
         }
 
@@ -104,28 +111,29 @@ class UserManagementController extends Controller
 
     public function edit(User $user)
     {
-        if ($user->hasRole('admin') && !auth()->user()->hasRole('admin')) {
+        if ($user->hasRole('admin') && ! auth()->user()->hasRole('admin')) {
             return redirect()->route('users.index')->with('error', 'غير مصرح لك بتعديل حساب مدير النظام الرئيسي.');
         }
 
         $roles = auth()->user()->hasRole('admin') ? Role::all() : Role::where('name', '!=', 'admin')->get();
         $locations = Location::orderBy('name')->get();
+
         return view('users.edit', compact('user', 'roles', 'locations'));
     }
 
     public function update(Request $request, User $user)
     {
-        if ($user->hasRole('admin') && !auth()->user()->hasRole('admin')) {
+        if ($user->hasRole('admin') && ! auth()->user()->hasRole('admin')) {
             return redirect()->route('users.index')->with('error', 'غير مصرح لك بتعديل حساب مدير النظام الرئيسي.');
         }
 
-        if (!auth()->user()->hasRole('admin') && in_array('admin', (array)$request->roles)) {
+        if (! auth()->user()->hasRole('admin') && in_array('admin', (array) $request->roles)) {
             abort(403, 'غير مصرح لك بمنح صلاحية مدير النظام الرئيسي (Admin).');
         }
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8|confirmed',
             'roles' => 'required|array|min:1',
             'location_id' => 'nullable|exists:locations,id',
@@ -179,10 +187,11 @@ class UserManagementController extends Controller
         }
 
         $user->update([
-            'is_active' => !$user->is_active
+            'is_active' => ! $user->is_active,
         ]);
 
         $status = $user->is_active ? 'تفعيل' : 'تعطيل';
+
         return back()->with('success', "تم {$status} المستخدم بنجاح");
     }
 }

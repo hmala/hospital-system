@@ -54,6 +54,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 295: تحديث وتطوير واجهة إدارة المستخدمين لتصميم عصري Enterprise مع البحث والفلترة الفورية اللحظية Modern Users Directory & Instant Real-time Debounced Filter)
+
+### Done
+- **المتحكم والبيانات ([app/Http/Controllers/UserManagementController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/UserManagementController.php))**:
+  * حساب وتمرير مؤشرات وإحصائيات سريعة (`stats`): إجمالي الحسابات، الحسابات النشطة، الحسابات المعطلة، وعدد الأدوار الوظيفية.
+  * دعم وتأكيد الفلترة متعددة المعايير بالبحث، الأدوار، مواقع التعيين والمخازن (`location_id`)، والحالة التشغيلية.
+- **الواجهة التفاعلية العصرية ([resources/views/users/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/users/index.blade.php))**:
+  * إضافة 4 بطاقات إحصائيات علوية (KPI Cards) متناسقة مع هوية النظام.
+  * حقل بحث سريع ذكي بمؤقت Debounce لحظي (420ms) يفلتر البيانات تلقائياً بمجرد الكتابة وبدون الحاجة لأي زر بحث، مع مؤشر تحميل تفاعلي (Spinner) وزر مسح سريع `(✕)` مع الحفاظ على التركيز وموضع المؤشر.
+  * قوائم منسدلة تفاعلية فورية للصلاحيات، المواقع/الأقسام، والحالة تتحدث تلقائياً بـ `onchange`.
+  * شارات الفلاتر النشطة (Filter Chips) مع إمكانية حذف أي فلتر بضغطة زر أو مسح كل الفلاتر.
+  * جدول مستخدمين عصري بأفاتار ملون (User Initials)، شارات أدوار وأقسام دقيقة، ونقاط حالة نابضة (Active/Inactive Pulse).
+  * أزرار إجراءات مستديرة ناعمة بتلميحات Tooltips وحماية حسابات الإدارة العليا.
+- **الاختبارات وضمان الجودة ([tests/Feature/UserManagementIndexTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UserManagementIndexTest.php))**:
+  * بناء اختبارات ميزة آلية جديدة لاختبار عرض الشاشة، الفلترة اللحظية بالدور والبحث والموقع والحالة (`4 passed, 18 assertions`) واجتياز `Pint`.
+
 ## Session log (2026-11-25 — المرحلة 294: سند تحويل وصرف الشحنات المخزنية الرسمي A4 بشعار مستشفى الكفاءات الأهلي المعتمد وتوقيعين وخارطة طريق إدارة الهوية ديناميكياً Stock Transfer Voucher A4, Al-Kafa'at Hospital Emblem, Dual Sign-off & Branding Roadmap)
 
 ### Done
