@@ -79,6 +79,21 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 294 (2026-11-25 — `main`) — تطوير سند تحويل وصرف واستلام الشحنات المخزنية الرسمي A4 مع شعار مستشفى الكفاءات الأهلي المعتمد وتوقيعين رسميين وتوثيق خارطة طريق إدارة الهوية والشعار ديناميكياً (Stock Transfer Request Official A4 Voucher, Al-Kafa'at Hospital Emblem, Dual Sign-off & Hospital Branding Roadmap)**:
+  * **المسار والكنترولر ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+    - إضافة مسار `GET /stock-transfers/requests/{stockTransferRequest}/print` باسم `stock-transfers.requests.print`.
+    - إضافة دالة `printRequest()` مع فحص الصلاحيات الصارم للأدوار الإدارية ومسؤولي عهدة الأقسام المستلمة والمصدرة.
+  * **الواجهات وقالب الطباعة الرسمي A4 ([resources/views/stock-transfers/requests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/show.blade.php), [resources/views/stock-transfers/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/print.blade.php))**:
+    - إضافة أزرار الطباعة الرسمية في أعلى صفحة الشحنة وأعلى جدول المواد في `show.blade.php`.
+    - بناء قالب الطباعة الرسمي A4 مع اعتماد اسم **«مستشفى الكفاءات الأهلي»** (Al-Kafa'at Private Hospital).
+    - تضمين شعار المستشفى المعتمد بدقة عالية عبر Base64 Data URI من `images/1.jpg` لضمان عدم تأخر أو انكسار الشعار عند الطباعة.
+    - جدول المواد الكامل مع تفاصيل الكميات المطلوبة والمصروفة والمستلمة وفروقات الصرف وملاحظات أمين المخزن.
+    - اعتماد التواقيع الرسمية المطلوبة حصراً: **منظم الطلب (مسؤول عهدة القسم المستلم)** و**أمين المخزن المصرف (مسؤول التجهيز والصرف)**.
+  * **خارطة طريق إدارة هوية وشعار المستشفى ديناميكياً ([docs/HOSPITAL_BRANDING_ROADMAP.md](file:///c:/wamp64/www/hospital-system/docs/HOSPITAL_BRANDING_ROADMAP.md))**:
+    - حفظ وأرشفة المخطط الهندسي الكامل لإنشاء لوحة تحكم إدارية لرفع الشعار وتعديل اسم المستشفى والترويسة مع كاشينغ فائق السرعة ومعاينة حية A4 للمستقبل.
+  * **الاختبارات وضمان الجودة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
+    - إضافة اختبارات الطباعة للممرضين ومنع الوصول غير المصرح به للأقسام الأخرى والتحقق من التواقيع واسم مستشفى الكفاءات الأهلي (`15 passed, 107 assertions`).
+
 - **المرحلة 293 (2026-11-25 — `main`) — بناء منظومة معاينة المواليد بعد الولادة (ساعتين) وربطها برادار العمليات مع استمارة `Obstetric Case Sheet` والطباعة A4 والأرشفة الموقعة والتحويل للحاضنة (Dynamic 2-Hour Newborn Observation, Delivery Radar Hub, Obstetric Case Sheet A4 Print, Signed Form Archive & NICU Incubator Handoff)**:
   * **قاعدة البيانات والنماذج ([2026_11_25_140000_create_nicu_delivery_observations_and_settings.php](file:///C:/get/hospital-system/database/migrations/2026_11_25_140000_create_nicu_delivery_observations_and_settings.php), [NicuSetting.php](file:///C:/get/hospital-system/app/Models/NicuSetting.php), [NicuDeliveryObservation.php](file:///C:/get/hospital-system/app/Models/NicuDeliveryObservation.php), [NicuDeliveryObservationBaby.php](file:///C:/get/hospital-system/app/Models/NicuDeliveryObservationBaby.php), [Surgery.php](file:///C:/get/hospital-system/app/Models/Surgery.php))**:
     - إنشاء جداول `nicu_settings` و`nicu_delivery_observations` و`nicu_delivery_observation_babies` مع دعم التوائم واستقلال قرار كل مولود (`observing`, `handed_over`, `admitted_to_nicu`).

@@ -432,6 +432,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/requests', [\App\Http\Controllers\StockTransferController::class, 'storeRequest'])->name('requests.store');
         Route::get('/requests', [\App\Http\Controllers\StockTransferController::class, 'indexRequests'])->name('requests.index');
         Route::get('/requests/{stockTransferRequest}', [\App\Http\Controllers\StockTransferController::class, 'showRequest'])->name('requests.show');
+        Route::get('/requests/{stockTransferRequest}/print', [\App\Http\Controllers\StockTransferController::class, 'printRequest'])->name('requests.print');
         Route::get('/requests/{stockTransferRequest}/edit', [\App\Http\Controllers\StockTransferController::class, 'editRequest'])->name('requests.edit');
         Route::put('/requests/{stockTransferRequest}', [\App\Http\Controllers\StockTransferController::class, 'updateRequest'])->name('requests.update');
         Route::delete('/requests/{stockTransferRequest}', [\App\Http\Controllers\StockTransferController::class, 'destroyRequest'])->name('requests.destroy');

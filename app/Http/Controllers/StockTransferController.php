@@ -599,6 +599,29 @@ class StockTransferController extends Controller
         return view('stock-transfers.requests.show', compact('stockTransferRequest', 'subLocationBatches', 'fromLocationQuantities', 'products', 'isAdmin'));
     }
 
+    public function printRequest(StockTransferRequest $stockTransferRequest)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && ($user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin'])
+            || $user->can('manage inventory'));
+
+        if (! $isAdmin && $user?->location_id) {
+            if ($stockTransferRequest->to_location_id != $user->location_id
+                && $stockTransferRequest->from_location_id != $user->location_id
+                && $stockTransferRequest->requested_by != $user->id) {
+                abort(403, 'غير مصرح لك بطباعة مستندات طلبات مخازن الطوابق الأخرى.');
+            }
+        }
+
+        $stockTransferRequest->loadMissing(['fromLocation', 'toLocation', 'requestedBy', 'approvedBy', 'receivedBy']);
+
+        $productIds = collect($stockTransferRequest->items)->pluck('product_id')->filter()->unique();
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+        $hospital = \App\Models\Hospital::first();
+
+        return view('stock-transfers.requests.print', compact('stockTransferRequest', 'products', 'hospital', 'isAdmin'));
+    }
+
     public function approveRequest(Request $request, StockTransferRequest $stockTransferRequest)
     {
         $user = Auth::user();

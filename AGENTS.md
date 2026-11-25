@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 294: سند تحويل وصرف الشحنات المخزنية الرسمي A4 بشعار مستشفى الكفاءات الأهلي المعتمد وتوقيعين وخارطة طريق إدارة الهوية ديناميكياً Stock Transfer Voucher A4, Al-Kafa'at Hospital Emblem, Dual Sign-off & Branding Roadmap)
+
+### Done
+- **المسار والكنترولر ([routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php), [app/Http/Controllers/StockTransferController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StockTransferController.php))**:
+  * إضافة مسار `GET /stock-transfers/requests/{stockTransferRequest}/print` باسم `stock-transfers.requests.print`.
+  * إضافة دالة `printRequest()` مع فحص الصلاحيات للأدوار الإدارية ومسؤولي عهدة الأقسام المستلمة والمصدرة.
+- **واجهة وقالب الطباعة الرسمي A4 ([resources/views/stock-transfers/requests/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/show.blade.php), [resources/views/stock-transfers/requests/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/stock-transfers/requests/print.blade.php))**:
+  * إضافة أزرار الطباعة في رأس صفحة الشحنة وأعلى جدول المواد في `show.blade.php`.
+  * بناء قالب الطباعة A4 المعتمد باسم **«مستشفى الكفاءات الأهلي»** (Al-Kafa'at Private Hospital).
+  * تضمين شعار المستشفى المعتمد بدقة عالية عبر Base64 Data URI من `images/1.jpg` لضمان عدم تأخر أو انكسار الشعار عند الطباعة.
+  * جدول المواد الكامل مع تفاصيل الكميات المطلوبة والمصروفة والمستلمة وملاحظات وفروقات الصرف.
+  * حصر التواقيع الرسمية باثنين فقط كما طُلب: **منظم الطلب (مسؤول عهدة القسم المستلم)** و**أمين المخزن المصرف (مسؤول التجهيز والصرف)**.
+- **حفظ وأرشفة خارطة طريق إدارة الهوية والشعار ديناميكياً ([docs/HOSPITAL_BRANDING_ROADMAP.md](file:///c:/wamp64/www/hospital-system/docs/HOSPITAL_BRANDING_ROADMAP.md))**:
+  * توثيق المخطط الهندسي الشامل لإنشاء لوحة تحكم إدارية لرفع الشعار وتعديل اسم المستشفى والترويسة مع كاشينغ فائق السرعة ومعاينة حية A4 للعودة له وتنفيذه مستقبلاً.
+- **الاختبارات وضمان الجودة ([tests/Feature/FloorCustodianStockTransferTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/FloorCustodianStockTransferTest.php))**:
+  * إضافة اختبارات آلية للطباعة والتحقق من التوقيعين الحصريين وظهور اسم مستشفى الكفاءات الأهلي (`15 passed, 107 assertions`).
+
 ## Session log (2026-11-25 — المرحلة 293: بناء منظومة معاينة المواليد بعد الولادة (ساعتين) وربطها برادار العمليات مع استمارة Obstetric Case Sheet والطباعة والأرشفة والتحويل للحاضنة Dynamic 2-Hour Newborn Observation, Delivery Radar Hub, Obstetric Case Sheet A4 Print, Signed Archive & NICU Handoff)
 
 ### Done

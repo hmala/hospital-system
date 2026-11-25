@@ -86,6 +86,9 @@
                                 <i class="fas fa-arrow-right me-1"></i> العودة لمخزن العمليات
                             </a>
                         @endif
+                        <a href="{{ route('stock-transfers.requests.print', $stockTransferRequest) }}" target="_blank" class="btn btn-outline-dark rounded-pill px-3 py-2 fw-bold shadow-xs">
+                            <i class="fas fa-print me-1 text-primary"></i> طباعة المستند (A4)
+                        </a>
                         <a href="{{ route('stock-transfers.requests.index') }}" class="btn btn-outline-secondary rounded-pill px-3 py-2">
                             <i class="fas fa-list me-1"></i> سجل الطلبات
                         </a>
@@ -244,9 +247,14 @@
                                 <h5 class="mb-1 fw-bold text-dark"><i class="fas fa-dolly me-2 text-primary"></i>المواد في الشحنة (معاينة واعتماد وتعديل الصرف)</h5>
                                 <small class="text-muted">يمكنك مراجعة الرصيد المتوفر بالمخزن الرئيسي وتعديل الكمية المعتمدة للصرف لكل مادة حسب المتاح.</small>
                             </div>
-                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
-                                {{ count($stockTransferRequest->items) }} مواد
-                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold">
+                                    {{ count($stockTransferRequest->items) }} مواد
+                                </span>
+                                <a href="{{ route('stock-transfers.requests.print', $stockTransferRequest) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold">
+                                    <i class="fas fa-print me-1 text-primary"></i> طباعة كشف الشحنة (A4)
+                                </a>
+                            </div>
                         </div>
                         <div class="card-body p-3">
                             <div class="table-responsive">
@@ -356,10 +364,15 @@
                 <!-- جدول العرض للردهات والعمليات والطلبات المصروفة -->
                 <div class="card border-0 shadow-lg" style="border-radius: 15px;">
                     <div class="card-header bg-light border-0 d-flex align-items-center justify-content-between p-3" style="border-radius: 15px 15px 0 0;">
-                        <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-boxes-stacked me-2 text-primary"></i>المواد في هذه الشحنة</h5>
-                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1">
-                            {{ count($stockTransferRequest->items) }} مواد
-                        </span>
+                        <div class="d-flex align-items-center gap-2">
+                            <h5 class="mb-0 fw-bold text-dark"><i class="fas fa-boxes-stacked me-2 text-primary"></i>المواد في هذه الشحنة</h5>
+                            <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 py-1">
+                                {{ count($stockTransferRequest->items) }} مواد
+                            </span>
+                        </div>
+                        <a href="{{ route('stock-transfers.requests.print', $stockTransferRequest) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-pill px-3 fw-bold">
+                            <i class="fas fa-print me-1 text-primary"></i> طباعة كشف الشحنة (A4)
+                        </a>
                     </div>
                     <div class="card-body p-3">
                         <div class="table-responsive">

@@ -636,4 +636,83 @@ class FloorCustodianStockTransferTest extends TestCase
         $this->assertEquals($surgeryNurse->id, $transferRequest->received_by);
         $this->assertEquals('تم استلام الخيوط الجراحية في صالة العمليات الكبرى', $transferRequest->received_notes);
     }
+
+    public function test_floor_nurse_can_print_her_floor_stock_transfer_request_document(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $product = Product::create([
+            'name' => 'شاش معقم طبي',
+            'code' => 'GAUZE-001',
+            'unit' => 'باكيت',
+        ]);
+
+        $transferRequest = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor3->id,
+            'requested_by' => $nurseMaryam->id,
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'original_qty' => 15,
+                    'qty' => 15,
+                    'notes' => 'حاجة عاجلة للردهة',
+                ],
+            ],
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($nurseMaryam)->get(route('stock-transfers.requests.print', $transferRequest));
+
+        $response->assertStatus(200);
+        $response->assertSee('مستشفى الكفاءات الأهلي');
+        $response->assertSee('Al-Kafa\'at Private Hospital');
+        $response->assertSee('سند تحويل وصرف واستلام مخزني رسمي');
+        $response->assertSee('شاش معقم طبي');
+        $response->assertSee('GAUZE-001');
+        $response->assertSee('ردهة الطابق الثالث');
+        $response->assertSee('منظم الطلب (مسؤول عهدة القسم المستلم)');
+        $response->assertSee('أمين المخزن المصرف (مسؤول التجهيز والصرف)');
+        $response->assertDontSee('مستلم الشحنة (العهدة)');
+        $response->assertDontSee('مصادقة الإدارة والتدقيق');
+    }
+
+    public function test_nurse_cannot_print_other_floor_stock_transfer_request(): void
+    {
+        $mainLocation = Location::create(['name' => 'المخزن الرئيسي', 'type' => 'main']);
+        $subFloor3 = Location::create(['name' => 'ردهة الطابق الثالث', 'type' => 'sub']);
+        $subFloor2 = Location::create(['name' => 'ردهة الطابق الثاني', 'type' => 'sub']);
+
+        $nurseMaryam = User::factory()->create([
+            'name' => 'مريم الممرضة',
+            'location_id' => $subFloor3->id,
+        ]);
+        $nurseMaryam->assignRole('nurse');
+
+        $otherNurse = User::factory()->create([
+            'name' => 'سارة ممرضة طابق 2',
+            'location_id' => $subFloor2->id,
+        ]);
+        $otherNurse->assignRole('nurse');
+
+        $transferRequest = StockTransferRequest::create([
+            'from_location_id' => $mainLocation->id,
+            'to_location_id' => $subFloor2->id,
+            'requested_by' => $otherNurse->id,
+            'items' => [
+                ['product_id' => 1, 'qty' => 5],
+            ],
+            'status' => 'pending',
+        ]);
+
+        $response = $this->actingAs($nurseMaryam)->get(route('stock-transfers.requests.print', $transferRequest));
+        $response->assertStatus(403);
+    }
 }
