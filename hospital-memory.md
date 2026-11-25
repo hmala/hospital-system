@@ -79,6 +79,18 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 289 (2026-11-25 — `main`) — تصحيح ومزامنة وجبات المخزن المرتبطة بفواتير المشتريات ومنع تكرار المواد بقوائم التوريد (Purchase Stock Batches Alignment & Duplicate Items Prevention Engine)**:
+  * **معالجة التزحيف والانزياح في قاعدة البيانات بالميجريشن ([database/migrations/2026_11_25_100000_sync_stock_batches_with_purchase_items.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_25_100000_sync_stock_batches_with_purchase_items.php))**:
+    - تشغيل استعلام تصحيحي لمزامنة `stock_batches.product_id = purchase_items.product_id` عبر كامل قاعدة البيانات.
+    - معالجة تزحيف الـ 29 مادة المنزاحة في الفاتورة رقم 7 (مثل الكانيولات والكاونات)، وعودة رصيد كل مادة في المخزن ليتطابق بنسبة 100% مع قائمة المشتريات.
+  * **حماية منع تكرار المواد في شاشات المشتريات ([app/Http/Controllers/PurchaseController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/PurchaseController.php))**:
+    - إضافة التحقق الصارم في الـ Backend بـ `store` و `update`: `'items.*.product_id' => 'required|distinct|exists:products,id'`.
+    - رسالة خطأ واضحة باللغة العربية: `لا يمكن تكرار نفس المادة في الفاتورة أكثر من مرة. يرجى تعديل الكمية في السطر الأصلي بدلاً من تكرارها`.
+  * **التنبيه التفاعلي الفوري بالواجهات ([resources/views/purchases/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/purchases/create.blade.php), [resources/views/purchases/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/purchases/edit.blade.php))**:
+    - بمجرد اختيار مادة مضافة مسبقاً في سطر آخر، يقوم المتصفح فوراً بتنبيه المستخدم برقم السطر الأصلي وتفريغ الحقل المكرر.
+  * **الاختبارات الآلية وضمان الجودة ([tests/Feature/PurchaseDuplicateAndBatchSyncTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/PurchaseDuplicateAndBatchSyncTest.php))**:
+    - بناء واجتياز اختبارات رفض التكرار ومزامنة الوجبات بنسبة 100% (`2 passed, 12 assertions`)، وتوافق تام مع `Laravel Pint`.
+
 - **المرحلة 288 (2026-11-25 — `main`) — الربط الآلي المقفل لتصنيف المريض التأميني من الاستعلامات بنقطة البيع والصرف والتسعير المزدوج للصيدلية المتعاقدة (Contracted Pharmacy Dual Cash/Insurance POS Engine & Automated Reception Patient Profile Lock)**:
   * **إلغاء التحديد اليدوي وقفل الوضع المالي من الاستعلامات ([resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
     - حذف القوائم المنسدلة لاختيار الضمان من شاشة الصيدلية (الصيدلية لا تحدد ولا تختار نوع المريض).
