@@ -1878,9 +1878,9 @@
                         @endcanany
 
                         <!-- قسم الخدج والحاضنات (NICU) -->
-                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations', 'view nicu delivery radar'])
+                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations', 'view nicu delivery radar', 'manage nicu store'])
                         @php
-                            $isNicuActive = request()->routeIs('nicu.*') || request()->routeIs('incubators.*') || request()->routeIs('incubator-reservations.*');
+                            $isNicuActive = request()->routeIs('nicu.*') || request()->routeIs('nicu-store.*') || request()->routeIs('incubators.*') || request()->routeIs('incubator-reservations.*') || (request()->routeIs('medicine-groups.*') && request('department') === 'nicu');
                             $occupiedNicuCount = 0;
                             if (\Illuminate\Support\Facades\Schema::hasTable('incubators')) {
                                 $occupiedNicuCount = \App\Models\Incubator::where('status', 'occupied')->count();
@@ -1920,10 +1920,24 @@
                                     <i class="fas fa-archive text-secondary"></i><span> {{ __('السجلات وأرشفة المرضى') }}</span>
                                 </a>
                             </li>
+                            @if(auth()->user()->can('manage nicu store') || auth()->user()->hasAnyRole(['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'head_nurse', 'admin', 'admin-hsop', 'hospital_admin']))
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu-store.*') ? 'active' : '' }}" href="{{ route('nicu-store.index') }}">
+                                    <i class="fas fa-boxes text-warning"></i><span> {{ __('مخزن وعُهدة الخدج') }}</span>
+                                </a>
+                            </li>
+                            @endif
+                            @if(auth()->user()->can('view medicine groups') || auth()->user()->hasAnyRole(['nicu_doctor', 'nicu_staff', 'doctor', 'resident', 'admin', 'admin-hsop', 'hospital_admin']))
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('medicine-groups.*') && request('department') === 'nicu' ? 'active' : '' }}" href="{{ route('medicine-groups.index', ['department' => 'nicu']) }}">
+                                    <i class="fas fa-layer-group text-success"></i><span> {{ __('باقات أدوية الخدج المفضلة') }}</span>
+                                </a>
+                            </li>
+                            @endif
                             <!-- Submenu: الإعدادات -->
-                            @canany(['manage nicu services', 'manage incubator reservations', 'manage nicu care plans'])
+                            @canany(['manage nicu services', 'manage incubator reservations', 'manage nicu care plans', 'manage nicu prescriptions'])
                             @php
-                                $isNicuSettingsActive = request()->routeIs('nicu.services.*') || request()->routeIs('incubators.*') || request()->routeIs('nicu.milk-types.*');
+                                $isNicuSettingsActive = request()->routeIs('nicu.services.*') || request()->routeIs('incubators.*') || request()->routeIs('nicu.milk-types.*') || request()->routeIs('nicu.custom-medicines.*');
                             @endphp
                             <div class="sidebar-section-title {{ $isNicuSettingsActive ? '' : 'collapsed' }} py-1 px-3 mt-2 ms-2" data-bs-toggle="collapse" data-bs-target="#nicuSettingsSubSection" aria-expanded="{{ $isNicuSettingsActive ? 'true' : 'false' }}" style="font-size: 0.82rem; background: rgba(245, 158, 11, 0.08); color: #d97706; border-radius: 6px; cursor: pointer;">
                                 <span><i class="fas fa-sliders-h me-1 text-warning"></i> {{ __('الإعدادات') }}</span>
@@ -1943,6 +1957,11 @@
                                 <li class="nav-item">
                                     <a class="nav-link {{ request()->routeIs('nicu.milk-types.*') ? 'active' : '' }}" href="{{ route('nicu.milk-types.index') }}">
                                         <i class="fas fa-baby text-warning"></i><span> {{ __('قائمة وتصنيفات حليب وتغذية الخدج') }}</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link {{ request()->routeIs('nicu.custom-medicines.*') ? 'active' : '' }}" href="{{ route('nicu.custom-medicines.index') }}">
+                                        <i class="fas fa-capsules text-info"></i><span> {{ __('دليل الأدوية المضافة للخدج') }}</span>
                                     </a>
                                 </li>
                             </div>

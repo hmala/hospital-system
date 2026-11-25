@@ -281,6 +281,14 @@
                     </button>
                 </li>
                 <li class="nav-item">
+                    <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'storeSuppliesPane' ? 'active' : '' }}" id="store-supplies-tab" data-bs-toggle="tab" data-bs-target="#storeSuppliesPane" type="button">
+                        <i class="fas fa-boxes text-warning me-1"></i> 📦 صرفيات ومستلزمات المخزن
+                        @if($reservation->stockMovements->count() > 0)
+                            <span class="badge bg-warning text-dark rounded-pill ms-1">{{ $reservation->stockMovements->count() }}</span>
+                        @endif
+                    </button>
+                </li>
+                <li class="nav-item">
                     <button class="nav-link fw-bold text-dark {{ $currentActiveTab === 'attachmentsPane' ? 'active' : '' }}" id="attachments-tab" data-bs-toggle="tab" data-bs-target="#attachmentsPane" type="button">
                         <i class="fas fa-folder-open text-primary me-1"></i> 📁 الأرشيف والمرفقات
                         @if($reservation->attachments->count() > 0)
@@ -708,14 +716,32 @@
                                         </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label small">ملاحظات التمريض:</label>
-                                        <input type="text" name="feeding_notes" class="form-control form-control-sm" placeholder="تحمل الرضاعة، لون الجلد، نشاط الطفل...">
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <label class="form-label small fw-bold text-dark mb-0">
+                                                <i class="fas fa-notes-medical text-primary me-1"></i>
+                                                ملاحظات الطبيب والتمريض السريرية:
+                                            </label>
+                                            <span class="text-muted" style="font-size: 10.5px;">مساحة واسعة للتدوين (حتى 5000 حرف)</span>
+                                        </div>
+                                        <textarea name="clinical_notes" rows="5" class="form-control form-control-sm" style="min-height: 115px; resize: vertical;" placeholder="اكتب ملاحظاتك السريرية، تقييم الطبيب، تحمل الرضاعة، لون الجلد، استجابة العلاج، أو أي توجيهات متابعة..."></textarea>
                                     </div>
 
-                                    <button type="submit" class="btn btn-sm btn-danger w-100 fw-bold shadow-sm">
-                                        <i class="fas fa-save me-1"></i> حفظ وتوثيق القراءة
-                                    </button>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" name="pin_as_doctor_note" value="1" id="vitalsPinDoctorNote">
+                                        <label class="form-check-label small fw-semibold text-dark" for="vitalsPinDoctorNote">
+                                            <i class="fas fa-thumbtack text-warning me-1"></i> تثبيت الملاحظة في رأس ملف الطفل أيضاً
+                                        </label>
+                                    </div>
+
+                                    <div class="d-grid gap-2">
+                                        <button type="submit" name="save_mode" value="full" class="btn btn-sm btn-danger w-100 fw-bold shadow-sm">
+                                            <i class="fas fa-save me-1"></i> حفظ وتوثيق القراءة الكاملة
+                                        </button>
+                                        <button type="submit" name="save_mode" value="note_only" class="btn btn-sm btn-outline-primary w-100 fw-bold">
+                                            <i class="fas fa-comment-medical me-1"></i> حفظ الملاحظة السريرية فقط
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
@@ -752,17 +778,37 @@
                                     </thead>
                                     <tbody>
                                         @forelse($reservation->vitals as $v)
-                                            <tr>
+                                            @php
+                                                $vitalNote = trim((string) ($v->clinical_notes ?: $v->feeding_notes));
+                                                $isNoteOnlyRow = is_null($v->temperature) && is_null($v->incubator_temperature) && is_null($v->heart_rate) && is_null($v->respiratory_rate) && is_null($v->spo2) && is_null($v->weight) && is_null($v->feeding_amount_ml);
+                                            @endphp
+                                            <tr class="{{ $isNoteOnlyRow ? 'table-info bg-opacity-25' : '' }}">
                                                 <td>{{ $v->recorded_at->format('d/m H:i') }}</td>
-                                                <td class="{{ $v->temperature > 37.5 || $v->temperature < 36.5 ? 'text-danger fw-bold' : '' }}">{{ $v->temperature ?? '—' }}</td>
-                                                <td>{{ $v->incubator_temperature ?? '—' }}</td>
-                                                <td>{{ $v->heart_rate ?? '—' }}</td>
-                                                <td>{{ $v->respiratory_rate ?? '—' }}</td>
-                                                <td class="{{ $v->spo2 < 92 ? 'text-danger fw-bold' : 'text-success' }}">{{ $v->spo2 ? $v->spo2 . '%' : '—' }}</td>
-                                                <td class="fw-bold text-success">{{ $v->weight ? number_format($v->weight) : '—' }}</td>
-                                                <td>{{ $v->feeding_type }} ({{ $v->feeding_amount_ml ? $v->feeding_amount_ml . ' مل' : '—' }})</td>
-                                                <td class="text-muted">{{ optional($v->nurse)->name ?? 'ممرض' }}</td>
+                                                @if($isNoteOnlyRow)
+                                                    <td colspan="7" class="text-start px-3">
+                                                        <span class="badge bg-primary me-1"><i class="fas fa-comment-medical me-1"></i> ملاحظة سريرية</span>
+                                                        <span class="text-dark fw-medium" style="white-space: pre-line;">{{ $vitalNote ?: '—' }}</span>
+                                                    </td>
+                                                @else
+                                                    <td class="{{ $v->temperature > 37.5 || $v->temperature < 36.5 ? 'text-danger fw-bold' : '' }}">{{ $v->temperature ?? '—' }}</td>
+                                                    <td>{{ $v->incubator_temperature ?? '—' }}</td>
+                                                    <td>{{ $v->heart_rate ?? '—' }}</td>
+                                                    <td>{{ $v->respiratory_rate ?? '—' }}</td>
+                                                    <td class="{{ $v->spo2 < 92 ? 'text-danger fw-bold' : 'text-success' }}">{{ $v->spo2 ? $v->spo2 . '%' : '—' }}</td>
+                                                    <td class="fw-bold text-success">{{ $v->weight ? number_format($v->weight) : '—' }}</td>
+                                                    <td>{{ $v->feeding_type ? $v->feeding_type . ' (' . ($v->feeding_amount_ml ? $v->feeding_amount_ml . ' مل' : '—') . ')' : '—' }}</td>
+                                                @endif
+                                                <td class="text-muted">{{ optional($v->nurse)->name ?? 'كادر الخدج' }}</td>
                                             </tr>
+                                            @if(! $isNoteOnlyRow && $vitalNote !== '')
+                                                <tr class="bg-light">
+                                                    <td colspan="9" class="text-start py-1.5 px-3 text-dark small">
+                                                        <i class="fas fa-sticky-note text-warning me-1"></i>
+                                                        <strong>ملاحظة:</strong>
+                                                        <span style="white-space: pre-line;">{{ $vitalNote }}</span>
+                                                    </td>
+                                                </tr>
+                                            @endif
                                         @empty
                                             <tr>
                                                 <td colspan="9" class="py-4 text-muted">لم يتم توثيق علامات حيوية بعد.</td>
@@ -807,6 +853,9 @@
                                                 <div class="d-flex justify-content-between align-items-center bg-light p-2 rounded border small">
                                                     <div>
                                                         <strong class="text-dark">{{ $aMed->title }}</strong>
+                                                        <span class="badge {{ $aMed->therapy_day_badge_class }} ms-1 font-monospace" style="font-size: 10px;">
+                                                            {{ $aMed->therapy_day_label }}
+                                                        </span>
                                                         <small class="text-muted d-block">{{ $aMed->dose_or_amount ?: 'جرعة موصوفة' }} • {{ $aMed->route ?: 'وريدي' }} (كل {{ $aMed->interval_hours }} س)</small>
                                                     </div>
                                                     <div class="d-flex align-items-center gap-1">
@@ -2598,9 +2647,66 @@
                                             <small class="text-muted" style="font-size: 11px;">تحديد الجرعات، التكرار، والمسار للخديج</small>
                                         </div>
                                     </div>
-                                    <a href="{{ route('nicu.print.prescription', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-success">
-                                        <i class="fas fa-print me-1"></i> طباعة RX
-                                    </a>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button type="button" class="btn btn-sm btn-warning text-dark fw-bold" onclick="window.openNicuSavePkgModal()" title="حفظ الأدوية المكتوبة حالياً كباقة سريعة للخدج">
+                                            <i class="fas fa-save me-1"></i> حفظ كباقة سريعة
+                                        </button>
+                                        <a href="{{ route('medicine-groups.index', ['department' => 'nicu']) }}" target="_blank" class="btn btn-sm btn-outline-primary" title="إدارة باقات أدوية الخدج">
+                                            <i class="fas fa-cog me-1"></i> إدارة الباقات
+                                        </a>
+                                        <a href="{{ route('nicu.print.prescription', $reservation) }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                            <i class="fas fa-print me-1"></i> طباعة RX
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- شريط باقات أدوية الخدج المفضلة والسريعة (عامة للقسم + خاصة بالطبيب/المقيم) -->
+                                <div id="nicuQuickPkgWrapper" class="mb-3 p-2 bg-white rounded-3 border" style="{{ (isset($nicuMedicineGroups) && $nicuMedicineGroups->isNotEmpty()) ? '' : 'display:none;' }}">
+                                    <div class="d-flex align-items-center justify-content-between mb-1.5 flex-wrap gap-1">
+                                        <span class="small fw-bold text-dark d-flex align-items-center gap-1">
+                                            <i class="fas fa-bolt text-warning"></i> باقاتي السريعة للخدج (⭐ تثبيت بالصدارة | نقرة لإدراج الباقة بالوصفة 🔥)
+                                        </span>
+                                        <a href="{{ route('medicine-groups.index', ['department' => 'nicu']) }}" target="_blank" class="text-decoration-none small text-muted">
+                                            <i class="fas fa-cog me-1"></i> إدارة الباقات
+                                        </a>
+                                    </div>
+                                    <div id="nicuQuickPkgContainer" class="d-flex flex-wrap gap-2 py-1 align-items-center">
+                                        @if(isset($nicuMedicineGroups) && $nicuMedicineGroups->isNotEmpty())
+                                            @foreach($nicuMedicineGroups as $pkg)
+                                                @php $pkgMeds = $pkg->formatted_medications; @endphp
+                                                <div class="nicu-pkg-chip-item d-inline-flex align-items-center btn btn-sm {{ $pkg->is_starred ? 'btn-warning border-warning text-dark fw-bold shadow-sm' : ($pkg->is_public ? 'btn-outline-primary border-primary' : 'btn-outline-success border-success') }} rounded-pill p-1 pe-3 transition-all"
+                                                     data-id="{{ $pkg->id }}"
+                                                     data-is-starred="{{ $pkg->is_starred ? '1' : '0' }}"
+                                                     data-usage="{{ $pkg->usage_count ?? 0 }}"
+                                                     data-meds='@json($pkgMeds)'
+                                                     data-pkg-name="{{ $pkg->name }}"
+                                                     title="نقرة لإدراج أدوية الباقة | اضغط النجمة للتثبيت بالصدارة ⭐">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-link p-0 me-2 text-decoration-none nicu-pkg-star-btn {{ $pkg->is_starred ? 'text-warning' : 'text-muted opacity-50' }}"
+                                                            onclick="event.stopPropagation(); window.toggleNicuPkgStar(this, {{ $pkg->id }});"
+                                                            title="{{ $pkg->is_starred ? 'إلغاء التثبيت' : 'تثبيت في الصدارة ⭐' }}">
+                                                        <i class="{{ $pkg->is_starred ? 'fas fa-star text-dark' : 'far fa-star' }} fs-6"></i>
+                                                    </button>
+                                                    <span class="nicu-pkg-content-click d-inline-flex align-items-center cursor-pointer" onclick="window.applyNicuMedPkg(this.closest('.nicu-pkg-chip-item'), {{ $pkg->id }})">
+                                                        @if($pkg->is_public)
+                                                            <i class="fas fa-hospital {{ $pkg->is_starred ? 'text-dark' : 'text-primary' }} me-1"></i>
+                                                            <strong>{{ $pkg->name }}</strong>
+                                                            <span class="badge {{ $pkg->is_starred ? 'bg-dark text-white' : 'bg-primary text-white' }} rounded-pill ms-1">{{ $pkgMeds->count() }} (عامة)</span>
+                                                        @else
+                                                            <i class="fas fa-layer-group {{ $pkg->is_starred ? 'text-dark' : 'text-success' }} me-1 opacity-75"></i>
+                                                            <strong>{{ $pkg->name }}</strong>
+                                                            <span class="badge {{ $pkg->is_starred ? 'bg-dark text-white' : 'bg-success-subtle text-success' }} rounded-pill ms-1">{{ $pkgMeds->count() }}</span>
+                                                        @endif
+                                                        @if(($pkg->usage_count ?? 0) > 0)
+                                                            <span class="badge bg-light text-dark border rounded-pill ms-1 pkg-usage-badge font-monospace" style="font-size: 0.7rem;">
+                                                                <i class="fas fa-fire text-danger"></i> <span class="usage-num">{{ $pkg->usage_count }}</span>
+                                                            </span>
+                                                        @endif
+                                                    </span>
+                                                </div>
+                                            @endforeach
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <form action="{{ route('nicu.prescriptions.store', $reservation) }}" method="POST" id="nicuPrescriptionForm">
@@ -2654,8 +2760,18 @@
                                                     </select>
                                                 </div>
                                                 <div class="col-6">
-                                                    <label class="form-label small fw-bold mb-1">المدة (Duration):</label>
-                                                    <input type="text" name="medications[0][duration]" class="form-control form-control-sm" placeholder="مثال: 5 أيام أو أسبوع">
+                                                    <label class="form-label small fw-bold mb-1">عدد الأيام (لعداد Day X of Y):</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="number" name="medications[0][duration_days]" min="1" max="365" class="form-control form-control-sm med-duration-days-input" placeholder="مثال: 3 أو فارغ لمستمر">
+                                                        <span class="input-group-text">يوم</span>
+                                                    </div>
+                                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 3)">3</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 5)">5</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 7)">7</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 10)">10</button>
+                                                        <button type="button" class="btn btn-xs btn-outline-info py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, '')">مستمر</button>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -2711,9 +2827,13 @@
                                         <tr>
                                             <th class="text-start">اسم الدواء والعلاج</th>
                                             <th class="text-start">تفاصيل الجرعة والمسار والتعليمات</th>
+                                            <th>أيام الاستخدام</th>
                                             <th>الحالة</th>
                                             <th>الطبيب الموصي</th>
                                             <th>وقت الوصف</th>
+                                            @if(! $isDischarged)
+                                                <th>إجراء</th>
+                                            @endif
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -2727,9 +2847,27 @@
                                                     {{ $ord->instructions ?? '—' }}
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-success">
-                                                        <i class="fas fa-check me-1"></i> موصوف
+                                                    <span class="badge {{ $ord->therapy_day_badge_class }} rounded-pill px-2.5 py-1 font-monospace">
+                                                        {{ $ord->therapy_day_label }}
+                                                        @if($ord->is_therapy_overdue)
+                                                            ⚠️
+                                                        @endif
                                                     </span>
+                                                    <small class="d-block text-muted mt-0.5" style="font-size: 10px;">
+                                                        {{ $ord->therapy_day_arabic }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    @if($ord->stopped_at)
+                                                        <span class="badge bg-secondary">
+                                                            <i class="fas fa-stop-circle me-1"></i> متوقف
+                                                        </span>
+                                                        <small class="d-block text-muted" style="font-size: 10px;">{{ $ord->stopped_at->format('d/m H:i') }}</small>
+                                                    @else
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-check me-1"></i> جاري / موصوف
+                                                        </span>
+                                                    @endif
                                                 </td>
                                                 <td class="text-muted small">
                                                     {{ optional($ord->orderedByUser)->name ?? 'طبيب الحاضنة' }}
@@ -2737,10 +2875,21 @@
                                                 <td class="text-muted small">
                                                     {{ $ord->ordered_at ? $ord->ordered_at->format('d/m H:i') : $ord->created_at->format('d/m H:i') }}
                                                 </td>
+                                                @if(! $isDischarged)
+                                                <td>
+                                                    <form action="{{ route('nicu.orders.stop', $ord) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-xs {{ $ord->stopped_at ? 'btn-outline-success' : 'btn-outline-danger' }} py-0.5 px-2" style="font-size: 11px;">
+                                                            <i class="fas {{ $ord->stopped_at ? 'fa-play' : 'fa-stop' }} me-1"></i>
+                                                            {{ $ord->stopped_at ? 'استئناف' : 'إيقاف' }}
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                                @endif
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5" class="py-4 text-muted">
+                                                <td colspan="{{ $isDischarged ? 6 : 7 }}" class="py-4 text-muted">
                                                     <i class="fas fa-pills fa-2x mb-2 d-block opacity-25"></i>
                                                     لا توجد وصفات أو أدوية مسجلة بعد لهذا الطفل.
                                                 </td>
@@ -2913,7 +3062,7 @@
                                             </div>
 
                                             <div class="row g-2 mb-2">
-                                                <div class="col-6">
+                                                <div class="col-4">
                                                     <label class="form-label small fw-bold text-danger">التكرار (كل كم ساعة؟):</label>
                                                     <select name="interval_hours" class="form-select form-select-sm fw-bold border-danger-subtle" required>
                                                         <option value="4">كل 4 ساعات (q4h - 6 مرات/يوم)</option>
@@ -2924,7 +3073,11 @@
                                                         <option value="48">كل 48 ساعة (q48h - كل يومين)</option>
                                                     </select>
                                                 </div>
-                                                <div class="col-6">
+                                                <div class="col-4">
+                                                    <label class="form-label small fw-bold">المدة (أيام):</label>
+                                                    <input type="number" name="duration_days" min="1" max="365" class="form-control form-control-sm" placeholder="مثال: 5">
+                                                </div>
+                                                <div class="col-4">
                                                     <label class="form-label small fw-bold">وقت أول جرعة:</label>
                                                     <input type="datetime-local" name="start_time" class="form-control form-control-sm" value="{{ now()->format('Y-m-d\TH:i') }}">
                                                 </div>
@@ -3067,7 +3220,14 @@
                                                     <i class="{{ $sched->icon }}"></i>
                                                 </div>
                                                 <div>
-                                                    <div class="fw-bold text-dark fs-6">{{ $sched->title }}</div>
+                                                    <div class="fw-bold text-dark fs-6">
+                                                        {{ $sched->title }}
+                                                        @if(! $isFeeding)
+                                                            <span class="badge {{ $sched->therapy_day_badge_class }} ms-1 font-monospace" style="font-size: 11px;">
+                                                                {{ $sched->therapy_day_label }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                     <small class="text-muted">
                                                         <span class="badge {{ $isFeeding ? 'bg-warning-subtle text-dark border border-warning-subtle' : 'bg-primary-subtle text-primary border border-primary-subtle' }} me-1">
                                                             {{ $sched->type_arabic }}
@@ -3344,6 +3504,168 @@
                     </div>
                 </div>
 
+                <!-- تبويب صرفيات ومستلزمات مخزن الخدج الفرعي (بدون أثر مالي على الفاتورة) -->
+                <div class="tab-pane fade {{ $currentActiveTab === 'storeSuppliesPane' ? 'show active' : '' }}" id="storeSuppliesPane">
+                    <div class="row g-4">
+                        @if(! $isDischarged)
+                        <div class="col-lg-5">
+                            <div class="card border-0 bg-light p-3 rounded-3 shadow-xs">
+                                <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-warning text-dark p-2 rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                            <i class="fas fa-boxes"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold text-dark mb-0">صرف مستلزمات من مخزن الخدج</h6>
+                                            <small class="text-muted" style="font-size: 11px;">
+                                                {{ $nicuStoreLocation?->name ?? 'مخزن الخدج' }} (مربوط بالمخزن الرئيسي)
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <a href="{{ route('nicu-store.index') }}" target="_blank" class="btn btn-xs btn-outline-primary py-1 px-2">
+                                        <i class="fas fa-warehouse me-1"></i> إدارة المخزن
+                                    </a>
+                                </div>
+
+                                <div class="alert alert-success py-2 px-3 small mb-3 border-0 bg-success bg-opacity-10 text-success-emphasis" style="font-size: 11.5px;">
+                                    <i class="fas fa-shield-alt me-1"></i>
+                                    <strong>توثيق عهدة فقط بدون أثر مالي:</strong> يُخصم المستلزم المصروف من رصيد مخزن الخدج الفرعي ويُوثق في سجل الطفل دون إضافة أي مبالغ على فاتورة كاشير الخدج.
+                                </div>
+
+                                @if($nicuStockBatches->isNotEmpty())
+                                    <form action="{{ route('nicu.store-dispense.store', $reservation) }}" method="POST">
+                                        @csrf
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-bold">المادة / المستلزم المتوفر بعهدة الخدج: <span class="text-danger">*</span></label>
+                                            <select name="batch_id" class="form-select form-select-sm" required>
+                                                <option value="">-- اختر المستلزم من مخزن الخدج --</option>
+                                                @foreach($nicuStockBatches as $nBatch)
+                                                    <option value="{{ $nBatch->id }}">
+                                                        {{ $nBatch->product?->name ?? 'مادة' }} — متاح: {{ $nBatch->current_qty }} {{ $nBatch->product?->unit ?? 'وحدة' }} {{ $nBatch->expiry_date ? ' (صلاحية: '.\Carbon\Carbon::parse($nBatch->expiry_date)->format('Y-m-d').')' : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-4">
+                                                <label class="form-label small fw-bold">الكمية: <span class="text-danger">*</span></label>
+                                                <input type="number" name="quantity" min="1" value="1" class="form-control form-control-sm" required>
+                                            </div>
+                                            <div class="col-8">
+                                                <label class="form-label small fw-bold">ملاحظات الصرف (اختياري):</label>
+                                                <input type="text" name="notes" class="form-control form-control-sm" placeholder="مثال: تبديل كانيولا، أنبوب تغذية...">
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-warning text-dark btn-sm w-100 fw-bold shadow-sm mt-1">
+                                            <i class="fas fa-check-circle me-1"></i> صرف المستلزم وتوثيقه على الطفل
+                                        </button>
+                                    </form>
+                                @else
+                                    <div class="text-center py-4 bg-white rounded-3 border">
+                                        <i class="fas fa-box-open fa-2x text-muted opacity-50 mb-2"></i>
+                                        <p class="small text-muted mb-2">لا توجد مستلزمات متوفرة حالياً في رصيد مخزن الخدج.</p>
+                                        @if($nicuStoreLocation)
+                                            <a href="{{ route('stock-transfers.create', ['to_location_id' => $nicuStoreLocation->id]) }}" target="_blank" class="btn btn-sm btn-warning text-dark fw-bold rounded-pill px-3">
+                                                <i class="fas fa-plus-circle me-1"></i> طلب تعزيز من المخزن الرئيسي
+                                            </a>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                        @else
+                            <div class="col-12 mb-2">
+                                <div class="alert alert-secondary py-2 px-3 small d-flex align-items-center gap-2 mb-0" style="border-radius: 8px;">
+                                    <i class="fas fa-lock text-secondary"></i>
+                                    <span><strong>صرف المستلزمات مقفل:</strong> تم تسجيل خروج الطفل وأرشفة إضبارته الطبية.</span>
+                                </div>
+                            </div>
+                        @endif
+
+                        <div class="{{ $isDischarged ? 'col-12' : 'col-lg-7' }}">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <h6 class="fw-bold text-dark mb-0">
+                                    <i class="fas fa-history text-warning me-1"></i>
+                                    سجل المستلزمات المصروفة للطفل من مخزن الخدج
+                                </h6>
+                                <span class="badge bg-light text-dark border">إجمالي الحركات: {{ $reservation->stockMovements->count() }}</span>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle border text-center small">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-start">المادة / المستلزم</th>
+                                            <th>الكمية</th>
+                                            <th>المسؤول الصارف</th>
+                                            <th class="text-start">الملاحظات</th>
+                                            <th>وقت الصرف</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($reservation->stockMovements as $mv)
+                                            <tr>
+                                                <td class="text-start fw-bold text-dark">
+                                                    {{ $mv->batch?->product?->name ?? 'مستلزم' }}
+                                                    <small class="text-muted d-block font-monospace">{{ $mv->batch?->internal_barcode ?: '' }}</small>
+                                                </td>
+                                                <td><span class="badge bg-danger-subtle text-danger fw-bold px-2.5">-{{ $mv->quantity }}</span></td>
+                                                <td class="text-muted">{{ $mv->user?->name ?? 'كادر الخدج' }}</td>
+                                                <td class="text-start text-muted">{{ $mv->notes ?: '—' }}</td>
+                                                <td class="text-muted font-monospace">{{ $mv->created_at?->format('d/m H:i') }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="5" class="py-4 text-muted">
+                                                    <i class="fas fa-boxes fa-2x mb-2 d-block opacity-25"></i>
+                                                    لم يتم صرف أي مستلزمات مخزنية لهذا الطفل بعد.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal حفظ وصفة الخدج الحالية كباقة سريعة -->
+<div class="modal fade" id="nicuSaveRxPkgModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-success text-white rounded-top-4">
+                <h5 class="modal-title fw-bold fs-6">
+                    <i class="fas fa-layer-group me-2"></i> حفظ الوصفة الحالية كباقة سريعة للخدج
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-danger py-2 px-3 small d-none" id="nicuSaveRxPkgError"></div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">اسم الباقة: <span class="text-danger">*</span></label>
+                    <input type="text" id="nicuSavePkgName" class="form-control form-control-sm" placeholder="مثال: بروتوكول التهاب الدم المبكر، باقة الخديج الافتراضية...">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">وصف مختصر (اختياري):</label>
+                    <textarea id="nicuSavePkgDesc" rows="2" class="form-control form-control-sm" placeholder="ملاحظات حول متى تُستخدم هذه الباقة..."></textarea>
+                </div>
+                <div class="form-check form-switch p-3 bg-light rounded-3 border">
+                    <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="nicuSavePkgIsPublic" value="1">
+                    <label class="form-check-label small fw-bold text-primary" for="nicuSavePkgIsPublic">
+                        <i class="fas fa-hospital me-1"></i> مشاركة كباقة عامة لكل قسم الخدج (NICU)
+                    </label>
+                    <small class="text-muted d-block mt-1">إذا تُرك غير مفعل، ستُحفظ كباقة خاصة بك فقط.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-sm btn-success fw-bold px-4" onclick="window.submitNicuSavePkg(this)">
+                    <i class="fas fa-save me-1"></i> حفظ الباقة
+                </button>
             </div>
         </div>
     </div>
@@ -4598,10 +4920,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // ==================== 3. وصفة أدوية الخدج (Prescription Workstation) ====================
+    // ==================== 3. وصفة أدوية الخدج (Prescription Workstation + أدوية الخدج المضافة + الباقات السريعة) ====================
     const nicuMedicines = [
+        @foreach($nicuCustomMedicines ?? [] as $cm)
+        {
+            id: 'custom_{{ $cm->id }}',
+            name: @json($cm->name),
+            form: @json($cm->dosage_form ?? ''),
+            strength: @json($cm->strength ?? ''),
+            source: 'nicu_custom',
+            default_dose: @json($cm->default_dose ?? ''),
+            default_route: @json($cm->default_route ?? ''),
+            default_frequency: @json($cm->default_frequency ?? ''),
+            default_duration_days: @json($cm->default_duration_days ?? '')
+        },
+        @endforeach
         @foreach($medicines as $m)
-        { id: {{ $m->id }}, name: @json($m->name), form: @json($m->dosage_form ?? ''), strength: @json($m->strength ?? '') },
+        { id: {{ $m->id }}, name: @json($m->name), form: @json($m->dosage_form ?? ''), strength: @json($m->strength ?? ''), source: 'pharmacy' },
         @endforeach
     ];
 
@@ -4609,6 +4944,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnAddMedRow = document.getElementById('btnAddMedicationRow');
     const prescriptionContainer = document.getElementById('prescriptionRowsContainer');
     const prescriptionCountSpan = document.getElementById('prescriptionRowsCount');
+
+    window.setNicuRowDurationDays = function(btn, daysVal) {
+        const row = btn.closest('.prescription-row');
+        if (!row) return;
+        const input = row.querySelector('.med-duration-days-input');
+        if (input) input.value = daysVal;
+    };
 
     function updatePrescriptionCount() {
         if (!prescriptionContainer || !prescriptionCountSpan) return;
@@ -4618,6 +4960,32 @@ document.addEventListener('DOMContentLoaded', function() {
             if (numSpan) numSpan.textContent = idx + 1;
         });
         prescriptionCountSpan.textContent = `${rows.length} أدوية مضافة`;
+    }
+
+    function applyMedicineDefaultsToRow(row, m) {
+        if (!row || !m) return;
+        if (m.default_dose) {
+            const dIn = row.querySelector('input[name*="[dose]"]');
+            if (dIn && !dIn.value) dIn.value = m.default_dose;
+        }
+        if (m.default_route) {
+            const rSel = row.querySelector('select[name*="[route]"]');
+            if (rSel) {
+                const matchOpt = Array.from(rSel.options).find(o => o.value === m.default_route || o.text.includes(m.default_route));
+                if (matchOpt) rSel.value = matchOpt.value;
+            }
+        }
+        if (m.default_frequency) {
+            const fSel = row.querySelector('select[name*="[frequency]"]');
+            if (fSel) {
+                const matchOpt = Array.from(fSel.options).find(o => o.value === m.default_frequency || o.text.includes(m.default_frequency));
+                if (matchOpt) fSel.value = matchOpt.value;
+            }
+        }
+        if (m.default_duration_days) {
+            const daysIn = row.querySelector('.med-duration-days-input');
+            if (daysIn && !daysIn.value) daysIn.value = m.default_duration_days;
+        }
     }
 
     function attachMedAutocomplete(row) {
@@ -4632,33 +5000,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 menu.style.display = 'none';
                 return;
             }
-            const matches = nicuMedicines.filter(m => 
+            const matches = nicuMedicines.filter(m =>
                 m.name && m.name.toLowerCase().includes(query)
-            ).slice(0, 15);
+            ).slice(0, 18);
 
             menu.innerHTML = '';
-            
-            // الأدوية المطابقة من صيدلية المستشفى
+
             matches.forEach(m => {
                 const item = document.createElement('a');
                 item.href = 'javascript:void(0);';
                 item.className = 'list-group-item list-group-item-action py-2';
+                const badgeHtml = m.source === 'nicu_custom'
+                    ? '<span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 10px;">🍼 مضاف بالخدج</span>'
+                    : '<span class="badge bg-light text-primary border" style="font-size: 10px;">صيدلية المستشفى</span>';
                 item.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center">
                         <strong class="text-dark small">${m.name}</strong>
-                        <span class="badge bg-light text-primary border" style="font-size: 10px;">صيدلية المستشفى</span>
+                        ${badgeHtml}
                     </div>
-                    <small class="text-muted" style="font-size: 10px;">${m.form || ''} ${m.strength ? '• ' + m.strength : ''}</small>
+                    <small class="text-muted" style="font-size: 10px;">${m.form || ''} ${m.strength ? '• ' + m.strength : ''} ${m.default_dose ? '• جرعة معتادة: ' + m.default_dose : ''}</small>
                 `;
                 item.addEventListener('click', function(e) {
                     e.preventDefault();
                     input.value = m.name;
+                    applyMedicineDefaultsToRow(row, m);
                     menu.style.display = 'none';
                 });
                 menu.appendChild(item);
             });
 
-            // خيار دائم لاعتماد الاسم المكتوب كعلاج مخصص / تركيبة خاصة حتى لو لم يكن بالصيدلية
             const customItem = document.createElement('a');
             customItem.href = 'javascript:void(0);';
             customItem.className = 'list-group-item list-group-item-action py-2 bg-light border-top text-primary';
@@ -4666,8 +5036,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="d-flex align-items-center">
                     <i class="fas fa-plus-circle me-2 text-success"></i>
                     <div>
-                        <strong class="small d-block text-dark">اعتماد الدواء المكتوب: "${rawVal}"</strong>
-                        <small class="text-muted" style="font-size: 10px;">(علاج مخصص / تركيبة خاصة غير مسجلة بقائمة الصيدلية)</small>
+                        <strong class="small d-block text-dark">اعتماد وإضافة الدواء المكتوب: "${rawVal}"</strong>
+                        <small class="text-muted" style="font-size: 10px;">(سيُحفظ تلقائياً في دليل أدوية الخدج ليظهر بالبحث لاحقاً)</small>
                     </div>
                 </div>
             `;
@@ -4681,7 +5051,6 @@ document.addEventListener('DOMContentLoaded', function() {
             menu.style.display = 'block';
         });
 
-        // إغلاق القائمة عند النقر خارج السطر
         document.addEventListener('click', function(e) {
             if (!row.contains(e.target)) {
                 menu.style.display = 'none';
@@ -4696,6 +5065,120 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function createNicuMedicationRow(prefill = null, pkgId = null) {
+        if (!prescriptionContainer) return null;
+        const idx = prescriptionRowIndex++;
+        const newRow = document.createElement('div');
+        newRow.className = 'card border bg-white p-2 mb-2 rounded-3 prescription-row';
+        newRow.setAttribute('data-row', idx);
+        if (pkgId) newRow.setAttribute('data-pkg-id', pkgId);
+
+        newRow.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <strong class="text-success small"><i class="fas fa-pills me-1"></i> الدواء #<span class="row-number">${idx + 1}</span></strong>
+                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 border-0 btn-remove-med-row" title="حذف الدواء"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="mb-2 position-relative">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label small fw-bold text-dark mb-0">اسم الدواء:</label>
+                    <span class="text-muted" style="font-size: 11px;">(اختر من الصيدلية أو اكتب أي دواء مخصص بحرية)</span>
+                </div>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="fas fa-capsules text-success"></i></span>
+                    <input type="text" name="medications[${idx}][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي أو التركيبة المخصصة..." autocomplete="off" required>
+                </div>
+                <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1060;"></div>
+            </div>
+
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label class="form-label small fw-bold mb-1">الجرعة (Dose):</label>
+                    <input type="text" name="medications[${idx}][dose]" class="form-control form-control-sm" placeholder="مثال: 50 mg أو 0.5 ml" required>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold mb-1">مسار الإعطاء:</label>
+                    <select name="medications[${idx}][route]" class="form-select form-select-sm">
+                        <option value="وريدي IV">وريدي (IV)</option>
+                        <option value="تسريب وريدي مستمر Infusion">تسريب وريدي مستمر</option>
+                        <option value="فموي Oral">فموي (Oral)</option>
+                        <option value="عضلي IM">عضلي (IM)</option>
+                        <option value="استنشاق Nebulizer">استنشاق / رذاذ (Nebulizer)</option>
+                        <option value="قطرات Drops">قطرات (Drops)</option>
+                        <option value="موضعي Topical">موضعي (Topical)</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold mb-1">التكرار (Frequency):</label>
+                    <select name="medications[${idx}][frequency]" class="form-select form-select-sm">
+                        <option value="كل 8 ساعات (TID)">كل 8 ساعات (TID)</option>
+                        <option value="كل 12 ساعة (BID)">كل 12 ساعة (BID)</option>
+                        <option value="مرة يومياً (OD)">مرة يومياً (OD)</option>
+                        <option value="كل 6 ساعات (QID)">كل 6 ساعات (QID)</option>
+                        <option value="عند اللزوم (PRN)">عند اللزوم (PRN)</option>
+                        <option value="جرعة وحيدة Stat">جرعة وحيدة (Single Dose)</option>
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label small fw-bold mb-1">عدد الأيام (لعداد Day X of Y):</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" name="medications[${idx}][duration_days]" min="1" max="365" class="form-control form-control-sm med-duration-days-input" placeholder="مثال: 3 أو فارغ لمستمر">
+                        <span class="input-group-text">يوم</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 3)">3</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 5)">5</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 7)">7</button>
+                        <button type="button" class="btn btn-xs btn-outline-secondary py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, 10)">10</button>
+                        <button type="button" class="btn btn-xs btn-outline-info py-0 px-1.5" style="font-size: 10px;" onclick="setNicuRowDurationDays(this, '')">مستمر</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-1">
+                <label class="form-label small mb-1">تعليمات وتوجيهات الطبيب:</label>
+                <input type="text" name="medications[${idx}][instructions]" class="form-control form-control-sm" placeholder="مثال: يُعطى ببطء عبر مضخة المحاليل، يُحفظ بعيداً عن الضوء...">
+            </div>
+        `;
+
+        newRow.querySelector('.btn-remove-med-row').addEventListener('click', function() {
+            newRow.remove();
+            updatePrescriptionCount();
+        });
+
+        if (prefill) {
+            const nameIn = newRow.querySelector('.med-name-input');
+            if (nameIn) nameIn.value = prefill.name || '';
+            const doseIn = newRow.querySelector('input[name*="[dose]"]');
+            if (doseIn) doseIn.value = prefill.dosage || prefill.dose || '';
+            const routeSel = newRow.querySelector('select[name*="[route]"]');
+            if (routeSel && prefill.route) {
+                const opt = Array.from(routeSel.options).find(o => o.value === prefill.route || o.text.includes(prefill.route));
+                if (opt) routeSel.value = opt.value;
+            }
+            const freqSel = newRow.querySelector('select[name*="[frequency]"]');
+            if (freqSel && prefill.frequency) {
+                const opt = Array.from(freqSel.options).find(o => o.value === prefill.frequency || o.text.includes(prefill.frequency));
+                if (opt) freqSel.value = opt.value;
+            }
+            const daysIn = newRow.querySelector('.med-duration-days-input');
+            if (daysIn) {
+                if (prefill.duration_days) daysIn.value = prefill.duration_days;
+                else if (prefill.duration) {
+                    const m = String(prefill.duration).match(/(\d+)/);
+                    if (m) daysIn.value = m[1];
+                }
+            }
+            const instrIn = newRow.querySelector('input[name*="[instructions]"]');
+            if (instrIn && prefill.instructions) instrIn.value = prefill.instructions;
+        }
+
+        prescriptionContainer.appendChild(newRow);
+        attachMedAutocomplete(newRow);
+        updatePrescriptionCount();
+        return newRow;
+    }
+
     if (prescriptionContainer) {
         prescriptionContainer.querySelectorAll('.prescription-row').forEach(row => {
             attachMedAutocomplete(row);
@@ -4704,79 +5187,196 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (btnAddMedRow && prescriptionContainer) {
         btnAddMedRow.addEventListener('click', function() {
-            const newRow = document.createElement('div');
-            newRow.className = 'card border bg-white p-2 mb-2 rounded-3 prescription-row';
-            newRow.setAttribute('data-row', prescriptionRowIndex);
-            newRow.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <strong class="text-success small"><i class="fas fa-pills me-1"></i> الدواء #<span class="row-number">${prescriptionRowIndex + 1}</span></strong>
-                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 border-0 btn-remove-med-row" title="حذف الدواء"><i class="fas fa-times"></i></button>
-                </div>
-
-                <div class="mb-2 position-relative">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label small fw-bold text-dark mb-0">اسم الدواء:</label>
-                        <span class="text-muted" style="font-size: 11px;">(اختر من الصيدلية أو اكتب أي دواء مخصص بحرية)</span>
-                    </div>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white"><i class="fas fa-capsules text-success"></i></span>
-                        <input type="text" name="medications[${prescriptionRowIndex}][name]" class="form-control med-name-input" placeholder="اكتب اسم الدواء التجاري أو العلمي أو التركيبة المخصصة..." autocomplete="off" required>
-                    </div>
-                    <div class="list-group position-absolute w-100 shadow-lg mt-1 med-autocomplete-menu" style="max-height: 200px; overflow-y: auto; display: none; z-index: 1060;"></div>
-                </div>
-
-                <div class="row g-2 mb-2">
-                    <div class="col-6">
-                        <label class="form-label small fw-bold mb-1">الجرعة (Dose):</label>
-                        <input type="text" name="medications[${prescriptionRowIndex}][dose]" class="form-control form-control-sm" placeholder="مثال: 50 mg أو 0.5 ml" required>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-bold mb-1">مسار الإعطاء:</label>
-                        <select name="medications[${prescriptionRowIndex}][route]" class="form-select form-select-sm">
-                            <option value="وريدي IV">وريدي (IV)</option>
-                            <option value="تسريب وريدي مستمر Infusion">تسريب وريدي مستمر</option>
-                            <option value="فموي Oral">فموي (Oral)</option>
-                            <option value="عضلي IM">عضلي (IM)</option>
-                            <option value="استنشاق Nebulizer">استنشاق / رذاذ (Nebulizer)</option>
-                            <option value="قطرات Drops">قطرات (Drops)</option>
-                            <option value="موضعي Topical">موضعي (Topical)</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-bold mb-1">التكرار (Frequency):</label>
-                        <select name="medications[${prescriptionRowIndex}][frequency]" class="form-select form-select-sm">
-                            <option value="كل 8 ساعات (TID)">كل 8 ساعات (TID)</option>
-                            <option value="كل 12 ساعة (BID)">كل 12 ساعة (BID)</option>
-                            <option value="مرة يومياً (OD)">مرة يومياً (OD)</option>
-                            <option value="كل 6 ساعات (QID)">كل 6 ساعات (QID)</option>
-                            <option value="عند اللزوم (PRN)">عند اللزوم (PRN)</option>
-                            <option value="جرعة وحيدة Stat">جرعة وحيدة (Single Dose)</option>
-                        </select>
-                    </div>
-                    <div class="col-6">
-                        <label class="form-label small fw-bold mb-1">المدة (Duration):</label>
-                        <input type="text" name="medications[${prescriptionRowIndex}][duration]" class="form-control form-control-sm" placeholder="مثال: 5 أيام أو أسبوع">
-                    </div>
-                </div>
-
-                <div class="mb-1">
-                    <label class="form-label small mb-1">تعليمات وتوجيهات الطبيب:</label>
-                    <input type="text" name="medications[${prescriptionRowIndex}][instructions]" class="form-control form-control-sm" placeholder="مثال: يُعطى ببطء عبر مضخة المحاليل، يُحفظ بعيداً عن الضوء...">
-                </div>
-            `;
-
-            newRow.querySelector('.btn-remove-med-row').addEventListener('click', function() {
-                newRow.remove();
-                updatePrescriptionCount();
-            });
-
-            prescriptionContainer.appendChild(newRow);
-            attachMedAutocomplete(newRow);
-            prescriptionRowIndex++;
-            updatePrescriptionCount();
-            newRow.querySelector('.med-name-input').focus();
+            const newRow = createNicuMedicationRow(null, null);
+            if (newRow) newRow.querySelector('.med-name-input').focus();
         });
     }
+
+    // ==================== باقات أدوية الخدج السريعة والمفضلة (مثل الطبيب الاستشاري) ====================
+    window.sortNicuQuickPkgChips = function() {
+        const container = document.getElementById('nicuQuickPkgContainer');
+        if (!container) return;
+        const chips = Array.from(container.querySelectorAll('.nicu-pkg-chip-item'));
+        if (chips.length <= 1) return;
+        chips.sort((a, b) => {
+            const sA = parseInt(a.getAttribute('data-is-starred') || '0', 10);
+            const sB = parseInt(b.getAttribute('data-is-starred') || '0', 10);
+            if (sB !== sA) return sB - sA;
+            const uA = parseInt(a.getAttribute('data-usage') || '0', 10);
+            const uB = parseInt(b.getAttribute('data-usage') || '0', 10);
+            if (uB !== uA) return uB - uA;
+            return (a.getAttribute('data-pkg-name') || '').localeCompare(b.getAttribute('data-pkg-name') || '', 'ar');
+        });
+        chips.forEach(c => container.appendChild(c));
+    };
+
+    window.toggleNicuPkgStar = function(btn, groupId) {
+        if (!groupId) return;
+        const chip = btn.closest('.nicu-pkg-chip-item');
+        btn.disabled = true;
+        fetch(`{{ url('medicine-groups') }}/${groupId}/toggle-star`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success && chip) {
+                const isStarred = data.is_starred;
+                chip.setAttribute('data-is-starred', isStarred ? '1' : '0');
+                btn.innerHTML = isStarred ? '<i class="fas fa-star text-dark fs-6"></i>' : '<i class="far fa-star fs-6"></i>';
+                window.sortNicuQuickPkgChips();
+            }
+        }).catch(() => { btn.disabled = false; });
+    };
+
+    window.applyNicuMedPkg = function(chip, groupId) {
+        if (!chip || !prescriptionContainer) return;
+        const isApplied = chip.getAttribute('data-applied') === '1';
+
+        if (isApplied) {
+            prescriptionContainer.querySelectorAll(`.prescription-row[data-pkg-id="${groupId}"]`).forEach(r => r.remove());
+            updatePrescriptionCount();
+            chip.setAttribute('data-applied', '0');
+            chip.classList.remove('active');
+            const chk = chip.querySelector('.pkg-check-indicator');
+            if (chk) chk.remove();
+            fetch(`{{ url('medicine-groups') }}/${groupId}/decrement-usage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+            }).then(r => r.json()).then(d => {
+                if (d.success) {
+                    chip.setAttribute('data-usage', d.usage_count);
+                    const n = chip.querySelector('.usage-num');
+                    if (n) n.textContent = d.usage_count;
+                    window.sortNicuQuickPkgChips();
+                }
+            });
+            return;
+        }
+
+        const meds = JSON.parse(chip.getAttribute('data-meds') || '[]');
+        // إذا كان السطر الأول فارغاً تماماً نحذفه قبل إدراج الباقة لتبقى القائمة نظيفة
+        const existingRows = prescriptionContainer.querySelectorAll('.prescription-row');
+        if (existingRows.length === 1) {
+            const firstName = existingRows[0].querySelector('.med-name-input')?.value?.trim();
+            if (!firstName) existingRows[0].remove();
+        }
+        meds.forEach(med => createNicuMedicationRow(med, groupId));
+
+        chip.setAttribute('data-applied', '1');
+        chip.classList.add('active');
+        const clickArea = chip.querySelector('.nicu-pkg-content-click');
+        if (clickArea && !chip.querySelector('.pkg-check-indicator')) {
+            const check = document.createElement('span');
+            check.className = 'badge bg-success text-white rounded-pill ms-1 pkg-check-indicator';
+            check.style.fontSize = '0.65rem';
+            check.innerHTML = '<i class="fas fa-check"></i>';
+            clickArea.appendChild(check);
+        }
+
+        fetch(`{{ url('medicine-groups') }}/${groupId}/increment-usage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' }
+        }).then(r => r.json()).then(d => {
+            if (d.success) {
+                chip.setAttribute('data-usage', d.usage_count);
+                const n = chip.querySelector('.usage-num');
+                if (n) n.textContent = d.usage_count;
+                window.sortNicuQuickPkgChips();
+            }
+        });
+    };
+
+    window.openNicuSavePkgModal = function() {
+        if (!prescriptionContainer) return;
+        const rows = prescriptionContainer.querySelectorAll('.prescription-row');
+        const meds = [];
+        rows.forEach(row => {
+            const name = (row.querySelector('.med-name-input')?.value || '').trim();
+            if (!name) return;
+            meds.push({
+                name: name,
+                dosage: row.querySelector('input[name*="[dose]"]')?.value || '',
+                route: row.querySelector('select[name*="[route]"]')?.value || '',
+                frequency: row.querySelector('select[name*="[frequency]"]')?.value || '',
+                duration_days: row.querySelector('.med-duration-days-input')?.value || null,
+                instructions: row.querySelector('input[name*="[instructions]"]')?.value || ''
+            });
+        });
+
+        if (meds.length === 0) {
+            alert('يرجى كتابة دواء واحد على الأقل في الوصفة قبل الحفظ كباقة.');
+            return;
+        }
+        window._pendingNicuPkgMeds = meds;
+        document.getElementById('nicuSavePkgName').value = '';
+        document.getElementById('nicuSavePkgDesc').value = '';
+        document.getElementById('nicuSaveRxPkgError').classList.add('d-none');
+        new bootstrap.Modal(document.getElementById('nicuSaveRxPkgModal')).show();
+    };
+
+    window.submitNicuSavePkg = function(btn) {
+        const name = (document.getElementById('nicuSavePkgName').value || '').trim();
+        const err = document.getElementById('nicuSaveRxPkgError');
+        if (!name) {
+            err.textContent = 'يرجى إدخال اسم الباقة.';
+            err.classList.remove('d-none');
+            return;
+        }
+        err.classList.add('d-none');
+        btn.disabled = true;
+
+        fetch("{{ route('medicine-groups.save-from-visit') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+            body: JSON.stringify({
+                department: 'nicu',
+                name: name,
+                description: document.getElementById('nicuSavePkgDesc').value || '',
+                is_public: document.getElementById('nicuSavePkgIsPublic').checked ? 1 : 0,
+                medications: window._pendingNicuPkgMeds || []
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false;
+            if (data.success && data.group) {
+                const wrapper = document.getElementById('nicuQuickPkgWrapper');
+                const container = document.getElementById('nicuQuickPkgContainer');
+                if (wrapper) wrapper.style.display = 'block';
+                if (container) {
+                    const isPub = data.group.is_public;
+                    const chip = document.createElement('div');
+                    chip.className = `nicu-pkg-chip-item d-inline-flex align-items-center btn btn-sm ${isPub ? 'btn-outline-primary border-primary' : 'btn-outline-success border-success'} rounded-pill p-1 pe-3 transition-all`;
+                    chip.setAttribute('data-id', data.group.id);
+                    chip.setAttribute('data-is-starred', '0');
+                    chip.setAttribute('data-usage', '0');
+                    chip.setAttribute('data-meds', JSON.stringify(data.group.meds || []));
+                    chip.setAttribute('data-pkg-name', data.group.name);
+                    chip.innerHTML = `
+                        <button type="button" class="btn btn-sm btn-link p-0 me-2 text-decoration-none nicu-pkg-star-btn text-muted opacity-50" onclick="event.stopPropagation(); window.toggleNicuPkgStar(this, ${data.group.id});"><i class="far fa-star fs-6"></i></button>
+                        <span class="nicu-pkg-content-click d-inline-flex align-items-center cursor-pointer" onclick="window.applyNicuMedPkg(this.closest('.nicu-pkg-chip-item'), ${data.group.id})">
+                            <i class="${isPub ? 'fas fa-hospital text-primary' : 'fas fa-layer-group text-success'} me-1"></i>
+                            <strong>${data.group.name}</strong>
+                            <span class="badge ${isPub ? 'bg-primary text-white' : 'bg-success-subtle text-success'} rounded-pill ms-1">${data.group.medicines_count}${isPub ? ' (عامة)' : ''}</span>
+                        </span>
+                    `;
+                    container.appendChild(chip);
+                }
+                const modalEl = document.getElementById('nicuSaveRxPkgModal');
+                const modalInst = bootstrap.Modal.getInstance(modalEl);
+                if (modalInst) modalInst.hide();
+            } else {
+                err.textContent = data.message || 'حدث خطأ أثناء الحفظ.';
+                err.classList.remove('d-none');
+            }
+        }).catch(() => {
+            btn.disabled = false;
+            err.textContent = 'تعذر الاتصال بالخادم.';
+            err.classList.remove('d-none');
+        });
+    };
 
     // إغلاق أي قائمة منسدلة عند النقر خارجها
     document.addEventListener('click', function(e) {

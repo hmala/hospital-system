@@ -17,6 +17,7 @@ class StockMovement extends Model
         'type',
         'user_id',
         'surgery_id',
+        'incubator_reservation_id',
         'notes',
     ];
 
@@ -43,5 +44,10 @@ class StockMovement extends Model
     public function surgery()
     {
         return $this->belongsTo(Surgery::class);
+    }
+
+    public function incubatorReservation()
+    {
+        return $this->belongsTo(IncubatorReservation::class, 'incubator_reservation_id');
     }
 }

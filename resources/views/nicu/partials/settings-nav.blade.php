@@ -1,6 +1,6 @@
 {{-- شريط تبويبات الإعدادات المشترك لقسم الخدج والحاضنات (NICU Settings Sub-tabs) --}}
 @php
-    $currentTab = $activeTab ?? (request()->routeIs('nicu.services.*') ? 'services' : (request()->routeIs('incubators.*') ? 'incubators' : 'milk-types'));
+    $currentTab = $activeTab ?? (request()->routeIs('nicu.services.*') ? 'services' : (request()->routeIs('incubators.*') ? 'incubators' : (request()->routeIs('nicu.custom-medicines.*') ? 'custom-medicines' : 'milk-types')));
 @endphp
 
 <div class="card border-0 shadow-sm mb-4 bg-white" style="border-radius: 12px;">
@@ -28,6 +28,14 @@
                    style="border-radius: 8px;">
                     <i class="fas fa-baby me-1 {{ $currentTab === 'milk-types' ? 'text-white' : 'text-warning' }}"></i>
                     قائمة وتصنيفات حليب وتغذية الخدج
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link px-3 py-2 fw-bold {{ $currentTab === 'custom-medicines' ? 'active shadow-sm' : 'text-secondary' }}" 
+                   href="{{ route('nicu.custom-medicines.index') }}"
+                   style="border-radius: 8px;">
+                    <i class="fas fa-capsules me-1 {{ $currentTab === 'custom-medicines' ? 'text-white' : 'text-info' }}"></i>
+                    دليل الأدوية المضافة للخدج
                 </a>
             </li>
         </ul>

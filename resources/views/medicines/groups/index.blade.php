@@ -1,26 +1,42 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $currentDept = $department ?? request('department', 'general');
+    $isNicuDept = $currentDept === 'nicu';
+    $canTogglePublic = Auth::user()->isAdmin()
+        || Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin'])
+        || ($isNicuDept && (Auth::user()->hasAnyRole(['nicu_doctor', 'nicu_staff', 'doctor', 'resident']) || Auth::user()->can('manage nicu prescriptions')));
+@endphp
 <div class="container-fluid py-3">
     <!-- ترويسة الصفحة -->
     <div class="row mb-3 align-items-center">
         <div class="col-lg-6">
-            <h2 class="h4 fw-bold text-dark mb-1 d-flex align-items-center gap-2">
-                <span class="badge bg-success-subtle text-success p-2 rounded-3">
+            <h2 class="h4 fw-bold text-dark mb-1 d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge {{ $isNicuDept ? 'bg-info-subtle text-info' : 'bg-success-subtle text-success' }} p-2 rounded-3">
                     <i class="fas fa-layer-group"></i>
                 </span>
-                مجموعات الأدوية المفضلة (باقات الوصفات السريعة)
+                {{ $isNicuDept ? 'باقات أدوية الخدج المفضلة (الوصفات السريعة للخدج)' : 'مجموعات الأدوية المفضلة (باقات الوصفات السريعة)' }}
+                @if($isNicuDept)
+                    <span class="badge bg-info text-white rounded-pill fs-6 px-3">NICU</span>
+                @endif
             </h2>
             <p class="text-muted small mb-0">
-                إدارة قوالب الروشتات السريعة لتسهيل كتابة الوصفة الطبية بضغطة زر واحدة داخل محطة الطبيب.
+                {{ $isNicuDept ? 'إدارة الباقات الدوائية العامة لقسم الخدج والباقات الخاصة بكل طبيب ومقيم لإدراجها بنقرة واحدة داخل ملف الحاضنة.' : 'إدارة قوالب الروشتات السريعة لتسهيل كتابة الوصفة الطبية بضغطة زر واحدة داخل محطة الطبيب.' }}
             </p>
         </div>
         <div class="col-lg-6 d-flex justify-content-lg-end gap-2 mt-3 mt-lg-0 flex-wrap">
+            @if($isNicuDept)
+                <a href="{{ route('nicu.index') }}" class="btn btn-outline-secondary btn-sm px-3">
+                    <i class="fas fa-arrow-right me-1"></i> لوحة الحاضنات
+                </a>
+            @endif
             <button type="button" class="btn btn-outline-danger btn-sm px-3 shadow-xs" onclick="confirmResetAllUsages()" title="تصفير عدادات استخدام كافة الباقات لتصبح 0">
                 <i class="fas fa-redo me-1"></i> تصفير جميع العدادات
             </button>
             <form id="resetAllUsagesForm" action="{{ route('medicine-groups.reset-usage') }}" method="POST" class="d-none">
                 @csrf
+                <input type="hidden" name="department" value="{{ $currentDept }}">
             </form>
             <button type="button" class="btn btn-success btn-sm px-3 shadow-sm fw-bold" data-bs-toggle="modal" data-bs-target="#createGroupModal">
                 <i class="fas fa-plus me-1"></i> إنشاء باقة جديدة
@@ -222,19 +238,20 @@
                                 <!-- الأدوية المشمولة -->
                                 <td>
                                     <div class="d-flex flex-wrap gap-1 align-items-center">
-                                        <span class="badge bg-{{ $group->medicines_count > 0 ? 'success' : 'secondary' }} rounded-pill px-2 py-1 font-monospace">
-                                            <i class="fas fa-pills me-1"></i> {{ $group->medicines_count }}
+                                        @php $allPreviewMeds = $group->formatted_medications; @endphp
+                                        <span class="badge bg-{{ $allPreviewMeds->count() > 0 ? 'success' : 'secondary' }} rounded-pill px-2 py-1 font-monospace">
+                                            <i class="fas fa-pills me-1"></i> {{ $allPreviewMeds->count() }}
                                         </span>
-                                        @forelse($group->medicines->take(3) as $m)
+                                        @forelse($allPreviewMeds->take(3) as $m)
                                             <span class="badge bg-light text-dark border font-monospace py-1" style="font-size: 0.72rem;">
-                                                {{ $m->name }} <span class="text-muted">({{ $m->pivot->dosage ?: $m->pivot->dosage_form }})</span>
+                                                {{ $m['name'] }} <span class="text-muted">({{ $m['dosage'] ?: $m['type'] }})</span>
                                             </span>
                                         @empty
                                             <span class="text-muted small fst-italic">لا توجد أدوية مضافة بعد</span>
                                         @endforelse
-                                        @if($group->medicines->count() > 3)
+                                        @if($allPreviewMeds->count() > 3)
                                             <span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size: 0.72rem;">
-                                                +{{ $group->medicines->count() - 3 }} إضافية
+                                                +{{ $allPreviewMeds->count() - 3 }} إضافية
                                             </span>
                                         @endif
                                     </div>
@@ -342,20 +359,21 @@
 
                                 <!-- معاينة الأدوية في البطاقة -->
                                 <div class="bg-light p-2 rounded-2 mb-2">
+                                    @php $cardMeds = $group->formatted_medications; @endphp
                                     <div class="small fw-bold text-muted mb-1 d-flex justify-content-between align-items-center">
-                                        <span><i class="fas fa-pills text-success me-1"></i> قائمة الأدوية ({{ $group->medicines->count() }}):</span>
+                                        <span><i class="fas fa-pills text-success me-1"></i> قائمة الأدوية ({{ $cardMeds->count() }}):</span>
                                     </div>
                                     <div class="d-flex flex-wrap gap-1">
-                                        @forelse($group->medicines->take(4) as $m)
+                                        @forelse($cardMeds->take(4) as $m)
                                             <span class="badge bg-white text-dark border font-monospace" style="font-size: 0.72rem;">
-                                                {{ $m->name }} <small class="text-muted">({{ $m->pivot->dosage ?: $m->pivot->dosage_form }})</small>
+                                                {{ $m['name'] }} <small class="text-muted">({{ $m['dosage'] ?: $m['type'] }})</small>
                                             </span>
                                         @empty
                                             <span class="text-muted small fst-italic">لا توجد أدوية مضافة</span>
                                         @endforelse
-                                        @if($group->medicines->count() > 4)
+                                        @if($cardMeds->count() > 4)
                                             <span class="badge bg-secondary-subtle text-secondary font-monospace" style="font-size: 0.7rem;">
-                                                +{{ $group->medicines->count() - 4 }} أخرى
+                                                +{{ $cardMeds->count() - 4 }} أخرى
                                             </span>
                                         @endif
                                     </div>
@@ -397,22 +415,23 @@
             </div>
             <form action="{{ route('medicine-groups.store') }}" method="POST" id="createGroupForm">
                 @csrf
+                <input type="hidden" name="department" value="{{ $currentDept }}">
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label for="groupName" class="form-label fw-bold small text-dark">اسم الباقة <span class="text-danger">*</span></label>
-                        <input type="text" id="groupName" name="name" class="form-control" placeholder="مثال: باقة نزلات البرد، باقة ما بعد العملية..." required maxlength="255" autofocus>
+                        <input type="text" id="groupName" name="name" class="form-control" placeholder="{{ $isNicuDept ? 'مثال: بروتوكول التهاب دم الوليد، باقة مقيم الخدج...' : 'مثال: باقة نزلات البرد، باقة ما بعد العملية...' }}" required maxlength="255" autofocus>
                     </div>
                     <div class="mb-3">
                         <label for="groupDescription" class="form-label fw-bold small text-dark">وصف مختصر / ملاحظات (اختياري)</label>
                         <textarea id="groupDescription" name="description" class="form-control" rows="3" placeholder="ملاحظات توضيحية حول دواعي استخدام الباقة"></textarea>
                     </div>
-                    @if(Auth::user()->isAdmin() || Auth::user()->hasRole('admin'))
+                    @if($canTogglePublic)
                     <div class="form-check form-switch p-3 bg-light rounded-3 border">
                         <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="groupIsPublic" name="is_public" value="1">
                         <label class="form-check-label fw-bold text-primary small cursor-pointer" for="groupIsPublic">
-                            <i class="fas fa-hospital me-1"></i> مشاركة كباقة عامة لجميع أطباء المستشفى
+                            <i class="fas fa-hospital me-1"></i> {{ $isNicuDept ? 'مشاركة كباقة عامة لجميع أطباء ومقيمي الخدج' : 'مشاركة كباقة عامة لجميع أطباء المستشفى' }}
                         </label>
-                        <small class="text-muted d-block mt-1">عند التفعيل، ستظهر هذه الباقة في قائمة الباقات السريعة لجميع الأطباء في المستشفى.</small>
+                        <small class="text-muted d-block mt-1">عند التفعيل، ستظهر هذه الباقة لجميع أطباء القسم؛ وعند الإلغاء تبقى باقة خاصة بك فقط.</small>
                     </div>
                     @endif
                 </div>

@@ -24,6 +24,7 @@ class NicuVital extends Model
         'feeding_type',
         'feeding_amount_ml',
         'feeding_notes',
+        'clinical_notes',
         'nurse_id',
         'recorded_at',
     ];

@@ -6,10 +6,12 @@ use App\Models\Doctor;
 use App\Models\Incubator;
 use App\Models\IncubatorReservation;
 use App\Models\LabTest;
+use App\Models\Location;
 use App\Models\Medicine;
 use App\Models\NicuAttachment;
 use App\Models\NicuCareSchedule;
 use App\Models\NicuConsultation;
+use App\Models\NicuCustomMedicine;
 use App\Models\NicuDoctorNote;
 use App\Models\NicuMedicalOrder;
 use App\Models\NicuMedicationAdministration;
@@ -20,7 +22,10 @@ use App\Models\NicuVital;
 use App\Models\RadiologyType;
 use App\Models\Request as MedicalRequest;
 use App\Models\Room;
+use App\Models\StockBatch;
+use App\Models\StockMovement;
 use App\Models\UserLabTestGroup;
+use App\Models\UserMedicineGroup;
 use App\Services\NicuBillingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -262,6 +267,7 @@ class NicuController extends Controller
             'consultations.requestedByUser',
             'medicalOrders.orderedByUser',
             'medicalOrders.processedByUser',
+            'medicalOrders.stoppedByUser',
             'medicationAdministrations.nurse',
             'medicalRequests.labResults',
             'medicalRequests.payments',
@@ -269,6 +275,8 @@ class NicuController extends Controller
             'careSchedules.creator',
             'attachments.uploader',
             'doctorNotes.doctor',
+            'stockMovements.batch.product',
+            'stockMovements.user',
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);
@@ -318,6 +326,46 @@ class NicuController extends Controller
 
         $milkTypes = NicuMilkType::active()->get();
 
+        // دليل الأدوية المضافة والمعتمدة داخل قسم الخدج
+        $nicuCustomMedicines = NicuCustomMedicine::active()
+            ->orderByDesc('usage_count')
+            ->orderBy('name')
+            ->get();
+
+        // باقات الأدوية السريعة والمفضلات الخاصة بقسم الخدج (عامة للقسم + خاصة بالطبيب/المقيم)
+        $nicuMedicineGroups = collect();
+        if ($user) {
+            $nicuMedicineGroups = UserMedicineGroup::with(['medicines', 'customItems'])
+                ->where('department', 'nicu')
+                ->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)
+                        ->orWhere('is_public', true);
+                })
+                ->orderByDesc('is_starred')
+                ->orderByDesc('usage_count')
+                ->orderByDesc('is_public')
+                ->orderBy('name')
+                ->get();
+        }
+
+        // موقع مخزن الخدج الفرعي والمستلزمات المتوفرة فيه (مربوط بالمخزن الرئيسي - بدون أثر مالي)
+        $nicuStoreLocation = Location::where('type', 'sub')
+            ->where(function ($q) {
+                $q->where('name', 'like', '%خدج%')
+                    ->orWhere('name', 'like', '%حاضن%')
+                    ->orWhere('name', 'like', '%NICU%');
+            })
+            ->first();
+
+        $nicuStockBatches = collect();
+        if ($nicuStoreLocation) {
+            $nicuStockBatches = StockBatch::with('product')
+                ->where('location_id', $nicuStoreLocation->id)
+                ->where('current_qty', '>', 0)
+                ->orderBy('expiry_date')
+                ->get();
+        }
+
         return view('nicu.show', compact(
             'reservation',
             'stayDetails',
@@ -327,7 +375,11 @@ class NicuController extends Controller
             'labTestGroups',
             'radiologyTypes',
             'medicines',
-            'milkTypes'
+            'milkTypes',
+            'nicuCustomMedicines',
+            'nicuMedicineGroups',
+            'nicuStoreLocation',
+            'nicuStockBatches'
         ));
     }
 
@@ -482,15 +534,50 @@ class NicuController extends Controller
     }
 
     /**
-     * تسجيل العلامات الحيوية والوزن والرضاعة
+     * تسجيل العلامات الحيوية والوزن والرضاعة والملاحظات السريرية الواسعة
      */
     public function storeVitals(Request $request, IncubatorReservation $reservation)
     {
-        $this->authorizeNicuAction(['record nicu vitals', 'manage nicu nursing'], ['nicu_nurse', 'nurse']);
+        $this->authorizeNicuAction(
+            ['record nicu vitals', 'manage nicu nursing', 'manage nicu clinical', 'manage nicu doctor notes'],
+            ['nicu_nurse', 'nurse', 'nicu_doctor', 'doctor', 'resident', 'nicu_staff']
+        );
 
         if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
             return $this->redirectBackWithActiveState($request, 'vitalsPane')
-                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن توثيق علامات حيوية جديدة.');
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن توثيق علامات حيوية أو ملاحظات جديدة.');
+        }
+
+        $saveMode = $request->input('save_mode', 'full');
+
+        if ($saveMode === 'note_only') {
+            $validated = $request->validate([
+                'clinical_notes' => 'required|string|max:5000',
+                'pin_as_doctor_note' => 'nullable|boolean',
+            ], [
+                'clinical_notes.required' => 'يرجى كتابة نص الملاحظة السريرية قبل الضغط على زر الحفظ.',
+            ]);
+
+            NicuVital::create([
+                'reservation_id' => $reservation->id,
+                'nurse_id' => Auth::id(),
+                'recorded_at' => now(),
+                'clinical_notes' => $validated['clinical_notes'],
+            ]);
+
+            if ($request->boolean('pin_as_doctor_note')) {
+                NicuDoctorNote::create([
+                    'incubator_reservation_id' => $reservation->id,
+                    'doctor_id' => Auth::id(),
+                    'doctor_name' => Auth::user()?->name,
+                    'content' => $validated['clinical_notes'],
+                    'is_urgent' => false,
+                    'is_pinned' => true,
+                ]);
+            }
+
+            return $this->redirectBackWithActiveState($request, 'vitalsPane')
+                ->with('success', 'تم حفظ الملاحظة السريرية في سجل القراءات بنجاح.');
         }
 
         $validated = $request->validate([
@@ -504,13 +591,29 @@ class NicuController extends Controller
             'feeding_type' => 'nullable|string|max:100',
             'feeding_amount_ml' => 'nullable|numeric|min:0',
             'feeding_notes' => 'nullable|string|max:500',
+            'clinical_notes' => 'nullable|string|max:5000',
         ]);
+
+        if (empty($validated['feeding_notes']) && ! empty($validated['clinical_notes'])) {
+            $validated['feeding_notes'] = Str::limit($validated['clinical_notes'], 240);
+        }
 
         $validated['reservation_id'] = $reservation->id;
         $validated['nurse_id'] = Auth::id();
         $validated['recorded_at'] = now();
 
         NicuVital::create($validated);
+
+        if ($request->boolean('pin_as_doctor_note') && ! empty($validated['clinical_notes'])) {
+            NicuDoctorNote::create([
+                'incubator_reservation_id' => $reservation->id,
+                'doctor_id' => Auth::id(),
+                'doctor_name' => Auth::user()?->name,
+                'content' => $validated['clinical_notes'],
+                'is_urgent' => false,
+                'is_pinned' => true,
+            ]);
+        }
 
         if (! empty($validated['weight'])) {
             $reservation->update(['current_weight' => $validated['weight']]);
@@ -531,7 +634,7 @@ class NicuController extends Controller
             }
         }
 
-        return $this->redirectBackWithActiveState($request, 'vitalsPane')->with('success', 'تم توثيق العلامات الحيوية والوزن بنجاح.');
+        return $this->redirectBackWithActiveState($request, 'vitalsPane')->with('success', 'تم توثيق العلامات الحيوية والملاحظات السريرية بنجاح.');
     }
 
     /**
@@ -949,6 +1052,8 @@ class NicuController extends Controller
             'medications.*.route' => 'nullable|string|max:50',
             'medications.*.frequency' => 'nullable|string|max:100',
             'medications.*.duration' => 'nullable|string|max:100',
+            'medications.*.duration_days' => 'nullable|integer|min:1|max:365',
+            'medications.*.started_at' => 'nullable|date',
             'medications.*.instructions' => 'nullable|string|max:500',
             // Or single direct item
             'item_name' => 'nullable|string|max:255',
@@ -956,6 +1061,8 @@ class NicuController extends Controller
             'route' => 'nullable|string|max:50',
             'frequency' => 'nullable|string|max:100',
             'duration' => 'nullable|string|max:100',
+            'duration_days' => 'nullable|integer|min:1|max:365',
+            'started_at' => 'nullable|date',
             'instructions' => 'nullable|string|max:500',
             'price' => 'nullable|numeric|min:0',
         ]);
@@ -974,6 +1081,8 @@ class NicuController extends Controller
                 'route' => $request->route,
                 'frequency' => $request->frequency,
                 'duration' => $request->duration,
+                'duration_days' => $request->duration_days,
+                'started_at' => $request->started_at,
                 'instructions' => $request->instructions,
                 'price' => $request->price ?? 0,
             ]);
@@ -985,6 +1094,13 @@ class NicuController extends Controller
 
         $count = 0;
         foreach ($medsList as $med) {
+            $medName = trim((string) $med['name']);
+            $durationDays = ! empty($med['duration_days']) ? (int) $med['duration_days'] : null;
+            if (! $durationDays && ! empty($med['duration']) && preg_match('/(\d+)/', (string) $med['duration'], $dMatch)) {
+                $durationDays = max(1, min(365, (int) $dMatch[1]));
+            }
+            $startedAt = ! empty($med['started_at']) ? Carbon::parse($med['started_at']) : now();
+
             $instructionsFormatted = [];
             if (! empty($med['dose'])) {
                 $instructionsFormatted[] = 'الجرعة: '.$med['dose'];
@@ -995,7 +1111,9 @@ class NicuController extends Controller
             if (! empty($med['frequency'])) {
                 $instructionsFormatted[] = 'التكرار: '.$med['frequency'];
             }
-            if (! empty($med['duration'])) {
+            if ($durationDays) {
+                $instructionsFormatted[] = "المدة: {$durationDays} يوم";
+            } elseif (! empty($med['duration'])) {
                 $instructionsFormatted[] = 'المدة: '.$med['duration'];
             }
             if (! empty($med['instructions'])) {
@@ -1005,18 +1123,149 @@ class NicuController extends Controller
             NicuMedicalOrder::create([
                 'reservation_id' => $reservation->id,
                 'order_type' => NicuMedicalOrder::TYPE_MEDICATION,
-                'item_name' => $med['name'],
+                'item_name' => $medName,
                 'price' => isset($med['price']) ? (float) $med['price'] : 0,
                 'priority' => 'urgent',
                 'instructions' => implode(' | ', $instructionsFormatted),
+                'duration_days' => $durationDays,
                 'status' => NicuMedicalOrder::STATUS_PENDING,
                 'ordered_by' => Auth::id(),
                 'ordered_at' => now(),
+                'started_at' => $startedAt,
             ]);
+
+            // حفظ تلقائي في دليل أدوية الخدج المضافة إذا لم يكن موجوداً في صيدلية المستشفى
+            $existsInPharmacy = Medicine::whereRaw('LOWER(name) = ?', [mb_strtolower($medName)])->exists();
+            if (! $existsInPharmacy) {
+                $existingCustom = NicuCustomMedicine::whereRaw('LOWER(name) = ?', [mb_strtolower($medName)])->first();
+                if ($existingCustom) {
+                    $existingCustom->increment('usage_count');
+                } else {
+                    NicuCustomMedicine::create([
+                        'name' => $medName,
+                        'default_dose' => $med['dose'] ?? null,
+                        'default_route' => $med['route'] ?? null,
+                        'default_frequency' => $med['frequency'] ?? null,
+                        'default_duration_days' => $durationDays,
+                        'usage_count' => 1,
+                        'is_active' => true,
+                        'created_by' => Auth::id(),
+                    ]);
+                }
+            }
+
             $count++;
         }
 
         return $this->redirectBackWithActiveState($request, 'prescriptionsPane')->with('success', "تم اعتماد {$count} علاج دوائي في الوصفة الطبية للطفل بنجاح.");
+    }
+
+    /**
+     * إيقاف أو استئناف علاج دوائي موصوف وتثبيت عداد أيام الاستخدام
+     */
+    public function stopMedicalOrder(Request $request, NicuMedicalOrder $order)
+    {
+        $this->authorizeNicuAction(['manage nicu prescriptions', 'manage nicu clinical'], ['nicu_doctor', 'doctor', 'resident']);
+
+        if ($order->stopped_at) {
+            $order->update([
+                'stopped_at' => null,
+                'stopped_by' => null,
+                'status' => NicuMedicalOrder::STATUS_PENDING,
+            ]);
+            $msg = "تم استئناف العلاج ({$order->item_name}) واستمرار عداد الأيام.";
+        } else {
+            $order->update([
+                'stopped_at' => now(),
+                'stopped_by' => Auth::id(),
+                'status' => NicuMedicalOrder::STATUS_COMPLETED,
+            ]);
+            $msg = "تم إيقاف العلاج ({$order->item_name}) وتثبيت مدة الاستخدام عند {$order->therapy_day_label}.";
+        }
+
+        return $this->redirectBackWithActiveState($request, 'prescriptionsPane')->with('success', $msg);
+    }
+
+    /**
+     * صرف مستلزم طبي للطفل من مخزن عهدة الخدج الفرعي (توثيق عهدة فقط بدون أثر مالي)
+     */
+    public function dispenseStoreItem(Request $request, IncubatorReservation $reservation)
+    {
+        $this->authorizeNicuAction(
+            ['manage nicu store', 'manage nicu nursing', 'manage nicu clinical'],
+            ['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'nurse', 'doctor', 'resident']
+        );
+
+        if ($reservation->status === IncubatorReservation::STATUS_DISCHARGED) {
+            return $this->redirectBackWithActiveState($request, 'storeSuppliesPane')
+                ->with('error', '⛔ تم تسجيل خروج الطفل وأرشفة إضبارته. لا يمكن صرف مستلزمات مخزن جديدة.');
+        }
+
+        $validated = $request->validate([
+            'batch_id' => 'required|exists:stock_batches,id',
+            'quantity' => 'required|integer|min:1',
+            'notes' => 'nullable|string|max:500',
+        ], [
+            'batch_id.required' => 'يرجى اختيار المادة من مخزن الخدج.',
+            'quantity.required' => 'يرجى تحديد الكمية المصروفة.',
+            'quantity.min' => 'الكمية المصروفة يجب أن تكون 1 على الأقل.',
+        ]);
+
+        $nicuLocation = Location::where('type', 'sub')
+            ->where(function ($q) {
+                $q->where('name', 'like', '%خدج%')
+                    ->orWhere('name', 'like', '%حاضن%')
+                    ->orWhere('name', 'like', '%NICU%');
+            })
+            ->first();
+
+        if (! $nicuLocation) {
+            return $this->redirectBackWithActiveState($request, 'storeSuppliesPane')
+                ->with('error', 'لم يتم العثور على مخزن فرعي معرف لقسم الخدج.');
+        }
+
+        try {
+            DB::transaction(function () use ($validated, $reservation, $nicuLocation) {
+                $batch = StockBatch::with('product')
+                    ->where('id', $validated['batch_id'])
+                    ->where('location_id', $nicuLocation->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $batch) {
+                    throw new \Exception('الوجبة المحددة غير موجودة في عهدة مخزن الخدج.');
+                }
+
+                if ($batch->current_qty < $validated['quantity']) {
+                    throw new \Exception("الكمية المطلوبة ({$validated['quantity']}) تتجاوز الرصيد المتوفر في مخزن الخدج ({$batch->current_qty}).");
+                }
+
+                $batch->decrement('current_qty', $validated['quantity']);
+
+                $incubatorNumber = $reservation->incubator?->incubator_number ?? '—';
+                $movementNotes = "صرف مستلزم لخديج: {$reservation->baby_title} (حاضنة: {$incubatorNumber}) - توثيق عهدة بدون أثر مالي";
+                if (! empty($validated['notes'])) {
+                    $movementNotes .= ' | '.$validated['notes'];
+                }
+
+                StockMovement::create([
+                    'batch_id' => $batch->id,
+                    'from_location_id' => $nicuLocation->id,
+                    'to_location_id' => null,
+                    'quantity' => $validated['quantity'],
+                    'type' => 'issue_to_patient',
+                    'user_id' => Auth::id(),
+                    'incubator_reservation_id' => $reservation->id,
+                    'notes' => $movementNotes,
+                ]);
+            });
+
+            return $this->redirectBackWithActiveState($request, 'storeSuppliesPane')
+                ->with('success', 'تم صرف المستلزم من عهدة مخزن الخدج وتوثيقه على ملف الطفل بنجاح (بدون أثر مالي).');
+        } catch (\Exception $e) {
+            return $this->redirectBackWithActiveState($request, 'storeSuppliesPane')
+                ->with('error', $e->getMessage());
+        }
     }
 
     /**
@@ -1109,6 +1358,7 @@ class NicuController extends Controller
             'dose_or_amount' => 'nullable|string|max:100',
             'route' => 'nullable|string|max:100',
             'interval_hours' => 'required|integer|min:1|max:48',
+            'duration_days' => 'nullable|integer|min:1|max:365',
             'start_time' => 'nullable|date',
             'instructions' => 'nullable|string|max:1000',
         ]);
@@ -1128,6 +1378,7 @@ class NicuController extends Controller
             'dose_or_amount' => $validated['dose_or_amount'] ?? null,
             'route' => $validated['route'] ?? null,
             'interval_hours' => $validated['interval_hours'],
+            'duration_days' => $validated['duration_days'] ?? null,
             'start_time' => $startTime,
             'next_due_at' => $nextDueAt,
             'instructions' => $validated['instructions'] ?? null,
@@ -1160,6 +1411,7 @@ class NicuController extends Controller
             'schedules.*.dose_or_amount' => 'nullable|string|max:100',
             'schedules.*.route' => 'nullable|string|max:100',
             'schedules.*.interval_hours' => 'required|integer|min:1|max:48',
+            'schedules.*.duration_days' => 'nullable|integer|min:1|max:365',
             'schedules.*.instructions' => 'nullable|string|max:1000',
         ]);
 
@@ -1180,6 +1432,7 @@ class NicuController extends Controller
                 'dose_or_amount' => $schedData['dose_or_amount'] ?? null,
                 'route' => $schedData['route'] ?? null,
                 'interval_hours' => (int) $schedData['interval_hours'],
+                'duration_days' => ! empty($schedData['duration_days']) ? (int) $schedData['duration_days'] : null,
                 'start_time' => now(),
                 'next_due_at' => now(),
                 'instructions' => $schedData['instructions'] ?? null,

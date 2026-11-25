@@ -211,6 +211,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu delivery radar settings', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu store', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nurse availability', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -304,6 +305,7 @@ class RoleManagementController extends Controller
         Permission::firstOrCreate(['name' => 'manage nicu delivery radar settings', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu clinical', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nicu nursing', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage nicu store', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage surgery tab permissions', 'guard_name' => 'web']);
         Permission::firstOrCreate(['name' => 'manage nurse availability', 'guard_name' => 'web']);
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -726,6 +728,7 @@ class RoleManagementController extends Controller
             'manage nicu delivery radar settings' => ['label' => 'التحكم بإعدادات وتفعيل رادار الولادات', 'action' => 'إعدادات', 'badge' => 'warning'],
             'manage nicu clinical' => ['label' => 'إصدار ومتابعة الأوامر السريرية العامة', 'action' => 'سريري', 'badge' => 'primary'],
             'manage nicu nursing' => ['label' => 'إجراءات التمريض العامة للخدج', 'action' => 'تمريض', 'badge' => 'success'],
+            'manage nicu store' => ['label' => 'إدارة وصرف عهدة ومخزن قسم الخدج (NICU)', 'action' => 'مخزن', 'badge' => 'warning'],
 
             // 👥 12. الموارد البشرية والرواتب (HR)
             'view hr' => ['label' => 'دخول لوحة وقسم الموارد البشرية (HR)', 'action' => 'عرض', 'badge' => 'primary'],

@@ -286,6 +286,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{location}', [\App\Http\Controllers\SurgeryStoreController::class, 'show'])->name('show');
     });
 
+    // إدارة ورقابة مخزن وعُهد قسم الخدج والحاضنات المربوط بالمخزن الرئيسي
+    Route::prefix('nicu-store')->name('nicu-store.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NicuStoreController::class, 'index'])->name('index');
+        Route::post('/{location}/assign-custodian', [\App\Http\Controllers\NicuStoreController::class, 'assignCustodian'])->name('assign-custodian');
+        Route::get('/{location}', [\App\Http\Controllers\NicuStoreController::class, 'show'])->name('show');
+    });
+
     // إدارة المرضى
     Route::get('/patients/insurance-alerts-poll', [PatientController::class, 'insuranceAlertsPoll'])->name('patients.insurance-alerts-poll');
     Route::patch('/patients/{patient}/quick-update', [PatientController::class, 'quickUpdate'])->name('patients.quick-update');
@@ -417,7 +424,7 @@ Route::middleware(['auth'])->group(function () {
             ->name('inventory.expiring');
     });
 
-    Route::prefix('stock-transfers')->name('stock-transfers.')->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view stock transfers|view stock transfer requests|create stock transfer requests|nurse|head_nurse|nicu_nurse|icu_nurse|surgery_staff|surgery_nurse|anesthesia|surgeon'])->group(function () {
+    Route::prefix('stock-transfers')->name('stock-transfers.')->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|manage nicu store|view stock transfers|view stock transfer requests|create stock transfer requests|nurse|head_nurse|nicu_nurse|nicu_doctor|nicu_staff|icu_nurse|surgery_staff|surgery_nurse|anesthesia|surgeon'])->group(function () {
         Route::get('/create', [\App\Http\Controllers\StockTransferController::class, 'create'])->name('create');
         Route::post('/', [\App\Http\Controllers\StockTransferController::class, 'store'])
             ->middleware(['role_or_permission:admin|admin-hsop|hospital_admin|super_admin|manage inventory|view stock transfers'])
@@ -734,21 +741,21 @@ Route::middleware(['auth'])->group(function () {
         });
     });
 
-    // إدارة مجموعات الأدوية المفضلة الشخصية للطبيب
-    Route::prefix('medicine-groups')->name('medicine-groups.')->middleware('can:view medicine groups')->group(function () {
+    // إدارة مجموعات الأدوية المفضلة الشخصية والعامة للأطباء (الاستشارية والخدج)
+    Route::prefix('medicine-groups')->name('medicine-groups.')->middleware('role_or_permission:view medicine groups|nicu_doctor|nicu_staff|doctor|resident|admin|admin-hsop|hospital_admin|super_admin')->group(function () {
         Route::get('/', [UserMedicineGroupController::class, 'index'])->name('index');
-        Route::post('/', [UserMedicineGroupController::class, 'store'])->name('store')->middleware('can:create medicine groups');
-        Route::post('/save-from-visit', [UserMedicineGroupController::class, 'saveFromVisit'])->name('save-from-visit')->middleware('can:create medicine groups');
-        Route::post('/reorder', [UserMedicineGroupController::class, 'reorder'])->name('reorder')->middleware('can:edit medicine groups');
-        Route::post('/reset-usage', [UserMedicineGroupController::class, 'resetUsageCounts'])->name('reset-usage')->middleware('can:edit medicine groups');
+        Route::post('/', [UserMedicineGroupController::class, 'store'])->name('store');
+        Route::post('/save-from-visit', [UserMedicineGroupController::class, 'saveFromVisit'])->name('save-from-visit');
+        Route::post('/reorder', [UserMedicineGroupController::class, 'reorder'])->name('reorder');
+        Route::post('/reset-usage', [UserMedicineGroupController::class, 'resetUsageCounts'])->name('reset-usage');
         Route::post('/{group}/toggle-star', [UserMedicineGroupController::class, 'toggleStar'])->name('toggle-star');
         Route::post('/{group}/increment-usage', [UserMedicineGroupController::class, 'incrementUsage'])->name('increment-usage');
         Route::post('/{group}/decrement-usage', [UserMedicineGroupController::class, 'decrementUsage'])->name('decrement-usage');
         Route::post('/{group}/reset-usage', [UserMedicineGroupController::class, 'resetSingleUsage'])->name('reset-single-usage');
         Route::get('/search-medicines', [UserMedicineGroupController::class, 'searchMedicines'])->name('search-medicines');
-        Route::get('/{group}/edit', [UserMedicineGroupController::class, 'edit'])->name('edit')->middleware('can:edit medicine groups');
-        Route::put('/{group}', [UserMedicineGroupController::class, 'update'])->name('update')->middleware('can:edit medicine groups');
-        Route::delete('/{group}', [UserMedicineGroupController::class, 'destroy'])->name('destroy')->middleware('can:delete medicine groups');
+        Route::get('/{group}/edit', [UserMedicineGroupController::class, 'edit'])->name('edit');
+        Route::put('/{group}', [UserMedicineGroupController::class, 'update'])->name('update');
+        Route::delete('/{group}', [UserMedicineGroupController::class, 'destroy'])->name('destroy');
     });
 
     // إدارة أنواع التحاليل المختبرية - تابع (تسعير، تفاصيل، مرجعيات)
@@ -954,6 +961,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reservations/{reservation}/lab-orders', [\App\Http\Controllers\NicuController::class, 'storeLabOrder'])->name('lab-orders.store');
         Route::post('/reservations/{reservation}/radiology-orders', [\App\Http\Controllers\NicuController::class, 'storeRadiologyOrder'])->name('radiology-orders.store');
         Route::post('/reservations/{reservation}/prescriptions', [\App\Http\Controllers\NicuController::class, 'storePrescription'])->name('prescriptions.store');
+        Route::post('/orders/{order}/stop', [\App\Http\Controllers\NicuController::class, 'stopMedicalOrder'])->name('orders.stop');
+        Route::post('/reservations/{reservation}/store-dispense', [\App\Http\Controllers\NicuController::class, 'dispenseStoreItem'])->name('store-dispense.store');
         Route::post('/reservations/{reservation}/medications-admin', [\App\Http\Controllers\NicuController::class, 'storeMedicationAdministration'])->name('medications-admin.store');
         Route::get('/reservations/{reservation}/print-prescription', [\App\Http\Controllers\NicuController::class, 'printPrescription'])->name('print.prescription');
         Route::patch('/orders/{order}/complete', [\App\Http\Controllers\NicuController::class, 'completeMedicalOrder'])->name('orders.complete');
@@ -995,6 +1004,13 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/milk-types/{milkType}', [\App\Http\Controllers\NicuMilkTypeController::class, 'update'])->name('milk-types.update');
         Route::delete('/milk-types/{milkType}', [\App\Http\Controllers\NicuMilkTypeController::class, 'destroy'])->name('milk-types.destroy');
         Route::post('/milk-types/{milkType}/toggle', [\App\Http\Controllers\NicuMilkTypeController::class, 'toggle'])->name('milk-types.toggle');
+
+        // دليل الأدوية المضافة والمعتمدة في قسم الخدج (معزول عن الصيدلية)
+        Route::get('/custom-medicines', [\App\Http\Controllers\NicuCustomMedicineController::class, 'index'])->name('custom-medicines.index');
+        Route::post('/custom-medicines', [\App\Http\Controllers\NicuCustomMedicineController::class, 'store'])->name('custom-medicines.store');
+        Route::put('/custom-medicines/{customMedicine}', [\App\Http\Controllers\NicuCustomMedicineController::class, 'update'])->name('custom-medicines.update');
+        Route::post('/custom-medicines/{customMedicine}/toggle', [\App\Http\Controllers\NicuCustomMedicineController::class, 'toggle'])->name('custom-medicines.toggle');
+        Route::delete('/custom-medicines/{customMedicine}', [\App\Http\Controllers\NicuCustomMedicineController::class, 'destroy'])->name('custom-medicines.destroy');
 
         // رادار صالات العمليات والولادة لحضانة الخدج (NICU Delivery & C-Section Operations Radar)
         Route::get('/delivery-radar', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'index'])->name('delivery-radar.index');

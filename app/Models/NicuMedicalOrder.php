@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasTherapyDayCounter;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NicuMedicalOrder extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTherapyDayCounter;
 
     protected $table = 'nicu_medical_orders';
 
@@ -21,6 +22,7 @@ class NicuMedicalOrder extends Model
         'price',
         'priority',
         'instructions',
+        'duration_days',
         'order_group_id',
         'result',
         'unit',
@@ -33,13 +35,19 @@ class NicuMedicalOrder extends Model
         'ordered_by',
         'processed_by',
         'ordered_at',
+        'started_at',
         'completed_at',
+        'stopped_at',
+        'stopped_by',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'duration_days' => 'integer',
         'ordered_at' => 'datetime',
+        'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'stopped_at' => 'datetime',
     ];
 
     const TYPE_LAB = 'lab';
@@ -79,6 +87,16 @@ class NicuMedicalOrder extends Model
     public function processedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'processed_by');
+    }
+
+    public function stoppedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'stopped_by');
+    }
+
+    protected function therapyStartDate()
+    {
+        return $this->started_at ?? $this->ordered_at ?? $this->created_at;
     }
 
     public function getOrderTypeNameAttribute(): string

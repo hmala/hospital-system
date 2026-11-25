@@ -205,6 +205,14 @@ class IncubatorReservation extends Model
     }
 
     /**
+     * سحوبات ومستلزمات مخزن الخدج المصروفة للطفل (توثيق عهدة فقط بدون أثر مالي)
+     */
+    public function stockMovements()
+    {
+        return $this->hasMany(StockMovement::class, 'incubator_reservation_id')->latest();
+    }
+
+    /**
      * الملاحظات المثبتة للطبيب الاختصاص
      */
     public function pinnedDoctorNotes()

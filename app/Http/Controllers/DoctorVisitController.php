@@ -353,6 +353,10 @@ class DoctorVisitController extends Controller
         $labTestGroups = UserLabTestGroup::with('labTests')->where('user_id', $user->id)->consultant()->get();
         $favoriteLabTests = UserLabTestStat::getFavoritesForUser($user->id);
         $medicineGroups = \App\Models\UserMedicineGroup::with('medicines')
+            ->where(function ($q) {
+                $q->whereNull('department')
+                    ->orWhere('department', '!=', 'nicu');
+            })
             ->where(function ($q) use ($user) {
                 $q->where('user_id', $user->id)
                     ->orWhere('is_public', true);

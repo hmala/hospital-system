@@ -1,6 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+@php
+    $isNicuDept = ($group->department ?? 'general') === 'nicu';
+    $canTogglePublic = Auth::user()->isAdmin()
+        || Auth::user()->hasRole(['admin', 'admin-hsop', 'hospital_admin'])
+        || ($isNicuDept && (Auth::user()->hasAnyRole(['nicu_doctor', 'nicu_staff', 'doctor', 'resident']) || Auth::user()->can('manage nicu prescriptions')));
+@endphp
 <div class="container-fluid py-3">
     <!-- Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3 bg-white p-3 rounded-3 shadow-sm border">
@@ -11,16 +17,19 @@
             <div>
                 <div class="d-flex align-items-center gap-2">
                     <h4 class="mb-0 fw-bold text-dark">{{ $group->name }}</h4>
+                    @if($isNicuDept)
+                        <span class="badge bg-info text-white rounded-pill px-2 py-1 small">قسم الخدج NICU</span>
+                    @endif
                     <span class="badge bg-success rounded-pill px-2 py-1 small">
                         <span class="selected-count-badge">{{ $selectedCount }}</span> دواء
                     </span>
                 </div>
-                <p class="text-muted small mb-0">{{ $group->description ?: 'مجموعة الأدوية المفضلة للاستخدام السريع بالعيادة' }}</p>
+                <p class="text-muted small mb-0">{{ $group->description ?: 'مجموعة الأدوية المفضلة للاستخدام السريع' }}</p>
             </div>
         </div>
 
         <div class="d-flex align-items-center gap-2">
-            <a href="{{ route('medicine-groups.index') }}" class="btn btn-outline-secondary btn-sm px-3">
+            <a href="{{ route('medicine-groups.index', $isNicuDept ? ['department' => 'nicu'] : []) }}" class="btn btn-outline-secondary btn-sm px-3">
                 <i class="fas fa-arrow-right me-1"></i> العودة للمجموعات
             </a>
             <button type="submit" form="groupMedicinesForm" class="btn btn-success btn-sm px-4 shadow-sm fw-bold">
@@ -48,16 +57,16 @@
                         <label class="form-label small fw-bold text-muted mb-1">اسم المجموعة</label>
                         <input type="text" name="name" class="form-control form-control-sm bg-light" value="{{ old('name', $group->name) }}" required placeholder="اسم المجموعة...">
                     </div>
-                    <div class="{{ (Auth::user()->isAdmin() || Auth::user()->hasRole('admin')) ? 'col-md-5' : 'col-md-8' }}">
+                    <div class="{{ $canTogglePublic ? 'col-md-5' : 'col-md-8' }}">
                         <label class="form-label small fw-bold text-muted mb-1">وصف المجموعة (اختياري)</label>
                         <input type="text" name="description" class="form-control form-control-sm bg-light" value="{{ old('description', $group->description) }}" placeholder="وصف استخدام هذه المجموعة...">
                     </div>
-                    @if(Auth::user()->isAdmin() || Auth::user()->hasRole('admin'))
+                    @if($canTogglePublic)
                     <div class="col-md-3">
                         <div class="form-check form-switch mt-3 pt-1">
                             <input class="form-check-input" type="checkbox" role="switch" id="groupIsPublicEdit" name="is_public" value="1" {{ old('is_public', $group->is_public) ? 'checked' : '' }}>
                             <label class="form-check-label small fw-bold text-primary cursor-pointer" for="groupIsPublicEdit">
-                                <i class="fas fa-hospital me-1"></i> باقة عامة للمستشفى
+                                <i class="fas fa-hospital me-1"></i> {{ $isNicuDept ? 'باقة عامة لقسم الخدج' : 'باقة عامة للمستشفى' }}
                             </label>
                         </div>
                     </div>
@@ -75,6 +84,11 @@
                     <button type="button" class="btn btn-sm btn-success category-pill active" data-category="all">
                         الكل <span class="badge bg-white text-success rounded-pill ms-1">{{ $totalActiveMedicines }}</span>
                     </button>
+                    @if($isNicuDept)
+                        <button type="button" class="btn btn-sm btn-outline-info category-pill" data-category="nicu_custom">
+                            🍼 أدوية الخدج المضافة
+                        </button>
+                    @endif
                     @php
                         $formNames = [
                             'tablet' => 'حبوب وأقراص',
@@ -185,7 +199,7 @@
             </div>
 
             <div class="d-flex gap-2">
-                <a href="{{ route('medicine-groups.index') }}" class="btn btn-outline-secondary px-3">
+                <a href="{{ route('medicine-groups.index', $isNicuDept ? ['department' => 'nicu'] : []) }}" class="btn btn-outline-secondary px-3">
                     إلغاء
                 </a>
                 <button type="submit" class="btn btn-success px-4 fw-bold shadow-sm">
@@ -224,6 +238,7 @@
 <script>
 window.selectedMedicinesData = {!! $selectedMedicinesJson !!};
 window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
+window.groupDepartment = "{{ $group->department ?? 'general' }}";
 </script>
 <script>
 (function() {
@@ -260,11 +275,14 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
             ['suppository', 'تحاميل'], ['inhaler', 'بخاخ استنشاق'], ['other', 'أخرى'],
         ];
 
-        // Medicines State Map (id -> Object)
+        // Medicines State Map (string id -> Object)
         const medicinesMap = new Map();
         (window.selectedMedicinesData || []).forEach(m => {
-            medicinesMap.set(m.id, {
-                id: m.id,
+            const key = String(m.id);
+            medicinesMap.set(key, {
+                id: key,
+                is_custom: Boolean(m.is_custom),
+                nicu_custom_medicine_id: m.nicu_custom_medicine_id || null,
                 name: m.name || '',
                 generic: m.generic || '',
                 strength: m.strength || '',
@@ -301,34 +319,50 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
             const freqOpts = FREQ_OPTIONS.map(([v, l]) =>
                 `<option value="${v}" ${v === (med.frequency || '1') ? 'selected' : ''}>${l}</option>`).join('');
 
+            const isCustom = Boolean(med.is_custom);
+            const hiddenInputs = isCustom
+                ? `<input type="hidden" name="custom_items[${med.id}][name]" value="${escapeHtml(med.name)}">
+                   <input type="hidden" name="custom_items[${med.id}][nicu_custom_medicine_id]" value="${med.nicu_custom_medicine_id || ''}">`
+                : `<input type="hidden" name="medicine_ids[]" value="${med.id}">`;
+
+            const namePrefix = isCustom ? `custom_items[${med.id}]` : null;
+            const fDosageForm = isCustom ? `${namePrefix}[dosage_form]` : `dosage_form[${med.id}]`;
+            const fDosage = isCustom ? `${namePrefix}[dosage]` : `dosage[${med.id}]`;
+            const fFrequency = isCustom ? `${namePrefix}[frequency]` : `frequency[${med.id}]`;
+            const fDuration = isCustom ? `${namePrefix}[duration]` : `duration[${med.id}]`;
+            const fInstructions = isCustom ? `${namePrefix}[instructions]` : `instructions[${med.id}]`;
+
             return `
                 <tr data-id="${med.id}" class="medicine-row">
                     <td class="text-muted fw-bold">${index + 1}</td>
                     <td class="text-start">
-                        <input type="hidden" name="medicine_ids[]" value="${med.id}">
-                        <div class="fw-bold text-dark text-truncate" style="max-width: 250px;">${escapeHtml(med.name)}</div>
+                        ${hiddenInputs}
+                        <div class="fw-bold text-dark text-truncate" style="max-width: 250px;">
+                            ${escapeHtml(med.name)}
+                            ${isCustom ? '<span class="badge bg-info-subtle text-info border border-info-subtle ms-1">مضاف بالخدج</span>' : ''}
+                        </div>
                         <div class="text-muted small text-truncate" style="max-width: 250px;">
                             ${escapeHtml(med.generic)} ${med.strength ? '<span class="badge bg-light text-secondary border ms-1">' + escapeHtml(med.strength) + '</span>' : ''}
                         </div>
                     </td>
                     <td>
-                        <select class="form-select form-select-sm bg-light field-dosage-form" name="dosage_form[${med.id}]">
+                        <select class="form-select form-select-sm bg-light field-dosage-form" name="${fDosageForm}">
                             ${dosageFormOpts}
                         </select>
                     </td>
                     <td>
-                        <input type="text" class="form-control form-control-sm bg-light field-dosage" name="dosage[${med.id}]" placeholder="مثال: 500mg" value="${escapeHtml(med.dosage)}">
+                        <input type="text" class="form-control form-control-sm bg-light field-dosage" name="${fDosage}" placeholder="مثال: 500mg" value="${escapeHtml(med.dosage)}">
                     </td>
                     <td>
-                        <select class="form-select form-select-sm bg-light field-frequency" name="frequency[${med.id}]">
+                        <select class="form-select form-select-sm bg-light field-frequency" name="${fFrequency}">
                             ${freqOpts}
                         </select>
                     </td>
                     <td>
-                        <input type="text" class="form-control form-control-sm bg-light field-duration" name="duration[${med.id}]" placeholder="مثال: 7 أيام" value="${escapeHtml(med.duration)}">
+                        <input type="text" class="form-control form-control-sm bg-light field-duration" name="${fDuration}" placeholder="مثال: 7 أيام" value="${escapeHtml(med.duration)}">
                     </td>
                     <td>
-                        <input type="text" class="form-control form-control-sm bg-light field-instructions text-start" name="instructions[${med.id}]" placeholder="مثال: بعد الأكل..." value="${escapeHtml(med.instructions)}">
+                        <input type="text" class="form-control form-control-sm bg-light field-instructions text-start" name="${fInstructions}" placeholder="مثال: بعد الأكل..." value="${escapeHtml(med.instructions)}">
                     </td>
                     <td>
                         <button type="button" class="btn btn-outline-danger btn-sm rounded-circle remove-med-btn" title="حذف الدواء من المجموعة">
@@ -349,8 +383,9 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
         }
 
         function addMedicine(med) {
-            if (medicinesMap.has(med.id)) {
-                const existingRow = tableBody.querySelector(`tr[data-id="${med.id}"]`);
+            const key = String(med.id);
+            if (medicinesMap.has(key)) {
+                const existingRow = tableBody.querySelector(`tr[data-id="${key}"]`);
                 if (existingRow) {
                     existingRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     existingRow.classList.remove('table-highlight-add');
@@ -360,21 +395,23 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
                 return;
             }
 
-            medicinesMap.set(med.id, {
-                id: med.id,
+            medicinesMap.set(key, {
+                id: key,
+                is_custom: Boolean(med.is_custom),
+                nicu_custom_medicine_id: med.nicu_custom_medicine_id || null,
                 name: med.name || '',
                 generic: med.generic || '',
                 strength: med.strength || '',
                 dosage_form: med.dosage_form || 'tablet',
-                dosage: '',
-                frequency: '1',
-                duration: '',
+                dosage: med.dosage || '',
+                frequency: med.frequency || '1',
+                duration: med.duration_days ? `${med.duration_days} أيام` : '',
                 instructions: '',
             });
 
             renderTable();
 
-            const newRow = tableBody.querySelector(`tr[data-id="${med.id}"]`);
+            const newRow = tableBody.querySelector(`tr[data-id="${key}"]`);
             if (newRow) {
                 newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 newRow.classList.add('table-highlight-add');
@@ -385,7 +422,7 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
         tableBody.addEventListener('input', function(e) {
             const row = e.target.closest('tr');
             if (!row) return;
-            const id = parseInt(row.getAttribute('data-id'), 10);
+            const id = String(row.getAttribute('data-id'));
             const med = medicinesMap.get(id);
             if (!med) return;
 
@@ -397,7 +434,7 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
         tableBody.addEventListener('change', function(e) {
             const row = e.target.closest('tr');
             if (!row) return;
-            const id = parseInt(row.getAttribute('data-id'), 10);
+            const id = String(row.getAttribute('data-id'));
             const med = medicinesMap.get(id);
             if (!med) return;
 
@@ -410,7 +447,7 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
             const btn = e.target.closest('.remove-med-btn');
             if (!btn) return;
             const row = btn.closest('tr');
-            const id = parseInt(row.getAttribute('data-id'), 10);
+            const id = String(row.getAttribute('data-id'));
 
             row.style.transition = 'all 0.25s ease';
             row.style.opacity = '0';
@@ -556,6 +593,7 @@ window.searchMedicinesUrl = "{{ route('medicine-groups.search-medicines') }}";
             const params = new URLSearchParams({
                 q: q,
                 dosage_form: currentCategory,
+                department: window.groupDepartment || 'general',
                 page: currentPage,
                 limit: 30,
             });

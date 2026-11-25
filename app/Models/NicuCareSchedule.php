@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasTherapyDayCounter;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class NicuCareSchedule extends Model
 {
-    use HasFactory;
+    use HasFactory, HasTherapyDayCounter;
 
     protected $fillable = [
         'reservation_id',
@@ -17,9 +18,11 @@ class NicuCareSchedule extends Model
         'dose_or_amount',
         'route',
         'interval_hours',
+        'duration_days',
         'start_time',
         'next_due_at',
         'last_administered_at',
+        'stopped_at',
         'instructions',
         'is_active',
         'created_by',
@@ -27,11 +30,18 @@ class NicuCareSchedule extends Model
 
     protected $casts = [
         'interval_hours' => 'integer',
+        'duration_days' => 'integer',
         'start_time' => 'datetime',
         'next_due_at' => 'datetime',
         'last_administered_at' => 'datetime',
+        'stopped_at' => 'datetime',
         'is_active' => 'boolean',
     ];
+
+    protected function therapyStartDate()
+    {
+        return $this->start_time ?? $this->created_at;
+    }
 
     public function reservation(): BelongsTo
     {

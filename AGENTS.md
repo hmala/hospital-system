@@ -54,6 +54,23 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-25 — المرحلة 291: تطوير المنظومة السريرية والمخزنية لقسم الخدج والحاضنات NICU Store Governance, Custom Medicines Directory, Therapy Day Counter, Favorite Packs & Large Clinical Notes)
+
+### Done
+- **مخزن وعُهدة قسم الخدج المربوط بالمخزن الرئيسي ([app/Http/Controllers/NicuStoreController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuStoreController.php), [resources/views/nicu-store/](file:///C:/get/hospital-system/resources/views/nicu-store/index.blade.php))**:
+  * إنشاء لوحة إدارة ومراقبة مخزن وعُهدة الخدج (`Location #18`) المربوطة مباشرة بالمخزن الرئيسي (`Location #1`) لطلبيات التعزيز وإرجاع الفائض.
+  * إضافة تبويب `صرفيات ومستلزمات المخزن` داخل ملف الطفل في [resources/views/nicu/show.blade.php](file:///C:/get/hospital-system/resources/views/nicu/show.blade.php) مع دالة `dispenseStoreItem()` في [app/Http/Controllers/NicuController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuController.php) لتوثيق السحب وخصم العهدة بدون أي أثر مالي على فاتورة كاشير الخدج.
+- **دليل الأدوية المضافة بالخدج ([app/Models/NicuCustomMedicine.php](file:///C:/get/hospital-system/app/Models/NicuCustomMedicine.php), [app/Http/Controllers/NicuCustomMedicineController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuCustomMedicineController.php), [resources/views/nicu/custom-medicines/index.blade.php](file:///C:/get/hospital-system/resources/views/nicu/custom-medicines/index.blade.php))**:
+  * حفظ تلقائي لأي دواء يكتبه طبيب الخدج وغير موجود بجدول الصيدلية `medicines` داخل `nicu_custom_medicines`، وظهوره بالبحث الفوري لاحقاً مع واجهة إدارة تحت إعدادات الخدج.
+- **عداد أيام استخدام الدواء ([app/Models/Concerns/HasTherapyDayCounter.php](file:///C:/get/hospital-system/app/Models/Concerns/HasTherapyDayCounter.php))**:
+  * إضافة حقول `duration_days`, `started_at`, `stopped_at`, `stopped_by` في `nicu_medical_orders` و`nicu_care_schedules` مع شارات `Day X of Y` / `Day X` وتنبيهات تجاوز المدة وزر `إيقاف/استئناف`.
+- **باقات الأدوية المفضلة السريعة للخدج ([app/Http/Controllers/UserMedicineGroupController.php](file:///C:/get/hospital-system/app/Http/Controllers/UserMedicineGroupController.php), [app/Models/UserMedicineGroupCustomItem.php](file:///C:/get/hospital-system/app/Models/UserMedicineGroupCustomItem.php))**:
+  * عزل باقات الخدج عبر `department = 'nicu'` مع دعم الباقات العامة لقسم الخدج والخاصة بكل طبيب ومقيم وبأي عدد من الأدوية والباقات، متضمنة النجمة ⭐ والترتيب حسب الاستخدام 🔥.
+- **خانة الملاحظات السريرية الكبيرة في تسجيل القراءة السريرية والتمريضية**:
+  * إضافة `clinical_notes` إلى `nicu_vitals`، فتح صلاحية التسجيل لأطباء الخدج والمقيمين، وتوفير زرين (**حفظ القراءة الكاملة** و**حفظ الملاحظة فقط**) مع خيار التثبيت برأس الملف وعرض الملاحظات بالجدول.
+- **الاختبارات الآلية وضمان الجودة ([tests/Feature/NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php))**:
+  * اجتياز `52 passed (426 assertions)` عبر `NicuEnhancementsTest`, `UserMedicineGroupTest`, `NicuTabAndStatePersistenceTest`, `NicuGranularPermissionsAndMilkTypesTest`, `SurgeryStoreGovernanceTest`, `NursingSubStoreGovernanceTest`, و `RolePermissionsMatrixTest`، وتوافق تام مع `Laravel Pint` و `view:cache`.
+
 ## Session log (2026-11-25 — المرحلة 290: التعديل اللحظي المباشر لأسعار الكاش داخل جدول دليل الأدوية مع الحفظ التلقائي والاشتقاق الذكي Medicines Directory Inline Quick-Pricing & Auto-Save Derivation Engine)
 
 ### Done
