@@ -141,16 +141,16 @@
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
-                        <tr class="text-muted small">
-                            <th>الرمز / الباركود</th>
-                            <th>اسم الدواء / المستلزم</th>
-                            <th>الشكل والعيار</th>
-                            <th>الوحدات (الكبرى / الصغرى)</th>
-                            <th>سعر العلبة (كاش / ضمان)</th>
-                            <th>سعر الشريط (كاش)</th>
-                            <th>الرصيد الحالي</th>
-                            <th>الحالة والاشتراطات</th>
-                            <th class="text-center">الإجراءات</th>
+                        <tr class="text-muted small align-middle">
+                            <th style="width: 11%;">الرمز / الباركود</th>
+                            <th style="width: 21%;">اسم الدواء والاشتراطات</th>
+                            <th style="width: 9%;">الشكل والعيار</th>
+                            <th style="width: 9%;">الوحدات والتعبئة</th>
+                            <th style="width: 12%;">سعر العلبة (كاش)</th>
+                            <th style="width: 11%;">سعر الشريط (كاش)</th>
+                            <th style="width: 11%;">سعر الضمان (حكومي)</th>
+                            <th style="width: 9%;">الرصيد الحالي</th>
+                            <th style="width: 7%;" class="text-center">الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -171,55 +171,88 @@
                                         {{ $medicine->name }}
                                     </a>
                                     @if($medicine->generic_name)
-                                        <div class="text-muted small fst-italic">{{ $medicine->generic_name }}</div>
+                                        <div class="text-muted small fst-italic" style="font-size: 0.75rem;">{{ $medicine->generic_name }}</div>
                                     @endif
+                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                        @if($medicine->requires_prescription)
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size: 0.65rem;" title="يشترط وصفة طبية">
+                                                <i class="fas fa-file-prescription"></i> وصفة
+                                            </span>
+                                        @endif
+                                        @if($medicine->is_controlled)
+                                            <span class="badge bg-dark text-warning" style="font-size: 0.65rem;" title="دواء رقابي ومخدر">
+                                                <i class="fas fa-lock"></i> رقابي
+                                            </span>
+                                        @endif
+                                        @if(!$medicine->requires_prescription && !$medicine->is_controlled)
+                                            <span class="badge bg-success bg-opacity-10 text-success" style="font-size: 0.65rem;">OTC</span>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-secondary bg-opacity-10 text-secondary">{{ $medicine->dosage_form ?? 'غير محدد' }}</span>
+                                    <div class="badge bg-secondary bg-opacity-10 text-secondary mb-1 d-inline-block">{{ $medicine->dosage_form ?? 'غير محدد' }}</div>
                                     @if($medicine->strength)
-                                        <span class="badge bg-info bg-opacity-10 text-info">{{ $medicine->strength }}</span>
+                                        <div><span class="badge bg-info bg-opacity-10 text-info font-monospace">{{ $medicine->strength }}</span></div>
                                     @endif
                                 </td>
                                 <td>
-                                    <span class="fw-semibold">{{ $medicine->main_unit }}</span>
+                                    <div class="fw-semibold text-dark">{{ $medicine->main_unit }}</div>
                                     @if($medicine->sub_units_count > 1)
-                                        <span class="text-muted small">({{ $medicine->sub_units_count }} {{ $medicine->sub_unit }})</span>
+                                        <div class="text-muted small" style="font-size: 0.72rem;">({{ $medicine->sub_units_count }} {{ $medicine->sub_unit }})</div>
                                     @endif
                                 </td>
                                 <td>
                                     @can('edit medicines')
-                                        <div class="input-group input-group-sm mb-1" style="max-width: 140px;">
-                                            <input type="number" step="any" min="0" 
-                                                class="form-control form-control-sm text-end fw-bold quick-sale-price quick-price-input" 
-                                                value="{{ (float) $medicine->sale_price }}" 
-                                                data-id="{{ $medicine->id }}"
-                                                data-pack-size="{{ max(1, (int) $medicine->sub_units_count) }}"
-                                                title="سعر بيع العلبة نقداً (اضغط Enter أو انتقل للحفظ)">
-                                            <span class="input-group-text bg-light small px-1 text-muted" style="font-size: 0.72rem;">د.ع</span>
+                                        <div class="d-flex flex-column align-items-stretch" style="max-width: 130px;">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" step="any" min="0" 
+                                                    class="form-control form-control-sm text-end fw-bold quick-sale-price quick-price-input" 
+                                                    value="{{ (float) $medicine->sale_price }}" 
+                                                    data-id="{{ $medicine->id }}"
+                                                    data-pack-size="{{ max(1, (int) $medicine->sub_units_count) }}"
+                                                    title="سعر بيع العلبة نقداً (اضغط Enter للحفظ)">
+                                                <span class="input-group-text bg-light small px-1 text-muted" style="font-size: 0.7rem;">د.ع</span>
+                                            </div>
+                                            <div class="quick-status-badge text-center" id="status-{{ $medicine->id }}" style="font-size: 0.68rem; min-height: 16px; line-height: 16px;"></div>
                                         </div>
-                                        <div class="quick-status-badge text-nowrap" id="status-{{ $medicine->id }}" style="font-size: 0.72rem; min-height: 16px;"></div>
                                     @else
                                         <div class="fw-bold text-dark">{{ number_format($medicine->sale_price) }} د.ع</div>
                                     @endcan
-                                    @if($medicine->is_insurance_covered)
-                                        <div class="text-success small" style="font-size: 0.75rem;"><i class="fas fa-shield-alt me-1"></i>ضمان: {{ number_format($medicine->hi_price ?? $medicine->sale_price) }} د.ع</div>
-                                    @else
-                                        <span class="badge bg-warning bg-opacity-10 text-warning small" style="font-size: 0.7rem;">غير مشمول</span>
-                                    @endif
                                 </td>
                                 <td>
                                     @can('edit medicines')
-                                        <div class="input-group input-group-sm" style="max-width: 130px;">
-                                            <input type="number" step="any" min="0" 
-                                                class="form-control form-control-sm text-end quick-sub-price quick-price-input" 
-                                                value="{{ (float) $medicine->sub_unit_sale_price }}" 
-                                                data-id="{{ $medicine->id }}"
-                                                title="سعر بيع الشريط نقداً (اضغط Enter أو انتقل للحفظ)">
-                                            <span class="input-group-text bg-light small px-1 text-muted" style="font-size: 0.72rem;">د.ع</span>
-                                        </div>
+                                        @if($medicine->sub_units_count > 1)
+                                            <div class="d-flex flex-column align-items-stretch" style="max-width: 120px;">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" step="any" min="0" 
+                                                        class="form-control form-control-sm text-end quick-sub-price quick-price-input" 
+                                                        value="{{ (float) $medicine->sub_unit_sale_price }}" 
+                                                        data-id="{{ $medicine->id }}"
+                                                        title="سعر بيع الشريط نقداً (اضغط Enter للحفظ)">
+                                                    <span class="input-group-text bg-light small px-1 text-muted" style="font-size: 0.7rem;">د.ع</span>
+                                                </div>
+                                                <div style="min-height: 16px;"></div>
+                                            </div>
+                                        @else
+                                            <div class="text-muted small py-1" title="لا يتجزأ">-</div>
+                                        @endif
                                     @else
                                         <span class="text-dark">{{ number_format($medicine->sub_unit_sale_price) }} د.ع</span>
                                     @endcan
+                                </td>
+                                <td>
+                                    @if($medicine->is_insurance_covered)
+                                        <div class="fw-semibold text-success small mb-0">
+                                            <i class="fas fa-shield-alt me-1"></i>{{ number_format($medicine->hi_price ?? $medicine->sale_price) }} د.ع
+                                        </div>
+                                        @if($medicine->sub_units_count > 1)
+                                            <div class="text-muted" style="font-size: 0.7rem;">
+                                                (شريط: {{ number_format(round(($medicine->hi_price ?? $medicine->sale_price) / max(1, $medicine->sub_units_count))) }} د.ع)
+                                            </div>
+                                        @endif
+                                    @else
+                                        <span class="badge bg-secondary bg-opacity-10 text-muted small" style="font-size: 0.72rem;">غير مشمول</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @php
@@ -238,21 +271,6 @@
                                         @if($openSubUnits > 0)
                                             <span class="badge bg-light text-dark border">+{{ $openSubUnits }} شريط</span>
                                         @endif
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($medicine->requires_prescription)
-                                        <span class="badge bg-danger bg-opacity-10 text-danger mb-1 d-inline-block" title="يشترط وصفة طبية">
-                                            <i class="fas fa-file-prescription"></i> وصفة إجبارية
-                                        </span>
-                                    @endif
-                                    @if($medicine->is_controlled)
-                                        <span class="badge bg-dark text-warning mb-1 d-inline-block" title="دواء رقابي ومخدر">
-                                            <i class="fas fa-lock"></i> رقابي
-                                        </span>
-                                    @endif
-                                    @if(!$medicine->requires_prescription && !$medicine->is_controlled)
-                                        <span class="badge bg-success bg-opacity-10 text-success">متاح OTC</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
