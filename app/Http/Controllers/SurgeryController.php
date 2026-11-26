@@ -210,10 +210,20 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بإنشاء عمليات جراحية');
         }
 
-        // احضر البيانات مع الترتيب الأبجدي للأسماء
-        $patients = Patient::with('user')->get()->sortBy(function ($p) {
-            return optional($p->user)->name ?? '';
-        });
+        // تحسين أداء حرج: عدم تحميل كامل قاعدة بيانات المرضى (10,000+ مريض) في الذاكرة
+        // إذا كان المريض محدداً مسبقاً (عبر الاستعلامات أو النموذج) نجلبه حصراً، وإلا نمرر أحدث 25 مريضاً فقط مع دعم البحث اللحظي
+        $selectedPatient = null;
+        $selectedPatientId = old('patient_id', request('patient_id'));
+        if ($selectedPatientId) {
+            $selectedPatient = Patient::with(['user', 'healthInsuranceCategory'])->find($selectedPatientId);
+        }
+
+        if ($selectedPatient) {
+            $patients = collect([$selectedPatient]);
+        } else {
+            $patients = Patient::with(['user', 'healthInsuranceCategory'])->latest('id')->take(25)->get();
+        }
+
         $doctors = Doctor::with('user')
             ->where('is_active', true)
             ->where(function ($query) {
@@ -234,11 +244,6 @@ class SurgeryController extends Controller
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
         $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->orderBy('room_type')->orderBy('room_number')->get();
         $locations = \App\Models\Location::orderBy('name')->get();
-
-        $selectedPatient = null;
-        if (request('patient_id')) {
-            $selectedPatient = Patient::with('user')->find(request('patient_id'));
-        }
 
         return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations', 'selectedPatient'));
     }
@@ -506,9 +511,7 @@ class SurgeryController extends Controller
             'consultations.requestedBy',
             'consultations.respondedBy',
         ]);
-        $patients = Patient::with('user')->get()->sortBy(function ($p) {
-            return optional($p->user)->name ?? '';
-        });
+        $patients = $surgery->patient ? collect([$surgery->patient]) : collect();
         $anesthesiaDoctors = Doctor::with('user')
             ->anesthesia()
             ->get()
@@ -627,9 +630,7 @@ class SurgeryController extends Controller
         }
 
         $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room', 'additionalOperations.surgicalOperation']);
-        $patients = Patient::with('user')->get()->sortBy(function ($p) {
-            return optional($p->user)->name ?? '';
-        });
+        $patients = $surgery->patient ? collect([$surgery->patient]) : collect();
         $doctors = Doctor::with('user')
             ->where('is_active', true)
             ->where(function ($query) {

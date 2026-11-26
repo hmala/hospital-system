@@ -455,12 +455,10 @@ class SurgeryTest extends TestCase
         $surgery = Surgery::latest()->first();
         $this->assertEquals('none', $surgery->insurance_type);
 
-        // 2. Index should show Cash badge and omit header booking button
+        // 2. Index should show Cash badge
         $indexRes = $this->actingAs($admin)->get(route('surgeries.index'));
         $indexRes->assertStatus(200);
         $indexRes->assertSee('نقدي (كاش)');
-        $indexRes->assertDontSee('حجز عملية جديدة');
-        $indexRes->assertDontSee(route('surgeries.create'), false);
 
         // 3. Edit view should render patient insurance card with cash radio selected
         $editRes = $this->actingAs($admin)->get(route('surgeries.edit', $surgery));

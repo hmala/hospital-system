@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
-use App\Models\Doctor;
-use App\Models\Department;
-use App\Models\Room;
 use App\Models\BedReservation;
+use App\Models\Department;
+use App\Models\Doctor;
+use App\Models\Patient;
+use App\Models\Room;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class BedReservationController extends Controller
 {
@@ -17,7 +16,7 @@ class BedReservationController extends Controller
         // list only bed reservations
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('view bed reservations') && !$user->can('view occupancy') && !$user->can('manage rooms')))) {
+        if (! $isAdmin && (! $user || (! $user->can('view bed reservations') && ! $user->can('view occupancy') && ! $user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بالوصول لحجوزات الأسرّة');
         }
 
@@ -25,12 +24,13 @@ class BedReservationController extends Controller
 
         if (request('search')) {
             $search = request('search');
-            $query->whereHas('patient.user', function($q) use ($search) {
+            $query->whereHas('patient.user', function ($q) use ($search) {
                 $q->where('name', 'like', "%$search%");
             });
         }
 
         $reservations = $query->orderBy('scheduled_date', 'desc')->paginate(20);
+
         return view('bed_reservations.index', compact('reservations'));
     }
 
@@ -38,34 +38,41 @@ class BedReservationController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
+        if (! $isAdmin && (! $user || (! $user->can('create bed reservations') && ! $user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بإنشاء حجز سرير');
         }
-        $patients = Patient::with('user')->get()->sortBy(fn($p) => optional($p->user)->name);
-        $doctors = Doctor::with('user')
-                        ->where('is_active', true)
-                        ->get()
-                        ->sortBy(fn($d) => optional($d->user)->name);
-        $departments = Department::where('is_active', true)->orderBy('name')->get();
-        $rooms = Room::where('is_active', true)
-                     ->where('room_purpose', 'beds')
-                     ->orderBy('room_type')
-                     ->orderBy('room_number')
-                     ->get();
 
         $selectedPatient = null;
-        if (request('patient_id')) {
-            $selectedPatient = Patient::find(request('patient_id'));
+        $selectedPatientId = old('patient_id', request('patient_id'));
+        if ($selectedPatientId) {
+            $selectedPatient = Patient::with('user')->find($selectedPatientId);
         }
 
-        return view('bed_reservations.create', compact('patients','doctors','departments','rooms', 'selectedPatient'));
+        if ($selectedPatient) {
+            $patients = collect([$selectedPatient]);
+        } else {
+            $patients = Patient::with('user')->latest('id')->take(25)->get();
+        }
+
+        $doctors = Doctor::with('user')
+            ->where('is_active', true)
+            ->get()
+            ->sortBy(fn ($d) => optional($d->user)->name);
+        $departments = Department::where('is_active', true)->orderBy('name')->get();
+        $rooms = Room::where('is_active', true)
+            ->where('room_purpose', 'beds')
+            ->orderBy('room_type')
+            ->orderBy('room_number')
+            ->get();
+
+        return view('bed_reservations.create', compact('patients', 'doctors', 'departments', 'rooms', 'selectedPatient'));
     }
 
     public function store(Request $request)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
+        if (! $isAdmin && (! $user || (! $user->can('create bed reservations') && ! $user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بحفظ حجز سرير');
         }
 
@@ -83,7 +90,7 @@ class BedReservationController extends Controller
         $reservation = BedReservation::create($data);
 
         // mark room occupied if provided
-        if (!empty($data['room_id'])) {
+        if (! empty($data['room_id'])) {
             $room = Room::find($data['room_id']);
             if ($room) {
                 $room->update(['status' => 'occupied']);
@@ -97,7 +104,7 @@ class BedReservationController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (!$isAdmin && (!$user || (!$user->can('create bed reservations') && !$user->can('manage rooms')))) {
+        if (! $isAdmin && (! $user || (! $user->can('create bed reservations') && ! $user->can('manage rooms')))) {
             abort(403, 'غير مصرح لك بتأكيد حجز سرير');
         }
 

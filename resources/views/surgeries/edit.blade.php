@@ -931,7 +931,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // تهيئة Select2
     if (typeof $.fn.select2 !== 'undefined') {
-        $('#doctor_id, #patient_id, #surgery_category').select2({
+        $('#doctor_id, #surgery_category').select2({
             theme: 'bootstrap-5',
             dir: 'rtl',
             width: '100%',
@@ -941,6 +941,64 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             placeholder: function() { return $(this).data('placeholder') || 'اختر...'; },
             allowClear: true
+        });
+
+        // تهيئة قائمة المرضى ببحث AJAX لحظي فائق السرعة دون تحميل 10 آلاف مريض
+        $('#patient_id').select2({
+            theme: 'bootstrap-5',
+            dir: 'rtl',
+            width: '100%',
+            placeholder: 'اختر أو ابحث عن المريض بالاسم أو الهاتف أو رقم الملف...',
+            allowClear: true,
+            language: {
+                noResults: function() { return 'لا توجد نتائج مطابقة'; },
+                searching: function() { return 'جاري البحث في سجل المرضى...'; },
+                inputTooShort: function() { return 'يرجى كتابة حرف واحد على الأقل للبحث'; }
+            },
+            ajax: {
+                url: '{{ route('inquiry.search.patients') }}',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        query: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: (data || []).map(function (p) {
+                            const insLabel = p.insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : (p.insurance_type === 'hi' ? 'هيئة الضمان الصحي الوطني' : 'بدون ضمان');
+                            return {
+                                id: p.id,
+                                text: `${p.name} (${p.age || '-'} سنة) - ملف #${p.id}`,
+                                patientData: {
+                                    id: p.id,
+                                    name: p.name,
+                                    age: p.age,
+                                    gender: p.gender,
+                                    phone: p.phone,
+                                    insurance_type: p.insurance_type,
+                                    insurance_label: insLabel,
+                                    insurance_card_no: p.insurance_card_no || '',
+                                    history_url: p.history_url,
+                                    dossier_url: p.dossier_url
+                                }
+                            };
+                        })
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('#patient_id').on('select2:select', function(e) {
+            const data = e.params.data;
+            if (data && data.patientData) {
+                const opt = $(this).find('option[value="' + data.id + '"]');
+                opt.data('patient', data.patientData);
+                opt.attr('data-patient', JSON.stringify(data.patientData));
+                $(this).trigger('change');
+            }
         });
 
         // قائمة الطبيب المرسل

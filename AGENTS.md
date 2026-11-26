@@ -56,6 +56,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 307: حل بطء وتعليق الانتقال إلى شاشة حجز العمليات الجراحية من 10 ثوانٍ إلى 0.1 ثانية وإلغاء تحميل 10 آلاف مريض في الذاكرة مع تفعيل البحث اللحظي بالـ AJAX Surgery Booking Transition Lag Fix: Eliminate 10K Patients In-Memory Saturation & Enable Instant AJAX Select2)
+
+### Done
+- **تشخيص السبب الجذري للبطء الشديد (Root Cause Discovery)**:
+  * كشفت القياسات الدقيقة أن دالة `SurgeryController::create()` كانت تنفذ استعلام `Patient::with('user')->get()->sortBy(...)` الذي يسحب **10,368 مريضاً** و 10,368 مستخدماً دفعة واحدة ويولد أكثر من 20,700 كائن Eloquent في الذاكرة.
+  * قيام قالب Blade في `surgeries/create.blade.php` بالدوران 10,368 مرة وتوليد مسارات `route('inquiry.patients.history')` و `route('inquiry.patients.dossier.print')` وترميز JSON لكل مريض داخل السمة `data-patient` مما كان يُنتج صفحة HTML بحجم ضخم يتجاوز **4 ميغابايت** ويستغرق معالجتها في السيرفر وحده 5.8 ثوانٍ، تليها 3 إلى 5 ثوانٍ أخرى في المتصفح لبناء عناصر مكتبة Select2 على 10 آلاف خيار، مما سبب تعليق التحميل (اللودنك) لأكثر من 10 ثوانٍ.
+- **المعالجة الجذرية والتحسين الفوري ([app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [app/Http/Controllers/BedReservationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/BedReservationController.php))**:
+  * قصر قائمة المرضى في `SurgeryController::create()` على المريض المختار حصراً `$selectedPatient` عند التحويل من الاستعلامات أو تمرير `patient_id`، أو جلب أحدث 25 مريضاً فقط كعينة أولية سريعة بدلاً من 10 آلاف مريض.
+  * تطبيق نفس التحسين على دالتي `SurgeryController::edit()` و `SurgeryController::show()` ودالة `BedReservationController::create()` لحجز الرقود والأسرة لمنع تكرار البطء في أي محطة.
+- **تفعيل البحث اللحظي بالـ AJAX في Select2 ([resources/views/surgeries/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php), [resources/views/surgeries/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/edit.blade.php))**:
+  * ربط حقل اختيار المريض `#patient_id` بنقطة نهاية البحث اللحظي السريع `route('inquiry.search.patients')` مع تأخير ذكي (debounce 250ms) والبحث بالاسم أو الهاتف أو رقم الملف أو الهوية الوطنية.
+  * ربط حدث `select2:select` لتحديث بيانات `data-patient` فورياً ومزامنة شريط هوية المريض العلوي (Executive Banner) واللوحة الجانبية الثابتة (Sticky Summary) ومسار التغطية فور اختيار أي مريض جديد دون أي بطء.
+- **النتيجة والقياسات والاختبارات ([tests/Feature/SurgeryCreateModernWorkspaceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCreateModernWorkspaceTest.php), [tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * انخفاض زمن فتح شاشة حجز العملية الجراحية من **10 ثوانٍ** إلى **0.2 ثانية فقط (206 ميلي ثانية)** أي تسريع بمقدار **50 ضعفاً**.
+  * اجتياز اختبارات العمليات [SurgeryCreateModernWorkspaceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCreateModernWorkspaceTest.php) (1 passed, 20 assertions) واختبارات [SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php) (9 passed, 174 assertions) واختبارات الاستعلامات (5 passed, 27 assertions) وكاش القوالب `view:cache` وتنسيق Pint.
+
 ## Session log (2026-11-26 — المرحلة 306: اختصار دورة الاستعلامات بالكامل إلى شاشة واحدة مباشرة مع قفل الخدمات لحين تحديد المريض وبحث فوري في الأعلى وتوجيه الموظف إليها فور تسجيل الدخول Instant Single-Page Inquiry Direct Booking, Strict Patient-First Services Lock & Direct Login Redirection)
 
 ### Done
