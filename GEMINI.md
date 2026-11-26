@@ -10,4 +10,4 @@
 3. **Pre-Execution Architecture Review**: Never write or edit code before explaining the mechanism and exact code locations, and securing explicit user alignment first.
 4. **Surgical Edits**: Make focused, small changes without overwriting intact files.
 5. **Automated Verification**: Run `vendor/bin/pint --dirty` and `php artisan test` after writing code to ensure zero syntax or logical errors.
-6. **Git Protocol**: Strictly work and push (`git push origin hr`) on branch `hr` only. NEVER push to `main` without explicit user instruction.
+6. **Git Protocol**: Work and push directly (`git push origin main`) on the `main` branch. Do not create side branches unless explicitly requested.
