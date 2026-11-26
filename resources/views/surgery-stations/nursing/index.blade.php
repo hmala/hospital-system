@@ -261,13 +261,12 @@
                                                             <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
                                                                 <i class="fas fa-sign-out-alt me-1"></i> {{ __('تم التخريج') }}
                                                             </span>
-                                                        @elseif($surgery->room_checkin_at)
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
-                                                                <i class="fas fa-check-circle me-1"></i> {{ __('تم استلام الغرفة') }} ({{ $surgery->room_checkin_at->format('h:i A') }})
-                                                            </span>
                                                         @elseif($surgery->room_id)
-                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
-                                                                <i class="fas fa-hourglass-start me-1"></i> {{ __('بانتظار استلام الغرفة') }}
+                                                            @php
+                                                                $checkinDt = $surgery->room_checkin_at ?? $surgery->created_at;
+                                                            @endphp
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;" title="تاريخ ووقت الاستلام: {{ $checkinDt ? $checkinDt->format('Y-m-d h:i A') : '' }}">
+                                                                <i class="fas fa-check-circle me-1"></i> {{ __('تم استلام الغرفة') }} ({{ $checkinDt ? $checkinDt->format('h:i A') : '--:--' }})
                                                             </span>
                                                         @else
                                                             <span class="badge bg-light text-muted border rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">

@@ -56,6 +56,18 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 313: حل مشكلة «بانتظار استلام الغرفة» تلقائياً محلياً وعلى خادم هوستنجر الحي وتفعيل استلام الغرفة الفوري Automatic Room Check-in & Waiting Badge Elimination Locally & on Live Hostinger)
+
+### Done
+- **معالجة وتحديث قاعدة البيانات محلياً وعلى هوستنجر (`remote_hostinger`)**:
+  * تشغيل مايجريشن [2026_11_27_021000_backfill_and_auto_checkin_surgeries_with_rooms.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_27_021000_backfill_and_auto_checkin_surgeries_with_rooms.php).
+  * تحديث الحالات السابقة التي تملك غرفة ولم يسجل لها تاريخ دخول (5 حالات محلياً و5 حالات على خادم هوستنجر الحي `u175868711_her2020`) وتثبيت تواريخ الدخول الفعلي فورياً (`room_checkin_at = COALESCE(started_at, scheduled_date, created_at, NOW())`).
+- **تحصين القوالب وتوحيد ظهور استلام الغرفة ([nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [nursing/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/show.blade.php))**:
+  * أي مريض لديه غرفة مخصصة (`room_id`) ولم يُخرّج بعد تظهر حالته تلقائياً **`[ تم استلام الغرفة ]`** مع توقيت الدخول المعتمد دون تعليقها أبداً على «بانتظار استلام الغرفة».
+  * إتاحة زر التخريج في شاشة تفاصيل المريض بمحطة التمريض (`nursing.show`) بمجرد وجود غرفة مخصصة للمريض.
+- **الاختبارات والتأكيد**:
+  * اجتياز اختبارات تدفق التمريض [NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php) بالكامل بنجاح (5 passed, 26 assertions)، واجتياز `view:cache`.
+
 ## Session log (2026-11-27 — المرحلة 312: ربط أدوية الرقود والجراحة بنقطة بيع الصيدلية POS والكاشير المركزي والتسليم الآلي للردهة Inpatient Medications to Pharmacy POS & Central Cashier End-to-End Cycle)
 
 ### Done

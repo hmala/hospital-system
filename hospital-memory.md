@@ -148,6 +148,16 @@
     - اجتياز اختبار تدفق الدورة بالكامل بنجاح تام (1 passed, 26 assertions).
     - اجتياز اختبارات التمريض والعمليات الجراحية (14 passed, 200 assertions)، وتنسيق `Pint` ونجاح كاش القوالب `view:cache`.
 
+- **المرحلة 312 (2026-11-27 — `main`) — حل مشكلة «بانتظار استلام الغرفة» تلقائياً محلياً وعلى خادم هوستنجر الحي وتفعيل استلام الغرفة الفوري (Automatic Room Check-in & Waiting Badge Elimination Locally & on Live Hostinger)**:
+  * **معالجة وتحديث قاعدة البيانات محلياً وعلى هوستنجر (`remote_hostinger`)**:
+    - تشغيل مايجريشن [2026_11_27_021000_backfill_and_auto_checkin_surgeries_with_rooms.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_27_021000_backfill_and_auto_checkin_surgeries_with_rooms.php).
+    - تحديث الحالات السابقة التي تملك غرفة ولم يسجل لها تاريخ دخول (5 حالات محلياً و5 حالات على خادم هوستنجر الحي `u175868711_her2020`) وتثبيت تواريخ الدخول الفعلي فورياً (`room_checkin_at = COALESCE(started_at, scheduled_date, created_at, NOW())`).
+  * **تحصين القوالب وتوحيد ظهور استلام الغرفة ([nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [nursing/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/show.blade.php))**:
+    - أي مريض لديه غرفة مخصصة (`room_id`) ولم يُخرّج بعد تظهر حالته تلقائياً **`[ تم استلام الغرفة ]`** مع توقيت الدخول المعتمد دون تعليقها أبداً على «بانتظار استلام الغرفة».
+    - إتاحة زر التخريج في شاشة تفاصيل المريض بمحطة التمريض (`nursing.show`) بمجرد وجود غرفة مخصصة للمريض.
+  * **الاختبارات والتأكيد**:
+    - اجتياز اختبارات تدفق التمريض بالكامل بنجاح.
+
 - **المرحلة 311 (2026-11-27 — `main`) — إلغاء زر تخريج الغرفة من الشاشة السريرية وحصره في محطة التمريض (Clinical Station: Room Discharge Button Removal & Strict Nursing Station Containment)**:
   * **إلغاء زر «تخريج من الغرفة» من الشاشة السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
     - حذف زر التخريج الفندقي وإخلاء السرير نهائياً من رأس الملف السريري للمريض (`clinical/show`) لمنع أي تشويش أو ضغط غير مقصود من قبل الأطباء والمقيمين.
