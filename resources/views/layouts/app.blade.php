@@ -1251,7 +1251,7 @@
                     <div class="sidebar-item my-2 px-1">
                         <a class="nav-link text-success fw-bold d-flex align-items-center justify-content-between py-2 px-3 rounded-3 border border-success border-opacity-25 shadow-xs" 
                            style="background: rgba(16, 185, 129, 0.08); font-size: 0.84rem; text-decoration: none;"
-                           href="{{ asset('downloads/HospitalScanner_Setup.zip') }}" 
+                           href="{{ route('scanner.download') }}" 
                            download 
                            title="{{ __('تحميل حزمة تثبيت السكانر التلقائي لهذه الحاسبة لمرة واحدة للأبد لجميع الأقسام') }}">
                             <span><i class="fas fa-print text-success me-2"></i>{{ __('تنزيل برنامج السكانر') }}</span>

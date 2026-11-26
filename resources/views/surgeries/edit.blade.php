@@ -529,7 +529,7 @@ body {
                                 <div class="d-flex align-items-center justify-content-between mb-1">
                                     <label class="form-label text-muted mb-0 small fw-bold">{{ __('ورقة التحويل الطبي (سكانر / رفع):') }}</label>
                                     <div class="d-flex align-items-center gap-2">
-                                        <a href="{{ asset('downloads/HospitalScanner_Setup.zip') }}" download class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none py-1 px-2" title="{{ __('تحميل حزمة تثبيت السكانر التلقائي لهذه الحاسبة لمرة واحدة للأبد') }}">
+                                        <a href="{{ route('scanner.download') }}" download class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none py-1 px-2" title="{{ __('تحميل حزمة تثبيت السكانر التلقائي لهذه الحاسبة لمرة واحدة للأبد') }}">
                                             <i class="fas fa-download me-1"></i>{{ __('تنزيل برنامج السكانر للحاسبة') }}
                                         </a>
                                         <span id="scannerStatusIndicator" class="badge bg-light text-muted border py-0 px-2" style="font-size: 0.72rem;" title="{{ __('حالة السكانر') }}">
@@ -549,7 +549,7 @@ body {
                                     </button>
 
                                     <!-- زر تنزيل حزمة السكانر المباشر -->
-                                    <a href="{{ asset('downloads/HospitalScanner_Setup.zip') }}" download class="btn btn-sm btn-outline-success d-inline-flex align-items-center" style="height:36px;" title="{{ __('تنزيل حزمة تثبيت السكانر التلقائي لهذه الحاسبة لمرة واحدة للأبد') }}">
+                                    <a href="{{ route('scanner.download') }}" download class="btn btn-sm btn-outline-success d-inline-flex align-items-center" style="height:36px;" title="{{ __('تنزيل حزمة تثبيت السكانر التلقائي لهذه الحاسبة لمرة واحدة للأبد') }}">
                                         <i class="fas fa-download me-1"></i> {{ __('تنزيل السكانر') }}
                                     </a>
 
