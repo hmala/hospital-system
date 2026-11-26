@@ -2918,7 +2918,12 @@
                                 }
 
                                 checkbox.checked = !!data.checked;
-                                checkbox.disabled = false;
+                                if (data.checked && !data.can_undo) {
+                                    checkbox.disabled = true;
+                                    checkbox.title = '{{ __('تم توثيق إعطاء الجرعة ولا يمكن إلغاؤها من التمريض لسلامة المريض') }}';
+                                } else {
+                                    checkbox.disabled = false;
+                                }
 
                                 if (isPrn && !data.checked) {
                                     const label = checkbox.closest('label.mar-dose-chip');
@@ -2927,9 +2932,12 @@
                                     const chip = document.getElementById('marChip_' + treatmentId + '_' + slotIndex);
                                     const stamp = document.getElementById('marStamp_' + treatmentId + '_' + slotIndex);
                                     if (chip) {
-                                        chip.classList.remove('mar-dose-checked', 'mar-dose-overdue', 'mar-dose-due');
+                                        chip.classList.remove('mar-dose-checked', 'mar-dose-overdue', 'mar-dose-due', 'mar-dose-locked');
                                         if (data.checked) {
                                             chip.classList.add('mar-dose-checked');
+                                            if (!data.can_undo) {
+                                                chip.classList.add('mar-dose-locked');
+                                            }
                                         } else if (checkbox.getAttribute('data-is-overdue') === '1') {
                                             chip.classList.add('mar-dose-overdue');
                                         } else if (checkbox.getAttribute('data-is-due') === '1') {
@@ -2985,19 +2993,21 @@
                                 const container = document.getElementById('marPrnList_' + treatmentId);
                                 if (container) {
                                     const label = document.createElement('label');
-                                    label.className = 'mar-dose-chip mar-dose-checked';
+                                    const chipLockedClass = (!data.can_undo) ? ' mar-dose-locked' : '';
+                                    label.className = 'mar-dose-chip mar-dose-checked' + chipLockedClass;
                                     const doseNum = data.administered_count || 1;
                                     const timeLabel = escapeHtml(data.administered_at_label || '');
                                     const nurseName = escapeHtml(data.administered_by_name || '{{ __('تمريض') }}');
                                     const safeUrl = escapeHtml(url);
                                     const slotIdx = parseInt(data.slot_index ?? 0, 10);
+                                    const disabledAttr = (!data.can_undo) ? ' disabled title="{{ __('تم توثيق إعطاء الجرعة ولا يمكن إلغاؤها من التمريض لسلامة المريض') }}"' : '';
 
                                     label.innerHTML =
                                         '<input type="checkbox" class="form-check-input mar-dose-checkbox" ' +
                                         'data-treatment-id="' + escapeHtml(treatmentId) + '" ' +
                                         'data-slot-index="' + slotIdx + '" ' +
                                         'data-url="' + safeUrl + '" ' +
-                                        'data-is-prn="1" checked onchange="window.handleMarCheckboxToggle(this)">' +
+                                        'data-is-prn="1" checked' + disabledAttr + ' onchange="window.handleMarCheckboxToggle(this)">' +
                                         '<span class="mar-dose-meta">' +
                                         '<span class="mar-dose-time">{{ __('ج') }}' + doseNum + ' • ' + timeLabel + '</span>' +
                                         '<span class="mar-dose-stamp">✓ ' + nurseName + '</span>' +

@@ -794,6 +794,14 @@ class ClinicalStationController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
+        if (! (bool) $validated['checked'] && ! $isAdmin) {
+            $msg = 'لا يمكن للممرض التراجع عن تأشير الجرعة بعد توثيق إعطائها للمريض؛ إلغاء الجرعة محصور بالإدارة الطبية فقط لسلامة المريض.';
+
+            return $request->expectsJson()
+                ? response()->json(['ok' => false, 'message' => $msg], 422)
+                : redirect()->back()->with('error', $msg);
+        }
+
         $slotIndex = $validated['slot_index'] ?? null;
         if ($slotIndex !== null && ! $treatment->is_prn) {
             $expected = max(1, (int) ($treatment->expected_doses_count ?? 1));
@@ -831,6 +839,7 @@ class ClinicalStationController extends Controller
             return response()->json([
                 'ok' => true,
                 'checked' => $result['checked'] ?? (bool) $validated['checked'],
+                'can_undo' => $isAdmin,
                 'slot_index' => $result['slot_index'] ?? $slotIndex,
                 'administered_at_label' => $result['administered_at_label'] ?? ($treatment->administered_at ? ($treatment->administered_at->format('h:i').' '.($treatment->administered_at->format('A') === 'AM' ? 'ص' : 'م')) : null),
                 'administered_by_name' => $result['administered_by_name'] ?? $treatment->administeredBy?->name,

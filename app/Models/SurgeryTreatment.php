@@ -438,15 +438,14 @@ class SurgeryTreatment extends Model
         if (! $viewer) {
             return false;
         }
+
+        // الإدارة فقط تملك صلاحية التراجع عن الجرعات المؤشرة عند الضرورة القصوى
         if ($isAdmin) {
             return true;
         }
-        $sameOwner = isset($entry['administered_by']) && (int) $entry['administered_by'] === (int) $viewer->id;
-        if (! $sameOwner || empty($entry['administered_at'])) {
-            return false;
-        }
 
-        return $now->lte(Carbon::parse($entry['administered_at'])->addMinutes(30));
+        // الممرض يؤشر لمرة واحدة عند إعطاء الجرعة ولا يستطيع إلغاءها لضمان الحوكمة السريرية وسلامة المريض
+        return false;
     }
 
     private function formatArabicTime(Carbon $dt): string
@@ -549,7 +548,7 @@ class SurgeryTreatment extends Model
         if (! $this->canUserUndoEntry($foundEntry, $user, $isAdmin, now())) {
             return [
                 'ok' => false,
-                'message' => 'لا يمكن التراجع عن تأشير هذه الجرعة لانقضاء مهلة 30 دقيقة أو لأنها مسجلة بحساب ممرض آخر.',
+                'message' => 'لا يمكن للممرض التراجع عن تأشير الجرعة بعد توثيق إعطائها للمريض؛ إلغاء الجرعة محصور بالإدارة الطبية فقط لسلامة المريض.',
             ];
         }
 

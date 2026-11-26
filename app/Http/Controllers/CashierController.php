@@ -1001,7 +1001,7 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول لشاشة تسديد رسوم الخدج');
         }
 
-        $reservation->load([
+        $loadRelations = [
             'incubator',
             'nicuService',
             'doctor.user',
@@ -1011,14 +1011,21 @@ class CashierController extends Controller
             'consultations.internalDoctor.user',
             'medicalOrders.labTest',
             'medicalOrders.radiologyType',
-            'extraServices.service',
-            'extraServices.createdBy',
             'payments.cashier',
-        ]);
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('nicu_extra_services')) {
+            $loadRelations[] = 'extraServices.service';
+            $loadRelations[] = 'extraServices.createdBy';
+        }
+
+        $reservation->load($loadRelations);
 
         $billingService = app(\App\Services\NicuBillingService::class);
         $stayDetails = $billingService->calculateStayDetails($reservation);
-        $availableExtraServices = HospitalExtraService::active()->forNicu()->orderBy('name')->get();
+        $availableExtraServices = (\Illuminate\Support\Facades\Schema::hasTable('hospital_extra_services') && \Illuminate\Support\Facades\Schema::hasColumn('hospital_extra_services', 'department'))
+            ? HospitalExtraService::active()->forNicu()->orderBy('name')->get()
+            : collect();
 
         return view('cashier.nicu.payment-form', compact('reservation', 'stayDetails', 'availableExtraServices'));
     }

@@ -319,7 +319,10 @@ class NicuBillingService
         ];
 
         // الخدمات الإضافية والفندقية للخدج (100% كاش على المريض - خارج تغطية الضمان الصحي)
-        $extraServices = $reservation->extraServices()->with(['service', 'createdBy'])->get();
+        $hasNicuExtraServicesTable = \Illuminate\Support\Facades\Schema::hasTable('nicu_extra_services');
+        $extraServices = $hasNicuExtraServicesTable
+            ? $reservation->extraServices()->with(['service', 'createdBy'])->get()
+            : collect();
         $totalExtraServicesCost = (float) $extraServices->sum(function ($item) {
             return (float) $item->total_amount;
         });
