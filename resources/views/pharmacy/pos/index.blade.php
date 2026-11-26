@@ -325,40 +325,6 @@
                         </div>
                     </div>
 
-                    <!-- تبويبات جهة إرسال الأدوية (الأقسام: الكل / الرقود / العيادات / الطوارئ) -->
-                    <div class="bg-light p-1 rounded-3 mb-2 border shadow-xs">
-                        <div class="row g-1 text-center" style="font-size: 0.82rem;">
-                            <div class="col-3">
-                                <button type="button" class="btn btn-sm w-100 py-1 px-1 source-tab-btn active bg-primary text-white shadow-xs rounded-2 fw-bold d-flex align-items-center justify-content-center gap-1" data-rxsource="all" onclick="filterRxSource('all')">
-                                    <i class="fas fa-layer-group"></i>
-                                    <span>الكل</span>
-                                    <span class="badge bg-white text-primary rounded-pill px-1.5 font-monospace" style="font-size: 0.72rem;" id="rxSourceCountAll">0</span>
-                                </button>
-                            </div>
-                            <div class="col-3">
-                                <button type="button" class="btn btn-sm w-100 py-1 px-1 source-tab-btn text-dark rounded-2 fw-semibold d-flex align-items-center justify-content-center gap-1" data-rxsource="inpatient" onclick="filterRxSource('inpatient')">
-                                    <i class="fas fa-bed text-info"></i>
-                                    <span>الرقود</span>
-                                    <span class="badge bg-info-subtle text-dark border rounded-pill px-1.5 font-monospace" style="font-size: 0.72rem;" id="rxSourceCountInpatient">0</span>
-                                </button>
-                            </div>
-                            <div class="col-3">
-                                <button type="button" class="btn btn-sm w-100 py-1 px-1 source-tab-btn text-dark rounded-2 fw-semibold d-flex align-items-center justify-content-center gap-1" data-rxsource="outpatient" onclick="filterRxSource('outpatient')">
-                                    <i class="fas fa-user-md text-primary"></i>
-                                    <span>العيادات</span>
-                                    <span class="badge bg-primary-subtle text-primary border rounded-pill px-1.5 font-monospace" style="font-size: 0.72rem;" id="rxSourceCountOutpatient">0</span>
-                                </button>
-                            </div>
-                            <div class="col-3">
-                                <button type="button" class="btn btn-sm w-100 py-1 px-1 source-tab-btn text-dark rounded-2 fw-semibold d-flex align-items-center justify-content-center gap-1" data-rxsource="emergency" onclick="filterRxSource('emergency')">
-                                    <i class="fas fa-ambulance text-danger"></i>
-                                    <span>الطوارئ</span>
-                                    <span class="badge bg-danger-subtle text-danger border rounded-pill px-1.5 font-monospace" style="font-size: 0.72rem;" id="rxSourceCountEmergency">0</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- شريط البحث اللحظي السريع في طابور الوصفات -->
                     <div class="input-group input-group-sm mb-2 shadow-xs">
                         <span class="input-group-text bg-light border-end-0 text-muted ps-2.5">
@@ -380,26 +346,23 @@
                         </button>
                     </div>
 
-                    <!-- أزرار تصفية سريعة لحالات الطابور -->
+                    <!-- أزرار تصفية سريعة للطابور -->
                     <div class="d-flex gap-1 overflow-auto pb-1 align-items-center justify-content-between">
-                        <div class="d-flex gap-1 overflow-auto flex-nowrap">
-                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 filter-pill active text-nowrap" data-rxfilter="all" onclick="filterRxStream('all')">
+                        <div class="d-flex gap-1 overflow-auto">
+                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 filter-pill active" data-rxfilter="all" onclick="filterRxStream('all')">
                                 الكل (<span id="rxFilterCountAll">0</span>)
                             </button>
-                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 filter-pill text-nowrap" data-rxfilter="new" onclick="filterRxStream('new')">
+                            <button type="button" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 filter-pill" data-rxfilter="new" onclick="filterRxStream('new')">
                                 جديدة (<span id="rxFilterCountNew">0</span>)
                             </button>
-                            <button type="button" class="btn btn-xs btn-outline-warning text-dark rounded-pill px-2.5 py-1 filter-pill text-nowrap" data-rxfilter="cashier" onclick="filterRxStream('cashier')">
-                                بالكاشير (<span id="rxFilterCountCashier">0</span>)
+                            <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1 filter-pill" data-rxfilter="ready" onclick="filterRxStream('ready')">
+                                جاهزة (<span id="rxFilterCountReady">0</span>)
                             </button>
-                            <button type="button" class="btn btn-xs btn-outline-success rounded-pill px-2.5 py-1 filter-pill text-nowrap" data-rxfilter="paid" onclick="filterRxStream('paid')">
-                                جاهزة للتسليم (<span id="rxFilterCountPaid">0</span>)
-                            </button>
-                            <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill px-2.5 py-1 filter-pill text-nowrap" data-rxfilter="pending" onclick="filterRxStream('pending')">
+                            <button type="button" class="btn btn-xs btn-outline-warning text-dark rounded-pill px-2.5 py-1 filter-pill" data-rxfilter="pending" onclick="filterRxStream('pending')">
                                 بدائل (<span id="rxFilterCountPending">0</span>)
                             </button>
                         </div>
-                        <span class="small text-muted font-monospace pe-1 text-nowrap" id="rxSearchMatchCounter" style="display: none; font-size: 0.75rem;"></span>
+                        <span class="small text-muted font-monospace pe-1" id="rxSearchMatchCounter" style="display: none; font-size: 0.75rem;"></span>
                     </div>
                 </div>
 
@@ -613,8 +576,7 @@
     let currentPrescriptionData = null;
     let targetItemForAlternative = null;
     let allPrescriptionsCache = [];
-    let currentRxSourceFilter = 'all'; // فلتر جهة الإرسال (all, inpatient, outpatient, emergency)
-    let currentRxStreamFilter = 'all'; // فلتر حالة الوصفة
+    let currentRxStreamFilter = 'all';
     let currentRxSearchQuery = '';
     let autoRefreshTimer = null;
 
@@ -1153,29 +1115,6 @@
             });
     }
 
-    function filterRxSource(source) {
-        currentRxSourceFilter = source;
-        document.querySelectorAll('.source-tab-btn').forEach(btn => {
-            const btnSource = btn.getAttribute('data-rxsource');
-            if (btnSource === source) {
-                btn.classList.add('active', 'shadow-xs');
-                btn.classList.remove('text-dark');
-                if (source === 'inpatient') {
-                    btn.className = 'btn btn-sm w-100 py-1 px-1 source-tab-btn active bg-info text-white shadow-xs rounded-2 fw-bold d-flex align-items-center justify-content-center gap-1';
-                } else if (source === 'emergency') {
-                    btn.className = 'btn btn-sm w-100 py-1 px-1 source-tab-btn active bg-danger text-white shadow-xs rounded-2 fw-bold d-flex align-items-center justify-content-center gap-1';
-                } else if (source === 'outpatient') {
-                    btn.className = 'btn btn-sm w-100 py-1 px-1 source-tab-btn active bg-primary text-white shadow-xs rounded-2 fw-bold d-flex align-items-center justify-content-center gap-1';
-                } else {
-                    btn.className = 'btn btn-sm w-100 py-1 px-1 source-tab-btn active bg-primary text-white shadow-xs rounded-2 fw-bold d-flex align-items-center justify-content-center gap-1';
-                }
-            } else {
-                btn.className = 'btn btn-sm w-100 py-1 px-1 source-tab-btn text-dark rounded-2 fw-semibold d-flex align-items-center justify-content-center gap-1';
-            }
-        });
-        renderRxStream();
-    }
-
     function filterRxStream(filter) {
         currentRxStreamFilter = filter;
         document.querySelectorAll('.filter-pill').forEach(btn => {
@@ -1211,84 +1150,37 @@
         const emptyState = document.getElementById('rxStreamEmptyState');
         if (!tbody) return;
 
-        const all = allPrescriptionsCache || [];
+        const all = allPrescriptionsCache;
+        const newCount = all.filter(r => r.stage === 'new').length;
+        const readyCount = all.filter(r => r.stage === 'approved_ready').length;
+        const pendingCount = all.filter(r => r.stage === 'awaiting_doctor').length;
 
-        // احتساب وتحديث إحصائيات التبويبات حسب الأقسام (جهات الإرسال)
-        const inpatientList = all.filter(r => r.is_inpatient);
-        const outpatientList = all.filter(r => !r.is_inpatient && !r.is_emergency);
-        const emergencyList = all.filter(r => r.is_emergency);
+        document.getElementById('badgeTotalPendingRx').innerText = all.length;
+        document.getElementById('rxFilterCountAll').innerText = all.length;
+        document.getElementById('rxFilterCountNew').innerText = newCount;
+        document.getElementById('rxFilterCountReady').innerText = readyCount;
+        document.getElementById('rxFilterCountPending').innerText = pendingCount;
 
-        const elSrcAll = document.getElementById('rxSourceCountAll');
-        const elSrcInp = document.getElementById('rxSourceCountInpatient');
-        const elSrcOut = document.getElementById('rxSourceCountOutpatient');
-        const elSrcEmg = document.getElementById('rxSourceCountEmergency');
-
-        if (elSrcAll) elSrcAll.innerText = all.length;
-        if (elSrcInp) elSrcInp.innerText = inpatientList.length;
-        if (elSrcOut) elSrcOut.innerText = outpatientList.length;
-        if (elSrcEmg) elSrcEmg.innerText = emergencyList.length;
-
-        // 1. تصفية القائمة حسب القسم المحدد أولاً
-        let sourceFiltered = all;
-        if (currentRxSourceFilter === 'inpatient') {
-            sourceFiltered = inpatientList;
-        } else if (currentRxSourceFilter === 'outpatient') {
-            sourceFiltered = outpatientList;
-        } else if (currentRxSourceFilter === 'emergency') {
-            sourceFiltered = emergencyList;
-        }
-
-        // احتساب الحالات داخل القسم المحدد
-        const newCount = sourceFiltered.filter(r => r.stage === 'new').length;
-        const cashierCount = sourceFiltered.filter(r => r.stage === 'pending_cashier').length;
-        const paidCount = sourceFiltered.filter(r => r.stage === 'paid_ready_to_dispense').length;
-        const readyCount = sourceFiltered.filter(r => r.stage === 'approved_ready').length;
-        const pendingCount = sourceFiltered.filter(r => r.stage === 'awaiting_doctor').length;
-
-        const elTotal = document.getElementById('badgeTotalPendingRx');
-        if (elTotal) elTotal.innerText = all.length;
-
-        const elFilterAll = document.getElementById('rxFilterCountAll');
-        const elFilterNew = document.getElementById('rxFilterCountNew');
-        const elFilterCashier = document.getElementById('rxFilterCountCashier');
-        const elFilterPaid = document.getElementById('rxFilterCountPaid');
-        const elFilterReady = document.getElementById('rxFilterCountReady');
-        const elFilterPending = document.getElementById('rxFilterCountPending');
-
-        if (elFilterAll) elFilterAll.innerText = sourceFiltered.length;
-        if (elFilterNew) elFilterNew.innerText = newCount;
-        if (elFilterCashier) elFilterCashier.innerText = cashierCount;
-        if (elFilterPaid) elFilterPaid.innerText = paidCount;
-        if (elFilterReady) elFilterReady.innerText = readyCount;
-        if (elFilterPending) elFilterPending.innerText = pendingCount;
-
-        // 2. تصفية حسب حالة الوصفة
-        let filtered = sourceFiltered;
+        let filtered = all;
         if (currentRxStreamFilter === 'new') {
-            filtered = sourceFiltered.filter(r => r.stage === 'new');
-        } else if (currentRxStreamFilter === 'cashier') {
-            filtered = sourceFiltered.filter(r => r.stage === 'pending_cashier');
-        } else if (currentRxStreamFilter === 'paid') {
-            filtered = sourceFiltered.filter(r => r.stage === 'paid_ready_to_dispense');
+            filtered = all.filter(r => r.stage === 'new');
         } else if (currentRxStreamFilter === 'ready') {
-            filtered = sourceFiltered.filter(r => r.stage === 'approved_ready');
+            filtered = all.filter(r => r.stage === 'approved_ready');
         } else if (currentRxStreamFilter === 'pending') {
-            filtered = sourceFiltered.filter(r => r.stage === 'awaiting_doctor');
+            filtered = all.filter(r => r.stage === 'awaiting_doctor');
         }
 
-        // 3. تطبيق البحث النصي اللحظي
+        // تطبيق البحث النصي اللحظي
         if (currentRxSearchQuery) {
             filtered = filtered.filter(rx => {
                 const rxNum = (rx.prescription_number || '').toLowerCase();
                 const patName = (rx.patient_name || '').toLowerCase();
                 const docName = (rx.doctor_name || '').toLowerCase();
-                const roomNum = (rx.room_number || '').toLowerCase();
                 const medNames = (rx.items_summary || []).map(i => (i.name || '').toLowerCase()).join(' ');
                 
                 return rxNum.includes(currentRxSearchQuery) ||
                        patName.includes(currentRxSearchQuery) ||
                        docName.includes(currentRxSearchQuery) ||
-                       roomNum.includes(currentRxSearchQuery) ||
                        medNames.includes(currentRxSearchQuery);
             });
         }
@@ -1312,15 +1204,6 @@
                 if (currentRxSearchQuery) {
                     if (emptyTitle) emptyTitle.innerText = 'لا توجد نتائج مطابقة للبحث';
                     if (emptyDesc) emptyDesc.innerText = `لم يتم العثور على وصفات تطابق: "${currentRxSearchQuery}"`;
-                } else if (currentRxSourceFilter === 'inpatient') {
-                    if (emptyTitle) emptyTitle.innerText = 'لا توجد وصفات رقود أو جراحة معلقة';
-                    if (emptyDesc) emptyDesc.innerText = 'أي علاج يكتبه طبيب الردهة سيصل إلى هذا التبويب فوراً.';
-                } else if (currentRxSourceFilter === 'emergency') {
-                    if (emptyTitle) emptyTitle.innerText = 'لا توجد وصفات طوارئ معلقة';
-                    if (emptyDesc) emptyDesc.innerText = 'أي وصفة إسعافية جديدة ستظهر هنا مباشرة.';
-                } else if (currentRxSourceFilter === 'outpatient') {
-                    if (emptyTitle) emptyTitle.innerText = 'لا توجد وصفات عيادات استشارية معلقة';
-                    if (emptyDesc) emptyDesc.innerText = 'أي وصفة من العيادات الاستشارية ستظهر في هذا التبويب.';
                 } else {
                     if (emptyTitle) emptyTitle.innerText = 'لا توجد وصفات طبية معلقة';
                     if (emptyDesc) emptyDesc.innerText = 'أي وصفة يكتبها الطبيب ستصلك هنا فوراً.';
@@ -1400,7 +1283,7 @@
                     <td>
                         <div class="fw-bold text-dark text-truncate d-flex align-items-center gap-1" style="max-width: 170px;">
                             <span>${rx.patient_name}</span>
-                            ${isInpatient ? `<span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;"><i class="fas fa-bed me-1"></i>غرفة ${rx.room_number || '-'}</span>` : (isEmerg ? `<span class="badge bg-danger-subtle text-danger border border-danger-subtle" style="font-size: 0.68rem;"><i class="fas fa-ambulance me-1"></i>طوارئ</span>` : `<span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.68rem;"><i class="fas fa-user-md me-1"></i>استشارية</span>`)}
+                            ${isInpatient ? `<span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;"><i class="fas fa-bed me-1"></i>غرفة ${rx.room_number || '-'}</span>` : ''}
                         </div>
                         <small class="text-muted d-block text-truncate" style="max-width: 150px; font-size: 0.73rem;">
                             <i class="fas fa-user-md text-primary me-1"></i>${rx.doctor_name}

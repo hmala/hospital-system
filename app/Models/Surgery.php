@@ -229,11 +229,6 @@ class Surgery extends Model
         return $this->hasMany(SurgeryTreatment::class)->orderBy('sort_order');
     }
 
-    public function treatments()
-    {
-        return $this->surgeryTreatments();
-    }
-
     public function getSurgeryNameAttribute()
     {
         return $this->surgery_type;
