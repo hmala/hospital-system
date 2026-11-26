@@ -36,22 +36,16 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته)
-        $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
-            ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
-            ->whereDoesntHave('operationTheaterStation', function ($q) {
-                $q->where('status', 'completed');
-            });
+        // 1. استعلام العمليات الجراحية الموحد لكافة الحالات
+        $surgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation']);
 
         // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
         if ($user->doctor && ! $isAdmin && ! $user->hasRole(['receptionist', 'surgery_staff'])) {
             // إخفاء العمليات عن الأطباء الاستشاريين
             if ($user->doctor->type === 'consultant') {
-                // لا نعرض أي عمليات للطبيب الاستشاري
-                $activeSurgeriesQuery->whereRaw('1 = 0');
+                $surgeriesQuery->whereRaw('1 = 0');
             } else {
-                // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
-                $activeSurgeriesQuery->where(function ($q) use ($user) {
+                $surgeriesQuery->where(function ($q) use ($user) {
                     $q->where('doctor_id', $user->doctor->id)
                         ->orWhere('anesthesiologist_id', $user->doctor->id)
                         ->orWhere('anesthesiologist_2_id', $user->doctor->id);
@@ -62,7 +56,7 @@ class SurgeryController extends Controller
         // تطبيق البحث والفلترة
         if (request('search')) {
             $search = request('search');
-            $activeSurgeriesQuery->where(function ($query) use ($search) {
+            $surgeriesQuery->where(function ($query) use ($search) {
                 $query->whereHas('patient.user', function ($q) use ($search) {
                     $q->where('name', 'like', '%'.$search.'%');
                 })
@@ -73,69 +67,51 @@ class SurgeryController extends Controller
             });
         }
 
+        // الفلترة الذكية حسب الحالة أو التبويب
+        $tabParam = request('tab');
         if (request('status') && request('status') !== '') {
-            $activeSurgeriesQuery->where('status', request('status'));
-        }
-
-        if (request('date')) {
-            $activeSurgeriesQuery->whereDate('scheduled_date', request('date'));
-        }
-
-        $activeSurgeries = $activeSurgeriesQuery->orderBy('scheduled_date', 'desc')
-            ->orderBy('scheduled_time', 'desc')
-            ->paginate(20)
-            ->appends(request()->query());
-
-        // العمليات المكتملة والملغاة (بما فيها التي اكتملت صالة عملياتها وخرجت)
-        $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
-            ->where(function ($q) {
+            $status = request('status');
+            if ($status === 'active') {
+                $surgeriesQuery->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+                    ->whereDoesntHave('operationTheaterStation', function ($q) {
+                        $q->where('status', 'completed');
+                    });
+            } elseif ($status === 'completed') {
+                $surgeriesQuery->where(function ($q) {
+                    $q->where('status', 'completed')
+                        ->orWhereHas('operationTheaterStation', function ($oq) {
+                            $oq->where('status', 'completed');
+                        });
+                });
+            } else {
+                $surgeriesQuery->where('status', $status);
+            }
+        } elseif ($tabParam === 'active') {
+            $surgeriesQuery->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+                ->whereDoesntHave('operationTheaterStation', function ($q) {
+                    $q->where('status', 'completed');
+                });
+        } elseif ($tabParam === 'completed') {
+            $surgeriesQuery->where(function ($q) {
                 $q->whereIn('status', ['completed', 'cancelled'])
                     ->orWhereHas('operationTheaterStation', function ($oq) {
                         $oq->where('status', 'completed');
                     });
             });
-
-        // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
-        if ($user->doctor && ! $isAdmin && ! $user->hasRole(['receptionist', 'surgery_staff'])) {
-            // إخفاء العمليات عن الأطباء الاستشاريين
-            if ($user->doctor->type === 'consultant') {
-                // لا نعرض أي عمليات للطبيب الاستشاري
-                $completedSurgeriesQuery->whereRaw('1 = 0');
-            } else {
-                // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
-                $completedSurgeriesQuery->where(function ($q) use ($user) {
-                    $q->where('doctor_id', $user->doctor->id)
-                        ->orWhere('anesthesiologist_id', $user->doctor->id)
-                        ->orWhere('anesthesiologist_2_id', $user->doctor->id);
-                });
-            }
-        }
-
-        if (request('search')) {
-            $search = request('search');
-            $completedSurgeriesQuery->where(function ($query) use ($search) {
-                $query->whereHas('patient.user', function ($q) use ($search) {
-                    $q->where('name', 'like', '%'.$search.'%');
-                })
-                    ->orWhereHas('doctor.user', function ($q) use ($search) {
-                        $q->where('name', 'like', '%'.$search.'%');
-                    })
-                    ->orWhere('surgery_type', 'like', '%'.$search.'%');
-            });
-        }
-
-        if (request('status') && in_array(request('status'), ['completed', 'cancelled'])) {
-            $completedSurgeriesQuery->where('status', request('status'));
         }
 
         if (request('date')) {
-            $completedSurgeriesQuery->whereDate('scheduled_date', request('date'));
+            $surgeriesQuery->whereDate('scheduled_date', request('date'));
         }
 
-        $completedSurgeries = $completedSurgeriesQuery->orderBy('scheduled_date', 'desc')
+        $surgeries = $surgeriesQuery->orderBy('scheduled_date', 'desc')
             ->orderBy('scheduled_time', 'desc')
             ->paginate(20)
             ->appends(request()->query());
+
+        // التوافق العكسي مع أي شاشات أو اختبارات
+        $activeSurgeries = $surgeries;
+        $completedSurgeries = $surgeries;
 
         // احتساب إحصاءات ومؤشرات العمليات الشاملة للوحة المؤشرات
         $statsQuery = Surgery::query();
@@ -183,12 +159,13 @@ class SurgeryController extends Controller
                 ->get();
         }
 
-        $allowedIndexTabs = $canViewOrStoreTab ? ['active', 'completed', 'or_store'] : ['active', 'completed'];
+        $allowedIndexTabs = $canViewOrStoreTab ? ['all', 'active', 'completed', 'or_store'] : ['all', 'active', 'completed'];
         $activeIndexTab = in_array(request()->query('tab'), $allowedIndexTabs, true)
             ? request()->query('tab')
-            : 'active';
+            : 'all';
 
         return view('surgeries.index', compact(
+            'surgeries',
             'activeSurgeries',
             'completedSurgeries',
             'stats',
