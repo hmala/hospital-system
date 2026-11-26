@@ -69,7 +69,10 @@ class ClinicalStationController extends Controller
             $postOpStation = $surgery->residentStations()->create([
                 'phase' => 'post_op',
                 'status' => 'pending',
+                'post_op_notes' => $surgery->post_op_notes,
             ]);
+        } elseif ($postOpStation && empty($postOpStation->post_op_notes) && ! empty($surgery->post_op_notes)) {
+            $postOpStation->update(['post_op_notes' => $surgery->post_op_notes]);
         }
 
         // 2. Ensure Nursing Station exists
@@ -516,6 +519,9 @@ class ClinicalStationController extends Controller
                 'treatment_plan',
             ]);
             $station->update($planData);
+            if (isset($planData['post_op_notes'])) {
+                $surgery->update(['post_op_notes' => $planData['post_op_notes']]);
+            }
         }
 
         // 4. Nursing Care & Notes Tab (if write permitted)

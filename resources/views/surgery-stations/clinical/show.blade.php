@@ -1410,11 +1410,11 @@
                                 'fluid_monitoring' => __('مراقبة السوائل والعلامات'),
                                 'intensive' => __('مكثف (عناية ومراقبة دقيقة)'),
                             ];
-                            $hasSurgeonSummary = $surgeonSt && (
+                            $hasSurgeonSummary = ($surgeonSt && (
                                 !empty($surgeonSt->treatment_plan) ||
                                 !empty($surgeonSt->notes) ||
                                 (!empty($surgeonSt->monitoring_protocol) && $surgeonSt->monitoring_protocol !== 'standard')
-                            );
+                            )) || !empty($surgery->post_op_notes) || !empty($surgery->treatment_plan);
                         @endphp
 
                         <div id="clinicalPlanGrid" class="d-flex flex-column gap-2.5">
@@ -1423,19 +1423,19 @@
                                     <span class="fw-bold text-primary">
                                         <i class="fas fa-user-md me-1"></i> {{ __("خلاصة توصية الجراح:") }}
                                     </span>
-                                    @if(!empty($surgeonSt->monitoring_protocol))
+                                    @if($surgeonSt && !empty($surgeonSt->monitoring_protocol))
                                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill">
                                             {{ __("البروتوكول:") }} {{ $protocolLabels[$surgeonSt->monitoring_protocol] ?? $surgeonSt->monitoring_protocol }}
                                         </span>
                                     @endif
-                                    @if(!empty($surgeonSt->treatment_plan))
-                                        <span class="badge bg-white text-dark border rounded-pill fw-normal text-truncate" style="max-width: 340px;" title="{{ $surgeonSt->treatment_plan }}">
-                                            <strong>{{ __("الخطة:") }}</strong> {{ $surgeonSt->treatment_plan }}
+                                    @if(!empty($surgery->post_op_notes) || ($surgeonSt && !empty($surgeonSt->notes)))
+                                        <span class="badge bg-white text-success border border-success-subtle rounded-pill fw-normal text-truncate" style="max-width: 360px;" title="{{ $surgery->post_op_notes ?? $surgeonSt->notes }}">
+                                            <strong><i class="fas fa-clipboard-check text-success me-1"></i>{{ __("ملاحظات ما بعد العملية:") }}</strong> {{ $surgery->post_op_notes ?? $surgeonSt->notes }}
                                         </span>
                                     @endif
-                                    @if(!empty($surgeonSt->notes))
-                                        <span class="badge bg-white text-secondary border rounded-pill fw-normal text-truncate" style="max-width: 320px;" title="{{ $surgeonSt->notes }}">
-                                            <strong>{{ __("ملاحظات:") }}</strong> {{ $surgeonSt->notes }}
+                                    @if(!empty($surgery->treatment_plan) || ($surgeonSt && !empty($surgeonSt->treatment_plan)))
+                                        <span class="badge bg-white text-dark border rounded-pill fw-normal text-truncate" style="max-width: 340px;" title="{{ $surgery->treatment_plan ?? $surgeonSt->treatment_plan }}">
+                                            <strong>{{ __("الخطة:") }}</strong> {{ $surgery->treatment_plan ?? $surgeonSt->treatment_plan }}
                                         </span>
                                     @endif
                                 </div>
@@ -1472,13 +1472,17 @@
                                                     <i class="fas fa-notes-medical text-success me-1"></i> {{ __("توصيات ما بعد الجراحة") }}
                                                     <span class="text-muted fw-normal" style="font-size: 0.72rem;">(Post-Op)</span>
                                                 </label>
-                                                @if($currentPhase === 'post_op')
+                                                @if(!empty($surgery->post_op_notes))
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill" style="font-size: 0.66rem;" title="{{ __('ملاحظات الطبيب الجراح المدونة في تفاصيل العملية') }}">
+                                                        <i class="fas fa-user-md me-1"></i> {{ __("من ملاحظات الجراح") }}
+                                                    </span>
+                                                @elseif($currentPhase === 'post_op')
                                                     <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill" style="font-size: 0.66rem;">{{ __("المرحلة الحالية") }}</span>
                                                 @endif
                                             </div>
                                             <textarea name="post_op_notes" id="plan_post_op_notes" class="form-control history-compact-textarea rounded-2" rows="2"
                                                       {{ !$canWriteCurrentTab ? 'readonly' : '' }}
-                                                      placeholder="{{ __('العناية بالجرح، المسكنات، وقت بدء السوائل...') }}">{{ $station?->post_op_notes }}</textarea>
+                                                      placeholder="{{ __('العناية بالجرح، المسكنات، وقت بدء السوائل...') }}">{{ old('post_op_notes', $station?->post_op_notes ?: ($surgery->post_op_notes ?? '')) }}</textarea>
                                         </div>
                                     </div>
                                 </div>

@@ -56,7 +56,7 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
-## Session log (2026-11-26 — المرحلة 304: تثبيت وتأمين تأشير إعطاء الجرعات الدوائية للممرض بنقرة واحدة لا رجعة فيها وحظر التراجع MAR One-Way Permanent Administration & Clinical Safety Lock)
+## Session log (2026-11-26 — المرحلة 304: تثبيت وتأمين تأشير إعطاء الجرعات الدوائية للممرض بنقرة واحدة وحظر التراجع + ربط ومزامنة توصيات ما بعد الجراحة للجراح بالمحطة السريرية MAR One-Way Administration & Surgeon Post-Op Notes Sync)
 
 ### Done
 - **حوكمة تأشير الجرعة في جدول الإعطاء MAR ([app/Models/SurgeryTreatment.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTreatment.php), [app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
@@ -67,7 +67,13 @@ Consult these files before making changes or proposing fixes:
 - **الواجهة التفاعلية والـ JavaScript اللحظي ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
   * قفل خانات الجرعات المنفذة تلقائياً (`@disabled`) لكادر التمريض مع وسام الإقفال الأمني `mar-dose-locked`.
   * تحديث دوال الـ JavaScript (`handleMarCheckboxToggle` و `addPrnDoseConfirmation`) لتقفل الخانة فوراً بعد أول نقرة ناجحة دون إمكانية النقر العكسي.
+- **ربط ومزامنة توصيات وملاحظات ما بعد الجراحة للجراح ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [app/Http/Controllers/SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * ربط حقل «توصيات ما بعد الجراحة (Post-Op)» في تبويب الخطة الطبية (`tab=plan`) ليعرض تلقائياً ملاحظات الجراح المدونة في تفاصيل العملية الجراحية (`surgeries.post_op_notes` / `surgeries/{id}`).
+  * إبراز وسم «من ملاحظات الجراح» بجانب الحقل وبطاقة خلاصة توصيات الجراح في رأس تبويب الخطة.
+  * تفعيل المزامنة التلقائية الثنائية (Two-Way Sync): عند تعديل الجراح لتفاصيل العملية (`surgeries.updateDetails`) تُحدّث توصيات محطة المقيم `resident_stations.post_op_notes` تلقائياً؛ وعند قيام الطبيب بتحديث تبويب الخطة تُزامن التوصيات فوراً إلى سجل العملية الجراحية `surgeries.post_op_notes`.
 - **الاختبارات وضمان الجودة ([tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php))**:
+  * اجتياز كامل اختبارات المحطة السريرية والأدوية MAR والصلاحيات والمزامنة بنجاح تام (24 passed, 314 assertions).
+  * اجتياز فحص `Laravel Pint` و `view:cache`.
   * اجتياز كامل اختبارات المحطة السريرية والأدوية MAR والصلاحيات بنجاح تام (23 passed, 305 assertions).
   * اجتياز فحص `Laravel Pint` و `view:cache`.
 

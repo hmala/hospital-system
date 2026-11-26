@@ -1342,4 +1342,57 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
         $delPaidRes->assertSessionHas('error');
         $this->assertDatabaseHas('surgery_radiology_tests', ['id' => $surgeryRad->id]);
     }
+
+    public function test_surgeon_post_op_notes_sync_and_display_in_clinical_station_plan()
+    {
+        // 1. Surgeon updates post-op notes in surgery details
+        $surgeonNote = 'تعليمات الجراح: راحة تامة، مراقبة النبض، بدء السوائل بعد 4 ساعات';
+        $updateRes = $this->actingAs($this->admin)->patch(route('surgeries.updateDetails', $this->surgery), [
+            'tab' => 'detail_diagnosis',
+            'diagnosis' => 'Appendicitis Acute',
+            'post_op_notes' => $surgeonNote,
+        ]);
+        $updateRes->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('surgeries', [
+            'id' => $this->surgery->id,
+            'post_op_notes' => $surgeonNote,
+        ]);
+
+        $this->assertDatabaseHas('resident_stations', [
+            'surgery_id' => $this->surgery->id,
+            'phase' => 'post_op',
+            'post_op_notes' => $surgeonNote,
+        ]);
+
+        // 2. Clinical station show (plan tab) renders surgeon post-op notes and badge
+        $showRes = $this->actingAs($this->residentUser)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'phase' => 'post_op',
+            'tab' => 'plan',
+        ]));
+        $showRes->assertStatus(200);
+        $showRes->assertSee('من ملاحظات الجراح');
+        $showRes->assertSee($surgeonNote);
+
+        // 3. Clinical station update syncs post_op_notes back to surgery model
+        $updatedNote = 'تحديث المقيم: المريض استعاد وعيه بالكامل، استمرار على المسكنات';
+        $clinicalUpdateRes = $this->actingAs($this->residentUser)->patch(route('clinical-station.update', $this->surgery), [
+            'tab' => 'plan',
+            'phase' => 'post_op',
+            'post_op_notes' => $updatedNote,
+        ]);
+        $clinicalUpdateRes->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('resident_stations', [
+            'surgery_id' => $this->surgery->id,
+            'phase' => 'post_op',
+            'post_op_notes' => $updatedNote,
+        ]);
+
+        $this->assertDatabaseHas('surgeries', [
+            'id' => $this->surgery->id,
+            'post_op_notes' => $updatedNote,
+        ]);
+    }
 }

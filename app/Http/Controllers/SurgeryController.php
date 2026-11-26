@@ -1693,6 +1693,19 @@ class SurgeryController extends Controller
         try {
             if (! empty($validated)) {
                 $surgery->update($validated);
+
+                if (array_key_exists('post_op_notes', $validated)) {
+                    $postOpStation = $surgery->residentStations()->where('phase', 'post_op')->first();
+                    if ($postOpStation) {
+                        $postOpStation->update(['post_op_notes' => $validated['post_op_notes']]);
+                    } elseif (! empty($validated['post_op_notes'])) {
+                        $surgery->residentStations()->create([
+                            'phase' => 'post_op',
+                            'status' => 'pending',
+                            'post_op_notes' => $validated['post_op_notes'],
+                        ]);
+                    }
+                }
             }
 
             // Sync / create AnesthesiaStation when saving anesthesia details or updating team/anesthesiologist
