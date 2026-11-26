@@ -925,25 +925,9 @@ class ClinicalStationController extends Controller
     {
         $user = Auth::user();
 
-        $validated = $request->validate([
-            'batch_id' => 'required|exists:stock_batches,id',
-            'quantity' => 'required|integer|min:1',
-            'timing' => 'nullable|string|max:255',
-            'admin_notes' => 'nullable|string|max:1000',
-            'expected_type' => 'nullable|in:medication,supply',
-            'phase' => 'nullable|in:pre_op,post_op',
-        ]);
-
         $access = SurgeryTabPermission::getAccessForUser($user, 'supplies');
         if ($access !== SurgeryTabPermission::ACCESS_WRITE) {
             return redirect()->back()->with('error', 'غير مصرح لك بصرف المستلزمات الطبية.');
-        }
-
-        $targetBatch = StockBatch::with('product')->find($validated['batch_id']);
-        $isSupplyProduct = $targetBatch?->product?->isSupply() ?? false;
-
-        if (($validated['expected_type'] ?? null) === SurgeryTreatment::TYPE_MEDICATION || ! $isSupplyProduct) {
-            return redirect()->back()->with('error', 'مخزن الطابق مخصص للمستلزمات الطبية والمستهلكات فقط؛ تُدار الأدوية من تبويب الأدوية وجدول الإعطاء المرتبط بالصيدلية.');
         }
 
         $floorLocation = $surgery->getFloorSubStoreLocation();
@@ -951,77 +935,128 @@ class ClinicalStationController extends Controller
             return redirect()->back()->with('error', 'لم يتم العثور على مخزن فرعي مرتبط بطابق غرفة هذا المريض.');
         }
 
+        $phase = $request->input('phase', 'pre_op');
+        $from = $request->input('from');
+
+        // دعم الحفظ الجماعي (قائمة مستلزمات متعددة) أو المفرد
+        $itemsToProcess = [];
+        if ($request->has('items') && is_array($request->input('items'))) {
+            $validated = $request->validate([
+                'items' => 'required|array|min:1',
+                'items.*.batch_id' => 'required|exists:stock_batches,id',
+                'items.*.quantity' => 'required|integer|min:1',
+                'items.*.timing' => 'nullable|string|max:255',
+                'items.*.admin_notes' => 'nullable|string|max:1000',
+                'phase' => 'nullable|in:pre_op,post_op',
+                'from' => 'nullable|string',
+            ]);
+            $itemsToProcess = $validated['items'];
+        } else {
+            $validated = $request->validate([
+                'batch_id' => 'required|exists:stock_batches,id',
+                'quantity' => 'required|integer|min:1',
+                'timing' => 'nullable|string|max:255',
+                'admin_notes' => 'nullable|string|max:1000',
+                'expected_type' => 'nullable|in:medication,supply',
+                'phase' => 'nullable|in:pre_op,post_op',
+                'from' => 'nullable|string',
+            ]);
+            $itemsToProcess = [[
+                'batch_id' => $validated['batch_id'],
+                'quantity' => $validated['quantity'],
+                'timing' => $validated['timing'] ?? null,
+                'admin_notes' => $validated['admin_notes'] ?? null,
+                'expected_type' => $validated['expected_type'] ?? null,
+            ]];
+        }
+
         try {
-            DB::transaction(function () use ($validated, $surgery, $floorLocation, $user) {
-                $batch = StockBatch::where('id', $validated['batch_id'])
-                    ->where('location_id', $floorLocation->id)
-                    ->lockForUpdate()
-                    ->first();
+            $dispensedCount = 0;
+            DB::transaction(function () use ($itemsToProcess, $surgery, $floorLocation, $user, &$dispensedCount) {
+                foreach ($itemsToProcess as $item) {
+                    $batch = StockBatch::where('id', $item['batch_id'])
+                        ->where('location_id', $floorLocation->id)
+                        ->lockForUpdate()
+                        ->first();
 
-                if (! $batch) {
-                    throw new \Exception('الوجبة المحددة لا تنتمي إلى مخزن عهدة طابق هذا المريض.');
-                }
+                    if (! $batch) {
+                        throw new \Exception('الوجبة المحددة لا تنتمي إلى مخزن عهدة طابق هذا المريض.');
+                    }
 
-                if ($batch->current_qty < $validated['quantity']) {
-                    throw new \Exception("الكمية المطلوبة ({$validated['quantity']}) تتجاوز الرصيد المتوفر في عهدة الطابق ({$batch->current_qty}).");
-                }
+                    $isSupplyProduct = $batch->product?->isSupply() ?? false;
+                    if (($item['expected_type'] ?? null) === SurgeryTreatment::TYPE_MEDICATION || ! $isSupplyProduct) {
+                        throw new \Exception('مخزن الطابق مخصص للمستلزمات الطبية والمستهلكات فقط؛ تُدار الأدوية من تبويب الأدوية وجدول الإعطاء المرتبط بالصيدلية.');
+                    }
 
-                // خصم الرصيد من وجبة الطابق
-                $batch->decrement('current_qty', $validated['quantity']);
+                    if ($batch->current_qty < $item['quantity']) {
+                        $pName = $batch->product?->name ?? 'مستلزم';
+                        throw new \Exception("الكمية المطلوبة للمستلزم ({$pName}) تتجاوز الرصيد المتوفر في عهدة الطابق (المتوفر: {$batch->current_qty}).");
+                    }
 
-                $patientName = $surgery->patient?->name ?? 'مريض';
-                $roomNumber = $surgery->room?->room_number ?? 'بدون غرفة';
-                $movementNotes = "صرف مستلزم لمريض: {$patientName} (غرفة: {$roomNumber})";
-                if (! empty($validated['admin_notes'])) {
-                    $movementNotes .= ' - '.$validated['admin_notes'];
-                }
+                    // خصم الرصيد من وجبة الطابق
+                    $batch->decrement('current_qty', $item['quantity']);
 
-                // تسجيل حركة الإخراج للمريض
-                $movement = StockMovement::create([
-                    'batch_id' => $batch->id,
-                    'from_location_id' => $floorLocation->id,
-                    'to_location_id' => null,
-                    'quantity' => $validated['quantity'],
-                    'type' => 'issue_to_patient',
-                    'user_id' => $user->id,
-                    'surgery_id' => $surgery->id,
-                    'notes' => $movementNotes,
-                ]);
+                    $patientName = $surgery->patient?->name ?? 'مريض';
+                    $roomNumber = $surgery->room?->room_number ?? 'بدون غرفة';
+                    $movementNotes = "صرف مستلزم لمريض: {$patientName} (غرفة: {$roomNumber})";
+                    if (! empty($item['admin_notes'])) {
+                        $movementNotes .= ' - '.$item['admin_notes'];
+                    }
 
-                // تسجيل المستلزم في جدول مستلزمات المريض السريرية
-                $product = $batch->product;
-                $unitName = $product?->unit ?? 'قطعة';
-                $dosageText = "{$validated['quantity']} {$unitName}";
+                    // تسجيل حركة الإخراج للمريض
+                    $movement = StockMovement::create([
+                        'batch_id' => $batch->id,
+                        'from_location_id' => $floorLocation->id,
+                        'to_location_id' => null,
+                        'quantity' => $item['quantity'],
+                        'type' => 'issue_to_patient',
+                        'user_id' => $user->id,
+                        'surgery_id' => $surgery->id,
+                        'notes' => $movementNotes,
+                    ]);
 
-                SurgeryTreatment::create([
-                    'surgery_id' => $surgery->id,
-                    'item_type' => SurgeryTreatment::TYPE_SUPPLY,
-                    'description' => $product?->name ?? 'مستلزم طبي',
-                    'dosage' => $dosageText,
-                    'timing' => $validated['timing'] ?: 'صرف مستلزم من عهدة الطابق',
-                    'status' => 'administered',
-                    'administered_by' => $user->id,
-                    'administered_at' => now(),
-                    'admin_notes' => $validated['admin_notes'] ?? null,
-                    'batch_id' => $batch->id,
-                    'stock_movement_id' => $movement->id,
-                    'quantity' => $validated['quantity'],
-                    'administrations' => [
-                        [
-                            'administered_at' => now()->format('Y-m-d H:i'),
-                            'administered_by' => $user->id,
-                            'administered_by_name' => $user->full_name ?? $user->name ?? 'الكادر التمريضي',
-                            'notes' => $validated['admin_notes'] ?? null,
+                    // تسجيل المستلزم في جدول مستلزمات المريض السريرية
+                    $product = $batch->product;
+                    $unitName = $product?->unit ?? 'قطعة';
+                    $dosageText = "{$item['quantity']} {$unitName}";
+
+                    SurgeryTreatment::create([
+                        'surgery_id' => $surgery->id,
+                        'item_type' => SurgeryTreatment::TYPE_SUPPLY,
+                        'description' => $product?->name ?? 'مستلزم طبي',
+                        'dosage' => $dosageText,
+                        'timing' => $item['timing'] ?: 'صرف مستلزم من عهدة الطابق',
+                        'status' => 'administered',
+                        'administered_by' => $user->id,
+                        'administered_at' => now(),
+                        'admin_notes' => $item['admin_notes'] ?? null,
+                        'batch_id' => $batch->id,
+                        'stock_movement_id' => $movement->id,
+                        'quantity' => $item['quantity'],
+                        'administrations' => [
+                            [
+                                'administered_at' => now()->format('Y-m-d H:i'),
+                                'administered_by' => $user->id,
+                                'administered_by_name' => $user->full_name ?? $user->name ?? 'الكادر التمريضي',
+                                'notes' => $item['admin_notes'] ?? null,
+                            ],
                         ],
-                    ],
-                ]);
+                    ]);
+
+                    $dispensedCount++;
+                }
             });
+
+            $successMsg = $dispensedCount > 1
+                ? "تم صرف وتوثيق ({$dispensedCount}) مستلزمات طبية بنجاح من ({$floorLocation->name}) وخصمها من الرصيد."
+                : "تم صرف المستلزم الطبي بنجاح من ({$floorLocation->name}) وخصمه من الرصيد وتوثيقه في تبويب المستلزمات.";
 
             return redirect()->route('clinical-station.show', array_filter([
                 'surgery' => $surgery->id,
-                'phase' => $validated['phase'] ?? null,
+                'phase' => $phase,
                 'tab' => 'supplies',
-            ]))->with('success', "تم صرف المستلزم الطبي بنجاح من ({$floorLocation->name}) وخصمه من الرصيد وتوثيقه في تبويب المستلزمات.");
+                'from' => $from,
+            ]))->with('success', $successMsg);
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

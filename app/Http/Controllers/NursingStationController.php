@@ -186,7 +186,36 @@ class NursingStationController extends Controller
         $completedSurgeries = $completedQuery->orderBy('updated_at', 'desc')
             ->get();
 
+        // 9. دمج وترتيب الحالات النشطة في قائمة موحدة واحدة (قبل الصالة، داخل الصالة، بعد الصالة)
+        $activeSurgeries = $preOpSurgeries->merge($postOpSurgeries)->unique('id')->values();
+
+        $phasePriority = function ($surgery) {
+            $isPostOp = ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')
+                || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed')
+                || $surgery->status === 'completed'
+                || ($surgery->residentStations && $surgery->residentStations->where('phase', 'post_op')->count() > 0);
+
+            if ($isPostOp) {
+                return 1; // خرج من الصالة وبحاجة متابعة فورية ورعاية بعد العملية
+            }
+            if ($surgery->status === 'in_progress' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'in_progress')) {
+                return 2; // داخل صالة العمليات
+            }
+            if ($surgery->status === 'waiting') {
+                return 3; // بانتظار الصالة (مسجل دخول)
+            }
+
+            return 4; // مجدولة (قبل الصالة)
+        };
+
+        $activeSurgeries = $activeSurgeries->sortBy([
+            fn ($a, $b) => $phasePriority($a) <=> $phasePriority($b),
+            ['scheduled_date', 'asc'],
+            ['scheduled_time', 'asc'],
+        ])->values();
+
         return view('surgery-stations.nursing.index', compact(
+            'activeSurgeries',
             'preOpSurgeries',
             'postOpSurgeries',
             'completedSurgeries',
@@ -208,7 +237,12 @@ class NursingStationController extends Controller
                 ->with('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
         }
 
-        return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id, 'from' => 'nursing'], $request->query()));
+        $params = array_merge(['surgery' => $surgery->id], $request->query());
+        if ($request->has('from')) {
+            $params['from'] = $request->input('from');
+        }
+
+        return redirect()->route('clinical-station.show', $params);
     }
 
     public function update(Request $request, Surgery $surgery)

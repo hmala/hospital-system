@@ -629,30 +629,44 @@
             <div class="d-flex flex-wrap align-items-center gap-2 ms-auto ms-lg-0">
                 {{-- Smart Phase Indicator & Subtle Switcher --}}
                 <div class="d-flex align-items-center gap-2">
-                    @if($currentPhase === 'pre_op')
-                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('المرحلة السريرية التلقائية الحالية') }}">
-                            <i class="fas fa-hourglass-half text-primary"></i>
-                            <span>{{ __('تحضير ما قبل العملية') }}</span>
-                        </span>
-                        @if($postOpStation)
-                            <a href="{{ route('clinical-station.show', array_filter(['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab, 'from' => $from ?? null])) }}" 
-                               class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
-                               title="{{ __('الانتقال إلى مرحلة ما بعد العملية') }}">
-                                <span>{{ __('ما بعد العملية') }}</span>
-                                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} fa-xs"></i>
-                            </a>
-                        @endif
-                    @else
-                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('المرحلة السريرية التلقائية الحالية') }}">
+                    @php
+                        $isOpTheaterDone = ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')
+                            || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed')
+                            || $surgery->status === 'completed';
+
+                        $isInOpTheater = ($surgery->status === 'in_progress')
+                            || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'in_progress');
+                    @endphp
+
+                    @if($isOpTheaterDone || $currentPhase === 'post_op')
+                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('المرحلة السريرية: عناية ما بعد العملية (الرقود)') }}">
                             <i class="fas fa-procedures text-success"></i>
-                            <span>{{ __('عناية ما بعد العملية (الرقود)') }}</span>
+                            <span>{{ __('بعد الصالة (عناية الرقود)') }}</span>
                         </span>
                         @if($preOpStation)
                             <a href="{{ route('clinical-station.show', array_filter(['surgery' => $surgery->id, 'phase' => 'pre_op', 'tab' => $activeTab, 'from' => $from ?? null])) }}" 
                                class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
                                title="{{ __('مراجعة سجل ما قبل العملية') }}">
                                 <i class="fas fa-history fa-xs"></i>
-                                <span>{{ __('أرشيف ما قبل العملية') }}</span>
+                                <span>{{ __('أرشيف قبل الصالة') }}</span>
+                            </a>
+                        @endif
+                    @elseif($isInOpTheater)
+                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('المريض داخل صالة العمليات حالياً') }}">
+                            <i class="fas fa-spinner fa-spin text-primary"></i>
+                            <span>{{ __('داخل صالة العمليات') }}</span>
+                        </span>
+                    @else
+                        <span class="badge rounded-pill bg-warning bg-opacity-15 text-warning-emphasis border border-warning-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('المرحلة السريرية: تحضير وتهيئة ما قبل العملية') }}">
+                            <i class="fas fa-hourglass-start text-warning"></i>
+                            <span>{{ __('قبل الصالة (تحضير وتهيئة)') }}</span>
+                        </span>
+                        @if($postOpStation)
+                            <a href="{{ route('clinical-station.show', array_filter(['surgery' => $surgery->id, 'phase' => 'post_op', 'tab' => $activeTab, 'from' => $from ?? null])) }}" 
+                               class="btn btn-outline-secondary btn-sm rounded-pill px-2.5 py-1 text-xs d-inline-flex align-items-center gap-1"
+                               title="{{ __('الانتقال إلى مرحلة ما بعد العملية') }}">
+                                <span>{{ __('بعد الصالة') }}</span>
+                                <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-right' : 'fa-arrow-left' }} fa-xs"></i>
                             </a>
                         @endif
                     @endif
@@ -3167,41 +3181,167 @@
                                         <i class="fas fa-exclamation-triangle me-1"></i> {{ __("لم يتم العثور على مخزن فرعي مرتبط بطابق غرفة هذا المريض، لذا يتعذر صرف المستلزمات مباشرة من عهدة الطابق.") }}
                                     </div>
                                 @elseif(isset($floorSupplyBatches) && $floorSupplyBatches->isNotEmpty())
-                                    <form action="{{ route('clinical-station.supplies.dispense', $surgery) }}" method="POST">
-                                        @csrf
-                                        <input type="hidden" name="expected_type" value="supply">
-                                        <input type="hidden" name="phase" value="{{ $currentPhase }}">
+                                    {{-- شريط الإدخال والبحث السريع للمستلزم --}}
+                                    <div class="p-3 bg-light rounded-3 border mb-3">
                                         <div class="row g-2 align-items-end">
-                                            <div class="col-lg-4 col-md-6">
+                                            <div class="col-lg-4 col-md-6 position-relative" id="supSearchWrapper">
                                                 <label class="form-label small fw-bold text-dark mb-1">{{ __("اختر المستلزم الطبي: ") }}<span class="text-danger">*</span></label>
-                                                <select name="batch_id" id="sup_dispense_batch_id" class="form-select form-select-sm rounded-2" required onchange="updateDispenseMaxQty(this, 'sup_dispense_qty', 'sup_dispense_unit_label')">
-                                                    <option value="" disabled selected>{{ __("-- اختر المستلزم المتوفر في عهدة الطابق --") }}</option>
+                                                
+                                                {{-- حقول الحالة المؤقتة للعنصر المختار --}}
+                                                <input type="hidden" id="sup_selected_batch_id" value="">
+                                                <input type="hidden" id="sup_selected_max" value="1">
+                                                <input type="hidden" id="sup_selected_unit" value="{{ __('قطعة') }}">
+                                                <input type="hidden" id="sup_selected_name" value="">
+                                                <input type="hidden" id="sup_selected_cat" value="">
+                                                <input type="hidden" id="sup_selected_lot" value="">
+
+                                                {{-- حقل البحث اللحظي التفاعلي --}}
+                                                <div class="position-relative">
+                                                    <input type="text" id="sup_search_input" class="form-control form-control-sm rounded-2 ps-4" 
+                                                           placeholder="{{ __('ابحث باسم المستلزم أو الكود أو الوجبة...') }}" 
+                                                           autocomplete="off">
+                                                    <span class="position-absolute top-50 translate-middle-y text-muted" style="left: 10px; pointer-events: none;">
+                                                        <i class="fas fa-search"></i>
+                                                    </span>
+                                                    <button type="button" id="sup_clear_search_btn" 
+                                                            class="btn btn-link position-absolute top-50 translate-middle-y text-danger p-0 border-0 text-decoration-none" 
+                                                            style="left: 28px; display: none;" title="{{ __('مسح التحديد') }}">
+                                                        <i class="fas fa-times-circle"></i>
+                                                    </button>
+                                                </div>
+
+                                                {{-- قائمة الاقتراحات والنتائج اللحظية --}}
+                                                <div id="sup_suggestions_dropdown" class="position-absolute start-0 end-0 bg-white border rounded-3 shadow-lg mt-1 p-1 overflow-auto" 
+                                                     style="max-height: 280px; z-index: 1055; display: none;">
                                                     @foreach($floorSupplyBatches as $b)
-                                                        <option value="{{ $b->id }}" data-max="{{ $b->current_qty }}" data-unit="{{ $b->product?->unit ?? __('قطعة') }}">
-                                                            [{{ $b->product?->category ?: __('مستلزم') }}] {{ $b->product?->name }} — {{ __('المتوفر: ') }}{{ $b->current_qty }} {{ $b->product?->unit ?? __('قطعة') }} ({{ $b->manufacturer_lot_number ?: $b->internal_barcode ?: '#'.$b->id }})
-                                                        </option>
+                                                        @php
+                                                            $cat = $b->product?->category ?: __('مستلزم');
+                                                            $name = $b->product?->name ?? __('مستلزم غير معروف');
+                                                            $qty = (float) $b->current_qty;
+                                                            $unit = $b->product?->unit ?? __('قطعة');
+                                                            $lot = $b->manufacturer_lot_number ?: ($b->internal_barcode ?: '#'.$b->id);
+                                                            $searchKeywords = mb_strtolower($name . ' ' . $cat . ' ' . $lot . ' ' . ($b->product?->barcode ?? ''));
+                                                            $displayLabel = "[{$cat}] {$name} — " . __('المتوفر: ') . "{$qty} {$unit} ({$lot})";
+                                                        @endphp
+                                                        <div class="sup-suggestion-item p-2 rounded-2 border-bottom border-light" 
+                                                             data-id="{{ $b->id }}"
+                                                             data-name="{{ $name }}"
+                                                             data-cat="{{ $cat }}"
+                                                             data-lot="{{ $lot }}"
+                                                             data-label="{{ $displayLabel }}"
+                                                             data-keywords="{{ $searchKeywords }}"
+                                                             data-max="{{ $qty }}"
+                                                             data-unit="{{ $unit }}"
+                                                             style="cursor: pointer; transition: background-color 0.15s ease;">
+                                                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                                                <div class="fw-bold text-dark small text-truncate">
+                                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border me-1" style="font-size: 0.68rem;">{{ $cat }}</span>
+                                                                    {{ $name }}
+                                                                </div>
+                                                                <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle flex-shrink-0" style="font-size: 0.72rem;">
+                                                                    <i class="fas fa-boxes me-1"></i> {{ __('المتوفر: ') }}{{ $qty }} {{ $unit }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="d-flex align-items-center gap-2 text-muted mt-0.5" style="font-size: 0.7rem;">
+                                                                <span><i class="fas fa-barcode me-1"></i> {{ $lot }}</span>
+                                                                @if($b->expiry_date)
+                                                                    <span><i class="far fa-calendar-alt me-1"></i> {{ __('الصلاحية: ') }}{{ $b->expiry_date->format('Y-m-d') }}</span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
                                                     @endforeach
-                                                </select>
+                                                    <div id="sup_no_match" class="p-3 text-muted small text-center" style="display: none;">
+                                                        <i class="fas fa-search me-1"></i> {{ __('لا توجد مستلزمات مطابقة لبحثك في عهدة الطابق') }}
+                                                    </div>
+                                                </div>
+
+                                                {{-- إشعار العنصر المحدد وتفاصيله --}}
+                                                <div id="sup_selected_info" class="mt-1 small d-none">
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1 d-inline-flex align-items-center gap-1">
+                                                        <i class="fas fa-check-circle"></i>
+                                                        <span id="sup_selected_text"></span>
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div class="col-lg-2 col-md-3 col-6">
                                                 <label class="form-label small fw-bold text-dark mb-1">{{ __("الكمية: ") }}<span class="text-danger">*</span></label>
                                                 <div class="input-group input-group-sm">
-                                                    <input type="number" name="quantity" id="sup_dispense_qty" class="form-control rounded-start-2" min="1" value="1" required>
-                                                    <span class="input-group-text rounded-end-2 small" id="sup_dispense_unit_label">{{ __("قطعة") }}</span>
+                                                    <input type="number" id="sup_add_qty" class="form-control rounded-start-2" min="1" value="1">
+                                                    <span class="input-group-text rounded-end-2 small" id="sup_add_unit_label">{{ __("قطعة") }}</span>
                                                 </div>
                                             </div>
                                             <div class="col-lg-2 col-md-3 col-6">
                                                 <label class="form-label small fw-semibold text-dark mb-1">{{ __("سبب / مكان الاستخدام:") }}</label>
-                                                <input type="text" name="timing" class="form-control form-control-sm rounded-2" placeholder="{{ __('مثال: تضميد / كانيولا / قسطرة') }}">
+                                                <input type="text" id="sup_add_timing" class="form-control form-control-sm rounded-2" placeholder="{{ __('مثال: تضميد / كانيولا / قسطرة') }}">
                                             </div>
                                             <div class="col-lg-2 col-md-6">
                                                 <label class="form-label small fw-semibold text-dark mb-1">{{ __('ملاحظات:') }}</label>
-                                                <input type="text" name="admin_notes" class="form-control form-control-sm rounded-2" placeholder="{{ __('ملاحظة إضافية...') }}">
+                                                <input type="text" id="sup_add_notes" class="form-control form-control-sm rounded-2" placeholder="{{ __('ملاحظة إضافية...') }}">
                                             </div>
                                             <div class="col-lg-2 col-md-6">
-                                                <button type="submit" class="btn btn-info text-white btn-sm rounded-pill w-100 fw-bold shadow-xs">
-                                                    <i class="fas fa-check-circle me-1"></i> {{ __("صرف وتوثيق") }}
+                                                <button type="button" id="sup_add_to_cart_btn" class="btn btn-primary text-white btn-sm rounded-pill w-100 fw-bold shadow-xs">
+                                                    <i class="fas fa-plus-circle me-1"></i> {{ __("إضافة للقائمة") }}
                                                 </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- جدول سلة المستلزمات قيد الصرف مع الحفظ الجماعي --}}
+                                    <form id="sup_dispense_form" action="{{ route('clinical-station.supplies.dispense', $surgery) }}" method="POST">
+                                        @csrf
+                                        <input type="hidden" name="expected_type" value="supply">
+                                        <input type="hidden" name="phase" value="{{ $currentPhase }}">
+                                        <input type="hidden" name="from" value="{{ request('from', $from ?? '') }}">
+
+                                        {{-- حاوية الحقول المخفية المولدة تلقائياً --}}
+                                        <div id="sup_cart_hidden_inputs"></div>
+
+                                        {{-- تنبيه القائمة الفارغة --}}
+                                        <div id="sup_cart_empty_state" class="text-center py-3 px-3 bg-light bg-opacity-50 border border-dashed rounded-3 text-muted small mb-3">
+                                            <i class="fas fa-cart-plus fa-2x mb-1 text-primary opacity-50 d-block"></i>
+                                            <span>{{ __('ابحث عن المستلزم واختره ثم اضغط «إضافة للقائمة». يمكنك إضافة عدة مستلزمات وتعديل كمياتها وحذفها ثم حفظها جميعاً بنقرة واحدة.') }}</span>
+                                        </div>
+
+                                        {{-- جدول المستلزمات المضافة --}}
+                                        <div id="sup_cart_table_wrapper" class="card border rounded-3 shadow-xs mb-3" style="display: none;">
+                                            <div class="card-header bg-light py-2 px-3 d-flex align-items-center justify-content-between">
+                                                <span class="small fw-bold text-dark"><i class="fas fa-clipboard-list text-primary me-1"></i> {{ __('المستلزمات المحددة قيد الصرف (بانتظار الحفظ)') }}</span>
+                                                <span class="badge bg-primary text-white rounded-pill" id="sup_cart_badge_count">0</span>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-hover align-middle mb-0 text-center small">
+                                                    <thead class="table-light">
+                                                        <tr>
+                                                            <th style="width: 40px;">#</th>
+                                                            <th class="text-start">{{ __('اسم المستلزم وتفاصيل الوجبة') }}</th>
+                                                            <th style="width: 120px;">{{ __('الرصيد المتاح') }}</th>
+                                                            <th style="width: 130px;">{{ __('الكمية المصروفة') }}</th>
+                                                            <th class="text-start">{{ __('سبب الاستخدام والملاحظات') }}</th>
+                                                            <th style="width: 60px;">{{ __('حذف') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody id="sup_cart_tbody">
+                                                        {{-- تتولد الصفوف ديناميكياً بواسطة JavaScript --}}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            <div class="card-footer bg-light py-2 px-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-white text-dark border px-2.5 py-1.5 shadow-xs">
+                                                        <i class="fas fa-boxes text-info me-1"></i> {{ __('إجمالي المواد:') }} <strong id="sup_cart_summary_items">0</strong>
+                                                    </span>
+                                                    <span class="badge bg-white text-dark border px-2.5 py-1.5 shadow-xs">
+                                                        <i class="fas fa-cubes text-primary me-1"></i> {{ __('إجمالي القطع:') }} <strong id="sup_cart_summary_pieces">0</strong>
+                                                    </span>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <button type="button" id="sup_cart_clear_all_btn" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
+                                                        <i class="fas fa-trash-alt me-1"></i> {{ __('تفريغ القائمة') }}
+                                                    </button>
+                                                    <button type="submit" id="sup_cart_save_btn" class="btn btn-success btn-sm rounded-pill px-4 fw-bold shadow-sm">
+                                                        <i class="fas fa-check-double me-1"></i> {{ __('حفظ وصرف كافة المستلزمات المحددة') }}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </form>
@@ -3302,20 +3442,395 @@
 
             @if($activeTab === 'supplies')
                 <script>
-                    window.updateDispenseMaxQty = function(select, qtyInputId = 'sup_dispense_qty', unitLabelId = 'sup_dispense_unit_label') {
-                        const option = select.options[select.selectedIndex];
-                        if (!option) return;
-                        const max = option.getAttribute('data-max');
-                        const unit = option.getAttribute('data-unit') || '{{ __('قطعة') }}';
-                        const qtyInput = document.getElementById(qtyInputId);
-                        const unitLabel = document.getElementById(unitLabelId);
-                        if (max && qtyInput) {
-                            qtyInput.max = max;
+                    document.addEventListener('DOMContentLoaded', function () {
+                        // عناصر البحث والاختيار السريع
+                        const searchInp = document.getElementById('sup_search_input');
+                        const dropdown = document.getElementById('sup_suggestions_dropdown');
+                        const clearBtn = document.getElementById('sup_clear_search_btn');
+                        const selectedInfo = document.getElementById('sup_selected_info');
+                        const selectedText = document.getElementById('sup_selected_text');
+                        const noMatch = document.getElementById('sup_no_match');
+                        const items = dropdown ? dropdown.querySelectorAll('.sup-suggestion-item') : [];
+
+                        // حقول التخزين المؤقت للاختيار الحالي
+                        const selectedBatchId = document.getElementById('sup_selected_batch_id');
+                        const selectedMax = document.getElementById('sup_selected_max');
+                        const selectedUnit = document.getElementById('sup_selected_unit');
+                        const selectedName = document.getElementById('sup_selected_name');
+                        const selectedCat = document.getElementById('sup_selected_cat');
+                        const selectedLot = document.getElementById('sup_selected_lot');
+
+                        // حقول الإدخال السريع
+                        const addQtyInput = document.getElementById('sup_add_qty');
+                        const addUnitLabel = document.getElementById('sup_add_unit_label');
+                        const addTimingInput = document.getElementById('sup_add_timing');
+                        const addNotesInput = document.getElementById('sup_add_notes');
+                        const addToCartBtn = document.getElementById('sup_add_to_cart_btn');
+
+                        // عناصر السلة والجدول والحفظ
+                        const dispenseForm = document.getElementById('sup_dispense_form');
+                        const cartHiddenInputs = document.getElementById('sup_cart_hidden_inputs');
+                        const cartEmptyState = document.getElementById('sup_cart_empty_state');
+                        const cartTableWrapper = document.getElementById('sup_cart_table_wrapper');
+                        const cartTbody = document.getElementById('sup_cart_tbody');
+                        const cartBadgeCount = document.getElementById('sup_cart_badge_count');
+                        const cartSummaryItems = document.getElementById('sup_cart_summary_items');
+                        const cartSummaryPieces = document.getElementById('sup_cart_summary_pieces');
+                        const cartClearAllBtn = document.getElementById('sup_cart_clear_all_btn');
+                        const cartSaveBtn = document.getElementById('sup_cart_save_btn');
+
+                        // مصفوفة عناصر السلة المؤقتة
+                        let cartItems = [];
+
+                        function escapeHtml(str) {
+                            if (!str) return '';
+                            return String(str)
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#039;');
                         }
-                        if (unitLabel) {
-                            unitLabel.textContent = unit;
+
+                        // تصفية نتائج البحث فور الكتابة
+                        function filterItems(query) {
+                            if (!dropdown) return;
+                            query = (query || '').trim().toLowerCase();
+                            let matches = 0;
+
+                            items.forEach(function (el) {
+                                const keywords = el.getAttribute('data-keywords') || '';
+                                const isMatch = !query || keywords.includes(query);
+                                el.style.display = isMatch ? 'block' : 'none';
+                                if (isMatch) matches++;
+                            });
+
+                            if (noMatch) {
+                                noMatch.style.display = (matches === 0) ? 'block' : 'none';
+                            }
+
+                            dropdown.style.display = 'block';
                         }
-                    };
+
+                        if (searchInp && dropdown) {
+                            searchInp.addEventListener('focus', function () {
+                                filterItems(this.value);
+                            });
+
+                            searchInp.addEventListener('input', function () {
+                                if (selectedBatchId && selectedBatchId.value) {
+                                    resetCurrentSelection(false);
+                                }
+                                filterItems(this.value);
+                            });
+
+                            items.forEach(function (el) {
+                                el.addEventListener('mouseenter', function() {
+                                    this.style.backgroundColor = '#f1f5f9';
+                                });
+                                el.addEventListener('mouseleave', function() {
+                                    this.style.backgroundColor = '';
+                                });
+                                el.addEventListener('click', function () {
+                                    const id = this.getAttribute('data-id');
+                                    const name = this.getAttribute('data-name');
+                                    const cat = this.getAttribute('data-cat') || '';
+                                    const lot = this.getAttribute('data-lot') || '';
+                                    const max = parseInt(this.getAttribute('data-max')) || 1;
+                                    const unit = this.getAttribute('data-unit') || '{{ __('قطعة') }}';
+
+                                    if (selectedBatchId) selectedBatchId.value = id;
+                                    if (selectedName) selectedName.value = name;
+                                    if (selectedCat) selectedCat.value = cat;
+                                    if (selectedLot) selectedLot.value = lot;
+                                    if (selectedMax) selectedMax.value = max;
+                                    if (selectedUnit) selectedUnit.value = unit;
+
+                                    searchInp.value = name;
+                                    searchInp.setCustomValidity('');
+
+                                    if (addQtyInput) {
+                                        addQtyInput.max = max;
+                                        if (parseInt(addQtyInput.value) > max) {
+                                            addQtyInput.value = max;
+                                        }
+                                    }
+                                    if (addUnitLabel) addUnitLabel.textContent = unit;
+
+                                    if (selectedText) {
+                                        selectedText.textContent = name + ' (' + '{{ __('المتوفر') }}: ' + max + ' ' + unit + ')';
+                                    }
+                                    if (selectedInfo) selectedInfo.classList.remove('d-none');
+                                    if (clearBtn) clearBtn.style.display = 'inline-block';
+
+                                    dropdown.style.display = 'none';
+                                    if (addQtyInput) addQtyInput.focus();
+                                });
+                            });
+
+                            if (clearBtn) {
+                                clearBtn.addEventListener('click', function () {
+                                    resetCurrentSelection(true);
+                                    searchInp.focus();
+                                });
+                            }
+
+                            document.addEventListener('click', function (e) {
+                                if (!e.target.closest('#supSearchWrapper')) {
+                                    dropdown.style.display = 'none';
+                                }
+                            });
+                        }
+
+                        function resetCurrentSelection(clearSearchText) {
+                            if (selectedBatchId) selectedBatchId.value = '';
+                            if (selectedName) selectedName.value = '';
+                            if (selectedCat) selectedCat.value = '';
+                            if (selectedLot) selectedLot.value = '';
+                            if (selectedMax) selectedMax.value = '1';
+                            if (selectedUnit) selectedUnit.value = '{{ __('قطعة') }}';
+
+                            if (clearSearchText && searchInp) searchInp.value = '';
+                            if (clearBtn) clearBtn.style.display = 'none';
+                            if (selectedInfo) selectedInfo.classList.add('d-none');
+                            if (addQtyInput) {
+                                addQtyInput.removeAttribute('max');
+                                addQtyInput.value = 1;
+                            }
+                            if (addUnitLabel) addUnitLabel.textContent = '{{ __('قطعة') }}';
+                        }
+
+                        // إضافة مستلزم إلى السلة
+                        if (addToCartBtn) {
+                            addToCartBtn.addEventListener('click', function () {
+                                if (!selectedBatchId || !selectedBatchId.value) {
+                                    if (searchInp) {
+                                        searchInp.setCustomValidity('{{ __('يرجى اختيار مستلزم من القائمة المقترحة أولاً') }}');
+                                        searchInp.reportValidity();
+                                        filterItems(searchInp.value);
+                                        searchInp.focus();
+                                    }
+                                    return;
+                                }
+
+                                const batchId = selectedBatchId.value;
+                                const maxStock = parseInt(selectedMax.value) || 1;
+                                let qty = parseInt(addQtyInput ? addQtyInput.value : 1) || 1;
+                                if (qty < 1) qty = 1;
+
+                                const timing = addTimingInput ? addTimingInput.value.trim() : '';
+                                const notes = addNotesInput ? addNotesInput.value.trim() : '';
+
+                                // التحقق مما إذا كان المستلزم موجوداً مسبقاً في السلة
+                                const existingIdx = cartItems.findIndex(it => it.batchId == batchId);
+                                if (existingIdx > -1) {
+                                    const combinedQty = cartItems[existingIdx].qty + qty;
+                                    if (combinedQty > maxStock) {
+                                        if (cartItems[existingIdx].qty >= maxStock) {
+                                            alert('{{ __('الكمية المضافة مسبقاً بلغت الحد الأقصى المتوفر في المخزن (') }}' + maxStock + ')');
+                                            return;
+                                        }
+                                        cartItems[existingIdx].qty = maxStock;
+                                        alert('{{ __('تمت زيادة الكمية إلى الحد الأقصى المتوفر في المخزن (') }}' + maxStock + ')');
+                                    } else {
+                                        cartItems[existingIdx].qty = combinedQty;
+                                    }
+                                    if (timing) cartItems[existingIdx].timing = timing;
+                                    if (notes) cartItems[existingIdx].notes = notes;
+                                } else {
+                                    if (qty > maxStock) {
+                                        qty = maxStock;
+                                        alert('{{ __('تم تعديل الكمية إلى الحد الأقصى المتوفر في المخزن (') }}' + maxStock + ')');
+                                    }
+                                    cartItems.push({
+                                        batchId: batchId,
+                                        name: selectedName ? selectedName.value : '',
+                                        cat: selectedCat ? selectedCat.value : '',
+                                        lot: selectedLot ? selectedLot.value : '',
+                                        unit: selectedUnit ? selectedUnit.value : '{{ __('قطعة') }}',
+                                        max: maxStock,
+                                        qty: qty,
+                                        timing: timing,
+                                        notes: notes
+                                    });
+                                }
+
+                                // تفريغ حقول الإدخال والعودة للبحث
+                                resetCurrentSelection(true);
+                                if (addTimingInput) addTimingInput.value = '';
+                                if (addNotesInput) addNotesInput.value = '';
+
+                                renderCart();
+                                if (searchInp) searchInp.focus();
+                            });
+                        }
+
+                        // السماح بالضغط على Enter في حقول الإدخال السريع لإضافة المستلزم
+                        [searchInp, addQtyInput, addTimingInput, addNotesInput].forEach(function (inp) {
+                            if (!inp) return;
+                            inp.addEventListener('keydown', function (e) {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    if (addToCartBtn) addToCartBtn.click();
+                                }
+                            });
+                        });
+
+                        // رسم وتحديث السلة
+                        function renderCart() {
+                            if (!cartTbody || !cartHiddenInputs) return;
+
+                            if (cartItems.length === 0) {
+                                if (cartEmptyState) cartEmptyState.style.display = 'block';
+                                if (cartTableWrapper) cartTableWrapper.style.display = 'none';
+                                if (cartBadgeCount) cartBadgeCount.textContent = '0';
+                                if (cartSummaryItems) cartSummaryItems.textContent = '0';
+                                if (cartSummaryPieces) cartSummaryPieces.textContent = '0';
+                                cartTbody.innerHTML = '';
+                                cartHiddenInputs.innerHTML = '';
+                                return;
+                            }
+
+                            if (cartEmptyState) cartEmptyState.style.display = 'none';
+                            if (cartTableWrapper) cartTableWrapper.style.display = 'block';
+                            if (cartBadgeCount) cartBadgeCount.textContent = cartItems.length;
+                            if (cartSummaryItems) cartSummaryItems.textContent = cartItems.length;
+
+                            const totalPieces = cartItems.reduce((sum, it) => sum + (parseInt(it.qty) || 0), 0);
+                            if (cartSummaryPieces) cartSummaryPieces.textContent = totalPieces;
+
+                            let rowsHtml = '';
+                            let hiddenHtml = '';
+
+                            cartItems.forEach(function (item, idx) {
+                                rowsHtml += `
+                                    <tr>
+                                        <td class="text-muted fw-bold">${idx + 1}</td>
+                                        <td class="text-start">
+                                            <div class="fw-bold text-dark">${escapeHtml(item.name)}</div>
+                                            <div class="text-muted mt-0.5" style="font-size: 0.72rem;">
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border me-1" style="font-size: 0.68rem;">${escapeHtml(item.cat)}</span>
+                                                <span><i class="fas fa-barcode me-1"></i>${escapeHtml(item.lot)}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-secondary border px-2 py-1">
+                                                ${item.max} ${escapeHtml(item.unit)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm justify-content-center mx-auto" style="max-width: 130px;">
+                                                <input type="number" class="form-control form-control-sm text-center sup-cart-qty-input rounded-start-2 fw-bold" 
+                                                       data-idx="${idx}" min="1" max="${item.max}" value="${item.qty}">
+                                                <span class="input-group-text rounded-end-2 small px-1 text-muted" style="font-size: 0.75rem;">${escapeHtml(item.unit)}</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-start">
+                                            <input type="text" class="form-control form-control-sm sup-cart-timing-input rounded-2 mb-1" 
+                                                   data-idx="${idx}" placeholder="{{ __('سبب / مكان الاستخدام...') }}" value="${escapeHtml(item.timing || '')}">
+                                            <input type="text" class="form-control form-control-sm sup-cart-notes-input rounded-2" 
+                                                   data-idx="${idx}" placeholder="{{ __('ملاحظات...') }}" value="${escapeHtml(item.notes || '')}">
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-outline-danger btn-sm rounded-circle p-1 sup-cart-remove-btn" 
+                                                   data-idx="${idx}" style="width: 30px; height: 30px;" title="{{ __('حذف من القائمة') }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+
+                                hiddenHtml += `
+                                    <input type="hidden" name="items[${idx}][batch_id]" value="${item.batchId}">
+                                    <input type="hidden" name="items[${idx}][quantity]" id="sup_hidden_qty_${idx}" value="${item.qty}">
+                                    <input type="hidden" name="items[${idx}][timing]" id="sup_hidden_timing_${idx}" value="${escapeHtml(item.timing || '')}">
+                                    <input type="hidden" name="items[${idx}][admin_notes]" id="sup_hidden_notes_${idx}" value="${escapeHtml(item.notes || '')}">
+                                    <input type="hidden" name="items[${idx}][expected_type]" value="supply">
+                                `;
+                            });
+
+                            cartTbody.innerHTML = rowsHtml;
+                            cartHiddenInputs.innerHTML = hiddenHtml;
+
+                            // ربط أحداث التعديل المباشر داخل الجدول
+                            cartTbody.querySelectorAll('.sup-cart-qty-input').forEach(function (inp) {
+                                inp.addEventListener('input', function () {
+                                    const idx = parseInt(this.getAttribute('data-idx'));
+                                    let val = parseInt(this.value) || 1;
+                                    const max = cartItems[idx].max;
+                                    if (val < 1) {
+                                        val = 1;
+                                        this.value = 1;
+                                    }
+                                    if (val > max) {
+                                        val = max;
+                                        this.value = max;
+                                        alert('{{ __('الحد الأقصى المتوفر في المخزن هو ') }}' + max);
+                                    }
+                                    cartItems[idx].qty = val;
+                                    const hiddenQty = document.getElementById('sup_hidden_qty_' + idx);
+                                    if (hiddenQty) hiddenQty.value = val;
+
+                                    const newTotalPieces = cartItems.reduce((sum, it) => sum + (parseInt(it.qty) || 0), 0);
+                                    if (cartSummaryPieces) cartSummaryPieces.textContent = newTotalPieces;
+                                });
+                            });
+
+                            cartTbody.querySelectorAll('.sup-cart-timing-input').forEach(function (inp) {
+                                inp.addEventListener('input', function () {
+                                    const idx = parseInt(this.getAttribute('data-idx'));
+                                    cartItems[idx].timing = this.value;
+                                    const hiddenTiming = document.getElementById('sup_hidden_timing_' + idx);
+                                    if (hiddenTiming) hiddenTiming.value = this.value;
+                                });
+                            });
+
+                            cartTbody.querySelectorAll('.sup-cart-notes-input').forEach(function (inp) {
+                                inp.addEventListener('input', function () {
+                                    const idx = parseInt(this.getAttribute('data-idx'));
+                                    cartItems[idx].notes = this.value;
+                                    const hiddenNotes = document.getElementById('sup_hidden_notes_' + idx);
+                                    if (hiddenNotes) hiddenNotes.value = this.value;
+                                });
+                            });
+
+                            cartTbody.querySelectorAll('.sup-cart-remove-btn').forEach(function (btn) {
+                                btn.addEventListener('click', function () {
+                                    const idx = parseInt(this.getAttribute('data-idx'));
+                                    cartItems.splice(idx, 1);
+                                    renderCart();
+                                });
+                            });
+                        }
+
+                        // زر تفريغ كامل القائمة
+                        if (cartClearAllBtn) {
+                            cartClearAllBtn.addEventListener('click', function () {
+                                if (cartItems.length === 0) return;
+                                if (confirm('{{ __('هل تريد تفريغ قائمة المستلزمات بالكامل؟') }}')) {
+                                    cartItems = [];
+                                    renderCart();
+                                }
+                            });
+                        }
+
+                        // التحقق عند إرسال نموذج الحفظ والصرف
+                        if (dispenseForm) {
+                            dispenseForm.addEventListener('submit', function (e) {
+                                if (cartItems.length === 0) {
+                                    e.preventDefault();
+                                    alert('{{ __('يرجى إضافة مستلزم واحد على الأقل إلى القائمة قبل الحفظ') }}');
+                                    if (searchInp) searchInp.focus();
+                                    return;
+                                }
+
+                                if (cartSaveBtn) {
+                                    cartSaveBtn.disabled = true;
+                                    cartSaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> {{ __('جاري الحفظ والصرف...') }}';
+                                }
+                            });
+                        }
+                    });
                 </script>
             @endif
 

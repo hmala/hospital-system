@@ -305,4 +305,92 @@ class NursingFloorDispenseTest extends TestCase
         $this->assertEquals(20, $batchFloor2->current_qty);
         $this->assertEquals(0, StockMovement::count());
     }
+
+    public function test_nurse_can_batch_dispense_multiple_supplies_at_once_with_proper_deductions_and_audit_trail(): void
+    {
+        $nurse = User::factory()->create();
+        $nurse->assignRole('nurse');
+
+        $locFloor1 = Location::create(['name' => 'ردهة الطابق الأول', 'type' => 'sub']);
+        $room101 = Room::create(['room_number' => '101', 'floor' => 'الطابق الأول', 'room_type' => 'regular']);
+        $patient = $this->createPatient('كرار حيدر');
+        $surgery = $this->createSurgery($patient, $room101);
+
+        $prod1 = Product::create([
+            'name' => 'Syringe 10ml',
+            'code' => 'SYR-10',
+            'category' => 'مستلزمات',
+            'unit' => 'سرنجة',
+        ]);
+        $batch1 = StockBatch::create([
+            'product_id' => $prod1->id,
+            'location_id' => $locFloor1->id,
+            'internal_barcode' => 'BC-SYR10',
+            'cost_price' => 200,
+            'initial_qty' => 50,
+            'current_qty' => 50,
+            'received_at' => now(),
+        ]);
+
+        $prod2 = Product::create([
+            'name' => 'Gauze Sterile 10x10',
+            'code' => 'GAU-10',
+            'category' => 'مستلزمات',
+            'unit' => 'باكيت',
+        ]);
+        $batch2 = StockBatch::create([
+            'product_id' => $prod2->id,
+            'location_id' => $locFloor1->id,
+            'internal_barcode' => 'BC-GAU10',
+            'cost_price' => 1500,
+            'initial_qty' => 20,
+            'current_qty' => 20,
+            'received_at' => now(),
+        ]);
+
+        $batchPayload = [
+            'phase' => 'post_op',
+            'from' => 'nursing',
+            'items' => [
+                [
+                    'batch_id' => $batch1->id,
+                    'quantity' => 5,
+                    'timing' => 'سحب عينات وسوائل',
+                    'admin_notes' => 'صرف وجبة صباحية',
+                ],
+                [
+                    'batch_id' => $batch2->id,
+                    'quantity' => 2,
+                    'timing' => 'تضميد الجرح الجراحي',
+                    'admin_notes' => 'غيار يومي',
+                ],
+            ],
+        ];
+
+        $response = $this->actingAs($nurse)
+            ->post(route('clinical-station.supplies.dispense', $surgery), $batchPayload);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        // Verify stock batches were decremented properly
+        $batch1->refresh();
+        $this->assertEquals(45, $batch1->current_qty);
+
+        $batch2->refresh();
+        $this->assertEquals(18, $batch2->current_qty);
+
+        // Verify stock movements
+        $movements = StockMovement::where('surgery_id', $surgery->id)->get();
+        $this->assertCount(2, $movements);
+        $this->assertTrue($movements->every(fn ($m) => $m->type === 'issue_to_patient'));
+
+        // Verify clinical treatments recorded
+        $treatments = SurgeryTreatment::where('surgery_id', $surgery->id)->get();
+        $this->assertCount(2, $treatments);
+        $this->assertEquals('Syringe 10ml', $treatments[0]->description);
+        $this->assertEquals('5 سرنجة', $treatments[0]->dosage);
+        $this->assertEquals('Gauze Sterile 10x10', $treatments[1]->description);
+        $this->assertEquals('2 باكيت', $treatments[1]->dosage);
+    }
 }

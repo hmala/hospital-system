@@ -56,6 +56,28 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 300: توحيد تبويبات محطة التمريض في تبويب تفاعلي واحد، وإبراز شارة الطور في رأس المحطة السريرية، وتفعيل البحث اللحظي وسلة الصرف الجماعي المتعدد للمستلزمات الطبية Unified Nursing Station Active Tab, Clinical Phase Header Badge & Live Search Multi-Item Supplies Cart)
+
+### Done
+- **توحيد تبويب محطة التمريض ([app/Http/Controllers/NursingStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingStationController.php), [resources/views/surgery-stations/nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+  * دمج حالتي «قبل الصالة» و «بعد الصالة» في تبويب موحد أسرع وأنظم تحت مسمى «مرضى الرقود والعمليات النشطة».
+  * إضافة أزرار فلترة لحظية سريعة فورية بدون إعادة تحميل الصفحة (كافة الحالات النشطة، قبل الصالة، داخل صالة العمليات، بعد الصالة / الرقود).
+  * تمييز كل مريض بشارة ملونة واضحة لطور حالته السريرية، مع أزرار تسكين الغرفة والمغادرة وعرض التفاصيل المباشرة.
+- **شارة الطور السريري في رأس المحطة ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إبراز وسم الطور الجراحي والسريري في رأس الصفحة بجانب اسم المريض والعملية (`قبل الصالة (تحضير وتهيئة)` / `داخل صالة العمليات` / `بعد الصالة (عناية الرقود)`).
+- **البحث اللحظي التفاعلي للمستلزمات الطبية ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * استبدال القائمة المنسدلة التقليدية بحقل بحث فوري لحظي أثناء الكتابة (As-you-type autocomplete) يفلتر المستلزمات الطبية لعهدة طابق المريض.
+  * عرض اسم المستلزم، التصنيف، الرصيد المتاح، كود الوجبة/الباركود، وتاريخ الصلاحية مع تظليل النتائج وزر مسح وتفريغ سريع.
+- **سلة الصرف الجماعي المتعدد مع التعديل والحذف المباشر ([app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * تمكين الكادر من إضافة عدة مستلزمات طبية دفعة واحدة إلى قائمة مؤقتة قيد الصرف.
+  * إمكانية تعديل كمية أي مستلزم مباشرة من الجدول مع فحص الرصيد الأقصى المتوفر ومنع التجاوز.
+  * إمكانية تعديل سبب الاستخدام والملاحظات لكل مستلزم على حدة، وحذف أي بند من القائمة بضغطة زر، أو تفريغ القائمة بالكامل.
+  * زر حفظ وصرف جماعي بنقرة واحدة ينفذ العملية ضمن معاملة مالية ومخزنية آمنة (`DB::transaction`) مع تسجيل حركات `StockMovement` وقيود `SurgeryTreatment` وخصم الأرصدة من وجبات عهدة الطابق بدقة.
+- **الاختبارات وضمان الجودة ([tests/Feature/NursingFloorDispenseTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingFloorDispenseTest.php), [tests/Feature/NursingStationSurgeriesTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingStationSurgeriesTest.php))**:
+  * إضافة اختبارات ميزة آلية للصرف الجماعي المتعدد وللتبويب الموحد والفلاتر اللحظية.
+  * اجتياز اختبارات صرف عهدة الطابق بنجاح (`6 passed, 43 assertions`) واختبارات محطة التمريض (`9 passed, 48 assertions`).
+  * اجتياز فحص القوالب `view:cache` و `Laravel Pint` بالكامل.
+
 ## Session log (2026-11-26 — المرحلة 299: تفعيل منظومة الخدمات الإضافية والفندقية الذكية (نمط ICD-10) لقسم الخدج والحاضنات NICU مع شاشة إدارة وتسعير «الخدمات المتفرقة للمستشفى» في الإدارة والإعدادات NICU Smart Extra Services Engine & Hospital Miscellaneous Services Settings)
 
 ### Done
