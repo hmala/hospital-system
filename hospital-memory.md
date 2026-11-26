@@ -130,6 +130,17 @@
   * **الاختبارات وضمان الجودة ([NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php), [DepartmentManagerSearchTest.php](file:///C:/get/hospital-system/tests/Feature/DepartmentManagerSearchTest.php))**:
     - اجتياز `23 passed (211 assertions)` في اختبارات مخزن الخدج والتحويلات، و`4 passed (33 assertions)` في اختبارات الأقسام، مع اجتياز `Pint` و`view:cache`.
 
+- **المرحلة 309 (2026-11-26 — `main`) — حزمة تثبيت سكانر المستشفى التلقائي بنقرة واحدة وتوزيعها لجميع الأقسام وزر تحميل عام (Universal Hospital Scanner 1-Click Setup Package, Multi-Station Distribution, Windows Startup & Permanent Insecure Content Policy)**:
+  * **تجهيز حزمة التثبيت بنقرة واحدة (`public/downloads/HospitalScanner_Setup.zip`)**:
+    - حزمة مستقلة مجمعة تضم: `HospitalScanner.exe`، ملف التثبيت التلقائي `تثبيت_السكانر_InstallScanner.bat`، وملف التعليمات.
+    - يقوم ملف الباتش بإنشاء مجلد محمي دائم `%LOCALAPPDATA%\HospitalScanner`، وربط البرنامج ببدء تشغيل الويندوز (`Startup`) ليعمل تلقائياً عند تشغيل الحاسبة يومياً.
+    - ضبط صلاحيات وسياسات متصفحي كروم و Edge تلقائياً بالسجل (Registry Policy `InsecureContentAllowedForUrls`) لموقع هوستنجر لمنع حظر الاتصال بالمحتوى المحلي عبر HTTPS.
+    - تشغيل البرنامج فوراً في الخلفية ليكون جاهزاً للمسح دون الحاجة لإعادة تشغيل الحاسبة.
+  * **إتاحة زر التحميل في أكثر الأماكن وضوحاً عبر كامل النظام (Universal Visibility)**:
+    - إضافة زر بارز في القائمة الجانبية (Sidebar) يراه جميع موظفي المستشفى في كافة الأقسام والمحطات: **`[ 🖨️ تنزيل برنامج السكانر ]`**.
+    - إضافة زر وشارة تحميل خضراء بارزة في شريط المرفقات في شاشتي حجز وتعديل العمليات (`surgeries/create` و `surgeries/edit`): **`[ 📥 تنزيل السكانر ]`**.
+    - تفعيل وتشغيل البرنامج محلياً على المنفذ 5000 واختبار استجابته بنجاح تام.
+
 - **المرحلة 308 (2026-11-26 — `main`) — زر الكشف التلقائي عن أجهزة السكانر المرتبطة بالحاسبة وتفعيل المسح الضوئي المباشر وتجريد الواجهة (Surgery Booking: USB Scanner Auto-Detection, Hardware Name Badge & Direct One-Click Scanning)**:
   * **زر الكشف التلقائي عن السكانر (`#detect_scanner_btn`) وتفعيل زر المسح الضوئي ([create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php), [edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/edit.blade.php))**:
     - إضافة زر `[ 🔍 كشف السكانر ]` في شاشتي حجز وتعديل العملية الجراحية.
