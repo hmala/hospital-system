@@ -1428,9 +1428,12 @@
                             <a class="nav-link {{ $isSurgeryReviewActive ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
                                 <i class="fas fa-calculator text-primary"></i><span> {{ __('مراجعة أسعار العمليات') }}</span>
                                 @php
-                                     $pendingPriceReviews = \App\Models\Surgery::where(function ($rq) {
-                                         $rq->where('billing_status', 'pending_review')
-                                             ->orWhere('devices_billing_status', 'pending_review');
+                                     $hasDevicesBillingCol = \Illuminate\Support\Facades\Schema::hasColumn('surgeries', 'devices_billing_status');
+                                     $pendingPriceReviews = \App\Models\Surgery::where(function ($rq) use ($hasDevicesBillingCol) {
+                                         $rq->where('billing_status', 'pending_review');
+                                         if ($hasDevicesBillingCol) {
+                                             $rq->orWhere('devices_billing_status', 'pending_review');
+                                         }
                                      })->count();
                                 @endphp
                                 @if($pendingPriceReviews > 0)
