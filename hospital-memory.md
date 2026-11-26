@@ -130,6 +130,14 @@
   * **الاختبارات وضمان الجودة ([NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php), [DepartmentManagerSearchTest.php](file:///C:/get/hospital-system/tests/Feature/DepartmentManagerSearchTest.php))**:
     - اجتياز `23 passed (211 assertions)` في اختبارات مخزن الخدج والتحويلات، و`4 passed (33 assertions)` في اختبارات الأقسام، مع اجتياز `Pint` و`view:cache`.
 
+- **المرحلة 311 (2026-11-27 — `main`) — إلغاء زر تخريج الغرفة من الشاشة السريرية وحصره في محطة التمريض (Clinical Station: Room Discharge Button Removal & Strict Nursing Station Containment)**:
+  * **إلغاء زر «تخريج من الغرفة» من الشاشة السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+    - حذف زر التخريج الفندقي وإخلاء السرير نهائياً من رأس الملف السريري للمريض (`clinical/show`) لمنع أي تشويش أو ضغط غير مقصود من قبل الأطباء والمقيمين.
+    - حصر عملية التخريج الفندقي وتحرير السرير بمكانها الطبيعي واللوجستي في **محطة التمريض** (`/surgery-stations/nursing`) فقط، حيث يتابع ممرض الطابق خروج المريض الفعلي وتسوية الحسابات بالكاشير.
+  * **الاختبارات والتأكيد**:
+    - اجتياز اختبارات تدفق التمريض [NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php) بالكامل بنجاح (5 passed, 26 assertions).
+    - نجاح كاش القوالب `view:cache`.
+
 - **المرحلة 310 (2026-11-27 — `main`) — إلغاء زر تسجيل دخول الغرفة اليدوي في محطة التمريض واعتماد الدخول التلقائي بمجرد تخصيص الغرفة من الاستعلامات (Automatic Room Check-in on Assignment, Seamless Inpatient Admission & Nursing Station Simplification)**:
   * **تجريد وتبسيط شاشة التمريض (`resources/views/surgery-stations/nursing/index.blade.php`)**:
     - إلغاء زر «تسجيل دخول الغرفة» نهائياً من جدول محطة التمريض لرفع العبء التوثيقي عن الكادر التمريضي.

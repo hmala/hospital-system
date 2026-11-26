@@ -691,14 +691,7 @@
                         </span>
                     @endif
 
-                    @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
-                        <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.') }}')">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1 shadow-xs fw-semibold" style="font-size: 0.78rem;" title="{{ __('تخريج المريض وإخلاء السرير') }}">
-                                <i class="fas fa-sign-out-alt me-1"></i> {{ __('تخريج من الغرفة') }}
-                            </button>
-                        </form>
-                    @endif
+
                 </div>
             </div>
 

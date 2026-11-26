@@ -56,6 +56,16 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 311: إلغاء زر تخريج الغرفة من الشاشة السريرية وحصره في محطة التمريض Clinical Station: Room Discharge Button Removal & Strict Nursing Station Containment)
+
+### Done
+- **إلغاء زر «تخريج من الغرفة» من الشاشة السريرية ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * حذف زر التخريج الفندقي وإخلاء السرير نهائياً من رأس الملف السريري للمريض (`clinical/show`) لمنع أي تشويش أو ضغط غير مقصود من قبل الأطباء والمقيمين.
+  * حصر عملية التخريج الفندقي وتحرير السرير بمكانها الطبيعي واللوجستي في **محطة التمريض** (`/surgery-stations/nursing`) فقط، حيث يتابع ممرض الطابق خروج المريض الفعلي وتسوية الحسابات بالكاشير.
+- **الاختبارات والتأكيد**:
+  * اجتياز اختبارات تدفق التمريض [NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php) بالكامل بنجاح (5 passed, 26 assertions).
+  * نجاح كاش القوالب `view:cache`.
+
 ## Session log (2026-11-27 — المرحلة 310: إلغاء زر تسجيل دخول الغرفة اليدوي في محطة التمريض واعتماد الدخول التلقائي بمجرد تخصيص الغرفة من الاستعلامات Automatic Room Check-in on Assignment & Nursing Station Simplification)
 
 ### Done
