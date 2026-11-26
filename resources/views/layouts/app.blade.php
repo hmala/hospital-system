@@ -1266,8 +1266,13 @@
                         @endcan
                         @can('view inquiries')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.create') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
-                                <i class="fas fa-concierge-bell"></i><span> {{ __('الاستعلامات') }}</span>
+                            <a class="nav-link {{ request()->routeIs('inquiry.create') ? 'active' : '' }}" href="{{ route('inquiry.create') }}">
+                                <i class="fas fa-concierge-bell"></i><span> {{ __('الاستعلامات (طلب جديد)') }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
+                                <i class="fas fa-clipboard-list"></i><span> {{ __('لوحة التحويلات والإحالات') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRequestsCount }}</span>
                             </a>
                         </li>

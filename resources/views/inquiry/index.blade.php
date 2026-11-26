@@ -141,7 +141,7 @@
                     <h3 class="fw-bold text-dark mb-2">استقبال العيادات الاستشارية</h3>
                     <p class="text-muted mb-4">بدء حجز كشفية جديدة لمريض بالعيادات</p>
                     <div>
-                        <a href="{{ route('inquiry.search') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow rounded-pill fs-5">
+                        <a href="{{ route('inquiry.create') }}" class="btn btn-primary btn-lg px-5 py-3 fw-bold shadow rounded-pill fs-5">
                             <i class="fas fa-plus-circle me-2"></i> طلب جديد
                         </a>
                     </div>
@@ -164,7 +164,7 @@
                 </h5>
                 <div class="d-flex gap-2">
                     @can('create inquiries')
-                    <a href="{{ route('inquiry.search') }}" class="btn btn-primary fw-bold shadow-sm">
+                    <a href="{{ route('inquiry.create') }}" class="btn btn-primary fw-bold shadow-sm">
                         <i class="fas fa-plus-circle me-1"></i> طلب جديد
                     </a>
                     @endcan
@@ -425,7 +425,7 @@
                         <h4 class="fw-bold text-dark">لا توجد تحويلات أو إحالات معلقة</h4>
                         <p class="text-muted mb-4">كافة تحويلات العمليات والرقود وإحالات الطوارئ مكتملة ومحجوزة</p>
                         <div>
-                            <a href="{{ route('inquiry.search') }}" class="btn btn-primary px-4 py-2 fw-bold shadow-sm rounded-pill">
+                            <a href="{{ route('inquiry.create') }}" class="btn btn-primary px-4 py-2 fw-bold shadow-sm rounded-pill">
                                 <i class="fas fa-plus-circle me-1"></i> إنشاء طلب جديد
                             </a>
                         </div>

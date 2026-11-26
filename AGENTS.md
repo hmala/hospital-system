@@ -56,6 +56,28 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 306: اختصار دورة الاستعلامات بالكامل إلى شاشة واحدة مباشرة مع بحث فوري في الأعلى والخدمات تحتها وإلغاء التنقل بين الصفحات Instant Single-Page Inquiry Direct Booking & Event-Delegated Patient Selection)
+
+### Done
+- **إلغاء التنقل والقفزات بين الصفحات واختصار دورة الاستعلامات بالكامل ([app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php), [resources/views/inquiry/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php), [resources/views/layouts/app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إلغاء السلسلة الطويلة السابقة (قائمة جانبية ⬅️ جدول الإحالات ⬅️ النقر على طلب جديد ⬅️ صفحة بحث منفصلة ⬅️ اختيار المريض ⬅️ صفحة الحجز).
+  * توجيه رابط «الاستعلامات (طلب جديد)» في القائمة الجانبية مباشرة إلى نموذج الحجز الموحد `route('inquiry.create')` مع تخصيص رابط «لوحة التحويلات والإحالات» `route('inquiry.index')` لمن يحتاج متابعة تحويلات الطوارئ والرقود.
+  * وضع شريط البحث اللحظي الفوري في أعلى الصفحة دائماً بشكل بارز ومركزي مع زر تسجيل مريض جديد.
+  * وضع كامل الخدمات والعيادات الطبية المباشرة (كشف طبي، تحاليل، أشعة، صيدلية، مصرف دم، تحويلات الأقسام التخصصية) مباشرة تحت شريط البحث في نفس الشاشة الواحدة.
+- **حل مشكلة تعذر الاختيار وتفويض النقر المباشر اللحظي لاختيار المريض (Direct Selection Fix & JS Const Error Resolution)**:
+  * حل الخطأ الجوهري `TypeError: Assignment to constant variable` الناجم عن تعريف `currentPatientId` كـ `const` وإعادة تعيينه عند النقر، وتحويله إلى `let` مع إضافة `currentPatientIsInsured` و `currentPatientIsInsuranceLocked`.
+  * توفير دالة اختيار عامة `window.selectPatientById(pId)` مرتبطة بكل سطر وبزر «اختيار» مباشرة إلى جانب تفويض النقر `results.addEventListener('click')` بدلالة `data-patient-id` وتخزين الكاش `window.patientSearchResultsCache`.
+  * تثبيت المريض المختار في حقل `patient_id` المخفي وتحديث بطاقة هويته وشارات التأمين الصحي فورياً في الواجهة دون مغادرة الصفحة أو إعادة تحميلها.
+  * تحديث ديناميكي فوري لقسم التغطية المالية للضمان والكاش (`#insuranceCoverageSection`) وتنبيه نواقص الضمان (`#patientInsuranceLockedAlert`) عند اختيار المريض دون الحاجة لإعادة تحميل الصفحة.
+  * تحديث روابط التحويلات التخصصية (طوارئ، عمليات، رقود، حاضنة، عناية) برقم المريض الجديد فور اختياره، مع زر سريع لـ «تغيير المريض» في أي وقت.
+  * التحقق البرمجي قبل الإرسال لمنع الحفظ بدون تحديد المريض مع التركيز التلقائي على شريط البحث.
+- **توسيع محرك البحث اللحظي بالـ AJAX ([app/Http/Controllers/InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php))**:
+  * دعم البحث برقم الملف / الإضبارة (`patient.id`)، الرقم الوطني (`national_id`)، رقم بطاقة أو دفتر الضمان (`insurance_card_no`)، واسم المريض ورقم هاتفه.
+  * إرجاع كائن بيانات متكامل للمريض يضم الاسم، الهاتف، العمر، الجنس، العنوان، حالة ونوع الضمان، وعما إذا كان الملف مقفلاً لنواقص الضمان.
+- **الاختبارات وضمان الجودة ([tests/Feature/InquiryStreamlinedDirectBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryStreamlinedDirectBookingTest.php))**:
+  * إنشاء واجتياز 4 اختبارات ميزة بنجاح تام (4 passed, 21 assertions) تغطي: فتح شاشة الاستعلامات مباشرة مع البحث والخدمات في نفس الصفحة، إعادة توجيه مسار البحث القديم للحجز المباشر، دقة نتائج الـ AJAX بالاسم ورقم الهاتف ورقم الملف، وتثبيت بيانات المريض المختار.
+  * اجتياز فحص كاش القوالب `view:cache` وتنسيق `Laravel Pint`.
+
 ## Session log (2026-11-26 — المرحلة 305: إعادة هيكلة جدول محطة الطبيب المقيم إلى 5 أعمدة واضحة وفصل اسم المريض في عمود مخصص مع إضافة عمود العملية والغرفة والطبيب الأخصائي Resident Doctor Station: 5-Column Table Restructure — Isolated Patient Name, Surgery & Room, Specialist Doctor, Phase & Actions)
 
 ### Done

@@ -118,17 +118,16 @@ class InquiryController extends Controller
             abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
         }
 
-        // البحث عن المريض
+        // البحث عن المريض (اختياري عند الدخول المباشر للشاشة)
         $patientId = $httpRequest->query('patient_id');
+        $patient = null;
 
-        if (! $patientId) {
-            return redirect()->route('inquiry.search')->with('error', 'يجب اختيار مريض أولاً');
-        }
+        if ($patientId) {
+            $patient = Patient::with(['user', 'healthInsuranceCategory'])->find($patientId);
 
-        $patient = Patient::with('user')->find($patientId);
-
-        if (! $patient || ! $patient->user) {
-            return redirect()->route('inquiry.search')->with('error', 'المريض غير موجود أو بياناته غير مكتملة');
+            if (! $patient || ! $patient->user) {
+                return redirect()->route('inquiry.create')->with('error', 'المريض غير موجود أو بياناته غير مكتملة');
+            }
         }
 
         // جلب أنواع الخدمات النشطة مع التحقق من الصلاحيات
@@ -1099,44 +1098,92 @@ class InquiryController extends Controller
     }
 
     /**
-     * البحث عن مريض
+     * البحث عن مريض (إعادة توجيه فورية إلى شاشة الحجز المباشر)
      */
     public function search()
     {
-        $user = Auth::user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('create inquiries'))) {
-            abort(403, 'غير مصرح لك بإنشاء وحجز طلبات الاستعلامات');
-        }
-
-        return view('inquiry.search');
+        return redirect()->route('inquiry.create');
     }
 
     /**
-     * البحث عن المرضى (AJAX)
+     * البحث عن المرضى (AJAX) - يدعم الاسم ورقم الهاتف ورقم الملف والرقم الوطني والبطاقة
      */
     public function searchPatients(HttpRequest $httpRequest)
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('create inquiries'))) {
+        $canBookAny = $isAdmin || (
+            $user && (
+                $user->can('create inquiries') ||
+                $user->can('create emergencies') ||
+                $user->can('create surgeries') ||
+                $user->can('create bed reservations') ||
+                $user->can('create incubator reservations') ||
+                $user->can('admit icu patients') ||
+                $user->can('view icu radar') ||
+                $user->can('inquiry.create.checkup') ||
+                $user->can('inquiry.create.radiology.general') ||
+                $user->can('inquiry.create.radiology.ultrasound') ||
+                $user->can('inquiry.create.radiology.mri') ||
+                $user->can('inquiry.create.radiology.echo') ||
+                $user->can('inquiry.create.lab') ||
+                $user->can('inquiry.create.pharmacy') ||
+                $user->can('inquiry.create.blood_bank')
+            )
+        );
+
+        if (! $canBookAny) {
             abort(403, 'غير مصرح لك بالبحث لإنشاء طلبات استعلامات');
         }
-        $query = $httpRequest->get('query');
+
+        $query = trim($httpRequest->get('query', ''));
 
         if (empty($query)) {
             return response()->json([]);
         }
 
-        $patients = Patient::with('user')
-            ->whereHas('user', function ($q) use ($query) {
-                $q->where('name', 'LIKE', "%{$query}%")
-                    ->orWhere('phone', 'LIKE', "%{$query}%");
+        $patients = Patient::with(['user', 'healthInsuranceCategory'])
+            ->where(function ($q) use ($query) {
+                if (is_numeric($query)) {
+                    $q->where('id', $query)
+                        ->orWhere('national_id', 'LIKE', "%{$query}%")
+                        ->orWhere('insurance_card_no', 'LIKE', "%{$query}%")
+                        ->orWhere('insurance_booklet_number', 'LIKE', "%{$query}%");
+                }
+                $q->orWhereHas('user', function ($uq) use ($query) {
+                    $uq->where('name', 'LIKE', "%{$query}%")
+                        ->orWhere('phone', 'LIKE', "%{$query}%");
+                });
             })
-            ->limit(10)
+            ->limit(15)
             ->get();
 
-        return response()->json($patients);
+        $data = $patients->map(function ($p) {
+            $isInsured = $p->insurance_type && $p->insurance_type !== 'none';
+            $missing = $isInsured ? $p->getMissingInsuranceFields() : [];
+
+            return [
+                'id' => $p->id,
+                'name' => optional($p->user)->name ?? 'غير معروف',
+                'phone' => optional($p->user)->phone ?? 'بدون هاتف',
+                'gender' => optional($p->user)->gender ?? 'male',
+                'address' => optional($p->user)->address ?? 'العنوان غير مدخل',
+                'age' => $p->age,
+                'national_id' => $p->national_id,
+                'blood_type' => $p->blood_type,
+                'insurance_type' => $p->insurance_type,
+                'insurance_card_no' => $p->insurance_card_no ?: $p->insurance_booklet_number,
+                'insurance_category_code' => optional($p->healthInsuranceCategory)->code,
+                'is_insured' => $isInsured,
+                'missing_insurance_fields' => $missing,
+                'is_insurance_locked' => count($missing) > 0,
+                'history_url' => route('inquiry.patients.history', $p->id),
+                'edit_url' => route('patients.edit', $p->id),
+                'dossier_url' => route('inquiry.patients.dossier.print', $p->id),
+            ];
+        });
+
+        return response()->json($data);
     }
 
     /**

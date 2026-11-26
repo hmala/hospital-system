@@ -79,6 +79,17 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 306 (2026-11-26 — `main`) — اختصار دورة الاستعلامات بالكامل إلى شاشة واحدة مباشرة مع بحث فوري في الأعلى والخدمات تحتها وحل مشكلة اختيار المريض وتأمين التفاعل اللحظي للضمان (Instant Single-Page Inquiry Direct Booking, Delegated Patient Selection & Reactive Insurance Controls)**:
+  * **إلغاء التنقل والقفزات بين الصفحات ([InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php), [create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php), [app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
+    - اختصار الدورة كاملة في رابط واحد مباشر «الاستعلامات (طلب جديد)» `inquiry.create`.
+    - شريط البحث اللحظي الفوري في أعلى الشاشة وتحته مباشرة كافة الخدمات الطبية (كشف، تحاليل، أشعة، صيدلية، مصرف دم، تحويلات تخصصية).
+  * **معالجة وحل مشكلة اختيار المريض من النتائج (Direct Selection Fix & JS Const Error Resolution)**:
+    - حل الخطأ الجوهري `TypeError: Assignment to constant variable` الناجم عن تعريف `currentPatientId` كـ `const` وإعادة تعيينه عند النقر، وتحويله إلى `let` مع إضافة `currentPatientIsInsured` و `currentPatientIsInsuranceLocked`.
+    - توفير دالة اختيار عامة `window.selectPatientById(pId)` مرتبطة بكل سطر وبزر «اختيار» مباشرة إلى جانب تفويض النقر `results.addEventListener('click')` لضمان استجابة النقر فورياً على أي جهاز ومتصفح.
+    - تحديث ديناميكي فوري لقسم التغطية المالية للضمان والكاش (`#insuranceCoverageSection`) وتنبيه نواقص الضمان (`#patientInsuranceLockedAlert`) عند اختيار المريض دون الحاجة لإعادة تحميل الصفحة.
+  * **الاختبارات وضمان الجودة ([InquiryStreamlinedDirectBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryStreamlinedDirectBookingTest.php))**:
+    - اجتياز اختبارات الميزة بنجاح تام (4 passed, 21 assertions) واختبارات الضمان (5 passed, 26 assertions) وتوافق كاش القوالب `view:cache` وتنسيق Pint.
+
 - **المرحلة 305 (2026-11-26 — `main`) — إعادة هيكلة جدول محطة الطبيب المقيم إلى 5 أعمدة واضحة وفصل اسم المريض في عمود مخصص مع إضافة عمود العملية والغرفة والطبيب الأخصائي (Resident Doctor Station: 5-Column Table Restructure — Isolated Patient Name, Surgery & Room, Specialist Doctor, Phase & Actions)**:
   * **فصل اسم المريض وإعادة هيكلة الجدول إلى 5 أعمدة واضحة ([resources/views/surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
     - تخصيص العمود الأول لـ «اسم المريض» فقط ورقم الملف الطبي دون أي تكديس للشارات، لتوفير رؤية بصرية مريحة وسريعة للمقيم.
