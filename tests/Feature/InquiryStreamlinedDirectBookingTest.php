@@ -159,4 +159,35 @@ class InquiryStreamlinedDirectBookingTest extends TestCase
         $response->assertSee('الخدمات الطبية المباشرة');
         $response->assertSee('requestForm');
     }
+
+    public function test_inquiry_staff_redirects_directly_to_inquiry_create_on_login_dashboard_and_root(): void
+    {
+        Role::firstOrCreate(['name' => 'receptionist', 'guard_name' => 'web']);
+        Role::firstOrCreate(['name' => 'inquiry_staff', 'guard_name' => 'web']);
+
+        $inquiryUser = User::factory()->create([
+            'email' => 'inquiry_user@hospital.test',
+            'password' => bcrypt('password123'),
+        ]);
+        $inquiryUser->assignRole('inquiry_staff');
+
+        // زيارة لوحة التحكم /dashboard
+        $responseDashboard = $this->actingAs($inquiryUser)->get('/dashboard');
+        $responseDashboard->assertRedirect(route('inquiry.create'));
+
+        // زيارة الصفحة الرئيسية /
+        $responseRoot = $this->actingAs($inquiryUser)->get('/');
+        $responseRoot->assertRedirect(route('inquiry.create'));
+
+        // تسجيل الخروج التام
+        auth()->logout();
+        $this->flushSession();
+
+        // تسجيل الدخول الفعلي عبر POST /login
+        $responseLogin = $this->post('/login', [
+            'email' => 'inquiry_user@hospital.test',
+            'password' => 'password123',
+        ]);
+        $responseLogin->assertRedirect(route('inquiry.create'));
+    }
 }

@@ -79,7 +79,11 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
-- **المرحلة 306 (2026-11-26 — `main`) — اختصار دورة الاستعلامات بالكامل إلى شاشة واحدة مباشرة مع قفل الخدمات لحين تحديد المريض وبحث فوري في الأعلى (Instant Single-Page Inquiry Direct Booking, Strict Patient-First Services Lock, Delegated Selection & Reactive Insurance Controls)**:
+- **المرحلة 306 (2026-11-26 — `main`) — اختصار دورة الاستعلامات بالكامل إلى شاشة واحدة مباشرة مع قفل الخدمات لحين تحديد المريض وبحث فوري في الأعلى وتوجيه موظف الاستعلامات إليها فور تسجيل الدخول (Instant Single-Page Inquiry Direct Booking, Strict Patient-First Services Lock, Delegated Selection & Direct Login Redirection)**:
+  * **توجيه موظف الاستعلامات / الاستقبال مباشرة إلى شاشة الاستعلامات فور تسجيل الدخول ([LoginController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Auth/LoginController.php), [DashboardController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/DashboardController.php), [User.php](file:///c:/wamp64/www/hospital-system/app/Models/User.php), [bootstrap/app.php](file:///c:/wamp64/www/hospital-system/bootstrap/app.php), [web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+    - إضافة دالة استعلام وتدقيق الدور `isInquiryStaff()` في موديل المستخدم `User` لتشمل: أدوار الاستعلامات والاستقبال (`inquiry_staff`, `receptionist`, `consultation_receptionist`, `استعلامات`, `استقبال`)، والأقسام المعنية، وصلاحيات إنشاء الاستعلامات لمن ليس لديه دور إداري أو طبي أعلى.
+    - توجيه موظف الاستعلامات فور نجاح تسجيل الدخول في `LoginController::redirectTo()` مباشرة إلى مسار `route('inquiry.create')`.
+    - توجيه موظف الاستعلامات في `DashboardController::index()` ومسار الجذر `/` ووسيط المصادقة `RedirectIfAuthenticated` في `bootstrap/app.php` مباشرة إلى `route('inquiry.create')` لتوفير الوقت وسرعة الاستجابة لطلبات المراجعين.
   * **إلغاء التنقل والقفزات بين الصفحات ([InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php), [create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php), [app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
     - اختصار الدورة كاملة في رابط واحد مباشر «الاستعلامات (طلب جديد)» `inquiry.create`.
     - شريط البحث اللحظي الفوري في أعلى الشاشة وتحته مباشرة كافة الخدمات الطبية (كشف، تحاليل، أشعة، صيدلية، مصرف دم، تحويلات تخصصية).
@@ -91,7 +95,7 @@
     - توفير دالة اختيار عامة `window.selectPatientById(pId)` مرتبطة بكل سطر وبزر «اختيار» مباشرة إلى جانب تفويض النقر `results.addEventListener('click')` لضمان استجابة النقر فورياً على أي جهاز ومتصفح.
     - تحديث ديناميكي فوري لقسم التغطية المالية للضمان والكاش (`#insuranceCoverageSection`) وتنبيه نواقص الضمان (`#patientInsuranceLockedAlert`) عند اختيار المريض دون الحاجة لإعادة تحميل الصفحة.
   * **الاختبارات وضمان الجودة ([InquiryStreamlinedDirectBookingTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InquiryStreamlinedDirectBookingTest.php))**:
-    - اجتياز اختبارات الميزة بنجاح تام (4 passed, 21 assertions) واختبارات الضمان (5 passed, 26 assertions) وتوافق كاش القوالب `view:cache` وتنسيق Pint.
+    - اجتياز اختبارات الميزة بنجاح تام (5 passed, 27 assertions) تشمل فحص تسجيل الدخول وتحويل لوحة التحكم والصفحة الرئيسية، واختبارات الضمان (5 passed, 26 assertions) وتوافق كاش القوالب `view:cache` وتنسيق Pint.
 
 - **المرحلة 305 (2026-11-26 — `main`) — إعادة هيكلة جدول محطة الطبيب المقيم إلى 5 أعمدة واضحة وفصل اسم المريض في عمود مخصص مع إضافة عمود العملية والغرفة والطبيب الأخصائي (Resident Doctor Station: 5-Column Table Restructure — Isolated Patient Name, Surgery & Room, Specialist Doctor, Phase & Actions)**:
   * **فصل اسم المريض وإعادة هيكلة الجدول إلى 5 أعمدة واضحة ([resources/views/surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:

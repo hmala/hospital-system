@@ -48,6 +48,11 @@ class DashboardController extends Controller
             return redirect()->route('surgeries.index');
         }
 
+        // توجيه موظف الاستعلامات / الاستقبال مباشرة إلى شاشة الاستعلامات والطلب المباشر
+        if ($user && $user->isInquiryStaff()) {
+            return redirect()->route('inquiry.create');
+        }
+
         // إحصائيات خاصة بموظف الأشعة
         if ($user->hasRole('radiology_staff')) {
             $pendingRadiology = \App\Models\RadiologyRequest::where('status', 'pending')->count();

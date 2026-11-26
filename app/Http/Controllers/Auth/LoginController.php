@@ -49,11 +49,16 @@ class LoginController extends Controller
             if (! $user->isNurseAvailableToday() && ! $user->hasRole(['admin', 'head_nurse', 'hospital_admin']) && ! $user->can('manage nurse availability')) {
                 return route('nurse.off-duty');
             }
+
             return route('nursing-station.index');
         }
 
         if ($user && ($user->hasRole(['surgery_staff', 'موظف عمليات']) || $user->user_type === 'surgery_staff')) {
             return route('surgeries.index');
+        }
+
+        if ($user && $user->isInquiryStaff()) {
+            return route('inquiry.create');
         }
 
         return '/dashboard';

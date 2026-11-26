@@ -84,6 +84,10 @@ Route::get('/', function () {
             return redirect()->route('doctor.visits.index');
         }
 
+        if ($user->isInquiryStaff()) {
+            return redirect()->route('inquiry.create');
+        }
+
         return redirect('/dashboard');
     }
 

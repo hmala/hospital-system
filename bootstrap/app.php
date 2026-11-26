@@ -11,6 +11,38 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->redirectTo(
+            guests: '/login',
+            users: function ($request) {
+                $user = $request->user();
+                if ($user) {
+                    if ($user->isInquiryStaff()) {
+                        return route('inquiry.create');
+                    }
+                    if ($user->hasRole(['الجراح', 'surgeon']) || ($user->doctor && $user->doctor->type === 'surgeon') || in_array($user->name, ['حساب الجراحين', 'حساب الجراحين العام']) || $user->email === 'gh@hospital.com') {
+                        return route('surgeon-station.index');
+                    }
+                    if ($user->hasRole(['التخدير', 'anesthesiologist']) || ($user->doctor && ($user->doctor->type === 'anesthesiologist' || $user->doctor->type === 'anesthesia')) || in_array($user->name, ['حساب أطباء التخدير', 'حساب اطباء التخدير', 'جساب اطباء التخدير', 'حساب التخدير']) || $user->email === 'anth@hospital.com') {
+                        return route('anesthesia-station.index');
+                    }
+                    if ($user->hasRole('doctor')) {
+                        return route('doctor.visits.index');
+                    }
+                    if ($user->hasRole('thaman')) {
+                        return route('patients.index');
+                    }
+                    if ($user->hasRole(['nurse', 'nicu_nurse', 'icu_nurse', 'تمريض']) || ($user->role ?? '') === 'nurse') {
+                        return route('nursing-station.index');
+                    }
+                    if ($user->hasRole(['surgery_staff', 'موظف عمليات']) || $user->user_type === 'surgery_staff') {
+                        return route('surgeries.index');
+                    }
+                }
+
+                return '/dashboard';
+            }
+        );
+
         $middleware->web(append: [
             \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\TrackUserActivity::class,
