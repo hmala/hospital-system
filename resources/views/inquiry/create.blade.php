@@ -99,10 +99,10 @@
     {{-- بطاقة وهوية المريض المحدد --}}
     <div id="emptyPatientPrompt" class="alert alert-warning border-0 rounded-4 shadow-sm py-2.5 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="{{ $patient ? 'display: none !important;' : '' }}">
         <div class="d-flex align-items-center gap-2">
-            <i class="fas fa-hand-pointer text-warning fs-5"></i>
-            <span class="small fw-bold text-dark">يرجى كتابة اسم المريض واختياره من حقل البحث أعلاه لتثبيت هويته وبدء تحديد الخدمات.</span>
+            <i class="fas fa-lock text-warning fs-5"></i>
+            <span class="small fw-bold text-dark">الخدمات مقفلة: يجب البحث عن المريض واختياره من شريط البحث أعلاه لتفعيل اختيار الخدمات والعيادات.</span>
         </div>
-        <span class="badge bg-warning bg-opacity-25 text-dark font-monospace">بانتظار تحديد المريض</span>
+        <span class="badge bg-warning bg-opacity-25 text-dark font-monospace">🔒 بانتظار تحديد المريض</span>
     </div>
 
     <div id="selectedPatientCard" class="card border-0 rounded-4 shadow-sm bg-white mb-3 p-3 border" style="{{ $patient ? '' : 'display: none;' }}">
@@ -234,7 +234,23 @@
             </div>
         @endif
 
-        <div class="row g-4 align-items-start">
+        {{-- تنبيه قفل الخدمات لحين تحديد المريض --}}
+        <div id="servicesLockedNotice" class="alert alert-warning border-0 rounded-4 shadow-sm py-2.5 px-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2" style="{{ $patient ? 'display: none !important;' : '' }}">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-warning text-dark p-2 rounded-circle">
+                    <i class="fas fa-lock fs-6"></i>
+                </span>
+                <div>
+                    <strong class="text-dark small d-block">الخدمات مقفلة — يرجى تحديد اسم المريض أولاً</strong>
+                    <span class="text-muted" style="font-size: 11px;">ابحث عن المريض واختاره من شريط البحث في الأعلى لتفعيل واختيار الخدمات والعيادات.</span>
+                </div>
+            </div>
+            <span class="badge bg-warning bg-opacity-25 text-dark font-monospace py-1.5 px-2.5 rounded-pill">🔒 مقفل لحين تحديد المريض</span>
+        </div>
+
+        {{-- حاوية الخدمات المحمية بقفل المريض --}}
+        <div id="servicesBookingSection" style="{{ $patient ? '' : 'opacity: 0.45; pointer-events: none; filter: grayscale(50%); transition: all 0.3s ease;' }}">
+            <div class="row g-4 align-items-start">
             {{-- العمود الأيمن (7 أعمدة): بطاقات الخدمات والتحويلات --}}
             <div class="col-12 col-lg-7">
 
@@ -761,6 +777,7 @@
                 </div>
             </div>
         </div>
+        </div>
     </form>
 </div>
 
@@ -989,7 +1006,7 @@ function checkDoctorActiveBooking(doctorId) {
     const submitBtn = document.getElementById('submitBtn');
     const submitBtnText = document.getElementById('submitBtnText');
 
-    if (!doctorId) {
+    if (!doctorId || !currentPatientId) {
         activeBookingState.checkup = null;
         if (warningBox) warningBox.style.display = 'none';
         if (submitBtn && submitBtn.dataset.blockedByDuplicate === '1') {
@@ -1038,6 +1055,11 @@ function checkDoctorActiveBooking(doctorId) {
 
 function checkUltrasoundActiveBooking() {
     const warningBox = document.getElementById('duplicateUltrasoundWarningBox');
+    if (!currentPatientId) {
+        activeBookingState.ultrasound = null;
+        if (warningBox) warningBox.style.display = 'none';
+        return;
+    }
     fetch(`${checkActiveBookingUrl}?patient_id=${currentPatientId}&type=radiology&radiology_category=ultrasound`)
         .then(res => res.json())
         .then(data => {
@@ -1260,6 +1282,16 @@ function updateRadiologyCategoryInfo() {
 }
 
 function toggleRequestType(type) {
+    if (!currentPatientId) {
+        showValidationError('لا يمكن اختيار أي خدمة قبل تحديد اسم المريض أولاً.\nيرجى البحث عن المريض واختياره من شريط البحث في الأعلى لتفعيل الخدمات.', '⛔ الخدمات مقفلة لحين تحديد المريض');
+        const searchInput = document.getElementById('patientLiveSearchInput');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
+    }
+
     const card = document.querySelector(`.request-card[data-type="${type}"]`);
     if (!card) return;
     
@@ -1955,6 +1987,18 @@ function selectPatientDirectly(patient) {
 
     updateDepartmentLinks(patient.id);
 
+    // فتح وتفعيل قسم الخدمات والتحويلات
+    const servicesSection = document.getElementById('servicesBookingSection');
+    const lockedNotice = document.getElementById('servicesLockedNotice');
+    if (servicesSection) {
+        servicesSection.style.pointerEvents = 'auto';
+        servicesSection.style.opacity = '1';
+        servicesSection.style.filter = 'none';
+    }
+    if (lockedNotice) {
+        lockedNotice.style.setProperty('display', 'none', 'important');
+    }
+
     const promptEl = document.getElementById('emptyPatientPrompt');
     const cardEl = document.getElementById('selectedPatientCard');
     if (promptEl) promptEl.style.setProperty('display', 'none', 'important');
@@ -2003,6 +2047,29 @@ function clearLiveSearch() {
     if (promptEl) promptEl.style.setProperty('display', 'flex', 'important');
     if (cardEl) cardEl.style.setProperty('display', 'none', 'important');
 
+    // إعادة قفل قسم الخدمات وإلغاء أي تحديد سابق
+    const servicesSection = document.getElementById('servicesBookingSection');
+    const lockedNotice = document.getElementById('servicesLockedNotice');
+    if (servicesSection) {
+        servicesSection.style.pointerEvents = 'none';
+        servicesSection.style.opacity = '0.45';
+        servicesSection.style.filter = 'grayscale(50%)';
+    }
+    if (lockedNotice) {
+        lockedNotice.style.setProperty('display', 'flex', 'important');
+    }
+
+    selectedTypes.clear();
+    document.querySelectorAll('.request-card').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.check-badge').forEach(b => b.style.display = 'none');
+    updateFormFields();
+    const details = document.getElementById('requestDetails');
+    const emptyDetails = document.getElementById('emptyRequestDetails');
+    if (details) details.style.display = 'none';
+    if (emptyDetails) emptyDetails.style.display = 'block';
+    const countBadge = document.getElementById('selectedServicesCountBadge');
+    if (countBadge) countBadge.textContent = '0';
+
     updateDepartmentLinks(null);
 }
 
@@ -2022,10 +2089,9 @@ function updateDepartmentLinks(patientId) {
 }
 
 function checkPatientBeforeExternalLink(e, link) {
-    const patientId = document.getElementById('patient_id') ? document.getElementById('patient_id').value : '';
-    if (!patientId) {
-        e.preventDefault();
-        showValidationError('يرجى اختيار المريض أولاً من شريط البحث في الأعلى قبل فتح حجز القسم التخصصي.', 'تنبيه: تحديد المريض إلزامي');
+    if (!currentPatientId) {
+        if (e) e.preventDefault();
+        showValidationError('لا يمكن فتح حجز القسم التخصصي قبل تحديد اسم المريض أولاً.\nيرجى البحث عن المريض واختياره من شريط البحث في الأعلى.', '⛔ تحديد المريض إلزامي');
         const input = document.getElementById('patientLiveSearchInput');
         if (input) {
             input.focus();

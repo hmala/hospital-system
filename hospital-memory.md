@@ -79,10 +79,13 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
-- **المرحلة 306 (2026-11-26 — `main`) — اختصار دورة الاستعلامات بالكامل إلى شاشة واحدة مباشرة مع بحث فوري في الأعلى والخدمات تحتها وحل مشكلة اختيار المريض وتأمين التفاعل اللحظي للضمان (Instant Single-Page Inquiry Direct Booking, Delegated Patient Selection & Reactive Insurance Controls)**:
+- **المرحلة 306 (2026-11-26 — `main`) — اختصار دورة الاستعلامات بالكامل إلى شاشة واحدة مباشرة مع قفل الخدمات لحين تحديد المريض وبحث فوري في الأعلى (Instant Single-Page Inquiry Direct Booking, Strict Patient-First Services Lock, Delegated Selection & Reactive Insurance Controls)**:
   * **إلغاء التنقل والقفزات بين الصفحات ([InquiryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/InquiryController.php), [create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/inquiry/create.blade.php), [app.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/layouts/app.blade.php))**:
     - اختصار الدورة كاملة في رابط واحد مباشر «الاستعلامات (طلب جديد)» `inquiry.create`.
     - شريط البحث اللحظي الفوري في أعلى الشاشة وتحته مباشرة كافة الخدمات الطبية (كشف، تحاليل، أشعة، صيدلية، مصرف دم، تحويلات تخصصية).
+  * **قفل وحظر اختيار أي خدمة أو تحويل تخصصي لحين تحديد المريض أولاً (Strict Patient-First Services Lock)**:
+    - إبقاء كافة بطاقات الخدمات والتحويلات مقفلة وغير قابلة للاختيار برمجياً وبصرياً (`pointer-events: none`, `opacity: 0.45`, `grayscale`) مع تنبيه القفل `#servicesLockedNotice`.
+    - حظر النقر في `toggleRequestType` وروابط الأقسام التخصصية لحين اختيار المريض، وفك القفل فورياً بمجرد اختيار المريض من نتائج البحث، وإعادة القفل عند «تغيير المريض».
   * **معالجة وحل مشكلة اختيار المريض من النتائج (Direct Selection Fix & JS Const Error Resolution)**:
     - حل الخطأ الجوهري `TypeError: Assignment to constant variable` الناجم عن تعريف `currentPatientId` كـ `const` وإعادة تعيينه عند النقر، وتحويله إلى `let` مع إضافة `currentPatientIsInsured` و `currentPatientIsInsuranceLocked`.
     - توفير دالة اختيار عامة `window.selectPatientById(pId)` مرتبطة بكل سطر وبزر «اختيار» مباشرة إلى جانب تفويض النقر `results.addEventListener('click')` لضمان استجابة النقر فورياً على أي جهاز ومتصفح.
