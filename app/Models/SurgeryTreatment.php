@@ -96,6 +96,8 @@ class SurgeryTreatment extends Model
         'administrations',
         'batch_id',
         'stock_movement_id',
+        'prescription_item_id',
+        'pharmacy_status',
         'quantity',
     ];
 
@@ -112,6 +114,11 @@ class SurgeryTreatment extends Model
     public function surgery()
     {
         return $this->belongsTo(Surgery::class);
+    }
+
+    public function prescriptionItem()
+    {
+        return $this->belongsTo(PrescriptionItem::class);
     }
 
     public function medicine()

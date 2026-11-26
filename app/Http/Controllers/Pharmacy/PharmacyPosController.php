@@ -168,6 +168,8 @@ class PharmacyPosController extends Controller
                 'visit',
                 'emergency.emergencyPatient',
                 'emergency.doctor.user',
+                'surgery.room',
+                'surgery.doctor.user',
                 'sale.payment',
             ])
             ->orderBy('created_at', 'desc')
@@ -207,9 +209,25 @@ class PharmacyPosController extends Controller
                     $stage = 'awaiting_doctor';
                 }
 
-                // بيانات المريض (طوارئ أو عيادة)
+                // بيانات المريض (طوارئ أو عيادة أو رقود)
                 $isEmergency = ! is_null($rx->emergency_id);
-                if ($isEmergency && $rx->emergency) {
+                $isInpatient = ! is_null($rx->surgery_id);
+                $roomNumber = null;
+                $roomFloor = null;
+
+                if ($isInpatient && $rx->surgery) {
+                    $surg = $rx->surgery;
+                    $patientName = optional($rx->patient)->user->name
+                        ?? $surg->patient?->user?->name
+                        ?? $surg->patient?->name
+                        ?? 'مريض رقود';
+                    $doctorName = optional($rx->doctor)->user->name
+                        ?? optional($surg->doctor)->user->name
+                        ?? 'طبيب معالج';
+                    $roomNumber = $surg->room?->room_number ?? 'انتظار';
+                    $roomFloor = $surg->room?->floor ?? '';
+                    $specialization = '🏨 الرقود: غرفة '.$roomNumber.($roomFloor ? " ({$roomFloor})" : '');
+                } elseif ($isEmergency && $rx->emergency) {
                     $em = $rx->emergency;
                     $patientName = $em->emergencyPatient?->name
                         ?? optional($em->patient)?->user?->name
@@ -257,6 +275,9 @@ class PharmacyPosController extends Controller
                     'doctor_name' => $doctorName,
                     'specialization' => $specialization,
                     'is_emergency' => $isEmergency,
+                    'is_inpatient' => $isInpatient,
+                    'room_number' => $roomNumber,
+                    'room_floor' => $roomFloor,
                     'diagnosis' => $rx->diagnosis ?? '-',
                     'items_count' => $rx->items->count(),
                     'items_summary' => $itemsSummary,
@@ -294,10 +315,28 @@ class PharmacyPosController extends Controller
             'visit',
             'emergency.emergencyPatient',
             'emergency.doctor.user',
+            'surgery.room',
+            'surgery.doctor.user',
         ]);
 
         $isEmergency = ! is_null($prescription->emergency_id);
-        if ($isEmergency && $prescription->emergency) {
+        $isInpatient = ! is_null($prescription->surgery_id);
+        $roomNumber = null;
+        $roomFloor = null;
+
+        if ($isInpatient && $prescription->surgery) {
+            $surg = $prescription->surgery;
+            $patientName = optional($prescription->patient)->user->name
+                ?? $surg->patient?->user?->name
+                ?? $surg->patient?->name
+                ?? 'مريض رقود';
+            $doctorName = optional($prescription->doctor)->user->name
+                ?? optional($surg->doctor)->user->name
+                ?? 'طبيب معالج';
+            $roomNumber = $surg->room?->room_number ?? 'انتظار';
+            $roomFloor = $surg->room?->floor ?? '';
+            $specialization = '🏨 الرقود: غرفة '.$roomNumber.($roomFloor ? " ({$roomFloor})" : '');
+        } elseif ($isEmergency && $prescription->emergency) {
             $em = $prescription->emergency;
             $patientName = $em->emergencyPatient?->name
                 ?? optional($em->patient)?->user?->name
@@ -407,6 +446,10 @@ class PharmacyPosController extends Controller
                 'diagnosis' => $prescription->diagnosis,
                 'notes' => $prescription->notes,
                 'is_emergency' => $isEmergency,
+                'is_inpatient' => $isInpatient,
+                'room_number' => $roomNumber,
+                'room_floor' => $roomFloor,
+                'specialization' => $specialization,
                 'insurance_type' => $insType,
                 'health_insurance_category_id' => $patient?->health_insurance_category_id,
                 'category_name' => $categoryName,
@@ -479,15 +522,18 @@ class PharmacyPosController extends Controller
             $category = $patient?->healthInsuranceCategory;
             $copayPercent = (float) ($category?->medication_copay ?? $patient?->copay_percentage ?? 0);
 
+            $saleType = $prescription->surgery_id ? 'inpatient' : ($prescription->emergency_id ? 'emergency' : 'prescription');
+
             // إنشاء سجل صرف بالمبيعات محول للكاشير المركزي
             $sale = PharmacySale::create([
                 'invoice_number' => PharmacySale::generateInvoiceNumber(),
                 'patient_id' => $prescription->patient_id,
                 'doctor_id' => $prescription->doctor_id,
                 'visit_id' => $prescription->visit_id,
-                'patient_name' => optional($prescription->patient)->user->name ?? 'مريض استشارية',
+                'surgery_id' => $prescription->surgery_id,
+                'patient_name' => optional($prescription->patient)->user->name ?? 'مريض',
                 'patient_phone' => optional($prescription->patient)->user->phone ?? null,
-                'sale_type' => 'prescription',
+                'sale_type' => $saleType,
                 'insurance_type' => $insType,
                 'health_insurance_category_id' => $category?->id,
                 'copay_percentage' => $copayPercent,
@@ -621,6 +667,13 @@ class PharmacyPosController extends Controller
                 'status' => $prescriptionStatus,
                 'sale_id' => $sale->id,
             ]);
+
+            if ($prescription->surgery_id) {
+                $itemIds = $prescription->items->pluck('id')->all();
+                \App\Models\SurgeryTreatment::whereIn('prescription_item_id', $itemIds)->update([
+                    'pharmacy_status' => 'pending_cashier',
+                ]);
+            }
 
             DB::commit();
 
@@ -994,6 +1047,13 @@ class PharmacyPosController extends Controller
                 'dispensed_by' => $userId,
                 'dispensed_at' => now(),
             ]);
+
+            if ($sale->prescription->surgery_id) {
+                $itemIds = $sale->prescription->items->pluck('id')->all();
+                \App\Models\SurgeryTreatment::whereIn('prescription_item_id', $itemIds)->update([
+                    'pharmacy_status' => 'dispensed',
+                ]);
+            }
         }
 
         return response()->json([

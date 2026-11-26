@@ -16,6 +16,7 @@ class Prescription extends Model
         'doctor_id',
         'visit_id',
         'emergency_id',
+        'surgery_id',
         'status',
         'diagnosis',
         'notes',
@@ -35,20 +36,20 @@ class Prescription extends Model
         static::creating(function ($model) {
             if (empty($model->prescription_number)) {
                 $dateStr = date('Ymd');
-                $prefix = 'RX-' . $dateStr . '-';
-                
+                $prefix = 'RX-'.$dateStr.'-';
+
                 $latest = self::withTrashed()
-                    ->where('prescription_number', 'like', $prefix . '%')
+                    ->where('prescription_number', 'like', $prefix.'%')
                     ->orderBy('id', 'desc')
                     ->first();
 
                 $nextNum = 1;
-                if ($latest && preg_match('/' . preg_quote($prefix, '/') . '(\d+)/', $latest->prescription_number, $matches)) {
-                    $nextNum = (int)$matches[1] + 1;
+                if ($latest && preg_match('/'.preg_quote($prefix, '/').'(\d+)/', $latest->prescription_number, $matches)) {
+                    $nextNum = (int) $matches[1] + 1;
                 }
 
                 do {
-                    $candidate = $prefix . str_pad($nextNum, 4, '0', STR_PAD_LEFT);
+                    $candidate = $prefix.str_pad($nextNum, 4, '0', STR_PAD_LEFT);
                     $exists = self::withTrashed()->where('prescription_number', $candidate)->exists();
                     if ($exists) {
                         $nextNum++;
@@ -80,6 +81,11 @@ class Prescription extends Model
     public function emergency()
     {
         return $this->belongsTo(Emergency::class);
+    }
+
+    public function surgery()
+    {
+        return $this->belongsTo(Surgery::class);
     }
 
     public function items()

@@ -708,9 +708,12 @@
                                                                     @endphp
                                                                     <tr class="pending-all-row" data-financial-type="{{ $isIns ? 'insurance' : 'cash' }}">
                                                                         <td><strong>{{ $sale->invoice_number }}</strong></td>
-                                                                        <td><span class="badge bg-success"><i class="fas fa-pills me-1"></i> {{ __("صيدلية") }}</span></td>
+                                                                        <td><span class="badge bg-success"><i class="fas fa-pills me-1"></i> {{ $sale->sale_type === 'inpatient' ? __("صيدلية (رقود)") : __("صيدلية") }}</span></td>
                                                                         <td>
                                                                             <div class="fw-semibold">{{ $pName }}
+                                                                                @if($sale->surgery && $sale->surgery->room)
+                                                                                    <span class="badge bg-warning bg-opacity-10 text-dark border border-warning-subtle fs-8 ms-1"><i class="fas fa-bed me-1"></i>غرفة {{ $sale->surgery->room->room_number }}</span>
+                                                                                @endif
                                                                                 @if($saleIns === 'interior_ministry' || $saleIns === 'moi')
                                                                                     <span class="badge bg-primary fs-8 ms-1"><i class="fas fa-shield-alt me-1"></i>{{ __("داخليّة") }}</span>
                                                                                 @elseif($saleIns === 'health_insurance' || $saleIns === 'hi')
@@ -1343,7 +1346,7 @@
                                                                     <td>
                                                                         <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
                                                                             <i class="fas fa-pills me-1"></i>
-                                                                            {{ $sale->sale_type === 'prescription' ? __('وصفة عيادة') : ($sale->sale_type === 'emergency' ? __('طوارئ') : __('مباشر OTC')) }}
+                                                                            {{ $sale->sale_type === 'inpatient' ? __('رقود') : ($sale->sale_type === 'prescription' ? __('وصفة عيادة') : ($sale->sale_type === 'emergency' ? __('طوارئ') : __('مباشر OTC'))) }}
                                                                         </span>
                                                                     </td>
                                                                     <td>

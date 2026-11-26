@@ -49,7 +49,7 @@
                 <div class="d-flex align-items-center gap-3 bg-white bg-opacity-10 p-2 px-3 rounded-3">
                     <div class="text-end">
                         <span class="badge bg-success mb-1">
-                            {{ $sale->sale_type === 'prescription' ? __('وصفة طبية معتمدة') : ($sale->sale_type === 'emergency' ? __('طوارئ وإسعاف') : __('صرف مباشر OTC')) }}
+                            {{ $sale->sale_type === 'inpatient' ? __('أدوية رقود: غرفة '.($sale->surgery?->room?->room_number ?? 'الردهة')) : ($sale->sale_type === 'prescription' ? __('وصفة طبية معتمدة') : ($sale->sale_type === 'emergency' ? __('طوارئ وإسعاف') : __('صرف مباشر OTC'))) }}
                         </span>
                         <div class="fw-bold text-white">
                             @if($doctor && $doctor->user)

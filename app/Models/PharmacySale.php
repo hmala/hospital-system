@@ -16,6 +16,7 @@ class PharmacySale extends Model
         'patient_id',
         'doctor_id',
         'visit_id',
+        'surgery_id',
         'patient_name',
         'patient_phone',
         'sale_type',
@@ -60,6 +61,11 @@ class PharmacySale extends Model
     public function visit()
     {
         return $this->belongsTo(Visit::class, 'visit_id');
+    }
+
+    public function surgery()
+    {
+        return $this->belongsTo(Surgery::class, 'surgery_id');
     }
 
     public function healthInsuranceCategory()

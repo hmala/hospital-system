@@ -8,6 +8,8 @@ use App\Models\LabTest;
 use App\Models\Medicine;
 use App\Models\NursingStation;
 use App\Models\Package;
+use App\Models\Prescription;
+use App\Models\PrescriptionItem;
 use App\Models\RadiologyType;
 use App\Models\ResidentStationFollowUp;
 use App\Models\ResidentStationReading;
@@ -760,7 +762,7 @@ class ClinicalStationController extends Controller
             ? Carbon::parse($validated['start_at'])
             : now();
 
-        SurgeryTreatment::create([
+        $treatment = SurgeryTreatment::create([
             'surgery_id' => $surgery->id,
             'item_type' => SurgeryTreatment::TYPE_MEDICATION,
             'medicine_id' => $medicine?->id,
@@ -777,7 +779,12 @@ class ClinicalStationController extends Controller
             'total_doses' => $totalDoses,
             'admin_notes' => $validated['admin_notes'] ?? null,
             'status' => 'planned',
+            'pharmacy_status' => 'pending_dispatch',
         ]);
+
+        if ($medicine && $medicine->id) {
+            $this->syncTreatmentToPharmacy($surgery, $treatment);
+        }
 
         return redirect()->route('clinical-station.show', array_filter([
             'surgery' => $surgery->id,
@@ -1085,6 +1092,9 @@ class ClinicalStationController extends Controller
             }
 
             $group->increment('usage_count');
+
+            // مزامنة أدوية الباقة تلقائياً إلى صيدلية المستشفى
+            $this->syncSurgeryTreatmentsToPharmacy($surgery);
 
             DB::commit();
 
@@ -2123,5 +2133,91 @@ class ClinicalStationController extends Controller
         }
 
         return back()->with('success', 'تم إلغاء طلب العلاج الفيزيائي بنجاح.');
+    }
+
+    /**
+     * تزامن وربط دواء الرقود مع وصفة إلكترونية لصيدلية المستشفى POS
+     */
+    public function syncTreatmentToPharmacy(Surgery $surgery, SurgeryTreatment $treatment): ?PrescriptionItem
+    {
+        if ($treatment->item_type !== SurgeryTreatment::TYPE_MEDICATION || ! $treatment->medicine_id) {
+            return null;
+        }
+
+        // إيجاد أو إنشاء وصفة إلكترونية للرقود
+        $prescription = Prescription::where('surgery_id', $surgery->id)
+            ->whereIn('status', ['pending', 'in_progress'])
+            ->latest()
+            ->first();
+
+        if (! $prescription) {
+            $prescription = Prescription::create([
+                'patient_id' => $surgery->patient_id,
+                'doctor_id' => $surgery->doctor_id ?? auth()->user()?->doctor?->id,
+                'surgery_id' => $surgery->id,
+                'status' => 'pending',
+                'diagnosis' => $surgery->surgery_type ?? 'أوامر علاجية لمريض رقود',
+                'notes' => 'وصفة علاجية للرقود - غرفة '.($surgery->room?->room_number ?? 'انتظار').($surgery->room?->floor ? ' ('.$surgery->room->floor.')' : ''),
+            ]);
+        }
+
+        $qty = (int) max(1, $treatment->duration_value ?: 1);
+        if ($treatment->total_doses && $treatment->total_doses > 0) {
+            $qty = (int) ceil($treatment->total_doses);
+        }
+
+        $item = PrescriptionItem::create([
+            'prescription_id' => $prescription->id,
+            'medicine_id' => $treatment->medicine_id,
+            'medicine_name' => $treatment->description,
+            'quantity' => $qty,
+            'unit_type' => 'main_unit',
+            'dosage_frequency' => $treatment->timing ?: ($treatment->dosage ?: '1x3'),
+            'duration_days' => $treatment->duration_value ?: 3,
+            'instructions' => trim(($treatment->route ? $treatment->route.' ' : '').($treatment->admin_notes ?: '')),
+            'status' => 'pending',
+        ]);
+
+        $treatment->update([
+            'prescription_item_id' => $item->id,
+            'pharmacy_status' => 'sent_to_pharmacy',
+        ]);
+
+        return $item;
+    }
+
+    /**
+     * مزامنة وتجميع كافة أدوية الرقود غير المرسلة إلى وصفة صيدلية المستشفى
+     */
+    public function syncSurgeryTreatmentsToPharmacy(Surgery $surgery): int
+    {
+        $unsentTreatments = $surgery->treatments()
+            ->where('item_type', SurgeryTreatment::TYPE_MEDICATION)
+            ->whereNotNull('medicine_id')
+            ->whereNull('prescription_item_id')
+            ->get();
+
+        $count = 0;
+        foreach ($unsentTreatments as $treatment) {
+            if ($this->syncTreatmentToPharmacy($surgery, $treatment)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * إرسال يدوي للأدوية غير المصروفة لصيدلية المستشفى
+     */
+    public function dispatchTreatmentsToPharmacy(Request $request, Surgery $surgery)
+    {
+        $count = $this->syncSurgeryTreatmentsToPharmacy($surgery);
+
+        if ($count > 0) {
+            return redirect()->back()->with('success', "تم إرسال {$count} صنف دوائي بنجاح إلى صيدلية المستشفى (POS) بانتظار التجهيز والكاشير.");
+        }
+
+        return redirect()->back()->with('info', 'كافة الأدوية الموصوفة مرسلة بالفعل إلى صيدلية المستشفى.');
     }
 }

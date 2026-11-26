@@ -1217,12 +1217,15 @@
         let html = '';
         filtered.forEach(rx => {
             const isEmerg = rx.is_emergency;
+            const isInpatient = rx.is_inpatient;
             let statusBadge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">جديدة</span>';
 
             if (rx.stage === 'paid_ready_to_dispense') {
                 statusBadge = '<span class="badge bg-success text-white border border-success"><i class="fas fa-check-circle me-1"></i>مدفوعة بالكاشير</span>';
             } else if (rx.stage === 'pending_cashier') {
                 statusBadge = '<span class="badge bg-warning text-dark border border-warning"><i class="fas fa-hourglass-half me-1"></i>بانتظار الكاشير</span>';
+            } else if (isInpatient) {
+                statusBadge = `<span class="badge bg-info text-dark border border-info"><i class="fas fa-bed me-1"></i>رقود: غرفة ${rx.room_number || '-'}</span>`;
             } else if (isEmerg) {
                 statusBadge = '<span class="badge bg-danger">🚨 طوارئ</span>';
             } else if (rx.stage === 'approved_ready') {
@@ -1234,7 +1237,7 @@
             const itemsPreview = (rx.items_summary || []).map(i => i.name).join('، ');
             const itemsCount = (rx.items_summary || []).length;
 
-            let rowClass = isEmerg ? 'table-danger' : '';
+            let rowClass = isEmerg ? 'table-danger' : (isInpatient ? 'table-info-subtle' : '');
             if (rx.stage === 'paid_ready_to_dispense') {
                 rowClass = 'table-success bg-success-subtle';
             } else if (rx.stage === 'pending_cashier') {
@@ -1278,7 +1281,10 @@
                         <small class="text-muted font-monospace" style="font-size: 0.72rem;">${rx.time_ago}</small>
                     </td>
                     <td>
-                        <div class="fw-bold text-dark text-truncate" style="max-width: 150px;">${rx.patient_name}</div>
+                        <div class="fw-bold text-dark text-truncate d-flex align-items-center gap-1" style="max-width: 170px;">
+                            <span>${rx.patient_name}</span>
+                            ${isInpatient ? `<span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.68rem;"><i class="fas fa-bed me-1"></i>غرفة ${rx.room_number || '-'}</span>` : ''}
+                        </div>
                         <small class="text-muted d-block text-truncate" style="max-width: 150px; font-size: 0.73rem;">
                             <i class="fas fa-user-md text-primary me-1"></i>${rx.doctor_name}
                         </small>
@@ -1369,7 +1375,7 @@
                 const banner = document.getElementById('loadedPrescriptionBanner');
                 document.getElementById('bannerRxNumber').innerText = rx.prescription_number;
                 document.getElementById('bannerRxDoctor').innerText = rx.doctor_name || 'الاستشاري';
-                document.getElementById('bannerRxSource').innerText = rx.is_emergency ? '🚨 طوارئ STAT' : 'وصفة عيادة استشارية';
+                document.getElementById('bannerRxSource').innerText = rx.is_inpatient ? ('🏨 رقود: غرفة ' + (rx.room_number || '-')) : (rx.is_emergency ? '🚨 طوارئ STAT' : 'وصفة عيادة استشارية');
                 banner.style.display = 'flex';
 
                 renderCart();

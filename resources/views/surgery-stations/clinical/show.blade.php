@@ -2473,6 +2473,12 @@
                                 </div>
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
                                     @if(isset($medicationTreatments) && $medicationTreatments->isNotEmpty())
+                                        <form action="{{ route('clinical-station.treatments.dispatch-pharmacy', $surgery) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-xs fw-bold" title="{{ __('إرسال الأدوية غير المصروفة لصيدلية المستشفى (POS)') }}">
+                                                <i class="fas fa-paper-plane me-1"></i> {{ __("إرسال للصيدلية (POS)") }}
+                                            </button>
+                                        </form>
                                         <button type="button" class="btn btn-warning btn-sm text-dark fw-bold rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#saveCurrentMedsAsPackageModal" title="{{ __('حفظ الأدوية الحالية كباقة مشتركة لجميع المقيمين') }}">
                                             <i class="fas fa-save me-1"></i> {{ __("حفظ كباقة مشتركة") }}
                                         </button>
@@ -2727,6 +2733,19 @@
                                                         <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle" style="font-size: 0.65rem;">
                                                             <i class="fas fa-capsules me-1"></i> {{ __("صيدلية") }}
                                                         </span>
+                                                        @if($t->pharmacy_status === 'dispensed')
+                                                            <span class="badge bg-success text-white border border-success" style="font-size: 0.65rem;" title="{{ __('تم الصرف والتسليم من الصيدلية') }}">
+                                                                <i class="fas fa-check-circle me-1"></i> {{ __("مصروف ✅") }}
+                                                            </span>
+                                                        @elseif($t->pharmacy_status === 'pending_cashier')
+                                                            <span class="badge bg-warning text-dark border border-warning" style="font-size: 0.65rem;" title="{{ __('تم تجهيزه بالصيدلية وبانتظار سداد الكاشير') }}">
+                                                                <i class="fas fa-cash-register me-1"></i> {{ __("بالكاشير 💳") }}
+                                                            </span>
+                                                        @elseif($t->pharmacy_status === 'sent_to_pharmacy')
+                                                            <span class="badge bg-info-subtle text-info border border-info-subtle" style="font-size: 0.65rem;" title="{{ __('بانتظار مراجعة وتجهيز الصيدلي') }}">
+                                                                <i class="fas fa-hourglass-start me-1"></i> {{ __("بالصيدلية POS") }}
+                                                            </span>
+                                                        @endif
                                                     @else
                                                         <span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size: 0.65rem;">
                                                             {{ __("وصف سريري") }}

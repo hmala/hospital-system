@@ -57,7 +57,6 @@ Route::get('/set-locale/{locale}', function (string $locale) {
     return redirect()->back(fallback: '/');
 });
 
-
 Route::get('/', function () {
     if (Auth::check()) {
         $user = Auth::user();
@@ -913,6 +912,7 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'update'])->name('clinical-station.update');
         Route::post('/clinical/{surgery}/follow-ups', [\App\Http\Controllers\ClinicalStationController::class, 'storeFollowUp'])->name('clinical-station.follow-ups.store');
         Route::post('/clinical/{surgery}/treatments', [\App\Http\Controllers\ClinicalStationController::class, 'storeTreatment'])->name('clinical-station.treatments.store');
+        Route::post('/clinical/{surgery}/treatments/dispatch-pharmacy', [\App\Http\Controllers\ClinicalStationController::class, 'dispatchTreatmentsToPharmacy'])->name('clinical-station.treatments.dispatch-pharmacy');
         Route::post('/clinical/{surgery}/treatments/apply-package', [\App\Http\Controllers\ClinicalStationController::class, 'applyMedicinePackage'])->name('clinical-station.treatments.apply-package');
         Route::post('/clinical/{surgery}/treatments/save-package', [\App\Http\Controllers\ClinicalStationController::class, 'saveMedicinePackage'])->name('clinical-station.treatments.save-package');
         Route::post('/clinical/treatments/{treatment}/administer', [\App\Http\Controllers\ClinicalStationController::class, 'administerTreatment'])->name('clinical-station.treatments.administer');

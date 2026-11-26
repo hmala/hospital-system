@@ -244,6 +244,16 @@ class Surgery extends Model
         return $this->belongsTo(Doctor::class, 'anesthesiologist_2_id');
     }
 
+    public function prescriptions()
+    {
+        return $this->hasMany(Prescription::class);
+    }
+
+    public function pharmacySales()
+    {
+        return $this->hasMany(PharmacySale::class);
+    }
+
     // علاقات المحطات
     public function surgeonStation()
     {

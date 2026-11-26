@@ -56,6 +56,26 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 312: ربط أدوية الرقود والجراحة بنقطة بيع الصيدلية POS والكاشير المركزي والتسليم الآلي للردهة Inpatient Medications to Pharmacy POS & Central Cashier End-to-End Cycle)
+
+### Done
+- **قاعدة البيانات والنماذج ([2026_11_27_020000_add_pharmacy_status_to_surgery_treatments_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_27_020000_add_pharmacy_status_to_surgery_treatments_table.php), [SurgeryTreatment.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTreatment.php), [Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [Prescription.php](file:///c:/wamp64/www/hospital-system/app/Models/Prescription.php), [PharmacySale.php](file:///c:/wamp64/www/hospital-system/app/Models/PharmacySale.php))**:
+  * إضافة عمودي `prescription_item_id` و `pharmacy_status` لجدول `surgery_treatments` وربطهما بالعلاقات في الموديلات.
+  * دعم ربط `surgery_id` في جدول الوصفات `prescriptions` وجدول مبيعات الصيدلية `pharmacy_sales`.
+- **المتحكمات والمسارات ([ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * عند قيام الطبيب أو المقيم بوصف دواء أو تطبيق باقة أدوية جاهزة في شاشة الرقود (`storeTreatment` / `applyMedicinePackage`)، يتم توليد وصفة إلكترونية `Prescription` مرتبطة بالعملية وإرسالها آلياً لصيدلية المستشفى (`sent_to_pharmacy`).
+  * في شاشة الصيدلية `pharmacy/pos`: تظهر طلبات الرقود في طابور الوصفات مع شارة مميزة `[🏨 رقود: غرفة X]`.
+  * عند تجهيز الصيدلي للوصفة، تُنشأ فاتورة بيع من نوع `inpatient` بمحور سداد `central_cashier` وحالة `pending_cashier`.
+  * فور سداد المرافق في الكاشير المركزي (`cashier.index`)، تُحدث الفاتورة إلى مدفوعة، وتتيح للصيدلي تأكيد التسليم للردهة (`pharmacy.pos.sales.handoff`).
+  * عند تأكيد التسليم، تتحدث حالة العلاج في جدول إعطاء الدواء للممرض تلقائياً إلى `تم الصرف والتسليم من الصيدلية ✅`.
+- **الواجهات ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php), [pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php), [cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php), [pharmacy-payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/pharmacy-payment-form.blade.php))**:
+  * إضافة شارات تتبع حالة العلاج بالصيدلية والكاشير والتسليم في كارت علاجات الرقود.
+  * إضافة زر `[ 💊 إرسال للصيدلية (POS) ]` للإرسال اليدوي أو إعادة المزامنة في أي وقت.
+  * تمييز فواتير الرقود بشارات ورقم الغرفة في الصيدلية والكاشير المركزي.
+- **الاختبارات وضمان الجودة ([InpatientPharmacyPosWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/InpatientPharmacyPosWorkflowTest.php))**:
+  * بناء واجتياز اختبار شامل للدورة السريرية والمالية والصيدلانية بالكامل بنجاح تام (1 passed, 26 assertions).
+  * اجتياز اختبارات التمريض والعمليات الجراحية (14 passed, 200 assertions)، وتنسيق `Pint` ونجاح كاش القوالب `view:cache`.
+
 ## Session log (2026-11-27 — المرحلة 311: إلغاء زر تخريج الغرفة من الشاشة السريرية وحصره في محطة التمريض Clinical Station: Room Discharge Button Removal & Strict Nursing Station Containment)
 
 ### Done
