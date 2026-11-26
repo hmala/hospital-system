@@ -56,6 +56,29 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 308: إضافة زر كشف أجهزة السكانر المرتبطة بالحاسبة وتفعيل المسح فورياً + دعم كاميرا المتصفح ومودال المساعدة الذكية وتحميل البرنامج المستقل بنقرة واحدة Surgery Booking: USB Scanner Auto-Detection, Hardware Name Badge, Native WebRTC Camera Scanner & Instant Desktop Bridge Support)
+
+### Done
+- **زر الكشف التلقائي عن أجهزة السكانر المرتبطة (`#detect_scanner_btn`) وتفعيل زر المسح الضوئي ([resources/views/surgeries/create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php), [resources/views/surgeries/edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/edit.blade.php))**:
+  * إضافة زر فحص وكشف السكانر `[ 🔍 كشف السكانر ]` في شاشتي حجز وتعديل العملية الجراحية.
+  * فحص سريع لبرنامج وسيط السكانر المحلي على المنفذين `127.0.0.1:5000` و `127.0.0.1:37426` لكشف اتصال الأجهزة.
+  * عند كشف اتصال السكانر بنجاح، يتم قراءة اسم جهاز السكانر وعرضه في شارة الحالة الخضراء (`#scannerStatusIndicator`: "جاهز: [اسم الجهاز]")، وتحويل زر «مسح من السكانر» إلى اللون الأخضر الزاهي وتفعيله فورياً.
+- **المسح الضوئي المباشر بكاميرا الحاسبة أو الهاتف بدون أي برامج خارجية (In-Browser Camera Scanner)**:
+  * إضافة زر `[ 📷 كاميرا ]` (`#camera_btn`) يتيح للموظف تصوير كتاب الإحالة أو الفحوصات مباشرة عبر كاميرا اللابتوب أو الموبايل بتقنية WebRTC دون الحاجة لأي برامج وسيطة.
+  * مودال متكامل `#cameraScannerModal` يعرض البث المباشر للكاميرا مع إطار ضبط حدود المستند، وزر التبديل بين الكاميرات، وزر الالتقاط عالي الدقة، وحفظ الصورة تلقائياً كملف مرفق للعملية الجراحية.
+- **مودال المساعدة الذكية والتحميل المباشر للبرنامج المستقل (`#scannerBridgeHelpModal`)**:
+  * مودال إرشادي ذكي يوفر فحصاً حياً لحالة الاتصال بنقرة واحدة (`فحص الاتصال الآن`).
+  * روابط تنزيل مباشرة من داخل المستشفى لبرنامج السكانر المستقل `HospitalScanner.exe` (الذي يعمل كملف تنفيذي مستقل بدون الحاجة لتثبيت بايثون) وملفات التشغيل التلقائي `.bat` داخل مجلد `public/downloads/`.
+  * إرشادات مرئية لكيفية تفعيل خيار Insecure Content في متصفح كروم عند العمل بنظام التشفير HTTPS.
+- **مودال تكبير ومعاينة الوثيقة الممسوحة (`#documentPreviewModal`)**:
+  * إمكانية تكبير واستعراض الوثيقة الملتقطة أو الممسوحة ضوئياً بملء الشاشة للتأكد من وضوح كافة بيانات الإحالة والتوقيعات قبل حفظ العملية.
+- **إصلاح ملف الهجرة الناقص (`AddSurgeryIdToPrescriptionsAndPharmacySales`)**:
+  * كتابة كود الهجرة السليمة لإضافة `surgery_id` إلى جداول الوصفات والمبيعات الصيدلانية لضمان نجاح `migrate` و `composer autoload`.
+- **الاختبارات وضمان الجودة ([tests/Feature/SurgeryCreateModernWorkspaceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCreateModernWorkspaceTest.php), [tests/Feature/SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز اختبارات شاشة حجز العمليات [SurgeryCreateModernWorkspaceTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCreateModernWorkspaceTest.php) (1 passed, 20 assertions).
+  * اجتياز اختبارات العمليات الجراحية [SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php) بالكامل (9 passed, 174 assertions).
+  * اجتياز كاش القوالب `view:cache` بنجاح تام.
+
 ## Session log (2026-11-26 — المرحلة 307: حل بطء وتعليق الانتقال إلى شاشة حجز العمليات الجراحية من 10 ثوانٍ إلى 0.1 ثانية وإلغاء تحميل 10 آلاف مريض في الذاكرة مع تفعيل البحث اللحظي بالـ AJAX Surgery Booking Transition Lag Fix: Eliminate 10K Patients In-Memory Saturation & Enable Instant AJAX Select2)
 
 ### Done

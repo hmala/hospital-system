@@ -526,23 +526,54 @@ body {
                                 @error('scheduled_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
 
-                            <!-- ورقة التحويل الطبي بالسكانر -->
+                            <!-- ورقة التحويل الطبي بالسكانر / الكاميرا / الرفع -->
                             <div class="col-md-7">
-                                <label class="form-label text-muted">{{ __('ورقة التحويل (سكانر / رفع)') }}</label>
-                                <div class="d-flex gap-1" id="referral_letter_container">
-                                    <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
-                                        <i class="fas fa-print me-1"></i> {{ __('سكانر') }}
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="form-label text-muted mb-0 small fw-bold">{{ __('ورقة التحويل (سكانر / كاميرا / رفع):') }}</label>
+                                    <span id="scannerStatusIndicator" class="badge bg-light text-muted border py-0 px-2" style="font-size: 0.72rem; cursor: pointer;" onclick="openScannerHelpModal()" title="{{ __('حالة السكانر') }}">
+                                        <i class="fas fa-circle text-secondary me-1" style="font-size: 7px;"></i>{{ __('غير مفحوص') }}
+                                    </span>
+                                </div>
+                                <div class="d-flex gap-1 flex-wrap" id="referral_letter_container">
+                                    <!-- زر كشف وقراءة السكانر المرتبط بالحاسبة -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="detect_scanner_btn" onclick="detectScannerDevice(true)" style="height:36px;" title="{{ __('قراءة واكتشاف جهاز السكانر المتصل بالحاسبة') }}">
+                                        <i class="fas fa-search me-1" id="detect_spinner"></i> {{ __('كشف السكانر') }}
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:34px;">
+
+                                    <!-- زر المسح من السكانر المكتبي USB -->
+                                    <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:36px; min-width: 95px;">
+                                        <i class="fas fa-print me-1"></i> <span id="scan_btn_label">{{ __('مسح من السكانر') }}</span>
+                                    </button>
+
+                                    <!-- زر التصوير بالكاميرا المباشرة -->
+                                    <button type="button" class="btn btn-sm btn-info text-white" id="camera_btn" onclick="openCameraScannerModal()" style="height:36px;" title="{{ __('تصوير مباشر بكاميرا الموبايل أو الويب كام') }}">
+                                        <i class="fas fa-camera me-1"></i> {{ __('كاميرا') }}
+                                    </button>
+
+                                    <!-- زر رفع ملف -->
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:36px;" title="{{ __('رفع ملف أو صورة من جهازك') }}">
                                         <i class="fas fa-upload me-1"></i> {{ __('رفع') }}
                                     </button>
-                                    <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
+
+                                    <!-- زر دليل السكانر -->
+                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="openScannerHelpModal()" style="height:36px;" title="{{ __('دليل تشغيل وحل مشاكل السكانر') }}">
+                                        <i class="fas fa-question-circle"></i>
+                                    </button>
+
+                                    <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf" capture="environment">
                                     <textarea id="scan_data_receiver" name="scanned_referral_letter" style="display:none;"></textarea>
                                 </div>
+
                                 <div id="referral_letter_preview" class="mt-2" style="display: none;">
-                                    <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
-                                        <span id="preview_text"><i class="fas fa-check-circle me-1"></i> {{ __('تم مسح/رفع الوثيقة') }}</span>
-                                        <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
+                                    <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small rounded-3 shadow-xs border-success">
+                                        <div class="d-flex align-items-center gap-2 text-truncate">
+                                            <i class="fas fa-check-circle text-success"></i>
+                                            <span id="preview_text" class="fw-bold">{{ __('تم سحب/التقاط الوثيقة بنجاح') }}</span>
+                                            <button type="button" class="btn btn-link btn-xs text-primary p-0 text-decoration-none fw-bold" onclick="viewCapturedDocument()">
+                                                <i class="fas fa-eye me-1"></i>{{ __('معاينة') }}
+                                            </button>
+                                        </div>
+                                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 rounded-pill" onclick="clearScannedDoc()">
                                             <i class="fas fa-times me-1"></i> {{ __('إلغاء') }}
                                         </button>
                                     </div>
@@ -868,6 +899,157 @@ body {
                 <button type="button" class="btn btn-sm btn-primary" id="saveDoctorBtn">
                     <i class="fas fa-save me-1"></i> <span id="saveDoctorBtnText">{{ __('حفظ وإضافة') }}</span>
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال التصوير المباشر بالكاميرا (Camera Document Scanner) -->
+<div class="modal fade" id="cameraScannerModal" tabindex="-1" aria-labelledby="cameraScannerModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+            <div class="modal-header text-white py-2 px-3 rounded-top-4" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                <h6 class="modal-title fw-bold" id="cameraScannerModalLabel">
+                    <i class="fas fa-camera me-1"></i> {{ __('الماسح الضوئي المباشر بالكاميرا (ورقة التحويل)') }}
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="stopCameraStream()"></button>
+            </div>
+            <div class="modal-body p-3 text-center bg-dark">
+                <div class="position-relative d-inline-block w-100" style="max-height: 460px; overflow: hidden; border-radius: 12px;">
+                    <video id="cameraVideo" autoplay playsinline style="width: 100%; max-height: 450px; object-fit: contain; background: #000; border-radius: 12px;"></video>
+                    <!-- إطار توجيه المستند -->
+                    <div style="position: absolute; top: 8%; left: 8%; right: 8%; bottom: 8%; border: 2px dashed rgba(255,255,255,0.7); border-radius: 10px; pointer-events: none; box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);">
+                        <span class="badge bg-dark text-white px-2 py-1 position-absolute top-0 start-50 translate-middle-x mt-2 opacity-75" style="font-size: 0.75rem;">
+                            {{ __('وجّه ورقة التحويل داخل الإطار') }}
+                        </span>
+                    </div>
+                </div>
+                <canvas id="cameraCanvas" style="display: none;"></canvas>
+            </div>
+            <div class="modal-footer d-flex justify-content-between py-2 px-3 bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal" onclick="stopCameraStream()">
+                    <i class="fas fa-times me-1"></i> {{ __('إلغاء') }}
+                </button>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3" id="switchCameraBtn" onclick="switchCameraDevice()" style="display: none;">
+                        <i class="fas fa-sync-alt me-1"></i> {{ __('تبديل الكاميرا') }}
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-4 shadow-sm fw-bold" onclick="takeCameraPhoto()">
+                        <i class="fas fa-circle-dot me-1"></i> {{ __('التقاط الصورة وتثبيتها') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال معاينة الوثيقة الممسوحة أو المرفوعة (Document Full Preview Modal) -->
+<div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+            <div class="modal-header py-2 px-3 border-bottom">
+                <h6 class="modal-title fw-bold text-dark" id="documentPreviewModalLabel">
+                    <i class="fas fa-file-invoice text-primary me-1"></i> {{ __('معاينة ورقة التحويل الطبي الممسوحة') }}
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-2 text-center bg-light" style="min-height: 300px; max-height: 75vh; overflow-y: auto;">
+                <img id="documentPreviewImg" src="" alt="{{ __('ورقة التحويل') }}" class="img-fluid rounded shadow-sm border" style="max-height: 70vh; display: none;">
+                <div id="documentPdfPreview" class="alert alert-info my-4" style="display: none;">
+                    <i class="fas fa-file-pdf fa-2x mb-2 d-block text-danger"></i>
+                    <strong>{{ __('ملف PDF مرفوع:') }}</strong> <span id="documentPdfName">-</span>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3 bg-white">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">{{ __('إغلاق') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- مودال معالج ودليل تشغيل السكانر المكتبي (Scanner Bridge Troubleshooter Modal) -->
+<div class="modal fade" id="scannerBridgeHelpModal" tabindex="-1" aria-labelledby="scannerBridgeHelpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+            <div class="modal-header bg-warning bg-opacity-10 py-2 px-3 border-bottom border-warning border-opacity-25 rounded-top-4">
+                <h6 class="modal-title fw-bold text-dark" id="scannerBridgeHelpModalLabel">
+                    <i class="fas fa-plug-circle-exclamation text-warning me-1"></i> {{ __('معالج كشف وربط السكانر المكتبي') }}
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                <!-- شريط الحالة المباشرة -->
+                <div id="scannerLiveStatusBox" class="alert alert-warning py-2 px-3 mb-3 d-flex align-items-center justify-content-between rounded-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-warning fa-lg"></i>
+                        <div>
+                            <strong class="d-block" id="scannerModalStatusTitle">{{ __('برنامج السكانر المكتبي غير متصل حالياً') }}</strong>
+                            <small class="text-muted" id="scannerModalStatusDesc">{{ __('المتصفح لا يستطيع الوصول لمنفذ السكانر المحلي (5000 / 37426).') }}</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3 py-1" onclick="detectScannerDevice(false)">
+                        <i class="fas fa-sync-alt me-1" id="scannerModalSpinner"></i> {{ __('إعادة الفحص الآن') }}
+                    </button>
+                </div>
+
+                <!-- البدائل الفورية بدون أي برامج -->
+                <div class="card p-3 mb-3 bg-light border-0 rounded-3">
+                    <h6 class="fw-bold text-dark mb-2">
+                        <i class="fas fa-bolt text-success me-1"></i> {{ __('حلول سريعة وفورية (تعمل فوراً بدون أي برامج خارجية):') }}
+                    </h6>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-info text-white w-100 py-2 rounded-3 shadow-xs text-start d-flex align-items-center gap-2" onclick="bootstrap.Modal.getInstance(document.getElementById('scannerBridgeHelpModal')).hide(); openCameraScannerModal();">
+                                <i class="fas fa-camera fa-lg"></i>
+                                <div>
+                                    <strong class="d-block">{{ __('تصوير مباشر بالكاميرا') }}</strong>
+                                    <small style="opacity: 0.9;">{{ __('كاميرا اللابتوب أو الموبايل والتابلت') }}</small>
+                                </div>
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 text-start d-flex align-items-center gap-2" onclick="bootstrap.Modal.getInstance(document.getElementById('scannerBridgeHelpModal')).hide(); document.getElementById('referral_letter').click();">
+                                <i class="fas fa-file-arrow-up fa-lg"></i>
+                                <div>
+                                    <strong class="d-block">{{ __('رفع ملف أو صورة') }}</strong>
+                                    <small class="text-muted">{{ __('اختر صورة مسحوبة مسبقاً أو PDF') }}</small>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- خطوات تشغيل السكانر المكتبي USB -->
+                <div class="border rounded-3 p-3">
+                    <h6 class="fw-bold text-dark mb-2">
+                        <i class="fas fa-tools text-primary me-1"></i> {{ __('لتشغيل واستخدام جهاز السكانر المكتبي (USB):') }}
+                    </h6>
+                    <ol class="small text-muted ps-3 mb-3" style="line-height: 1.8;">
+                        <li>
+                            <strong class="text-dark">{{ __('تحميل وتشغيل برنامج السكانر على الحاسبة:') }}</strong>
+                            {{ __('قم بتنزيل برنامج الجسر الصغير وتشغيله على حاسبتك المتصل بها السكانر:') }}
+                            <div class="mt-1 d-flex gap-2 flex-wrap">
+                                <a href="{{ asset('downloads/HospitalScanner.exe') }}" download class="btn btn-sm btn-primary rounded-pill px-3 py-1 shadow-xs">
+                                    <i class="fas fa-download me-1"></i> {{ __('تحميل HospitalScanner.exe (يعمل مباشرة)') }}
+                                </a>
+                                <a href="{{ asset('downloads/تشغيل_السكانر_التلقائي.bat') }}" download class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1">
+                                    <i class="fas fa-terminal me-1"></i> {{ __('ملف التشغيل التلقائي .bat') }}
+                                </a>
+                            </div>
+                        </li>
+                        <li class="mt-2">
+                            <strong class="text-dark">{{ __('اتركه يعمل في الخلفية:') }}</strong>
+                            {{ __('ستظهر نافذة صغيرة توضح أن السكانر متصل وجاهز على المنفذ 5000.') }}
+                        </li>
+                        <li class="mt-2">
+                            <strong class="text-dark">{{ __('إذا كنت تستخدم رابط السيرفر (HTTPS / هوستنجر):') }}</strong>
+                            {{ __('المتصفح يحظر الاتصال المحلي للأمان. لحل ذلك: اضغط على علامة القفل 🔒 بجانب رابط الموقع بأعلى المتصفح ⬅️ إعدادات الموقع (Site settings) ⬅️ ابحث عن (المحتوى غير الآمن / Insecure content) ⬅️ غيّره إلى "سماح" (Allow).') }}
+                        </li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3 bg-light">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">{{ __('إغلاق') }}</button>
             </div>
         </div>
     </div>
@@ -1750,34 +1932,134 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // ===== نظام الأرشفة التلقائي - يعمل مع أي سكانر =====
+    // ===== نظام الأرشفة والسكانر الذكي المتكامل (سكانر USB + كشف مباشر + كاميرا + رفع) =====
     const referralInput = document.getElementById('referral_letter');
     const previewContainer = document.getElementById('referral_letter_preview');
-    const scanStatus = document.getElementById('scan_status');
+    const hiddenScanInput = document.getElementById('scan_data_receiver');
+    let localStream = null;
+    let availableVideoDevices = [];
+    let currentDeviceIndex = 0;
 
-    function checkScannerStatus() {
-        fetch('http://127.0.0.1:5000/status', { method: 'GET', mode: 'cors' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'ready' || data.status === 'ok') {
-                console.log('Scanner server ready');
+    // 1. كشف وقراءة السكانر المتصل بالحاسبة وتفعيل الزر
+    window.detectScannerDevice = async function(showModalIfFail = true) {
+        const detectBtn = document.getElementById('detect_scanner_btn');
+        const spinner = document.getElementById('detect_spinner');
+        const scanBtn = document.getElementById('scan_btn');
+        const scanBtnLabel = document.getElementById('scan_btn_label');
+        const indicator = document.getElementById('scannerStatusIndicator');
+        const modalSpinner = document.getElementById('scannerModalSpinner');
+
+        if (detectBtn) detectBtn.disabled = true;
+        if (spinner) spinner.className = 'fas fa-spinner fa-spin me-1';
+        if (modalSpinner) modalSpinner.className = 'fas fa-spinner fa-spin me-1';
+        if (indicator) {
+            indicator.className = 'badge bg-warning-subtle text-warning border border-warning-subtle py-0 px-2';
+            indicator.innerHTML = '<span class="spinner-grow spinner-grow-sm me-1" style="width:7px;height:7px;"></span>جاري قراءة السكانر...';
+        }
+
+        const endpoints = [
+            'http://127.0.0.1:5000/status',
+            'http://127.0.0.1:37426/status',
+            'http://localhost:5000/status',
+            'http://localhost:37426/status'
+        ];
+
+        let foundScanner = null;
+        let bridgeRunning = false;
+
+        for (const url of endpoints) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2500);
+                const res = await fetch(url, { method: 'GET', mode: 'cors', signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    bridgeRunning = true;
+                    if (data.scanners && data.scanners.length > 0) {
+                        foundScanner = data.scanners[0].name || data.scanners[0].id || 'سكانر متصل';
+                    } else if (data.status === 'ready' || data.status === 'ok') {
+                        foundScanner = data.message || 'سكانر جاهز';
+                    }
+                    break;
+                }
+            } catch (e) {
+                // Ignore and try next
             }
-        })
-        .catch(err => console.log('Scanner check offline'));
-    }
+        }
 
+        if (detectBtn) detectBtn.disabled = false;
+        if (spinner) spinner.className = 'fas fa-search me-1';
+        if (modalSpinner) modalSpinner.className = 'fas fa-sync-alt me-1';
+
+        if (foundScanner) {
+            // تفعيل زر السكانر وتحويله إلى الأخضر
+            if (indicator) {
+                indicator.className = 'badge bg-success text-white py-0 px-2';
+                indicator.innerHTML = '<i class="fas fa-check-circle me-1" style="font-size: 8px;"></i>متصل: ' + foundScanner;
+            }
+            if (scanBtn) {
+                scanBtn.className = 'btn btn-sm btn-success flex-grow-1 shadow-sm';
+            }
+            if (scanBtnLabel) {
+                scanBtnLabel.innerText = 'مسح من: ' + foundScanner;
+            }
+            const liveBox = document.getElementById('scannerLiveStatusBox');
+            if (liveBox) {
+                liveBox.className = 'alert alert-success py-2 px-3 mb-3 d-flex align-items-center justify-content-between rounded-3';
+                document.getElementById('scannerModalStatusTitle').innerText = '✓ خادم السكانر متصل وجاهز للعمل!';
+                document.getElementById('scannerModalStatusDesc').innerText = 'تم اكتشاف جهاز: ' + foundScanner;
+            }
+            if (window.toastr) {
+                toastr.success('تم قراءة واكتشاف السكانر بنجاح وهو متصل وجاهز للمسح: ' + foundScanner);
+            }
+        } else if (bridgeRunning) {
+            if (indicator) {
+                indicator.className = 'badge bg-warning text-dark py-0 px-2';
+                indicator.innerHTML = '<i class="fas fa-exclamation-circle me-1" style="font-size: 8px;"></i>البرنامج يعمل ولكن لم يتم اكتشاف جهاز سكانر';
+            }
+            if (showModalIfFail) {
+                openScannerHelpModal();
+            }
+        } else {
+            if (indicator) {
+                indicator.className = 'badge bg-secondary text-white py-0 px-2';
+                indicator.innerHTML = '<i class="fas fa-times-circle me-1" style="font-size: 8px;"></i>السكانر غير متصل';
+            }
+            if (showModalIfFail) {
+                openScannerHelpModal();
+            }
+        }
+    };
+
+    // فحص خفيف أولي في الخلفية بعد تحميل الصفحة
+    setTimeout(() => {
+        detectScannerDevice(false);
+    }, 1200);
+
+    // 2. سحب من سكانر USB
     window.scanFromDevice = async function() {
         const btn = document.getElementById('scan_btn');
         const origText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المسح...';
 
-        const endpoints = ['http://127.0.0.1:5000/scan', 'http://127.0.0.1:37426/scan'];
+        const endpoints = [
+            'http://127.0.0.1:5000/scan',
+            'http://127.0.0.1:37426/scan',
+            'http://localhost:5000/scan',
+            'http://localhost:37426/scan'
+        ];
         let response = null;
         let lastError = null;
 
         for (const url of endpoints) {
             try {
-                const res = await fetch(url, { method: 'POST', mode: 'cors' });
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                const res = await fetch(url, { method: 'POST', mode: 'cors', signal: controller.signal });
+                clearTimeout(timeoutId);
                 if (res.ok) {
                     response = res;
                     break;
@@ -1789,30 +2071,150 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             if (!response) {
-                throw lastError || new Error('تعذر الاتصال بالسكانر');
+                throw lastError || new Error('تعذر الاتصال بخادم السكانر المحلي');
             }
             const blob = await response.blob();
             const reader = new FileReader();
             reader.onloadend = function() {
                 const base64data = reader.result;
-                const hiddenInput = document.getElementById('scan_data_receiver');
-                if (hiddenInput) hiddenInput.value = base64data;
+                if (hiddenScanInput) hiddenScanInput.value = base64data;
                 const previewTxt = document.getElementById('preview_text');
-                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-camera me-1"></i> تم سحب الصورة من السكانر بنجاح';
+                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i> تم سحب الوثيقة من السكانر بنجاح';
                 if (previewContainer) previewContainer.style.display = 'block';
             };
             reader.readAsDataURL(blob);
         } catch (err) {
-            console.error('Scanner error:', err);
-            if (window.location.protocol === 'https:') {
-                alert('⚠️ تعذر الاتصال بالسكانر المحلي!\n\n1. تأكد من تشغيل ملف (تشغيل_السكانر_التلقائي.bat) على حاسبتك.\n2. على هوستنجر (HTTPS): اضغط علامة القفل/الضبط بجانب الرابط في كروم ⬅️ إعدادات الموقع ⬅️ غيّر (محتوى غير آمن / Insecure content) إلى سماح (Allow).\n\nأو يمكنك استخدام زر "رفع ملف" كبديل سريع.');
-            } else {
-                alert('برنامج السكانر غير مشغل أو غير متصل. تأكد من تشغيل (تشغيل_السكانر_التلقائي.bat) أو استخدم زر "رفع ملف".');
-            }
+            console.warn('Scanner error:', err);
+            openScannerHelpModal();
         } finally {
             btn.disabled = false;
             btn.innerHTML = origText;
         }
+    };
+
+    // 3. فتح كاميرا الموبايل / اللابتوب للتصوير المباشر
+    window.openCameraScannerModal = async function() {
+        const modalEl = document.getElementById('cameraScannerModal');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+
+        const switchBtn = document.getElementById('switchCameraBtn');
+
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                availableVideoDevices = devices.filter(d => d.kind === 'videoinput');
+                if (availableVideoDevices.length > 1 && switchBtn) {
+                    switchBtn.style.display = 'inline-block';
+                }
+            }
+            await startCameraStream(currentDeviceIndex);
+        } catch (e) {
+            console.error('Camera access error:', e);
+            alert('تعذر فتح الكاميرا: ' + (e.message || 'يرجى التأكد من إعطاء إذن الوصول للكاميرا في المتصفح.'));
+            modal.hide();
+        }
+    };
+
+    async function startCameraStream(deviceIndex) {
+        if (localStream) {
+            localStream.getTracks().forEach(t => t.stop());
+        }
+        const video = document.getElementById('cameraVideo');
+        const constraints = {
+            video: availableVideoDevices.length > 0 && availableVideoDevices[deviceIndex]
+                ? { deviceId: { exact: availableVideoDevices[deviceIndex].deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+                : { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
+        };
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (video) {
+            video.srcObject = localStream;
+        }
+    }
+
+    window.switchCameraDevice = async function() {
+        if (availableVideoDevices.length < 2) return;
+        currentDeviceIndex = (currentDeviceIndex + 1) % availableVideoDevices.length;
+        await startCameraStream(currentDeviceIndex);
+    };
+
+    window.stopCameraStream = function() {
+        if (localStream) {
+            localStream.getTracks().forEach(t => t.stop());
+            localStream = null;
+        }
+        const video = document.getElementById('cameraVideo');
+        if (video) video.srcObject = null;
+    };
+
+    window.takeCameraPhoto = function() {
+        const video = document.getElementById('cameraVideo');
+        const canvas = document.getElementById('cameraCanvas');
+        if (!video || !canvas) return;
+
+        canvas.width = video.videoWidth || 1280;
+        canvas.height = video.videoHeight || 720;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+        if (hiddenScanInput) hiddenScanInput.value = dataUrl;
+
+        const previewTxt = document.getElementById('preview_text');
+        if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-camera me-1 text-info"></i> تم التقاط ورقة التحويل بالكاميرا بنجاح';
+        if (previewContainer) previewContainer.style.display = 'block';
+
+        stopCameraStream();
+        const modal = bootstrap.Modal.getInstance(document.getElementById('cameraScannerModal'));
+        if (modal) modal.hide();
+    };
+
+    // 4. فتح نافذة مساعدة ومعالج السكانر
+    window.openScannerHelpModal = function() {
+        const modalEl = document.getElementById('scannerBridgeHelpModal');
+        if (!modalEl) return;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    };
+
+    // 5. معاينة الوثيقة الممسوحة أو الملتقطة
+    window.viewCapturedDocument = function() {
+        const previewModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('documentPreviewModal'));
+        const img = document.getElementById('documentPreviewImg');
+        const pdfDiv = document.getElementById('documentPdfPreview');
+        const pdfName = document.getElementById('documentPdfName');
+
+        if (hiddenScanInput && hiddenScanInput.value) {
+            img.src = hiddenScanInput.value;
+            img.style.display = 'inline-block';
+            if (pdfDiv) pdfDiv.style.display = 'none';
+            previewModal.show();
+            return;
+        }
+
+        if (referralInput && referralInput.files && referralInput.files[0]) {
+            const file = referralInput.files[0];
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    img.style.display = 'inline-block';
+                    if (pdfDiv) pdfDiv.style.display = 'none';
+                    previewModal.show();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                img.style.display = 'none';
+                if (pdfDiv) {
+                    pdfDiv.style.display = 'block';
+                    if (pdfName) pdfName.innerText = file.name;
+                }
+                previewModal.show();
+            }
+            return;
+        }
+
+        alert('لا توجد وثيقة للمعاينة حالياً');
     };
 
     window.clearScannedDoc = function() {
@@ -1826,7 +2228,7 @@ document.addEventListener('DOMContentLoaded', function() {
         referralInput.addEventListener('change', function(e) {
             if (this.files && this.files[0]) {
                 const previewTxt = document.getElementById('preview_text');
-                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-file-alt me-1"></i> تم اختيار الملف: ' + this.files[0].name;
+                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-file-alt me-1 text-primary"></i> تم اختيار الملف: ' + this.files[0].name;
                 if (previewContainer) previewContainer.style.display = 'block';
             }
         });
