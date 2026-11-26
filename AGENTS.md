@@ -68,6 +68,17 @@ Consult these files before making changes or proposing fixes:
 - **الاختبارات والتأكيد**:
   * اجتياز اختبارات تدفق التمريض [NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php) بالكامل بنجاح (5 passed, 26 assertions)، واجتياز `view:cache`.
 
+## Session log (2026-11-27 — المرحلة 313: تبويبات جهة إرسال الأدوية بطابور صيدلية المستشفى Department Source Tabs in Pharmacy POS Queue)
+
+### Done
+- **المتحكمات والبيانات ([PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php))**:
+  * إضافة تصنيف جهة الإرسال الصريحة (`source`, `source_label`, `source_badge`, `is_outpatient`) لكل وصفة إلكترونية واردة في طابور الصيدلية (`pendingPrescriptions`).
+- **الواجهة التفاعلية والفرز الفوري ([resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
+  * بناء شريط تبويبات علوي أنيق في رأس طابور الوارد مقسم إلى: **[ 🏥 الكل ]**، **[ 🛏️ الرقود ]**، **[ 🩺 العيادات ]**، **[ 🚨 الطوارئ ]**، مع عدّاد فوري مباشر لكل قسم.
+  * فلترة فورية بنقرة واحدة لعزل طلبات الرقود عن العيادات عن الطوارئ دون إعادة تحميل الصفحة.
+  * تحديث شريط الفلاتر الفرعية للحالات: (الكل، جديدة، بالكاشير، جاهزة للتسليم، بدائل) لتعمل بتوافق وتكامل تام مع القسم المختار.
+  * إضافة شارات القسم في صفوف المرضى مع رقم الغرفة لمرضى الرقود.
+
 ## Session log (2026-11-27 — المرحلة 312: ربط أدوية الرقود والجراحة بنقطة بيع الصيدلية POS والكاشير المركزي والتسليم الآلي للردهة Inpatient Medications to Pharmacy POS & Central Cashier End-to-End Cycle)
 
 ### Done
