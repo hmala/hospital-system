@@ -158,16 +158,19 @@ return new class extends Migration
 
         Schema::table('hr_payrolls', function (Blueprint $table) {
             if (! Schema::hasColumn('hr_payrolls', 'salary_calculation_mode')) {
-                $table->string('salary_calculation_mode', 30)->default('fixed_salary')->after('hr_employee_id');
+                $table->string('salary_calculation_mode', 30)->default('fixed_salary');
             }
             if (! Schema::hasColumn('hr_payrolls', 'calls_count')) {
-                $table->unsignedInteger('calls_count')->default(0)->after('basic_salary');
+                $table->unsignedInteger('calls_count')->default(0);
             }
             if (! Schema::hasColumn('hr_payrolls', 'calls_amount')) {
-                $table->decimal('calls_amount', 12, 2)->default(0)->after('calls_count');
+                $table->decimal('calls_amount', 12, 2)->default(0);
+            }
+            if (! Schema::hasColumn('hr_payrolls', 'absence_deduction')) {
+                $table->decimal('absence_deduction', 12, 2)->default(0);
             }
             if (! Schema::hasColumn('hr_payrolls', 'unpaid_leave_deduction')) {
-                $table->decimal('unpaid_leave_deduction', 12, 2)->default(0)->after('absence_deduction');
+                $table->decimal('unpaid_leave_deduction', 12, 2)->default(0);
             }
         });
     }
