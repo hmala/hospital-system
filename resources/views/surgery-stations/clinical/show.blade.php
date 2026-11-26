@@ -1628,11 +1628,23 @@
                                             <span class="text-muted small" style="font-size: 0.72rem;">{{ __("إجمالي الفحوصات: ") }}{{ $surgery->labTests?->count() ?? 0 }}</span>
                                         </div>
                                     </div>
-                                    @if(!empty($canEditTests))
-                                        <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderLabTestsModal">
-                                            <i class="fas fa-plus me-1"></i> {{ __("طلب تحاليل") }}
-                                        </button>
-                                    @endif
+                                    <div class="d-flex align-items-center gap-2">
+                                        @php
+                                            $allValidLab = $surgery->labTests ? $surgery->labTests->whereNotNull('lab_test_id') : collect();
+                                            $isAllLabCompleted = $allValidLab->count() > 0 && ($allValidLab->where('status', 'completed')->count() === $allValidLab->count());
+                                        @endphp
+                                        @if($isAllLabCompleted)
+                                            <a href="{{ route('staff.surgery-lab-tests.print', $allValidLab->first()) }}" target="_blank" class="btn btn-sm btn-outline-danger rounded-pill px-3 fw-bold shadow-xs" title="{{ __('طباعة تقرير المختبر النهائي المعتمد') }}">
+                                                <i class="fas fa-print me-1"></i> {{ __("طباعة التقرير النهائي") }}
+                                            </a>
+                                        @endif
+
+                                        @if(!empty($canEditTests))
+                                            <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderLabTestsModal">
+                                                <i class="fas fa-plus me-1"></i> {{ __("طلب تحاليل") }}
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
                                 <div class="p-3">
                                     @if($surgery->labTests && $surgery->labTests->count() > 0)
@@ -1680,6 +1692,12 @@
                                                         </div>
                                                     </div>
                                                     <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        @if(!empty($lt->result_file))
+                                                            <a href="{{ asset('storage/' . $lt->result_file) }}" target="_blank" class="btn btn-sm btn-light border text-primary rounded-pill px-2.5 py-1 small fw-semibold" title="{{ __('عرض ملف الفحص المرفق') }}">
+                                                                <i class="fas fa-paperclip me-1"></i> {{ __('المرفق') }}
+                                                            </a>
+                                                        @endif
+
                                                         {{-- Technical status --}}
                                                         @if($lt->status === 'completed')
                                                             <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill small">
@@ -1739,11 +1757,23 @@
                                             <span class="text-muted small" style="font-size: 0.72rem;">{{ __("إجمالي الفحوصات: ") }}{{ $surgery->radiologyTests?->count() ?? 0 }}</span>
                                         </div>
                                     </div>
-                                    @if(!empty($canEditTests))
-                                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderRadiologyModal">
-                                            <i class="fas fa-plus me-1"></i> {{ __("طلب فحص أشعة") }}
-                                        </button>
-                                    @endif
+                                    <div class="d-flex align-items-center gap-2">
+                                        @php
+                                            $allValidRad = $surgery->radiologyTests ?? collect();
+                                            $isAllRadCompleted = $allValidRad->count() > 0 && ($allValidRad->where('status', 'completed')->count() === $allValidRad->count());
+                                        @endphp
+                                        @if($isAllRadCompleted)
+                                            <a href="{{ route('staff.surgery-radiology-tests.print', $allValidRad->first()) }}" target="_blank" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold shadow-xs" title="{{ __('طباعة تقرير الأشعة والتصوير الطبي النهائي') }}">
+                                                <i class="fas fa-print me-1"></i> {{ __("طباعة التقرير النهائي") }}
+                                            </a>
+                                        @endif
+
+                                        @if(!empty($canEditTests))
+                                            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#orderRadiologyModal">
+                                                <i class="fas fa-plus me-1"></i> {{ __("طلب فحص أشعة") }}
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
                                 <div class="p-3">
                                     @if($surgery->radiologyTests && $surgery->radiologyTests->count() > 0)
@@ -1791,6 +1821,12 @@
                                                         </div>
                                                     </div>
                                                     <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        @if(!empty($rt->result_file))
+                                                            <a href="{{ asset('storage/' . $rt->result_file) }}" target="_blank" class="btn btn-sm btn-light border text-primary rounded-pill px-2.5 py-1 small fw-semibold" title="{{ __('عرض ملف الأشعة المرفق') }}">
+                                                                <i class="fas fa-paperclip me-1"></i> {{ __('المرفق') }}
+                                                            </a>
+                                                        @endif
+
                                                         {{-- Technical status --}}
                                                         @if($rt->status === 'completed')
                                                             <span class="badge bg-success-subtle text-success border border-success-subtle px-2.5 py-1 rounded-pill small">

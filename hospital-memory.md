@@ -130,14 +130,6 @@
   * **الاختبارات وضمان الجودة ([NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php), [DepartmentManagerSearchTest.php](file:///C:/get/hospital-system/tests/Feature/DepartmentManagerSearchTest.php))**:
     - اجتياز `23 passed (211 assertions)` في اختبارات مخزن الخدج والتحويلات، و`4 passed (33 assertions)` في اختبارات الأقسام، مع اجتياز `Pint` و`view:cache`.
 
-- **المرحلة 313 (2026-11-27 — `main`) — تبويبات جهة إرسال الأدوية بطابور صيدلية المستشفى (Department Source Tabs in Pharmacy POS Queue)**:
-  * **المتحكمات والبيانات ([PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php))**:
-    - إضافة تصنيف جهة الإرسال الصريحة (`source`, `source_label`, `source_badge`, `is_outpatient`) لكل وصفة إلكترونية واردة في طابور الصيدلية (`pendingPrescriptions`).
-  * **الواجهة التفاعلية والفرز الفوري ([resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
-    - بناء شريط تبويبات علوي أنيق في رأس طابور الوارد مقسم إلى: **[ 🏥 الكل ]**، **[ 🛏️ الرقود ]**، **[ 🩺 العيادات ]**، **[ 🚨 الطوارئ ]**، مع عدّاد فوري مباشر لكل قسم.
-    - فلترة فورية بنقرة واحدة لعزل طلبات الرقود عن العيادات عن الطوارئ دون إعادة تحميل الصفحة.
-    - تحديث شريط الفلاتر الفرعية للحالات: (الكل، جديدة، بالكاشير، جاهزة للتسليم، بدائل) لتعمل بتوافق وتكامل تام مع القسم المختار.
-
 - **المرحلة 312 (2026-11-27 — `main`) — ربط أدوية الرقود والجراحة بنقطة بيع الصيدلية POS والكاشير المركزي والتسليم الآلي للردهة (Inpatient Medications to Pharmacy POS & Central Cashier End-to-End Cycle)**:
   * **قاعدة البيانات والنماذج ([2026_11_27_020000_add_pharmacy_status_to_surgery_treatments_table.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_27_020000_add_pharmacy_status_to_surgery_treatments_table.php), [SurgeryTreatment.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTreatment.php), [Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [Prescription.php](file:///c:/wamp64/www/hospital-system/app/Models/Prescription.php), [PharmacySale.php](file:///c:/wamp64/www/hospital-system/app/Models/PharmacySale.php))**:
     - إضافة عمودي `prescription_item_id` و `pharmacy_status` لجدول `surgery_treatments` وربطهما بالعلاقات في الموديلات.
@@ -2477,6 +2469,15 @@
     - دعم جلب المرفق الطبي في `emergencyLabAttachment` عبر معرف الفحص الرقمي أو اسمه المعتمد أو البديل دون أي أخطاء 404.
   * **حزمة الاختبارات الآلية (`tests/Feature/CbcTestNameStandardizationTest.php`)**:
     - بناء واجتياز اختبار ميزة يضمن ظهور المسمى الموحد `CBC & Blood Film` ومنع ظهور `Complete blood count & Differential` في تقرير الطباعة بنجاح تام (`1 passed, 4 assertions`).
+
+- **المرحلة 314 (إضافة زر طباعة التقرير النهائي للمختبر والأشعة في الشاشة السريرية للعمليات Clinical Surgery Station Lab & Radiology Final Report Direct Print):**
+  * **زر طباعة التقرير النهائي (`show.blade.php`)**:
+    - إضافة زر وحيد مباشر في رأس بطاقة التحاليل: **`[ 🖨️ طباعة التقرير النهائي ]`** يربط مباشرة بتقرير المختبر المعتمد (`staff.surgery-lab-tests.print`).
+    - حصر ظهور الزر حصرياً عند اكتمال التحاليل واعتماد النتائج (`where('status', 'completed')->count() > 0`) لضمان عدم طباعة استمارة فارغة.
+    - إضافة زر مماثل في بطاقة الفحوصات الإشعاعية لطباعة تقرير الأشعة والتصوير الطبي النهائي (`staff.surgery-radiology-tests.print`) عند اكتمال الفحص.
+    - إبقاء جداول الفحوصات نظيفة بدون تكرار أزرار الطباعة في كل سطر.
+  * **توسيع الصلاحيات وتفادي الحجب (`StaffRequestController.php`)**:
+    - توسيع صلاحية `printSurgeryLabTest` و`printSurgeryRadiologyTest` لتشمل الأطباء المقيمين والتمريض وكادر العمليات (`resident`, `nurse`, `surgery_staff`, `view clinical surgery station`) ليتمكنوا من فتح التقرير النهائي مباشرة دون أية عوائق أو أخطاء 403.
 
 - **المرحلة 123 (إصلاح وتفعيل زر تحويل المريض لطبيب آخر وتوافق MariaDB ومحطة الانتظار Doctor Referral to Another Doctor & Live Queue Integration):**
   * **معالجة استعلام الأطباء المتاحين في الكنترولر (`DoctorVisitController.php`)**:

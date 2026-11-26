@@ -56,6 +56,35 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 315: إعادة هندسة وتنسيق تقرير العملية الجراحية المعتمد وحذف التكرار والمراقبة السريرية Surgical Report Restructuring & Elegant Medical Formatting)
+
+### Done
+- **إعادة هندسة وتنسيق تقرير العملية الجراحية بالكامل ([resources/views/surgeries/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/print.blade.php))**:
+  * تحويل التقرير من شكل البطاقات الملونة المتفرقة إلى تقرير سريري رسمي معتمد A4 فائق الترتيب والأناقة بتنسيق طبي موحد.
+  * جدول ملخص بيانات المريض والإقامة الفندقية والغرفة من سطرين منظمين ومضغوطين.
+  * جدول الفريق الطبي المشرف (الجراح، مساعد الجراح، طبيب التخدير الأول والثاني، مساعد / تقني التخدير، كادر التمريض، المقيم).
+  * شبكة التداخل الجراحي والعملية الأساسية مع كود العملية، والعمليات الإضافية.
+  * التوثيق السريري: التشخيص الطبي، وملاحظات ما بعد العملية وسير التداخل (`post_op_notes`) وتوثيق التخدير والإفاقة.
+- **إلغاء التكرار وحذف بروتوكول المراقبة السريرية بناءً على طلب المستخدم**:
+  * إلغاء ظهور حقل «بروتوكول المراقبة السريرية» نهائياً من التقرير المطبوع.
+  * منع تكرار «خطة العلاج» وحصرها حصرياً وبشكل مرتب داخل قسم «خطة العلاج والأدوية» مع جدول الأدوية المصروفة بالرقود.
+- **التأكيد والاختبارات**:
+  * اجتياز اختبارات تقرير الطباعة [SurgeryStatusPostOpAndPrintReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryStatusPostOpAndPrintReportTest.php) (4 passed, 48 assertions).
+  * اجتياز اختبارات الترجمة والطباعة [SurgeriesLocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeriesLocalizationTest.php) (7 passed, 76 assertions).
+  * نجاح مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد عبر `Pint`.
+
+## Session log (2026-11-27 — المرحلة 314: إضافة زر طباعة التقرير النهائي للمختبر والأشعة في الشاشة السريرية للعمليات Clinical Surgery Station: Official Lab & Radiology Final Report Direct Print Button)
+
+### Done
+- **إضافة زر طباعة التقرير النهائي للمختبر والأشعة وحصره بالحالات المكتملة ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة زر واحد رسمي ومباشر في رأس بطاقة التحاليل: **`[ 🖨️ طباعة التقرير النهائي ]`** يربط مباشرة بتقرير المختبر المعتمد (`staff.surgery-lab-tests.print`).
+  * شرط ظهور الزر حصرياً عند اكتمال التحاليل واعتماد النتائج (`where('status', 'completed')->count() > 0`) لضمان عدم طباعة استمارة فارغة.
+  * إضافة زر مماثل في بطاقة الفحوصات الإشعاعية لطباعة تقرير الأشعة والتصوير الطبي النهائي (`staff.surgery-radiology-tests.print`) عند اكتمال الفحص.
+- **توسيع الصلاحيات وتفادي الحجب ([StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php))**:
+  * توسيع صلاحية `printSurgeryLabTest` و`printSurgeryRadiologyTest` لتشمل الأطباء المقيمين والتمريض وكادر العمليات (`resident`, `nurse`, `surgery_staff`, `view clinical surgery station`) ليتمكنوا من فتح التقرير النهائي مباشرة دون أية عوائق أو أخطاء 403.
+- **التأكيد والاختبار**:
+  * اجتياز `php artisan view:clear` و`php artisan view:cache` بنجاح واجتياز `Pint`.
+
 ## Session log (2026-11-27 — المرحلة 313: حل مشكلة «بانتظار استلام الغرفة» تلقائياً محلياً وعلى خادم هوستنجر الحي وتفعيل استلام الغرفة الفوري Automatic Room Check-in & Waiting Badge Elimination Locally & on Live Hostinger)
 
 ### Done
@@ -67,17 +96,6 @@ Consult these files before making changes or proposing fixes:
   * إتاحة زر التخريج في شاشة تفاصيل المريض بمحطة التمريض (`nursing.show`) بمجرد وجود غرفة مخصصة للمريض.
 - **الاختبارات والتأكيد**:
   * اجتياز اختبارات تدفق التمريض [NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php) بالكامل بنجاح (5 passed, 26 assertions)، واجتياز `view:cache`.
-
-## Session log (2026-11-27 — المرحلة 313: تبويبات جهة إرسال الأدوية بطابور صيدلية المستشفى Department Source Tabs in Pharmacy POS Queue)
-
-### Done
-- **المتحكمات والبيانات ([PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php))**:
-  * إضافة تصنيف جهة الإرسال الصريحة (`source`, `source_label`, `source_badge`, `is_outpatient`) لكل وصفة إلكترونية واردة في طابور الصيدلية (`pendingPrescriptions`).
-- **الواجهة التفاعلية والفرز الفوري ([resources/views/pharmacy/pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
-  * بناء شريط تبويبات علوي أنيق في رأس طابور الوارد مقسم إلى: **[ 🏥 الكل ]**، **[ 🛏️ الرقود ]**، **[ 🩺 العيادات ]**، **[ 🚨 الطوارئ ]**، مع عدّاد فوري مباشر لكل قسم.
-  * فلترة فورية بنقرة واحدة لعزل طلبات الرقود عن العيادات عن الطوارئ دون إعادة تحميل الصفحة.
-  * تحديث شريط الفلاتر الفرعية للحالات: (الكل، جديدة، بالكاشير، جاهزة للتسليم، بدائل) لتعمل بتوافق وتكامل تام مع القسم المختار.
-  * إضافة شارات القسم في صفوف المرضى مع رقم الغرفة لمرضى الرقود.
 
 ## Session log (2026-11-27 — المرحلة 312: ربط أدوية الرقود والجراحة بنقطة بيع الصيدلية POS والكاشير المركزي والتسليم الآلي للردهة Inpatient Medications to Pharmacy POS & Central Cashier End-to-End Cycle)
 

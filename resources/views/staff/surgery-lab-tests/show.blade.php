@@ -517,7 +517,7 @@ if (!function_exists('getSurgeryTestUnit')) {
                 </div>
 
                 <div class="card-body p-0 flex-grow-1">
-                    <form action="{{ route('staff.surgery-lab-tests.update-all', $surgery) }}" method="POST" id="surgeryLabResultForm">
+                    <form action="{{ route('staff.surgery-lab-tests.update-all', $surgery) }}" method="POST" id="surgeryLabResultForm" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
                         <input type="hidden" name="status" value="completed" id="labFormStatus">
@@ -541,6 +541,9 @@ if (!function_exists('getSurgeryTestUnit')) {
                                             $tObj = $surgeryTest->labTest;
                                             $testName = $tObj->name;
                                             $testIcon = getSurgeryTestIcon($testName);
+                                            $isAttachmentOnly = $tObj && $tObj->isAttachmentOnly();
+                                            $hasFile = !empty($surgeryTest->result_file);
+                                            $fileUrl = $hasFile ? asset('storage/' . $surgeryTest->result_file) : null;
 
                                             // حساب المرجع الطبيعي المعتمد بناءً على جنس وعمر المريض
                                             $refObj = LabTestReference::forPatient($tObj->id, $patientGender, $patientAge);
@@ -550,63 +553,141 @@ if (!function_exists('getSurgeryTestUnit')) {
                                             $refText = $refObj?->ref_text;
                                             $unitDisplay = $refObj?->unit ?? getSurgeryTestUnit($testName, $labTests);
                                         @endphp
-                                        <tr class="test-row" 
-                                            data-test="{{ $testName }}"
-                                            data-ref-min="{{ $refMin }}"
-                                            data-ref-max="{{ $refMax }}"
-                                            data-ref-text="{{ $refText }}">
-                                            <!-- الرقم -->
-                                            <td class="text-center text-muted font-monospace small fw-bold">
-                                                {{ $index + 1 }}
-                                            </td>
+                                        @if($isAttachmentOnly)
+                                            {{-- فحص يعتمد حصراً على تقرير الجهاز المرفق (مثل CBC / أجهزة التحليل الآلية) --}}
+                                            <tr class="table-info bg-opacity-10 test-row" data-test="{{ $testName }}">
+                                                <td class="text-center text-muted font-monospace small fw-bold">{{ $index + 1 }}</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="{{ $testIcon }}"></i>
+                                                        <div>
+                                                            <strong class="text-dark">{{ $testName }}</strong>
+                                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle ms-1" style="font-size: 0.72rem;">
+                                                                <i class="fas fa-file-medical-alt me-1"></i> {{ __("مرفق تقرير جهاز") }}
+                                                            </span>
+                                                            @if($tObj->code)
+                                                                <small class="text-muted font-monospace d-block" style="font-size: 0.7rem;">
+                                                                    {{ __("كود:") }} {{ $tObj->code }}
+                                                                </small>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                    <small class="text-muted d-block mt-1">
+                                                        <i class="fas fa-info-circle me-1"></i> {{ __("تعتمد نتائج هذا الفحص على التقرير أو الرسم البياني المرفق للجهاز") }}
+                                                    </small>
+                                                </td>
+                                                <td colspan="3">
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        <input type="hidden" name="test_results[{{ $surgeryTest->id }}][value]" value="{{ old('test_results.' . $surgeryTest->id . '.value', $surgeryTest->result ?: ($hasFile ? 'تقرير الجهاز مرفق' : '')) }}">
+                                                        <input type="hidden" name="test_results[{{ $surgeryTest->id }}][unit]" value="{{ $unitDisplay }}">
+                                                        <input type="hidden" name="test_results[{{ $surgeryTest->id }}][test_id]" value="{{ $surgeryTest->id }}">
 
-                                            <!-- اسم التحليل -->
-                                            <td>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <i class="{{ $testIcon }}"></i>
-                                                    <div>
-                                                        <strong class="text-dark">{{ $testName }}</strong>
-                                                        @if($tObj->code)
-                                                            <small class="text-muted font-monospace d-block" style="font-size: 0.7rem;">
-                                                                {{ __("كود:") }} {{ $tObj->code }}
-                                                            </small>
+                                                        @if($hasFile)
+                                                            <div class="d-inline-flex align-items-center gap-1 bg-white border border-primary-subtle rounded-pill p-1 shadow-xs">
+                                                                <a href="{{ $fileUrl }}" target="_blank" class="btn btn-xs btn-primary-subtle text-primary rounded-pill py-1 px-2.5 d-inline-flex align-items-center gap-1 text-decoration-none fw-bold" style="font-size: 0.75rem;" title="{{ __("معاينة التقرير المرفق") }}">
+                                                                    <i class="fas fa-paperclip"></i>
+                                                                    <span>{{ __("معاينة التقرير المرفق") }}</span>
+                                                                </a>
+                                                                <label class="btn btn-xs btn-outline-danger rounded-circle p-0 mb-0 d-inline-flex align-items-center justify-content-center" style="width: 22px; height: 22px; cursor: pointer;" title="{{ __("حذف هذا المرفق عند الحفظ") }}">
+                                                                    <input type="checkbox" name="remove_test_file[{{ $surgeryTest->id }}]" value="1" class="d-none" onchange="this.checked ? (this.closest('label').classList.add('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.add('border-danger', 'bg-danger-subtle')) : (this.closest('label').classList.remove('active', 'btn-danger', 'text-white'), this.closest('.d-inline-flex').classList.remove('border-danger', 'bg-danger-subtle'))">
+                                                                    <i class="fas fa-times" style="font-size: 0.65rem;"></i>
+                                                                </label>
+                                                            </div>
+                                                        @endif
+
+                                                        <div class="pill-upload-wrapper d-inline-block">
+                                                            <label class="btn btn-sm {{ $hasFile ? 'btn-outline-secondary' : 'btn-outline-primary' }} rounded-pill py-1 px-2.5 mb-0 d-inline-flex align-items-center gap-1.5 shadow-xs pill-upload-btn" style="cursor: pointer; font-size: 0.75rem; border-width: 1.5px;" title="{{ __("اضغط لاختيار أو استبدال تقرير هذا الفحص") }}">
+                                                                <i class="fas fa-paperclip"></i>
+                                                                <span class="pill-text fw-semibold">{{ $hasFile ? __('تغيير التقرير') : __('إرفاق تقرير الجهاز') }}</span>
+                                                                <input type="file" name="test_files[{{ $surgeryTest->id }}]" class="d-none pill-file-input" accept=".pdf,image/*" onchange="handlePillUpload(this)">
+                                                            </label>
+                                                            <div class="pill-chosen-badge d-none align-items-center gap-1 bg-success-subtle text-success border border-success-subtle rounded-pill py-1 px-2 shadow-xs" style="font-size: 0.74rem;">
+                                                                <i class="fas fa-check-circle"></i>
+                                                                <span class="pill-filename text-truncate fw-bold" style="max-width: 130px;"></span>
+                                                                <button type="button" class="btn-close p-0 ms-1" style="font-size: 0.55rem;" title="{{ __("إلغاء الملف") }}" onclick="cancelPillUpload(this)"></button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center">
+                                                    @if($hasFile || $surgeryTest->status === 'completed')
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 rounded-pill small">
+                                                            <i class="fas fa-check-circle me-1"></i> {{ __("مكتمل") }}
+                                                        </span>
+                                                    @else
+                                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-2 py-1 rounded-pill small">
+                                                            <i class="fas fa-hourglass-half me-1"></i> {{ __("بانتظار التقرير") }}
+                                                        </span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @else
+                                            <tr class="test-row" 
+                                                data-test="{{ $testName }}"
+                                                data-ref-min="{{ $refMin }}"
+                                                data-ref-max="{{ $refMax }}"
+                                                data-ref-text="{{ $refText }}">
+                                                <!-- الرقم -->
+                                                <td class="text-center text-muted font-monospace small fw-bold">
+                                                    {{ $index + 1 }}
+                                                </td>
+
+                                                <!-- اسم التحليل -->
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="{{ $testIcon }}"></i>
+                                                        <div>
+                                                            <strong class="text-dark">{{ $testName }}</strong>
+                                                            @if($tObj->code)
+                                                                <small class="text-muted font-monospace d-block" style="font-size: 0.7rem;">
+                                                                    {{ __("كود:") }} {{ $tObj->code }}
+                                                                </small>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <!-- حقل إدخال القيمة -->
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-1.5">
+                                                        <input type="text"
+                                                               class="form-control form-control-sm test-value font-monospace fw-bold"
+                                                               name="test_results[{{ $surgeryTest->id }}][value]"
+                                                               value="{{ old('test_results.' . $surgeryTest->id . '.value', $surgeryTest->result) }}"
+                                                               placeholder="{{ __("أدخل القيمة...") }}"
+                                                               tabindex="{{ $index + 1 }}"
+                                                               data-test="{{ $testName }}">
+                                                        <input type="hidden" name="test_results[{{ $surgeryTest->id }}][unit]" value="{{ $unitDisplay }}">
+                                                        <input type="hidden" name="test_results[{{ $surgeryTest->id }}][test_id]" value="{{ $surgeryTest->id }}">
+
+                                                        @if($hasFile)
+                                                            <a href="{{ $fileUrl }}" target="_blank" class="btn btn-xs btn-outline-primary rounded-circle p-1" style="width: 24px; height: 24px; line-height: 1;" title="{{ __("معاينة المرفق") }}">
+                                                                <i class="fas fa-paperclip" style="font-size: 0.65rem;"></i>
+                                                            </a>
                                                         @endif
                                                     </div>
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            <!-- حقل إدخال القيمة -->
-                                            <td>
-                                                <input type="text"
-                                                       class="form-control form-control-sm test-value font-monospace fw-bold"
-                                                       name="test_results[{{ $surgeryTest->id }}][value]"
-                                                       value="{{ old('test_results.' . $surgeryTest->id . '.value', $surgeryTest->result) }}"
-                                                       placeholder="{{ __("أدخل القيمة...") }}"
-                                                       tabindex="{{ $index + 1 }}"
-                                                       data-test="{{ $testName }}">
-                                                <input type="hidden" name="test_results[{{ $surgeryTest->id }}][unit]" value="{{ $unitDisplay }}">
-                                                <input type="hidden" name="test_results[{{ $surgeryTest->id }}][test_id]" value="{{ $surgeryTest->id }}">
-                                            </td>
+                                                <!-- الوحدة -->
+                                                <td class="text-muted small font-monospace">
+                                                    {{ $unitDisplay ?: '—' }}
+                                                </td>
 
-                                            <!-- الوحدة -->
-                                            <td class="text-muted small font-monospace">
-                                                {{ $unitDisplay ?: '—' }}
-                                            </td>
+                                                <!-- المدى المرجعي -->
+                                                <td>
+                                                    <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.78rem;">
+                                                        {{ $refDisplay }}
+                                                    </span>
+                                                </td>
 
-                                            <!-- المدى المرجعي -->
-                                            <td>
-                                                <span class="badge bg-light text-dark border font-monospace" style="font-size: 0.78rem;">
-                                                    {{ $refDisplay }}
-                                                </span>
-                                            </td>
-
-                                            <!-- الحالة الحية (Flag) -->
-                                            <td class="text-center">
-                                                <span class="result-flag font-monospace" id="flag-{{ $index }}">
-                                                    <span class="badge bg-secondary-subtle text-muted">{{ __("غير محدد") }}</span>
-                                                </span>
-                                            </td>
-                                        </tr>
+                                                <!-- الحالة الحية (Flag) -->
+                                                <td class="text-center">
+                                                    <span class="result-flag font-monospace" id="flag-{{ $index }}">
+                                                        <span class="badge bg-secondary-subtle text-muted">{{ __("غير محدد") }}</span>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endif
                                     @endforeach
                                 </tbody>
                             </table>
@@ -894,6 +975,36 @@ document.addEventListener('DOMContentLoaded', function () {
     // تقييم أولي عند التحميل
     updateSummary();
 });
+
+// ──────────────── دوال رفع المرفقات بنمط الكبسولة الأنيقة ────────────────
+function handlePillUpload(input) {
+    const wrapper = input.closest('.pill-upload-wrapper');
+    if (!wrapper) return;
+    const btn = wrapper.querySelector('.pill-upload-btn');
+    const badge = wrapper.querySelector('.pill-chosen-badge');
+    const nameSpan = wrapper.querySelector('.pill-filename');
+    
+    if (input.files && input.files[0]) {
+        nameSpan.textContent = input.files[0].name;
+        nameSpan.title = input.files[0].name;
+        btn.classList.add('d-none');
+        badge.classList.remove('d-none');
+        badge.classList.add('d-inline-flex');
+    }
+}
+
+function cancelPillUpload(button) {
+    const wrapper = button.closest('.pill-upload-wrapper');
+    if (!wrapper) return;
+    const btn = wrapper.querySelector('.pill-upload-btn');
+    const badge = wrapper.querySelector('.pill-chosen-badge');
+    const input = wrapper.querySelector('.pill-file-input');
+    
+    if (input) input.value = '';
+    btn.classList.remove('d-none');
+    badge.classList.add('d-none');
+    badge.classList.remove('d-inline-flex');
+}
 </script>
 @endpush
 @endsection

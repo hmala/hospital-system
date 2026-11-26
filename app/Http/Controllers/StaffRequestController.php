@@ -1502,23 +1502,52 @@ class StaffRequestController extends Controller
             'test_results.*.value' => 'nullable|string',
             'test_results.*.unit' => 'nullable|string',
             'test_results.*.test_id' => 'required|exists:surgery_lab_tests,id',
+            'test_files' => 'nullable|array',
+            'test_files.*' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp,tiff,bmp|max:10240',
+            'remove_test_file' => 'nullable|array',
             'notes' => 'nullable|string',
         ]);
 
         $testResults = $validated['test_results'] ?? [];
+        $uploadedFiles = $request->file('test_files', []);
+        $removeFiles = $request->input('remove_test_file', []);
         $completedCount = 0;
 
         // تحديث كل تحليل
         foreach ($testResults as $testId => $resultData) {
-            $surgeryTest = \App\Models\SurgeryLabTest::find($resultData['test_id']);
+            $surgeryTest = \App\Models\SurgeryLabTest::with('labTest')->find($resultData['test_id']);
             if ($surgeryTest && $surgeryTest->surgery_id === $surgery->id) {
-                $hasValue = ! empty($resultData['value']);
+                $isAttachmentOnly = $surgeryTest->labTest && $surgeryTest->labTest->isAttachmentOnly();
+                $filePath = $surgeryTest->result_file;
+
+                // معالجة حذف المرفق
+                if (! empty($removeFiles[$surgeryTest->id])) {
+                    if ($filePath && \Illuminate\Support\Facades\Storage::disk('public')->exists($filePath)) {
+                        \Illuminate\Support\Facades\Storage::disk('public')->delete($filePath);
+                    }
+                    $filePath = null;
+                }
+
+                // معالجة رفع ملف جديد لهذا التحليل
+                if (isset($uploadedFiles[$surgeryTest->id]) && $uploadedFiles[$surgeryTest->id]->isValid()) {
+                    $file = $uploadedFiles[$surgeryTest->id];
+                    $fileName = time().'_'.$surgeryTest->id.'_'.$file->getClientOriginalName();
+                    $filePath = $file->storeAs('surgery_lab_results', $fileName, 'public');
+                }
+
+                $enteredVal = trim((string) ($resultData['value'] ?? ''));
+                if ($enteredVal === '' && ! empty($filePath)) {
+                    $enteredVal = 'تقرير الجهاز مرفق';
+                }
+
+                $hasValue = ($enteredVal !== '') || (! empty($filePath));
                 $testStatus = $isDraft
                     ? ($hasValue ? 'in_progress' : 'pending')
                     : ($hasValue ? 'completed' : 'pending');
 
                 $surgeryTest->update([
-                    'result' => $resultData['value'] ?? null,
+                    'result' => $hasValue ? $enteredVal : null,
+                    'result_file' => $filePath,
                     'status' => $testStatus,
                     'completed_at' => (! $isDraft && $hasValue) ? now() : null,
                     'notes' => $validated['notes'] ?? $surgeryTest->notes,
@@ -1550,7 +1579,9 @@ class StaffRequestController extends Controller
         $user = Auth::user();
 
         // التحقق من الصلاحية
-        if (! $user->hasRole(['admin', 'lab_staff', 'doctor'])) {
+        if (! $user->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'lab_staff', 'doctor', 'resident', 'nurse', 'surgery_staff', 'receptionist'])
+            && ! $user->can('view clinical surgery station')
+            && ! $user->can('view surgery stations')) {
             abort(403, 'غير مصرح لك بطباعة هذا الطلب');
         }
 
@@ -1671,7 +1702,9 @@ class StaffRequestController extends Controller
     {
         $user = Auth::user();
 
-        if (! $user->hasRole(['admin', 'radiology_staff', 'doctor'])) {
+        if (! $user->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'radiology_staff', 'doctor', 'resident', 'nurse', 'surgery_staff', 'receptionist'])
+            && ! $user->can('view clinical surgery station')
+            && ! $user->can('view surgery stations')) {
             abort(403, 'غير مصرح لك بطباعة هذا الطلب');
         }
 
