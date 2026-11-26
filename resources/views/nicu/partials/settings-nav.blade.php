@@ -38,6 +38,14 @@
                     دليل الأدوية المضافة للخدج
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link px-3 py-2 fw-bold {{ request()->routeIs('admin.extra-services.*') ? 'active shadow-sm' : 'text-secondary' }}" 
+                   href="{{ route('admin.extra-services.index', ['department' => 'nicu']) }}"
+                   style="border-radius: 8px;">
+                    <i class="fas fa-concierge-bell me-1 {{ request()->routeIs('admin.extra-services.*') ? 'text-white' : 'text-warning' }}"></i>
+                    الخدمات المتفرقة للخدج
+                </a>
+            </li>
         </ul>
         <div class="d-none d-md-flex align-items-center pe-2 text-muted small">
             <i class="fas fa-sliders-h text-warning me-1"></i>

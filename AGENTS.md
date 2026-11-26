@@ -56,6 +56,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 299: تفعيل منظومة الخدمات الإضافية والفندقية الذكية (نمط ICD-10) لقسم الخدج والحاضنات NICU مع شاشة إدارة وتسعير «الخدمات المتفرقة للمستشفى» في الإدارة والإعدادات NICU Smart Extra Services Engine & Hospital Miscellaneous Services Settings)
+
+### Done
+- **قاعدة البيانات والنماذج ([2026_11_26_100000_create_nicu_extra_services_and_department_scope.php](file:///C:/get/hospital-system/database/migrations/2026_11_26_100000_create_nicu_extra_services_and_department_scope.php), [NicuExtraService.php](file:///C:/get/hospital-system/app/Models/NicuExtraService.php), [HospitalExtraService.php](file:///C:/get/hospital-system/app/Models/HospitalExtraService.php), [IncubatorReservation.php](file:///C:/get/hospital-system/app/Models/IncubatorReservation.php))**:
+  * إضافة عمود `department` (`general`, `nicu`, `all`) لجدول `hospital_extra_services` وبذر 18 خدمة مخصصة للخدج ضمن 5 فئات (`clinical`, `care`, `administrative`, `accommodation`, `fine`).
+  * إنشاء جدول `nicu_extra_services` وربطه بعلاقة `extraServices()` في `IncubatorReservation` مع عزل قوائم العمليات عن الخدج (`scopeForGeneral()`, `scopeForNicu()`).
+- **المحرك المالي والكاشير والمطبوعات ([NicuBillingService.php](file:///C:/get/hospital-system/app/Services/NicuBillingService.php), [CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php), [resources/views/cashier/nicu/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/nicu/payment-form.blade.php), [resources/views/cashier/nicu-itemized-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php), [resources/views/nicu/statement.blade.php](file:///C:/get/hospital-system/resources/views/nicu/statement.blade.php))**:
+  * احتساب الخدمات الإضافية للخدج كاش 100% على المريض (خارج الضمان) ضمن `grand_total` و`patient_grand_total` و`net_balance`.
+  * بناء صندوق «إضافة خدمات إضافية وفندقية للخدج والحاضنة» الذكي بترتيب مطابق لشاشة العمليات مع بحث فوري وتصنيف سريع وحفظ تلقائي للخدمات الجديدة، بالإضافة لقسم البنود المضافة مع التعديل والحذف وإظهارها في الوصل الحراري وكشف الحساب A4.
+- **إدارة «الخدمات المتفرقة للمستشفى» في الإدارة والإعدادات ([HospitalExtraServiceController.php](file:///C:/get/hospital-system/app/Http/Controllers/Admin/HospitalExtraServiceController.php), [resources/views/admin/extra-services/index.blade.php](file:///C:/get/hospital-system/resources/views/admin/extra-services/index.blade.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php), [resources/views/nicu/partials/settings-nav.blade.php](file:///C:/get/hospital-system/resources/views/nicu/partials/settings-nav.blade.php))**:
+  * إضافة عنصر فرعي **«الخدمات المتفرقة للمستشفى»** تحت قائمة **الإدارة والإعدادات** وتبويب وصول سريع في إعدادات الخدج، مع تعديل أسعار فوري بـ AJAX وإدارة كاملة لكافة الأقسام.
+- **الاختبارات وضمان الجودة ([tests/Feature/NicuExtraServicesTest.php](file:///C:/get/hospital-system/tests/Feature/NicuExtraServicesTest.php))**:
+  * اجتياز كافة اختبارات `NicuExtraServicesTest` و`NicuEnhancementsTest` وفحص `Laravel Pint` و`view:cache`.
+
 ## Session log (2026-11-25 — المرحلة 298: تفعيل مركزية الدفع لكافة فواتير ووصفات الصيدلية في الكاشير المركزي وحظر الدفع بالصيدلية مع صلاحية مستقلة ورادار التسليم التفاعلي Central Cashier Pharmacy Routing, Permission-gated Tab & Real-time Dispensing Handoff)
 
 ### Done

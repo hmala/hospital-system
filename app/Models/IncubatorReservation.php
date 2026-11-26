@@ -227,6 +227,14 @@ class IncubatorReservation extends Model
     }
 
     /**
+     * الخدمات الإضافية والفندقية المضافة على حساب الحاضنة
+     */
+    public function extraServices()
+    {
+        return $this->hasMany(NicuExtraService::class, 'incubator_reservation_id')->orderBy('created_at', 'desc');
+    }
+
+    /**
      * المدفوعات والأمانات المسددة في الصندوق (جدول nicu_payments المستقل)
      */
     public function payments()

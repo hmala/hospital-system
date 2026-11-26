@@ -516,6 +516,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
         Route::get('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'showNicuPaymentForm'])->name('nicu.payment.form');
         Route::post('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'processNicuPayment'])->name('nicu.payment');
+        Route::post('/nicu/{reservation}/extra-services', [\App\Http\Controllers\CashierController::class, 'addNicuExtraService'])->name('nicu.extra-services.add');
+        Route::patch('/nicu/{reservation}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'updateNicuExtraService'])->name('nicu.extra-services.update');
+        Route::delete('/nicu/{reservation}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeNicuExtraService'])->name('nicu.extra-services.remove');
         Route::get('/nicu/receipt/{nicuPayment}', [\App\Http\Controllers\CashierController::class, 'showNicuReceipt'])->name('nicu.receipt');
         Route::get('/nicu/receipt/{nicuPayment}/print', [\App\Http\Controllers\CashierController::class, 'printNicuReceipt'])->name('nicu.receipt.print');
         Route::get('/nicu/{reservation}/itemized-receipt/print', [\App\Http\Controllers\CashierController::class, 'printNicuItemizedReceipt'])->name('nicu.itemized-receipt.print');
@@ -804,6 +807,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('doctor-commission-settings/recalculate-today', [\App\Http\Controllers\Admin\DoctorCommissionSettingController::class, 'recalculateToday'])
             ->name('doctor-commission-settings.recalculate-today');
         Route::resource('packages', \App\Http\Controllers\Admin\PackageController::class)->except(['show']);
+
+        // الخدمات المتفرقة للمستشفى (إدارة أسعار وتصنيفات الخدمات الإضافية والفندقية)
+        Route::get('extra-services', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'index'])->name('extra-services.index');
+        Route::post('extra-services', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'store'])->name('extra-services.store');
+        Route::put('extra-services/{extraService}', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'update'])->name('extra-services.update');
+        Route::patch('extra-services/{extraService}/quick-price', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'updateQuickPrice'])->name('extra-services.quick-price');
+        Route::post('extra-services/{extraService}/toggle', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'toggle'])->name('extra-services.toggle');
+        Route::delete('extra-services/{extraService}', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'destroy'])->name('extra-services.destroy');
     });
 
     // إدارة العمليات

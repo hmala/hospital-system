@@ -316,9 +316,32 @@
             @endforeach
         @endif
 
-        <!-- 5. الدفعات المسددة -->
+        <!-- 5. الخدمات الإضافية والفندقية للخدج -->
+        @php
+            $nicuExtras = $stayDetails['extra_services'] ?? collect();
+        @endphp
+        @if($nicuExtras->isNotEmpty())
+            <div class="section-header">{{ __('5. الخدمات الإضافية والفندقية') }} ({{ $nicuExtras->count() }}):</div>
+            @foreach($nicuExtras as $extra)
+                <div class="item-row">
+                    <span class="item-name">
+                        • {{ $extra->name }} @if($extra->quantity > 1) (×{{ $extra->quantity }}) @endif
+                        @if($stayDetails['is_insured'])
+                            <small style="font-size: 9.5px; color: #475569; display: block;">(خارج الضمان - كاش 100%)</small>
+                        @endif
+                    </span>
+                    <span class="item-price">{{ number_format($extra->total_amount) }} {{ __('د.ع') }}</span>
+                </div>
+            @endforeach
+            <div class="item-row" style="font-weight: 800; font-size: 11px; margin-top: 2px;">
+                <span>{{ __('مجموع الخدمات الإضافية:') }}</span>
+                <span>{{ number_format($stayDetails['total_extra_services_cost'] ?? 0) }} {{ __('د.ع') }}</span>
+            </div>
+        @endif
+
+        <!-- 6. الدفعات المسددة -->
         @if($stayDetails['payments']->isNotEmpty())
-            <div class="section-header">{{ __('5. الدفعات والوصولات النقدية المسددة:') }}</div>
+            <div class="section-header">{{ __('6. الدفعات والوصولات النقدية المسددة:') }}</div>
             @foreach($stayDetails['payments'] as $pmt)
                 <div class="item-row">
                     <span class="item-name">{{ __('وصل') }} #{{ $pmt->receipt_number }} ({{ $pmt->paid_at ? $pmt->paid_at->format('m/d') : '' }})</span>

@@ -79,6 +79,20 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 299 (2026-11-26 — `main`) — نقل وتخصيص منظومة الخدمات الإضافية والفندقية الذكية (نمط ICD-10) لقسم الخدج والحاضنات NICU مع شاشة إدارة وتسعير «الخدمات المتفرقة للمستشفى» في الإدارة والإعدادات (NICU Smart Extra & Hotel Services Engine + Hospital Miscellaneous Services Admin Management)**:
+  * **قاعدة البيانات والنماذج ([2026_11_26_100000_create_nicu_extra_services_and_department_scope.php](file:///C:/get/hospital-system/database/migrations/2026_11_26_100000_create_nicu_extra_services_and_department_scope.php), [NicuExtraService.php](file:///C:/get/hospital-system/app/Models/NicuExtraService.php), [HospitalExtraService.php](file:///C:/get/hospital-system/app/Models/HospitalExtraService.php), [IncubatorReservation.php](file:///C:/get/hospital-system/app/Models/IncubatorReservation.php))**:
+    - إضافة عمود `department` (`general`, `nicu`, `all`) لجدول `hospital_extra_services` وبذر 18 خدمة مخصصة لقسم الخدج موزعة على 5 تصنيفات (`clinical`, `care`, `administrative`, `accommodation`, `fine`).
+    - إنشاء جدول `nicu_extra_services` وربطه بعلاقة `extraServices()` على `IncubatorReservation` مع عزل خدمات العمليات عن خدمات الخدج (`scopeForGeneral()`, `scopeForNicu()`).
+  * **المحرك المالي والكاشير والمطبوعات ([NicuBillingService.php](file:///C:/get/hospital-system/app/Services/NicuBillingService.php), [CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php), [cashier/nicu/payment-form.blade.php](file:///C:/get/hospital-system/resources/views/cashier/nicu/payment-form.blade.php), [nicu-itemized-print.blade.php](file:///C:/get/hospital-system/resources/views/cashier/nicu-itemized-print.blade.php), [nicu/statement.blade.php](file:///C:/get/hospital-system/resources/views/nicu/statement.blade.php))**:
+    - احتساب الخدمات الإضافية للخدج كاش 100% على المريض (خارج الضمان الصحي) وجمعها لحظياً ضمن `grand_total` و`patient_grand_total` و`net_balance`.
+    - إضافة صندوق «إضافة خدمات إضافية وفندقية للخدج والحاضنة» بالبحث الذكي والتصنيف السريع في شاشة كاشير الخدج بترتيب مطابق لشاشة العمليات مع إمكانية إضافة خدمة جديدة وحفظها تلقائياً في دليل الخدج، وتعديل السعر والكمية، والحذف.
+    - إظهار الخدمات الإضافية تلقائياً في الوصل الحراري التفصيلي وكشف الحساب الرسمي A4.
+  * **إدارة «الخدمات المتفرقة للمستشفى» في الإدارة والإعدادات ([HospitalExtraServiceController.php](file:///C:/get/hospital-system/app/Http/Controllers/Admin/HospitalExtraServiceController.php), [admin/extra-services/index.blade.php](file:///C:/get/hospital-system/resources/views/admin/extra-services/index.blade.php), [layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php), [nicu/partials/settings-nav.blade.php](file:///C:/get/hospital-system/resources/views/nicu/partials/settings-nav.blade.php))**:
+    - إضافة عنصر قائمة فرعي جديد باسم **«الخدمات المتفرقة للمستشفى»** تحت قسم **الإدارة والإعدادات** وتبويب وصول سريع في إعدادات الخدج.
+    - شاشة تحكم متكاملة بإحصائيات وتبويبات للأقسام (العمليات، الخدج، مشترك)، إضافة وتعديل وحذف وتفعيل/تعطيل، مع تعديل وحفظ تلقائي فوري للسعر عبر AJAX.
+  * **الاختبارات وضمان الجودة ([NicuExtraServicesTest.php](file:///C:/get/hospital-system/tests/Feature/NicuExtraServicesTest.php))**:
+    - 5 اختبارات ميزة آلية شاملة بالإضافة لاختبارات `NicuEnhancementsTest` واجتياز `Laravel Pint` و`view:cache` بالكامل.
+
 - **المرحلة 298 (2026-11-25 — `main`) — تفعيل مركزية الدفع لكافة فواتير ووصفات الصيدلية في الكاشير المركزي وحظر الدفع بالصيدلية مع صلاحية مستقلة ورادار التسليم التفاعلي (Central Cashier Pharmacy Routing, Permission-gated Tab & Real-time Dispensing Handoff)**:
   * **منع الدفع النقدي في الصيدلية وتوجيهه للكاشير المركزي ([PharmacyPosController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/Pharmacy/PharmacyPosController.php), [pos/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/pharmacy/pos/index.blade.php))**:
     - حظر أي استلام نقدي أو دفع في نافذة الصيدلية، وتوجيه 100% من مبيعات الرف (OTC) والوصفات الطبية (`prescriptions`) إلى الكاشير المركزي (`payment_route = 'central_cashier'`, `payment_status = 'pending_cashier'`).

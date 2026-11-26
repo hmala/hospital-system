@@ -318,14 +318,20 @@ class NicuBillingService
             'medication' => $totalMedCost,
         ];
 
-        $grandTotal = $totalServiceCost + $totalConsultationsCost + $totalOrdersCost;
+        // الخدمات الإضافية والفندقية للخدج (100% كاش على المريض - خارج تغطية الضمان الصحي)
+        $extraServices = $reservation->extraServices()->with(['service', 'createdBy'])->get();
+        $totalExtraServicesCost = (float) $extraServices->sum(function ($item) {
+            return (float) $item->total_amount;
+        });
+
+        $grandTotal = $totalServiceCost + $totalConsultationsCost + $totalOrdersCost + $totalExtraServicesCost;
 
         $insuranceGrandTotal = $isInsured
             ? ($totalInsuranceServiceShare + $totalInsuranceOrdersShare + $totalInsuranceConsultationsShare)
             : 0.0;
 
         $patientGrandTotal = $isInsured
-            ? ($totalPatientServiceShare + $totalPatientOrdersShare + $totalPatientConsultationsShare)
+            ? ($totalPatientServiceShare + $totalPatientOrdersShare + $totalPatientConsultationsShare + $totalExtraServicesCost)
             : $grandTotal;
 
         // تحديث الحجز إذا كان تأميناً بالمبالغ التراكمية الشاملة
@@ -349,6 +355,7 @@ class NicuBillingService
                     'total_consultations_cost' => $totalConsultationsCost,
                     'patient_consultations_share' => $totalPatientConsultationsShare,
                     'insurance_consultations_share' => $totalInsuranceConsultationsShare,
+                    'total_extra_services_cost' => $totalExtraServicesCost,
                     'daily_details' => $dailyCoverageDetails,
                 ],
             ]);
@@ -394,6 +401,8 @@ class NicuBillingService
             'insurance_radiology_share' => $insuranceRadShare,
             'orders_by_type' => $ordersByType,
             'medical_orders' => $medicalOrders,
+            'extra_services' => $extraServices,
+            'total_extra_services_cost' => $totalExtraServicesCost,
             'grand_total' => $grandTotal,
             'patient_grand_total' => $patientGrandTotal,
             'insurance_grand_total' => $insuranceGrandTotal,

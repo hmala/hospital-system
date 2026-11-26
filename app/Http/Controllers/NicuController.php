@@ -1646,6 +1646,7 @@ class NicuController extends Controller
             'serviceLogs.nicuService',
             'consultations',
             'medicalOrders',
+            'extraServices',
         ]);
 
         $stayDetails = $this->billingService->calculateStayDetails($reservation);

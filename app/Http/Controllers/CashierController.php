@@ -12,6 +12,7 @@ use App\Models\HospitalExtraService;
 use App\Models\IcuAdmission;
 use App\Models\IncubatorReservation;
 use App\Models\LabTest;
+use App\Models\NicuExtraService;
 use App\Models\NicuPayment;
 use App\Models\Payment;
 use App\Models\RadiologyType;
@@ -982,7 +983,7 @@ class CashierController extends Controller
     public function showNicuPaymentForm(IncubatorReservation $reservation)
     {
         $user = Auth::user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
         if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process payments') && ! $user->can('process refunds')))) {
             abort(403, 'غير مصرح لك بالوصول لشاشة تسديد رسوم الخدج');
         }
@@ -997,13 +998,189 @@ class CashierController extends Controller
             'consultations.internalDoctor.user',
             'medicalOrders.labTest',
             'medicalOrders.radiologyType',
+            'extraServices.service',
+            'extraServices.createdBy',
             'payments.cashier',
         ]);
 
         $billingService = app(\App\Services\NicuBillingService::class);
         $stayDetails = $billingService->calculateStayDetails($reservation);
+        $availableExtraServices = HospitalExtraService::active()->forNicu()->orderBy('name')->get();
 
-        return view('cashier.nicu.payment-form', compact('reservation', 'stayDetails'));
+        return view('cashier.nicu.payment-form', compact('reservation', 'stayDetails', 'availableExtraServices'));
+    }
+
+    /**
+     * إضافة خدمة إضافية أو فندقية لحساب حاضنة الخدج من الكاشير
+     */
+    public function addNicuExtraService(Request $request, IncubatorReservation $reservation)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process payments')))) {
+            abort(403, 'غير مصرح لك بإضافة خدمات إضافية لقسم الخدج');
+        }
+
+        $request->validate([
+            'service_name' => 'required|string|max:255',
+            'service_price' => 'required|numeric|min:0',
+            'service_quantity' => 'nullable|integer|min:1',
+            'service_notes' => 'nullable|string|max:500',
+            'service_id' => 'nullable|exists:hospital_extra_services,id',
+            'service_category' => 'nullable|string|max:40',
+        ]);
+
+        $qty = max(1, (int) $request->input('service_quantity', 1));
+        $price = (float) $request->input('service_price', 0);
+        $name = trim($request->input('service_name'));
+        $serviceId = $request->input('service_id');
+        $allowedCategories = ['clinical', 'care', 'administrative', 'accommodation', 'fine', 'medical', 'decorating', 'general'];
+        $category = $request->input('service_category', 'general');
+        if (! in_array($category, $allowedCategories, true)) {
+            $category = 'general';
+        }
+
+        if ($serviceId) {
+            $catalogService = HospitalExtraService::find($serviceId);
+            if ($catalogService) {
+                $category = $catalogService->category ?: $category;
+                if ((float) $catalogService->default_price == 0 && $price > 0) {
+                    $catalogService->update(['default_price' => $price]);
+                }
+            }
+        } else {
+            $catalogService = HospitalExtraService::where('name', $name)
+                ->whereIn('department', ['nicu', 'all'])
+                ->first();
+
+            if ($catalogService) {
+                $serviceId = $catalogService->id;
+                $category = $catalogService->category ?: $category;
+                if ((float) $catalogService->default_price == 0 && $price > 0) {
+                    $catalogService->update(['default_price' => $price]);
+                }
+            } else {
+                $catalogService = HospitalExtraService::create([
+                    'name' => $name,
+                    'category' => $category,
+                    'department' => 'nicu',
+                    'default_price' => $price,
+                    'is_active' => true,
+                ]);
+                $serviceId = $catalogService->id;
+            }
+        }
+
+        $extra = $reservation->extraServices()->create([
+            'service_id' => $serviceId,
+            'name' => $name,
+            'category' => $category,
+            'price' => $price,
+            'quantity' => $qty,
+            'total_amount' => $price * $qty,
+            'notes' => $request->input('service_notes'),
+            'created_by' => $user->id,
+        ]);
+
+        \App\Services\UserActivityLogger::log(
+            action: 'nicu_extra_service_added',
+            category: 'cashier',
+            description: "إضافة خدمة إضافية للخديج (إضبارة #{$reservation->id}): {$name} × {$qty} بمبلغ ".number_format($price * $qty, 0).' د.ع',
+            subject: $extra,
+            isSensitive: false
+        );
+
+        return redirect()->route('cashier.nicu.payment.form', $reservation)
+            ->with('success', 'تمت إضافة خدمة "'.$name.'" لحساب الخديج بمبلغ '.number_format($price * $qty, 0).' د.ع وحفظها في دليل خدمات الخدج.');
+    }
+
+    /**
+     * تعديل سعر أو كمية خدمة إضافية لحساب حاضنة الخدج
+     */
+    public function updateNicuExtraService(Request $request, IncubatorReservation $reservation, NicuExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process payments')))) {
+            abort(403, 'غير مصرح لك بتعديل خدمات الخدج');
+        }
+
+        if ($extraService->incubator_reservation_id !== $reservation->id) {
+            abort(404, 'الخدمة غير مرتبطة بهذه الحاضنة');
+        }
+
+        $request->validate([
+            'price' => 'required|numeric|min:0',
+            'quantity' => 'nullable|integer|min:1',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $price = (float) $request->input('price');
+        $qty = $request->filled('quantity') ? max(1, (int) $request->input('quantity')) : max(1, (int) $extraService->quantity);
+        $total = $price * $qty;
+
+        $extraService->update([
+            'price' => $price,
+            'quantity' => $qty,
+            'total_amount' => $total,
+            'notes' => $request->has('notes') ? $request->input('notes') : $extraService->notes,
+        ]);
+
+        \App\Services\UserActivityLogger::log(
+            action: 'nicu_extra_service_updated',
+            category: 'cashier',
+            description: "تعديل خدمة إضافية للخديج (إضبارة #{$reservation->id}): {$extraService->name} إلى ".number_format($total, 0).' د.ع',
+            subject: $extraService,
+            isSensitive: false
+        );
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'price' => $price,
+                'quantity' => $qty,
+                'total_amount' => $total,
+                'formatted_total' => number_format($total, 0).' د.ع',
+            ]);
+        }
+
+        return redirect()->route('cashier.nicu.payment.form', $reservation)
+            ->with('success', 'تم تعديل خدمة "'.$extraService->name.'" إلى '.number_format($total, 0).' د.ع');
+    }
+
+    /**
+     * حذف خدمة إضافية من حساب حاضنة الخدج
+     */
+    public function removeNicuExtraService(IncubatorReservation $reservation, NicuExtraService $extraService)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('view cashier') && ! $user->can('process payments')))) {
+            abort(403, 'غير مصرح لك بحذف خدمات الخدج');
+        }
+
+        if ($extraService->incubator_reservation_id !== $reservation->id) {
+            abort(404, 'الخدمة غير مرتبطة بهذه الحاضنة');
+        }
+
+        $serviceName = $extraService->name;
+        $serviceTotal = (float) $extraService->total_amount;
+        $extraService->delete();
+
+        \App\Services\UserActivityLogger::log(
+            action: 'nicu_extra_service_removed',
+            category: 'cashier',
+            description: "حذف خدمة إضافية للخديج (إضبارة #{$reservation->id}): {$serviceName} بقيمة ".number_format($serviceTotal, 0).' د.ع',
+            subject: $reservation,
+            isSensitive: false
+        );
+
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'تم حذف خدمة "'.$serviceName.'" بنجاح']);
+        }
+
+        return redirect()->route('cashier.nicu.payment.form', $reservation)
+            ->with('success', 'تم حذف خدمة "'.$serviceName.'" بنجاح');
     }
 
     public function processNicuPayment(Request $request, IncubatorReservation $reservation)
@@ -1176,6 +1353,7 @@ class CashierController extends Controller
             'payments.cashier',
             'medicalOrders.labTest',
             'medicalOrders.radiologyType',
+            'extraServices',
         ]);
 
         $stayDetails = app(\App\Services\NicuBillingService::class)->calculateStayDetails($reservation);
@@ -1223,7 +1401,7 @@ class CashierController extends Controller
             ->where('status', '!=', 'cancelled')
             ->get();
 
-        $availableExtraServices = HospitalExtraService::where('is_active', true)->orderBy('id', 'asc')->get();
+        $availableExtraServices = HospitalExtraService::active()->forGeneral()->orderBy('id', 'asc')->get();
 
         $pendingExtraServices = VisitExtraService::where(function ($q) use ($request) {
             $q->where('request_id', $request->id);
@@ -3703,7 +3881,7 @@ class CashierController extends Controller
 
         $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee + $extraServicesFee + $consultationsFee;
 
-        $availableExtraServices = HospitalExtraService::active()->orderBy('name')->get();
+        $availableExtraServices = HospitalExtraService::active()->forGeneral()->orderBy('name')->get();
 
         return view('cashier.surgeries.payment-form', compact(
             'surgery',
