@@ -56,6 +56,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 304: تثبيت وتأمين تأشير إعطاء الجرعات الدوائية للممرض بنقرة واحدة لا رجعة فيها وحظر التراجع MAR One-Way Permanent Administration & Clinical Safety Lock)
+
+### Done
+- **حوكمة تأشير الجرعة في جدول الإعطاء MAR ([app/Models/SurgeryTreatment.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryTreatment.php), [app/Http/Controllers/ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * منع إلغاء التأشير تماماً لكادر التمريض (`canUserUndoEntry = false` لغير الإدارة).
+  * بمجرد نقر الممرض على خانة الجرعة، يتم توثيق الصرف باسمه وتاريخ ووقت الصرف الفعلي اللحظي وتثبيته.
+  * حظر أي محاولة إلغاء للتأشير (`checked: 0`) برمجياً على مستوى السيرفر مع إرجاع كود 422 ورسالة: `لا يمكن للممرض التراجع عن تأشير الجرعة بعد توثيق إعطائها للمريض؛ إلغاء الجرعة محصور بالإدارة الطبية فقط لسلامة المريض.`
+  * الإدارة فقط (`admin`) تحتفظ بصلاحية فك أو تصحيح الجرعة عند الأخطاء الإدارية القصوى.
+- **الواجهة التفاعلية والـ JavaScript اللحظي ([resources/views/surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * قفل خانات الجرعات المنفذة تلقائياً (`@disabled`) لكادر التمريض مع وسام الإقفال الأمني `mar-dose-locked`.
+  * تحديث دوال الـ JavaScript (`handleMarCheckboxToggle` و `addPrnDoseConfirmation`) لتقفل الخانة فوراً بعد أول نقرة ناجحة دون إمكانية النقر العكسي.
+- **الاختبارات وضمان الجودة ([tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/UnifiedClinicalStationAndTabPermissionsTest.php))**:
+  * اجتياز كامل اختبارات المحطة السريرية والأدوية MAR والصلاحيات بنجاح تام (23 passed, 305 assertions).
+  * اجتياز فحص `Laravel Pint` و `view:cache`.
+
 ## Session log (2026-11-26 — المرحلة 303: قفل صالة العمليات بعد الإكمال + فصل محاسبة الأجهزة الطبية للجراح + بوابة التخريج المالية وإصلاح الأرشيف + وضع انتظار الغرفة بصلاحية مخصصة OR Lock, Surgeon-Only Devices Billing, Discharge Gate & Permission-Gated Room Standby)
 
 ### Done
