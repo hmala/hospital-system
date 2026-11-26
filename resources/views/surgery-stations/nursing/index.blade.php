@@ -39,6 +39,12 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     @endif
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
 
                     <!-- Floor Filter Bar & Search (شريط تصفية الطوابق والبحث السريع) -->
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2.5 bg-light rounded-4 border">
@@ -196,6 +202,15 @@
                                                                 <span class="badge bg-light text-dark border rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
                                                                     <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
                                                                 </span>
+                                                                @if($surgery->discharged_at)
+                                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                        <i class="fas fa-sign-out-alt me-1"></i> {{ __('تم التخريج') }}
+                                                                    </span>
+                                                                @endif
+                                                            @else
+                                                                <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-2 py-0.5" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-hourglass-half text-warning me-1"></i> {{ __('وضع انتظار الغرفة') }}
+                                                                </span>
                                                             @endif
                                                             <span class="text-muted small" style="font-size: 0.73rem;">
                                                                 <i class="far fa-calendar-alt me-1"></i> {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}
@@ -313,7 +328,17 @@
                                                         </button>
                                                     </form>
                                                 @else
-                                                    <div class="d-inline-flex align-items-center gap-1">
+                                                    <div class="d-inline-flex align-items-center gap-1 flex-wrap justify-content-center">
+                                                        @if(!$surgery->room_id && !$surgery->discharged_at && (auth()->user()?->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()?->can('assign surgery room')))
+                                                            <button type="button"
+                                                                    class="btn btn-sm btn-warning rounded-pill px-3 py-1.5 shadow-sm fw-bold assign-room-trigger"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#assignSurgeryRoomModal"
+                                                                    data-assign-url="{{ route('surgeries.assign-room', $surgery) }}"
+                                                                    data-patient-name="{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'المريض' }}">
+                                                                <i class="fas fa-door-open me-1"></i> تخصيص غرفة
+                                                            </button>
+                                                        @endif
                                                         <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
                                                             <i class="fas fa-eye me-1"></i> {{ __('عرض وتعديل') }}
                                                         </a>
@@ -378,6 +403,12 @@
                                                             <div class="mt-0.5">
                                                                 <span class="badge bg-light text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
                                                                     <i class="fas fa-bed text-success me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                                </span>
+                                                            </div>
+                                                        @else
+                                                            <div class="mt-1">
+                                                                <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-2 py-0.5" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-hourglass-half text-warning me-1"></i> وضع انتظار الغرفة
                                                                 </span>
                                                             </div>
                                                         @endif
@@ -644,6 +675,79 @@
         </div>
     </div>
 </div>
+
+{{-- مودال تخصيص غرفة لمرضى وضع الانتظار --}}
+@if(auth()->user()?->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()?->can('assign surgery room'))
+<div class="modal fade" id="assignSurgeryRoomModal" tabindex="-1" aria-labelledby="assignSurgeryRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-warning bg-opacity-25 border-bottom">
+                <h5 class="modal-title fw-bold text-dark" id="assignSurgeryRoomModalLabel">
+                    <i class="fas fa-door-open text-warning-emphasis me-2"></i> تخصيص غرفة للمريض
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="assignSurgeryRoomForm" method="POST" action="">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border mb-3 py-2">
+                        <small class="text-muted d-block">المريض:</small>
+                        <strong id="assignRoomPatientName" class="text-primary fs-6">-</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label for="assignRoomSelect" class="form-label fw-bold">اختر الغرفة المتاحة <span class="text-danger">*</span></label>
+                        @if(isset($availableRooms) && $availableRooms->count())
+                            <select name="room_id" id="assignRoomSelect" class="form-select" required>
+                                <option value="">-- اختر غرفة --</option>
+                                @foreach($availableRooms as $availRoom)
+                                    <option value="{{ $availRoom->id }}">
+                                        غرفة {{ $availRoom->room_number }} ({{ strtoupper($availRoom->room_type) }} - {{ $availRoom->floor }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        @else
+                            <div class="alert alert-danger mb-0 small">لا توجد غرف متاحة حالياً للتخصيص.</div>
+                        @endif
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="checkin_immediately" value="1" id="assignRoomCheckinNow" checked>
+                        <label class="form-check-label fw-semibold" for="assignRoomCheckinNow">
+                            تسجيل دخول المريض للغرفة مباشرة (بدء الإقامة الآن)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    @if(isset($availableRooms) && $availableRooms->count())
+                        <button type="submit" class="btn btn-warning fw-bold rounded-pill px-4">
+                            <i class="fas fa-check me-1"></i> تأكيد تخصيص الغرفة
+                        </button>
+                    @endif
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const assignModal = document.getElementById('assignSurgeryRoomModal');
+    const assignForm = document.getElementById('assignSurgeryRoomForm');
+    const assignPatientName = document.getElementById('assignRoomPatientName');
+    if (assignModal && assignForm) {
+        document.querySelectorAll('.assign-room-trigger').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                assignForm.setAttribute('action', this.dataset.assignUrl || '');
+                if (assignPatientName) {
+                    assignPatientName.textContent = this.dataset.patientName || 'المريض';
+                }
+            });
+        });
+    }
+});
+</script>
+@endpush
+@endif
 @endsection
 
 @push('scripts')

@@ -429,8 +429,13 @@
                                                             <div class="fw-bold">{{ $surgery->surgery_type }}</div>
                                                             @if($isCancelled)
                                                                 <span class="badge bg-danger"><i class="fas fa-times-circle me-1"></i> {{ __('ملغاة (مستحق استرجاع)') }}</span>
-                                                            @elseif($surgery->payment_status === 'partial')
-                                                                <small class="text-warning"><i class="fas fa-adjust"></i> {{ __('دفع جزئي') }}</small>
+                                                            @else
+                                                                @if($surgery->billing_status === 'pending_review')
+                                                                    <span class="badge bg-warning text-dark border border-warning me-1"><i class="fas fa-calculator me-1"></i> {{ __('بانتظار تسعير الحسابات (عملية معدلة)') }}</span>
+                                                                @endif
+                                                                @if($surgery->payment_status === 'partial')
+                                                                    <small class="text-warning"><i class="fas fa-adjust"></i> {{ __('دفع جزئي') }}</small>
+                                                                @endif
                                                             @endif
                                                         </td>
                                                         <td>{{ $surgery->doctor->user->name ?? $surgery->surgeon_name ?? __('غير محدد') }}</td>
@@ -467,6 +472,14 @@
                                                                 @else
                                                                     <span class="badge bg-secondary">{{ __('غير مصرح بالاسترجاع') }}</span>
                                                                 @endif
+                                                            @elseif($pendingAmount == 0 && $surgery->billing_status === 'pending_review')
+                                                                @can('review surgery prices')
+                                                                    <a href="{{ route('accountant.surgeries.review', $surgery->id) }}" class="btn btn-warning btn-sm px-3 text-dark fw-bold">
+                                                                        <i class="fas fa-calculator me-1"></i> {{ __('تسعير العملية') }}
+                                                                    </a>
+                                                                @else
+                                                                    <span class="badge bg-warning text-dark">{{ __('بانتظار تسعير الحسابات') }}</span>
+                                                                @endcan
                                                             @else
                                                                 <span class="text-success"><i class="fas fa-check-double me-1"></i> {{ __('مدفوع بالكامل') }}</span>
                                                             @endif

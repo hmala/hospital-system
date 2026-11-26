@@ -699,6 +699,21 @@ body {
                 <div id="collapseRoomStay" class="collapse show">
                     <div class="compact-card-body">
                         <input type="hidden" name="expected_stay_days" id="expected_stay_days" value="1">
+                        <input type="hidden" name="room_waiting_mode" id="room_waiting_mode" value="{{ old('room_waiting_mode', '0') }}">
+
+                        <!-- خيار تخصيص الغرفة الآن أو إبقاء المريض في وضع الانتظار -->
+                        <div class="d-flex flex-wrap gap-2 mb-2 p-2 bg-light rounded border">
+                            <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3" id="btnRoomDirectMode">
+                                <i class="fas fa-bed me-1"></i> {{ __('تخصيص غرفة مباشرة الآن') }}
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-warning text-dark fw-bold rounded-pill px-3" id="btnRoomWaitingMode">
+                                <i class="fas fa-hourglass-half me-1"></i> {{ __('وضع الانتظار (بدون غرفة حالياً — تُخصص لاحقاً)') }}
+                            </button>
+                        </div>
+                        <div id="room_waiting_banner" class="alert alert-warning py-2 px-3 mb-2 d-none small fw-bold border-warning">
+                            <i class="fas fa-hourglass-half me-1"></i>
+                            {{ __('المريض في وضع انتظار الغرفة: سيتم حجز العملية بدون إشغال غرفة الآن (0 د.ع أجور غرفة مبدئياً) ويمكن للمخولين تخصيص الغرفة المتاحة له لاحقاً.') }}
+                        </div>
                         <div class="row g-2 mb-2 align-items-center">
                             <div class="col-md-9">
                                 <div class="px-3 py-2 bg-light rounded border d-flex justify-content-between align-items-center small flex-wrap gap-2">
@@ -1419,9 +1434,81 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // نظام اختيار الغرفة المدمج والتحقق
+    // نظام اختيار الغرفة المدمج أو وضع الانتظار
+    const roomWaitingModeInput = document.getElementById('room_waiting_mode');
+    const btnRoomDirectMode = document.getElementById('btnRoomDirectMode');
+    const btnRoomWaitingMode = document.getElementById('btnRoomWaitingMode');
+    const roomWaitingBanner = document.getElementById('room_waiting_banner');
+
+    function setRoomWaitingMode(isWaiting) {
+        if (!roomWaitingModeInput) return;
+        roomWaitingModeInput.value = isWaiting ? '1' : '0';
+
+        if (isWaiting) {
+            if (btnRoomDirectMode) {
+                btnRoomDirectMode.classList.remove('btn-primary');
+                btnRoomDirectMode.classList.add('btn-outline-primary');
+            }
+            if (btnRoomWaitingMode) {
+                btnRoomWaitingMode.classList.remove('btn-outline-warning');
+                btnRoomWaitingMode.classList.add('btn-warning');
+            }
+            if (roomWaitingBanner) roomWaitingBanner.classList.remove('d-none');
+            if (roomValidationError) roomValidationError.classList.add('d-none');
+            if (floorPillsContent) floorPillsContent.style.border = '';
+
+            document.querySelectorAll('.room-tile').forEach(t => {
+                t.style.borderColor = t.dataset.origBorder || t.style.borderColor;
+                t.style.borderWidth = t.dataset.origWidth || '2px';
+                t.style.boxShadow = '';
+                const icon = t.querySelector('.room-actions');
+                if (icon) icon.style.display = 'none';
+            });
+            if (roomIdInput) roomIdInput.value = '';
+            selectedRoomFee = 0;
+            selectedRoomType = '';
+            if (selectedRoomNameEl) selectedRoomNameEl.textContent = '⏳ وضع انتظار الغرفة';
+            if ($('#stickyRoomName').length) $('#stickyRoomName').text('⏳ وضع انتظار الغرفة');
+            if (headerRoomBadge) {
+                headerRoomBadge.textContent = '⏳ وضع انتظار الغرفة';
+                headerRoomBadge.className = 'badge bg-warning text-dark';
+            }
+            const statusSpan = document.getElementById('selected_room_status');
+            if (statusSpan) {
+                statusSpan.textContent = 'وضع الانتظار (تُخصص لاحقاً)';
+                statusSpan.className = 'fw-bold text-warning-emphasis';
+            }
+            if (clearRoomSection) clearRoomSection.style.display = 'none';
+            calculateRoomFee();
+        } else {
+            if (btnRoomDirectMode) {
+                btnRoomDirectMode.classList.remove('btn-outline-primary');
+                btnRoomDirectMode.classList.add('btn-primary');
+            }
+            if (btnRoomWaitingMode) {
+                btnRoomWaitingMode.classList.remove('btn-warning');
+                btnRoomWaitingMode.classList.add('btn-outline-warning');
+            }
+            if (roomWaitingBanner) roomWaitingBanner.classList.add('d-none');
+        }
+    }
+
+    if (btnRoomDirectMode) {
+        btnRoomDirectMode.addEventListener('click', function() { setRoomWaitingMode(false); });
+    }
+    if (btnRoomWaitingMode) {
+        btnRoomWaitingMode.addEventListener('click', function() { setRoomWaitingMode(true); });
+    }
+    if (roomWaitingModeInput && roomWaitingModeInput.value === '1') {
+        setRoomWaitingMode(true);
+    }
 
     function validateRoomSelection() {
+        if (roomWaitingModeInput && roomWaitingModeInput.value === '1') {
+            if (roomValidationError) roomValidationError.classList.add('d-none');
+            if (floorPillsContent) floorPillsContent.style.border = '';
+            return true;
+        }
         const val = roomIdInput ? roomIdInput.value : '';
         if (!val) {
             if (roomValidationError) roomValidationError.classList.remove('d-none');
@@ -1441,7 +1528,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const toast = document.createElement('div');
             toast.className = 'room-required-toast alert alert-danger position-fixed shadow-lg';
             toast.style.cssText = 'top:25px;left:50%;transform:translateX(-50%);z-index:9999;border-right:6px solid #dc3545;font-weight:bold;font-size:0.95rem;background:#fff;';
-            toast.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i> يرجى اختيار غرفة للمريض من قائمة الغرف المتاحة.';
+            toast.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i> يرجى اختيار غرفة متاحة أو تفعيل «وضع الانتظار للغرفة».';
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 4500);
 
@@ -1514,6 +1601,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function selectRoom(tile) {
         if (tile.dataset.available === '0') return;
+
+        if (typeof setRoomWaitingMode === 'function') {
+            setRoomWaitingMode(false);
+        }
 
         if (roomValidationError) roomValidationError.classList.add('d-none');
         if (floorPillsContent) floorPillsContent.style.border = '';

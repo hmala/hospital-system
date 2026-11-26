@@ -143,11 +143,11 @@
     $isCancelled = $surgery->status === 'cancelled';
     $netPatientPaidCash = (float) $surgery->payments()->sum('amount');
 
-    // حساب التكاليف مع تتبع حالة الدفع
+    // حساب التكاليف مع تتبع حالة الدفع (الأجهزة الطبية لا تضاف لفاتورة المريض وتُحاسب مع الجراح في الحسابات)
     $surgeryFee = $isCancelled ? 0 : ($surgery->surgery_fee ?? 0);
     $additionalOpsFee = $isCancelled ? 0 : $surgery->additionalOperations->sum('fee');
-    $devicesFee = $isCancelled ? 0 : $surgery->medicalDevices->sum('pivot.price');
-    $totalSurgeryFee = $isCancelled ? 0 : ($surgeryFee + $additionalOpsFee + $devicesFee);
+    $devicesFee = 0;
+    $totalSurgeryFee = $isCancelled ? 0 : ($surgeryFee + $additionalOpsFee);
     $surgeryFeePaidAmount = $surgery->surgery_fee_paid_amount ?? 0;
     $remainingSurgeryFee = $isCancelled ? 0 : max(0, $totalSurgeryFee - $surgeryFeePaidAmount);
     $excessSurgeryFee = $isCancelled ? ($netPatientPaidCash > 0 ? $netPatientPaidCash : $surgeryFeePaidAmount) : ($surgeryFeePaidAmount > $totalSurgeryFee ? ($surgeryFeePaidAmount - $totalSurgeryFee) : 0);
@@ -180,10 +180,11 @@
     $totalExcess = $excessSurgeryFee + $excessRoomFee;
     
     // تحاليل معلقة ومدفوعة
-    $pendingLabTests = $isCancelled ? collect() : $surgery->labTests->where('payment_status', '!=', 'paid');
+    $pendingLabTests = $isCancelled ? collect() : $surgery->labTests->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled');
     $paidLabTests = $surgery->labTests->filter(function($test) use ($isCancelled) {
         return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->labTest);
     });
+    $isPostOpLabDefault = ($surgery->surgery_fee_paid === 'paid') || ($surgery->status === 'completed') || ($surgery->postOpResidentStation !== null);
     $labCopayPct = match($defaultInsurance) {
         'hi' => ($patient?->getCopayPercentageFor('lab') ?? 15),
         'moi' => (float)($patient?->copay_percentage ?? 15),
@@ -209,7 +210,7 @@
     });
     
     // أشعة معلقة ومدفوعة
-    $pendingRadiologyTests = $isCancelled ? collect() : $surgery->radiologyTests->where('payment_status', '!=', 'paid');
+    $pendingRadiologyTests = $isCancelled ? collect() : $surgery->radiologyTests->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled');
     $paidRadiologyTests = $surgery->radiologyTests->filter(function($test) use ($isCancelled) {
         return $test->payment_status === 'paid' || !empty($test->payment_id) || ($isCancelled && $test->radiologyType);
     });
@@ -795,10 +796,26 @@
                     </div>
                     @endif
 
+                    @if(!$isCancelled && $surgery->billing_status === 'pending_review')
+                        <div class="alert alert-warning border-warning shadow-sm mb-4 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <div>
+                                <i class="fas fa-calculator me-2"></i>
+                                <strong>{{ __('تنبيه تسعير:') }}</strong>
+                                {{ __('تم تعديل نوع أو عمليات هذه العملية وهي بانتظار اعتماد السعر الجديد من قسم الحسابات. يمكنك تسديد أجور الغرفة والفحوصات والاستشارات الآن.') }}
+                            </div>
+                            @can('review surgery prices')
+                                <a href="{{ route('accountant.surgeries.review', $surgery) }}" class="btn btn-sm btn-warning fw-bold text-dark">
+                                    <i class="fas fa-coins me-1"></i> {{ __('فتح شاشة تسعير العملية') }}
+                                </a>
+                            @endcan
+                        </div>
+                    @endif
+
                     @if(!$isCancelled && ($pendingAmount > 0 || $hasPendingItems))
                     <!-- نموذج الدفع للعناصر المعلقة -->
                     <form action="{{ route('cashier.surgeries.payment.process', $surgery->id) }}" method="POST" id="paymentForm" novalidate>
                         @csrf
+                        <input type="hidden" name="package_included_submitted" value="1">
 
                         @if($defaultInsurance !== 'none')
                             <!-- قسم الضمان الصحي ونسبة التحمل التلقائية المحمية للعمليات -->
@@ -1039,6 +1056,7 @@
                                     <tbody>
                                         <!-- رسوم العملية (إذا لم تُدفع بالكامل) -->
                                         @if(!$surgeryFeePaid && $remainingSurgeryFee > 0)
+                                        @php $lockSurgeryPayForReview = ($surgery->billing_status === 'pending_review'); @endphp
                                         <tr class="table-light align-middle">
                                             <td class="text-center">
                                                 <input type="checkbox" 
@@ -1047,7 +1065,7 @@
                                                        name="pay_surgery" 
                                                        value="1"
                                                        data-is-custom="true"
-                                                       checked>
+                                                       {{ $lockSurgeryPayForReview ? 'disabled' : 'checked' }}>
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">
@@ -1055,16 +1073,13 @@
                                                     <div>
                                                         <strong class="text-dark fs-6">{{ $surgery->surgery_type ?? __('عملية جراحية') }}</strong>
                                                         <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">{{ __('العملية الأساسية') }}</span>
+                                                        @if($lockSurgeryPayForReview)
+                                                            <span class="badge bg-warning text-dark ms-1">{{ __('معلقة لحين اعتماد الحسابات') }}</span>
+                                                        @endif
                                                         <div class="small text-muted mt-1">
                                                             {{ __('أجور الجراحة الأساسية:') }} {{ number_format($surgeryFee, 0) }} {{ __('د.ع') }}
                                                             @if($additionalOpsFee > 0)
                                                                 + {{ __('العمليات الإضافية:') }} {{ number_format($additionalOpsFee, 0) }} {{ __('د.ع') }}
-                                                            @endif
-                                                            @if($surgery->medicalDevices->isNotEmpty())
-                                                                <br>+ {{ __('الأجهزة الطبية') }} ({{ $surgery->medicalDevices->count() }}): 
-                                                                @foreach($surgery->medicalDevices as $device)
-                                                                    {{ $device->name }} ({{ number_format($device->pivot->price ?? 0, 0) }} {{ __('د.ع') }})@if(!$loop->last), @endif
-                                                                @endforeach
                                                             @endif
                                                         </div>
                                                         @if($surgeryFeePaidAmount > 0)
@@ -1329,7 +1344,7 @@
                                                                 <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
                                                                        name="pkg_radio_lab_{{ $labTest->id }}" 
                                                                        id="rad_inc_lab_{{ $labTest->id }}" 
-                                                                       value="1" checked autocomplete="off">
+                                                                       value="1" {{ !$isPostOpLabDefault ? 'checked' : '' }} autocomplete="off">
                                                                 <label class="segmented-pill-label pill-included" for="rad_inc_lab_{{ $labTest->id }}" title="{{ __('مشمول ضمن باقة العملية (0 د.ع)') }}">
                                                                     <i class="fas fa-box-open"></i>
                                                                     <span>{{ __('مشمول') }}</span>
@@ -1338,7 +1353,7 @@
                                                                 <input type="radio" class="segmented-pill-input inclusion-pill-radio" 
                                                                        name="pkg_radio_lab_{{ $labTest->id }}" 
                                                                        id="rad_sep_lab_{{ $labTest->id }}" 
-                                                                       value="0" autocomplete="off">
+                                                                       value="0" {{ $isPostOpLabDefault ? 'checked' : '' }} autocomplete="off">
                                                                 <label class="segmented-pill-label pill-unbundled" for="rad_sep_lab_{{ $labTest->id }}" title="{{ __('غير مشمول - منفصل') }}">
                                                                     <i class="fas fa-coins"></i>
                                                                     <span>{{ __('منفصل') }}</span>
@@ -1346,7 +1361,7 @@
                                                                 <input type="checkbox" class="package-inclusion-switch d-none" 
                                                                        name="package_included[lab][{{ $labTest->id }}]" 
                                                                        id="pkg_incl_lab_{{ $labTest->id }}" 
-                                                                       value="1" checked>
+                                                                       value="1" {{ !$isPostOpLabDefault ? 'checked' : '' }}>
                                                             </div>
                                                             <button type="button" class="btn btn-outline-danger btn-sm p-1 rounded-circle delete-surgery-item-btn d-inline-flex align-items-center justify-content-center" 
                                                                     style="width: 28px; height: 28px; flex-shrink: 0;"

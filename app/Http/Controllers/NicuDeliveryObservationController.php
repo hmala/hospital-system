@@ -49,6 +49,81 @@ class NicuDeliveryObservationController extends Controller
     }
 
     /**
+     * شاشة معاينات الوليد الحية (ساعتان) وأرشيف التسليم والتحويل
+     */
+    public function index(Request $request): View
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canView = $isAdmin || ($user && ($user->can('manage nicu delivery observations') || $user->can('view nicu delivery radar')));
+
+        if (! $canView) {
+            abort(403, 'عذراً، لا تملك صلاحية عرض معاينات الوليد الحية لقسم الخدج.');
+        }
+
+        $observationSettings = NicuSetting::observationConfig();
+
+        $activeObservations = NicuDeliveryObservation::with([
+            'babies.incubatorReservation.incubator',
+            'surgery',
+            'patient.user',
+        ])
+            ->whereIn('status', [
+                NicuDeliveryObservation::STATUS_UNDER_OBSERVATION,
+                NicuDeliveryObservation::STATUS_READY_FOR_HANDOVER,
+                NicuDeliveryObservation::STATUS_PARTIAL,
+            ])
+            ->orderBy('started_at', 'asc')
+            ->get();
+
+        $archiveSearch = trim((string) $request->input('archive_search', ''));
+
+        $archiveObservations = NicuDeliveryObservation::with([
+            'babies.incubatorReservation.incubator',
+            'surgery',
+            'patient.user',
+        ])
+            ->when($archiveSearch !== '', function ($q) use ($archiveSearch) {
+                $q->where(function ($sub) use ($archiveSearch) {
+                    $sub->where('mother_name', 'like', "%{$archiveSearch}%")
+                        ->orWhere('recipient_name', 'like', "%{$archiveSearch}%")
+                        ->orWhere('recipient_id_number', 'like', "%{$archiveSearch}%")
+                        ->orWhere('recipient_phone', 'like', "%{$archiveSearch}%")
+                        ->orWhereHas('babies', fn ($b) => $b->where('born_name', 'like', "%{$archiveSearch}%"));
+                });
+            })
+            ->orderByDesc('created_at')
+            ->limit(60)
+            ->get();
+
+        $readyCount = $activeObservations->filter(fn ($obs) => $obs->isDurationCompleted())->count();
+
+        $stats = [
+            'under_observation' => max(0, $activeObservations->count() - $readyCount),
+            'ready_for_handover' => $readyCount,
+            'admitted_today' => NicuDeliveryObservationBaby::where('disposition', NicuDeliveryObservationBaby::DISPOSITION_ADMITTED_TO_NICU)
+                ->whereDate('updated_at', today())
+                ->count(),
+            'handed_over_today' => NicuDeliveryObservation::where('status', NicuDeliveryObservation::STATUS_HANDED_OVER)
+                ->whereDate('handed_over_at', today())
+                ->count(),
+        ];
+
+        $canManageSettings = $isAdmin || ($user && ($user->can('manage nicu delivery radar settings') || $user->hasRole('nicu_doctor')));
+        $canManageObservations = $isAdmin || ($user && $user->can('manage nicu delivery observations'));
+
+        return view('nicu.observations.index', compact(
+            'activeObservations',
+            'archiveObservations',
+            'archiveSearch',
+            'observationSettings',
+            'stats',
+            'canManageSettings',
+            'canManageObservations'
+        ));
+    }
+
+    /**
      * بدء معاينة (ساعتين) مباشرة من عملية قيصرية / ولادة في رادار العمليات
      */
     public function startFromSurgery(Request $request, Surgery $surgery): RedirectResponse

@@ -49,6 +49,7 @@ class ResidentStationController extends Controller
         // 1. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
         $preOpQuery = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation'])
             ->where('status', '!=', 'cancelled')
+            ->whereNull('discharged_at')
             ->where(function ($query) {
                 $query->whereIn('status', ['scheduled', 'waiting', 'checked_in'])
                     ->orWhere(function ($q) {
@@ -67,7 +68,10 @@ class ResidentStationController extends Controller
             });
 
         if ($selectedFloor) {
-            $preOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+            $preOpQuery->where(function ($fq) use ($selectedFloor) {
+                $fq->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor))
+                    ->orWhereNull('room_id');
+            });
         }
         $applySearch($preOpQuery);
 
@@ -78,6 +82,7 @@ class ResidentStationController extends Controller
         // 2. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد خروج المريض من الصالة)
         $postOpQuery = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation', 'anesthesiaStation'])
             ->where('status', '!=', 'cancelled')
+            ->whereNull('discharged_at')
             ->where(function ($query) {
                 $query->whereHas('operationTheaterStation', function ($sq) {
                     $sq->where('status', 'completed');
@@ -101,7 +106,10 @@ class ResidentStationController extends Controller
             });
 
         if ($selectedFloor) {
-            $postOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+            $postOpQuery->where(function ($fq) use ($selectedFloor) {
+                $fq->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor))
+                    ->orWhereNull('room_id');
+            });
         }
         $applySearch($postOpQuery);
 
@@ -109,13 +117,14 @@ class ResidentStationController extends Controller
             ->orderBy('scheduled_time', 'desc')
             ->get();
 
-        // 3. جلب العمليات التي أتمت كل مراحل المقيم (pre_op و post_op)
+        // 3. جلب العمليات المكتملة في الأرشيف (أتمت مرحلة ما بعد العملية أو تم تخريج المريض نهائياً)
         $completedQuery = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
-            ->whereHas('residentStations', function ($q) {
-                $q->where('phase', 'pre_op')->where('status', 'completed');
-            })
-            ->whereHas('residentStations', function ($q) {
-                $q->where('phase', 'post_op')->where('status', 'completed');
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($q) {
+                $q->whereHas('residentStations', function ($sq) {
+                    $sq->where('phase', 'post_op')->where('status', 'completed');
+                })
+                    ->orWhereNotNull('discharged_at');
             });
 
         if ($selectedFloor) {

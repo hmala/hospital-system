@@ -101,6 +101,21 @@
         </div>
     </div>
 
+    @if(($canSurgeries ?? false) && ($pendingSurgeriesCount ?? 0) > 0)
+        <div class="alert alert-danger border-danger shadow-sm d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fas fa-procedures fs-4 text-danger"></i>
+                <div>
+                    <strong>{{ __('تنبيه كاشير العمليات والرقود:') }}</strong>
+                    {{ __('يوجد حالياً') }} <span class="badge bg-danger fs-6">{{ $pendingSurgeriesCount }}</span> {{ __('ملف عملية/رقود يحتوي على رسوم أو طلبات مقيم (تحاليل، أشعة، استشارات، غرف) بانتظار التحصيل.') }}
+                </div>
+            </div>
+            <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-danger btn-sm fw-bold px-3 rounded-pill shadow-xs">
+                <i class="fas fa-cash-register me-1"></i> {{ __('الانتقال لكاشير العمليات والتحصيل') }}
+            </a>
+        </div>
+    @endif
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="fas fa-check-circle me-2"></i>

@@ -1086,7 +1086,7 @@ class ClinicalStationController extends Controller
             $message = 'تم إكمال المحطة السريرية لما بعد العملية وتثبيت المتابعة.';
         }
 
-        return redirect()->route('surgeries.waiting')->with('success', $message);
+        return redirect()->route('resident-station.index')->with('success', $message);
     }
 
     /**
@@ -1447,6 +1447,8 @@ class ClinicalStationController extends Controller
             $addedCount++;
         }
 
+        $surgery->syncPaymentStatus();
+
         if (class_exists(UserActivityLogger::class)) {
             UserActivityLogger::log(
                 'create',
@@ -1485,6 +1487,7 @@ class ClinicalStationController extends Controller
 
         $testName = $labTest->labTest?->name ?? 'فحص مخبري';
         $labTest->delete();
+        $surgery->syncPaymentStatus();
 
         return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
             ->with('success', "تم حذف التحليل «{$testName}» بنجاح.");
@@ -1521,6 +1524,8 @@ class ClinicalStationController extends Controller
             'payment_status' => 'pending',
             'notes' => $notes,
         ]);
+
+        $surgery->syncPaymentStatus();
 
         $radType = RadiologyType::find($validated['radiology_type_id']);
         $radName = $radType?->name ?? 'فحص إشعاعي';
@@ -1563,6 +1568,7 @@ class ClinicalStationController extends Controller
 
         $radName = $radiologyTest->radiologyType?->name ?? 'فحص أشعة';
         $radiologyTest->delete();
+        $surgery->syncPaymentStatus();
 
         return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'tab' => 'tests'])
             ->with('success', "تم حذف فحص الأشعة «{$radName}» بنجاح.");
@@ -1610,6 +1616,8 @@ class ClinicalStationController extends Controller
             'status' => 'pending',
             'requested_by' => Auth::id(),
         ]);
+
+        $surgery->syncPaymentStatus();
 
         $doctorName = $doctor->user?->name ?? "دكتور #{$doctor->id}";
 
@@ -1728,6 +1736,8 @@ class ClinicalStationController extends Controller
             'status' => 'cancelled',
         ]);
 
+        $surgery->syncPaymentStatus();
+
         if (class_exists(UserActivityLogger::class)) {
             UserActivityLogger::log(
                 'delete',
@@ -1791,6 +1801,8 @@ class ClinicalStationController extends Controller
             'created_by' => Auth::id(),
         ]);
 
+        $surgery->syncPaymentStatus();
+
         if (class_exists(UserActivityLogger::class)) {
             UserActivityLogger::log(
                 'create',
@@ -1837,6 +1849,7 @@ class ClinicalStationController extends Controller
         }
 
         $extraService->delete();
+        $surgery->syncPaymentStatus();
 
         if (class_exists(UserActivityLogger::class)) {
             UserActivityLogger::log(

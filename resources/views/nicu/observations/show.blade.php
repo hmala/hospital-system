@@ -10,8 +10,11 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <div>
                     <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                        <a href="{{ route('nicu.observations.index') }}" class="btn btn-sm btn-outline-primary rounded-3">
+                            <i class="fas fa-arrow-right me-1"></i> العودة لمعاينات الوليد الحية
+                        </a>
                         <a href="{{ route('nicu.delivery-radar.index') }}" class="btn btn-sm btn-outline-secondary rounded-3">
-                            <i class="fas fa-arrow-right me-1"></i> العودة لرادار العمليات
+                            <i class="fas fa-satellite-dish me-1"></i> رادار العمليات
                         </a>
                         <span class="badge {{ $observation->status_badge_class }} px-3 py-2 rounded-pill">
                             {{ $observation->status_label }}

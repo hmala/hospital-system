@@ -89,7 +89,7 @@ class SurgeryStatusPostOpAndPrintReportTest extends TestCase
         return [$adminUser, $doctor, $patient, $surgery, $hospital];
     }
 
-    public function test_surgery_show_allows_status_dropdown_even_when_completed_and_shows_top_save_button(): void
+    public function test_surgery_show_locks_completed_status_and_shows_top_save_button(): void
     {
         [$adminUser, , , $surgery] = $this->createTestData('completed');
 
@@ -97,15 +97,16 @@ class SurgeryStatusPostOpAndPrintReportTest extends TestCase
 
         $response->assertStatus(200);
 
-        // 1. Status dropdown is present and clickable
+        // 1. Status dropdown shows Post-Op & locked notice
         $response->assertSee('patientOrStatusDropdownBtn');
         $response->assertSee('Post-Op (خرج من الصالة)');
+        $response->assertSee('تم إنهاء العملية وتثبيتها نهائياً (مقفلة)');
 
-        // 2. Options to re-start or return to waiting from completed are present
-        $response->assertSee('formDropdownRestartSurgery');
-        $response->assertSee('استئناف العملية (إعادة دخول الصالة)');
-        $response->assertSee('formDropdownReturnFromCompleted');
-        $response->assertSee('إرجاعه لقائمة الانتظار (Pre-Op)');
+        // 2. Options to re-start, return to waiting, or cancel from completed are REMOVED
+        $response->assertDontSee('formDropdownRestartSurgery');
+        $response->assertDontSee('استئناف العملية (إعادة دخول الصالة)');
+        $response->assertDontSee('formDropdownReturnFromCompleted');
+        $response->assertDontSee('إرجاعه لقائمة الانتظار (Pre-Op)');
 
         // 3. Top save button is present right beside print report
         $response->assertSee('btnUnifiedSaveSurgeryTop');
@@ -113,31 +114,30 @@ class SurgeryStatusPostOpAndPrintReportTest extends TestCase
         $response->assertSee('طباعة التقرير');
     }
 
-    public function test_can_change_status_after_completed_back_to_in_progress_and_waiting(): void
+    public function test_cannot_restart_return_to_waiting_or_cancel_after_completed(): void
     {
         [$adminUser, , , $surgery] = $this->createTestData('completed');
 
-        // Restart surgery from completed back to in_progress
+        // Restart surgery from completed is blocked
         $startResponse = $this->actingAs($adminUser)->post(route('surgeries.start', $surgery));
         $startResponse->assertRedirect();
-
-        $surgery->refresh();
-        $this->assertEquals('in_progress', $surgery->status);
-        $this->assertNull($surgery->end_time);
-
-        // Complete again
-        $this->actingAs($adminUser)->post(route('surgeries.complete', $surgery));
+        $startResponse->assertSessionHas('error');
         $surgery->refresh();
         $this->assertEquals('completed', $surgery->status);
-        $this->assertNotNull($surgery->end_time);
 
-        // Return from completed back to waiting
+        // Return from completed back to waiting is blocked
         $waitingResponse = $this->actingAs($adminUser)->post(route('surgeries.return-to-waiting', $surgery));
         $waitingResponse->assertRedirect();
-
+        $waitingResponse->assertSessionHas('error');
         $surgery->refresh();
-        $this->assertEquals('waiting', $surgery->status);
-        $this->assertNull($surgery->end_time);
+        $this->assertEquals('completed', $surgery->status);
+
+        // Cancelling completed surgery is blocked
+        $cancelResponse = $this->actingAs($adminUser)->post(route('surgeries.cancel', $surgery));
+        $cancelResponse->assertRedirect();
+        $cancelResponse->assertSessionHas('error');
+        $surgery->refresh();
+        $this->assertEquals('completed', $surgery->status);
     }
 
     public function test_surgery_print_report_renders_with_official_hospital_header_logo_and_details(): void

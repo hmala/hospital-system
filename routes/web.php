@@ -832,6 +832,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
+    Route::post('/surgeries/{surgery}/assign-room', [SurgeryController::class, 'assignRoom'])->name('surgeries.assign-room');
     Route::post('/surgeries/{surgery}/cancel', [SurgeryController::class, 'cancel'])->name('surgeries.cancel');
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
     Route::post('/surgeries/theaters/quick-store', [SurgeryController::class, 'quickStoreTheater'])->name('surgeries.theaters.quick-store');
@@ -1034,6 +1035,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/delivery-radar/toggle/{surgicalOperation}', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'toggleOperation'])->name('delivery-radar.toggle');
 
         // معاينة المواليد بعد الولادة (ساعتان) واستمارة Obstetric Case Sheet
+        Route::get('/observations', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'index'])->name('observations.index');
         Route::post('/observations/from-surgery/{surgery}', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'startFromSurgery'])->name('observations.from-surgery');
         Route::post('/observations/manual', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'storeManual'])->name('observations.store-manual');
         Route::get('/observations/{observation}', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'show'])->name('observations.show');

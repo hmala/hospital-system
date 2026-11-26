@@ -96,14 +96,23 @@ class OperationTheaterStationController extends Controller
             'end_time' => $validated['end_time'] ?? null,
         ]);
 
-        // مزامنة الأجهزة الطبية المستخدمة
+        // مزامنة الأجهزة الطبية المستخدمة (تُحاسب مع الجراح في الحسابات دون تعطيل فاتورة المريض)
         $syncData = [];
-        if ($request->has('devices')) {
+        if ($request->has('devices') && ! empty($request->devices)) {
+            $existingPivots = $surgery->medicalDevices()->get()->keyBy('id');
+            $devicesMap = \App\Models\MedicalDevice::whereIn('id', $request->devices)->get()->keyBy('id');
             foreach ($request->devices as $deviceId) {
-                $syncData[$deviceId] = ['assigned_by' => auth()->id()];
+                $existingPivotPrice = $existingPivots->get($deviceId)?->pivot?->price;
+                $syncData[$deviceId] = [
+                    'assigned_by' => auth()->id(),
+                    'price' => $existingPivotPrice ?? (float) ($devicesMap->get($deviceId)?->usage_price ?? 0),
+                ];
             }
         }
         $surgery->medicalDevices()->sync($syncData);
+        $surgery->devices_billing_status = ! empty($syncData) ? 'pending_review' : 'none';
+        $surgery->save();
+        $surgery->syncSurgeonDoctorDue();
 
         return redirect()->route('operation-theater-station.show', $surgery)
             ->with('success', 'تم حفظ بيانات صالة العمليات بنجاح');
@@ -116,7 +125,26 @@ class OperationTheaterStationController extends Controller
             return redirect()->back()->with('error', 'المحطة غير موجودة');
         }
 
+        if ($surgery->status === 'completed' || $station->status === 'completed') {
+            return redirect()->route('operation-theater-station.index')->with('info', 'تم إتمام هذه العملية مسبقاً.');
+        }
+
         $station->markAsCompleted();
+
+        $preOpStation = $surgery->residentStations()->where('phase', 'pre_op')->first();
+        if (! $preOpStation) {
+            $surgery->residentStations()->create([
+                'phase' => 'pre_op',
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+        } elseif ($preOpStation->status !== 'completed') {
+            $preOpStation->markAsCompleted();
+        }
+        $surgery->residentStations()->firstOrCreate(
+            ['phase' => 'post_op'],
+            ['status' => 'pending']
+        );
 
         // إنشاء محطة الجراح التالية
         if (! $surgery->surgeonStation) {

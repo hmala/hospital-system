@@ -201,11 +201,12 @@
                     
                     <div class="card-body p-4">
                         {{-- 1. Main Operation --}}
+                        @php $isOpReviewRequired = $surgery->billing_status === 'pending_review'; @endphp
                         <div class="billing-item p-4 mb-4 bg-light bg-opacity-50">
                             <div class="row align-items-center g-3">
                                 <div class="col-md-7">
-                                    <span class="badge bg-primary bg-opacity-10 text-primary mb-2 px-2 py-1" style="font-size: 0.75rem;">
-                                        العملية الأساسية
+                                    <span class="badge {{ $isOpReviewRequired ? 'bg-primary bg-opacity-10 text-primary' : 'bg-success bg-opacity-10 text-success' }} mb-2 px-2 py-1" style="font-size: 0.75rem;">
+                                        {{ $isOpReviewRequired ? 'العملية الأساسية (تُحاسب للمريض والجراح)' : 'العملية الأساسية (معتمدة مسبقاً)' }}
                                     </span>
                                     <h5 class="fw-bold text-dark mb-2">{{ $surgery->surgery_type }}</h5>
                                     @if($surgery->surgicalOperation)
@@ -226,13 +227,15 @@
                                                class="form-control price-format fw-bold text-primary @error('surgery_fee') is-invalid @enderror"
                                                value="{{ old('surgery_fee', $surgery->surgery_fee ?? ($surgery->surgicalOperation->fee ?? 0)) }}"
                                                data-target="surgery_fee"
-                                               required>
+                                               {{ $isOpReviewRequired ? 'required' : 'readonly' }}>
                                         <span class="input-group-text">د.ع</span>
                                     </div>
                                     @error('surgery_fee')
                                         <div class="invalid-feedback d-block small mt-1">{{ $message }}</div>
                                     @enderror
-                                    <input type="hidden" id="surgery_fee" name="surgery_fee" value="{{ old('surgery_fee', $surgery->surgery_fee ?? ($surgery->surgicalOperation->fee ?? 0)) }}">
+                                    @if($isOpReviewRequired)
+                                        <input type="hidden" id="surgery_fee" name="surgery_fee" value="{{ old('surgery_fee', $surgery->surgery_fee ?? ($surgery->surgicalOperation->fee ?? 0)) }}">
+                                    @endif
                                 </div>
                             </div>
                         </div>
@@ -283,9 +286,10 @@
                         {{-- 3. Medical Devices --}}
                         @if($surgery->medicalDevices->isNotEmpty())
                             <div class="border-top pt-3 mt-3 mb-4">
-                                <h6 class="fw-bold text-info mb-3">
-                                    <i class="fas fa-stethoscope me-1"></i>رسوم الأجهزة الطبية المستخدمة
+                                <h6 class="fw-bold text-info mb-1">
+                                    <i class="fas fa-stethoscope me-1"></i>تسوية الأجهزة الطبية المستخدمة (تُستقطع من حساب الجراح فقط ولا تُحمّل على المريض)
                                 </h6>
+                                <p class="text-muted small mb-3">يُحدد هنا مبلغ استخدام الأجهزة لتسويته ضمن كشف حساب الطبيب الجراح في الحسابات دون إضافة أي رسوم على فاتورة المريض.</p>
                                 <div class="d-flex flex-column gap-3">
                                     @foreach($surgery->medicalDevices as $device)
                                         <div class="billing-item p-3">
@@ -324,9 +328,9 @@
                         {{-- 4. Live Total Summary Card --}}
                         <div class="live-total-card p-4 mt-4 text-white d-flex align-items-center justify-content-between">
                             <div>
-                                <span class="text-white-50 small fw-bold">الإجمالي المعتمد الكلي</span>
+                                <span class="text-white-50 small fw-bold">ملخص الاعتماد المالي</span>
                                 <h6 class="mb-0 text-white opacity-75 mt-1" style="font-size: 0.8rem;">
-                                    (العملية الأساسية + الإضافات + الأجهزة)
+                                    (أجور العملية للمريض vs استقطاع الأجهزة من الجراح)
                                 </h6>
                             </div>
                             <h3 class="fw-bold mb-0 text-warning" id="live_total_display" style="font-size: 1.8rem; letter-spacing: 0.5px;">0 د.ع</h3>

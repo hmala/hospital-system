@@ -1358,6 +1358,12 @@ class InquiryController extends Controller
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
             ->whereNull('discharged_at');
 
+        // جلب العمليات التي في وضع انتظار الغرفة (لم تُخصص لها غرفة بعد)
+        $waitingRoomQuery = \App\Models\Surgery::with(['patient.user', 'doctor.user', 'department'])
+            ->whereNull('room_id')
+            ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
+            ->whereNull('discharged_at');
+
         // تطبيق الفلاتر المشتركة
         if ($search) {
             $bedQuery->where(function ($q) use ($search) {
@@ -1402,6 +1408,13 @@ class InquiryController extends Controller
 
         $bedReservations = $bedQuery->orderBy('scheduled_date', 'desc')->orderBy('scheduled_time', 'desc')->get();
         $surgeries = $surgeryQuery->orderBy('scheduled_date', 'desc')->get();
+        $waitingRoomSurgeries = $waitingRoomQuery->orderBy('scheduled_date')->orderBy('scheduled_time')->get();
+        $availableRooms = \App\Models\Room::where('is_active', true)
+            ->where('room_purpose', 'beds')
+            ->where('status', 'available')
+            ->orderBy('room_type')
+            ->orderBy('room_number')
+            ->get();
 
         // تجميع البيانات حسب الغرفة
         $roomsData = [];
@@ -1447,7 +1460,7 @@ class InquiryController extends Controller
             $allOccupancies[] = $occupancyData;
         }
 
-        return view('inquiry.occupancy', compact('roomsData', 'allOccupancies', 'search', 'roomType', 'fromDate', 'toDate'));
+        return view('inquiry.occupancy', compact('roomsData', 'allOccupancies', 'waitingRoomSurgeries', 'availableRooms', 'search', 'roomType', 'fromDate', 'toDate'));
     }
 
     /**

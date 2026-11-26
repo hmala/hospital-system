@@ -677,6 +677,7 @@ class RoleManagementController extends Controller
             'view nursing station' => ['label' => 'دخول محطة التمريض السريري', 'action' => 'محطة', 'badge' => 'success'],
             'manage nurse availability' => ['label' => 'إدارة وتوزيع جدول دوام التمريض اليومي وتسكين الطوابق', 'action' => 'إدارة', 'badge' => 'primary'],
             'manage rooms' => ['label' => 'إدارة غرف العمليات وأسرة الرقود', 'action' => 'إدارة', 'badge' => 'primary'],
+            'assign surgery room' => ['label' => 'تخصيص غرفة لمرضى العمليات (من وضع الانتظار للغرفة)', 'action' => 'تخصيص', 'badge' => 'primary'],
             'manage surgery tab permissions' => ['label' => 'إدارة وتخصيص صلاحيات تبويبات المحطة السريرية', 'action' => 'إدارة', 'badge' => 'primary'],
             'view medical devices' => ['label' => 'عرض دليل الأجهزة والمستلزمات الجراحية', 'action' => 'عرض', 'badge' => 'info'],
             'manage medical devices' => ['label' => 'إدارة وصيانة الأجهزة الطبية الجراحية', 'action' => 'إدارة', 'badge' => 'primary'],

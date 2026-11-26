@@ -1332,11 +1332,8 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بتحديث تحاليل العمليات الجراحية');
         }
 
-        // التحقق من دفع رسوم العملية أولاً
+        // سياسة المستشفى: الطلبات المخبرية للمريض الراقد تمر مباشرة وتُحاسب في الكاشير قبل التخريج
         $test->load('surgery');
-        if ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') {
-            return redirect()->back()->with('error', 'لا يمكن إجراء التحليل قبل دفع رسوم العملية الجراحية');
-        }
 
         $validated = $request->validate([
             'status' => 'required|in:pending,completed,cancelled',
@@ -1417,6 +1414,8 @@ class StaffRequestController extends Controller
             }
         }
 
+        $surgery?->syncPaymentStatus();
+
         if ($firstTest) {
             return redirect()->route('staff.surgery-lab-tests.show', $firstTest)
                 ->with('success', 'تم اختيار التحاليل بنجاح. يمكنك الآن إدخال النتائج.');
@@ -1466,6 +1465,10 @@ class StaffRequestController extends Controller
                 ]);
                 $added++;
             }
+        }
+
+        if ($added > 0) {
+            $surgery->syncPaymentStatus();
         }
 
         $firstTest = $surgery->labTests()->whereNotNull('lab_test_id')->first();

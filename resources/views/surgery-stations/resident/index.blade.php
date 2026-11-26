@@ -366,6 +366,11 @@
                                                             <i class="fas fa-check-circle me-1"></i> المتابعة (ما بعد)
                                                         </span>
                                                     @endif
+                                                    @if($surgery->discharged_at)
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2 py-1.5 small">
+                                                            <i class="fas fa-sign-out-alt me-1"></i> تم التخريج
+                                                        </span>
+                                                    @endif
                                                 </div>
                                             </td>
                                             <td class="text-center">
@@ -375,11 +380,9 @@
                                                             <i class="fas fa-eye me-1"></i> عرض التهيئة
                                                         </a>
                                                     @endif
-                                                    @if($postOpStation && $postOpStation->status === 'completed')
-                                                        <a href="{{ route('resident-station.show', $surgery) }}?phase=post_op" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 text-dark shadow-sm">
-                                                            <i class="fas fa-eye me-1"></i> عرض المتابعة
-                                                        </a>
-                                                    @endif
+                                                    <a href="{{ route('resident-station.show', $surgery) }}?phase=post_op" class="btn btn-sm btn-outline-info rounded-pill px-3 py-1 text-dark shadow-sm">
+                                                        <i class="fas fa-eye me-1"></i> عرض المتابعة
+                                                    </a>
                                                 </div>
                                             </td>
                                         </tr>

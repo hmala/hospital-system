@@ -56,6 +56,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 303: قفل صالة العمليات بعد الإكمال + فصل محاسبة الأجهزة الطبية للجراح + بوابة التخريج المالية وإصلاح الأرشيف + وضع انتظار الغرفة بصلاحية مخصصة OR Lock, Surgeon-Only Devices Billing, Discharge Gate & Permission-Gated Room Standby)
+
+### Done
+- **الأجهزة الطبية ومزامنة الكاشير ([2026_11_26_130000_add_devices_billing_status_to_surgeries.php](file:///C:/get/hospital-system/database/migrations/2026_11_26_130000_add_devices_billing_status_to_surgeries.php), [Surgery.php](file:///C:/get/hospital-system/app/Models/Surgery.php), [AccountantController.php](file:///C:/get/hospital-system/app/Http/Controllers/AccountantController.php), [CashierController.php](file:///C:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * فصل `devices_billing_status` عن `billing_status` بحيث لا تتعطل فاتورة المريض في الكاشير بسبب إضافة جهاز طبي داخل الصالة، وتُسوى الأجهزة على حساب الطبيب الجراح فقط (`calculateSurgeonFinancials()` / `syncSurgeonDoctorDue()`).
+  * إضافة `calculatePendingItemsBreakdown()`, `getFinancialClearanceSummary()`, `syncPaymentStatus()` لمزامنة `payment_status` فور إضافة تحاليل/أشعة/استشارات ما بعد العملية أو تعديل الغرف، وضبط التحاليل بعد العملية لتكون منفصلة افتراضياً مع إشعار تنبيهي بالكاشير العام.
+- **منع إعادة العملية وبوابة التخريج وأرشيف المقيم ([SurgeryController.php](file:///C:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [OperationTheaterStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/OperationTheaterStationController.php), [NursingStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/NursingStationController.php), [ResidentStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ResidentStationController.php), [StaffRequestController.php](file:///C:/get/hospital-system/app/Http/Controllers/StaffRequestController.php), [ClinicalStationController.php](file:///C:/get/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * حظر إعادة بدء أو إلغاء أو إرجاع العملية المكتملة مع إتمام `pre_op` وضمان وجود `post_op` عند إكمال الصالة.
+  * إتاحة مرور طلبات المختبر والأشعة للراقدين مباشرة مع بيان حالتها المالية، وتطبيق فحص براءة الذمة الصارم في `roomCheckout()` و`discharge()`، وإصلاح استعلام الأرشيف في `ResidentStationController`.
+- **وضع انتظار الغرفة بصلاحية مخصصة ([2026_11_26_133000_add_assign_surgery_room_permission.php](file:///C:/get/hospital-system/database/migrations/2026_11_26_133000_add_assign_surgery_room_permission.php), [RolesAndPermissionsSeeder.php](file:///C:/get/hospital-system/database/seeders/RolesAndPermissionsSeeder.php), [RoleManagementController.php](file:///C:/get/hospital-system/app/Http/Controllers/RoleManagementController.php), [routes/web.php](file:///C:/get/hospital-system/routes/web.php), [InquiryController.php](file:///C:/get/hospital-system/app/Http/Controllers/InquiryController.php), [resources/views/surgeries/create.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/create.blade.php), [resources/views/surgeries/edit.blade.php](file:///C:/get/hospital-system/resources/views/surgeries/edit.blade.php), [resources/views/inquiry/occupancy.blade.php](file:///C:/get/hospital-system/resources/views/inquiry/occupancy.blade.php), [resources/views/surgery-stations/nursing/index.blade.php](file:///C:/get/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+  * دعم الحجز وتعديل الحجز بـ `room_id = null`، وإضافة مسار `surgeries.assign-room` بصلاحية `assign surgery room` مع واجهات التخصيص في الإشغال ومحطة التمريض وإصلاح استدعاء `Room::getInitialFeeForType()` داخل `assignRoom()`.
+- **الاختبارات وضمان الجودة ([tests/Feature/SurgeryCashierDevicesAndRoomWaitingWorkflowTest.php](file:///C:/get/hospital-system/tests/Feature/SurgeryCashierDevicesAndRoomWaitingWorkflowTest.php))**:
+  * اجتياز `Laravel Pint` (`20 files`) و`php artisan view:cache` واختبارات الميزة الجديدة (`SurgeryCashierDevicesAndRoomWaitingWorkflowTest`) واختبارات العمليات (`SurgeryStatusPostOpAndPrintReportTest`, `SurgeryWaitingListFlightBoardTest`, `SurgeriesCashierStayBillingTest`).
+
 ## Session log (2026-11-26 — المرحلة 302: توحيد تبويبات محطة الطبيب المقيم في تبويب نشط واحد وإعادة هيكلة الجدول إلى 4 أعمدة رئيسية مع فلاتر الأطوار اللحظية Resident Doctor Station Unified Active Tab, 4-Column Clinical Table & Instant Phase Filters)
 
 ### Done
@@ -104,6 +118,17 @@ Consult these files before making changes or proposing fixes:
   * إضافة اختبارات ميزة آلية للصرف الجماعي المتعدد وللتبويب الموحد والفلاتر اللحظية.
   * اجتياز اختبارات صرف عهدة الطابق بنجاح (`6 passed, 43 assertions`) واختبارات محطة التمريض (`9 passed, 48 assertions`).
   * اجتياز فحص القوالب `view:cache` و `Laravel Pint` بالكامل.
+
+## Session log (2026-11-26 — المرحلة 300: فصل شاشة «معاينات الوليد الحية» بعرض البطاقات وإضافتها كعنصر قياسي مباشر تحت رادار العمليات بالقائمة الجانبية وتنظيف الرادار Dedicated NICU Live Observations Cards Screen & Standard Sidebar Item)
+
+### Done
+- **المسار والقائمة الجانبية ([routes/web.php](file:///C:/get/hospital-system/routes/web.php), [resources/views/layouts/app.blade.php](file:///C:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * إضافة مسار `GET /nicu/observations` (`nicu.observations.index`) ورابط قياسي مسطّح «معاينات الوليد الحية» بنفس تنسيق باقي القوائم مباشرة أسفل «رادار صالات العمليات والولادة» مع بادج العدّاد الحي.
+- **المتحكمات والواجهات ([NicuDeliveryObservationController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuDeliveryObservationController.php), [NicuDeliveryRadarController.php](file:///C:/get/hospital-system/app/Http/Controllers/NicuDeliveryRadarController.php), [resources/views/nicu/observations/index.blade.php](file:///C:/get/hospital-system/resources/views/nicu/observations/index.blade.php), [resources/views/nicu/observations/show.blade.php](file:///C:/get/hospital-system/resources/views/nicu/observations/show.blade.php), [resources/views/nicu/delivery-radar.blade.php](file:///C:/get/hospital-system/resources/views/nicu/delivery-radar.blade.php))**:
+  * إنشاء شاشة `nicu.observations.index` بعرض البطاقات (Cards) ومؤقتات حية، 4 بطاقات إحصائيات، تبويب أرشيف التسليم والتحويل، ومودال بدء معاينة ولادة طبيعية.
+  * تنظيف شاشة رادار العمليات وإزالة التبويبات الثقيلة منها مع إبقاء عمود بدء/فتح معاينة الساعتين وزر الانتقال السريع لشاشة المعاينات الحية.
+- **الاختبارات وضمان الجودة ([tests/Feature/NicuDeliveryObservationTest.php](file:///C:/get/hospital-system/tests/Feature/NicuDeliveryObservationTest.php))**:
+  * اجتياز `22 passed (306 assertions)` وفحص `Laravel Pint` و`view:cache`.
 
 ## Session log (2026-11-26 — المرحلة 299: تفعيل منظومة الخدمات الإضافية والفندقية الذكية (نمط ICD-10) لقسم الخدج والحاضنات NICU مع شاشة إدارة وتسعير «الخدمات المتفرقة للمستشفى» في الإدارة والإعدادات NICU Smart Extra Services Engine & Hospital Miscellaneous Services Settings)
 

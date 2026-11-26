@@ -223,7 +223,9 @@
                                     $firstTest = $validTests->first() ?: $surgery->labTests->first();
                                     $completedTestsCount = $validTests->where('status', 'completed')->count();
                                     $isAllCompleted = $hasTests && ($completedTestsCount === $validTests->count());
-                                    $isFeePaid = ($surgery->surgery_fee_paid === 'paid') || ($validTests->where('payment_status', 'paid')->count() > 0);
+                                    $paidTestsCount = $validTests->where('payment_status', 'paid')->count();
+                                    $isAllTestsPaid = $hasTests && ($paidTestsCount === $validTests->count());
+                                    $isPartiallyPaid = $hasTests && ($paidTestsCount > 0) && ! $isAllTestsPaid;
 
                                     // تحديد لون الحافة وحالة السطر
                                     if (!$hasTests) {
@@ -331,13 +333,17 @@
 
                                     <!-- 6. حالة الدفع -->
                                     <td class="text-center">
-                                        @if($isFeePaid)
+                                        @if($isAllTestsPaid)
                                             <span class="badge bg-success-subtle text-success border border-success-subtle py-1 px-2" style="font-size: 0.72rem;">
-                                                <i class="fas fa-check-circle me-1"></i> {{ __("مدفوع") }}
+                                                <i class="fas fa-check-circle me-1"></i> {{ __("مسدد بالكاشير") }}
+                                            </span>
+                                        @elseif($isPartiallyPaid)
+                                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle py-1 px-2" style="font-size: 0.72rem;" title="{{ __('بانتظار تسديد باقي التحاليل في الكاشير قبل التخريج') }}">
+                                                <i class="fas fa-adjust me-1 text-warning"></i> {{ __("جزئي — كاشير") }}
                                             </span>
                                         @else
-                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2" style="font-size: 0.72rem;">
-                                                <i class="fas fa-clock me-1"></i> {{ __("غير مدفوع") }}
+                                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1 px-2" style="font-size: 0.72rem;" title="{{ __('يمر للفحص ويُحاسب في الكاشير قبل التخريج') }}">
+                                                <i class="fas fa-clock me-1"></i> {{ __("بانتظار الكاشير") }}
                                             </span>
                                         @endif
                                     </td>

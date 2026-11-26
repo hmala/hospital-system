@@ -147,60 +147,14 @@ class NicuDeliveryRadarController extends Controller
             'waiting' => $surgeries->where('status', 'waiting')->count(),
             'in_progress' => $surgeries->where('status', 'in_progress')->count(),
             'completed' => $surgeries->where('status', 'completed')->count(),
-        ];
-
-        $observationSettings = $hasNicuSettingsTable
-            ? NicuSetting::observationConfig()
-            : [
-                'duration_minutes' => 120,
-                'is_billable' => false,
-                'fee' => 0.0,
-                'hospital_name_ar' => 'مستشفى الكفاءات الأهلي',
-                'hospital_name_en' => 'Al-Kafaat Hospital',
-                'hospital_email' => 'alkafaathospital@gmail.com',
-                'hospital_phone' => '07760507060',
-                'hospital_address' => 'بغداد - الحارثية شارع الكندي',
-            ];
-
-        if ($hasNicuObservationsTable) {
-            $activeObservations = NicuDeliveryObservation::with([
-                'babies.incubatorReservation.incubator',
-                'surgery',
-                'patient.user',
-            ])
-                ->whereIn('status', [
+            'observing' => $hasNicuObservationsTable
+                ? NicuDeliveryObservation::whereIn('status', [
                     NicuDeliveryObservation::STATUS_UNDER_OBSERVATION,
                     NicuDeliveryObservation::STATUS_READY_FOR_HANDOVER,
                     NicuDeliveryObservation::STATUS_PARTIAL,
-                ])
-                ->orderBy('started_at', 'asc')
-                ->get();
-
-            $archiveSearch = trim((string) $request->input('archive_search', ''));
-
-            $archiveObservations = NicuDeliveryObservation::with([
-                'babies.incubatorReservation.incubator',
-                'surgery',
-                'patient.user',
-            ])
-                ->when($archiveSearch !== '', function ($q) use ($archiveSearch) {
-                    $q->where(function ($sub) use ($archiveSearch) {
-                        $sub->where('mother_name', 'like', "%{$archiveSearch}%")
-                            ->orWhere('recipient_name', 'like', "%{$archiveSearch}%")
-                            ->orWhere('recipient_id_number', 'like', "%{$archiveSearch}%")
-                            ->orWhere('recipient_phone', 'like', "%{$archiveSearch}%")
-                            ->orWhereHas('babies', fn ($b) => $b->where('born_name', 'like', "%{$archiveSearch}%"));
-                    });
-                })
-                ->orderByDesc('created_at')
-                ->limit(50)
-                ->get();
-        } else {
-            $activeObservations = collect();
-            $archiveObservations = collect();
-        }
-
-        $stats['observing'] = $activeObservations->count();
+                ])->count()
+                : 0,
+        ];
 
         $canManageSettings = $isAdmin || ($user && ($user->can('manage nicu delivery radar settings') || $user->hasRole('nicu_doctor')));
         $canManageObservations = $isAdmin || ($user && $user->can('manage nicu delivery observations'));
@@ -213,11 +167,7 @@ class NicuDeliveryRadarController extends Controller
             'stats',
             'radarOperationNames',
             'canManageSettings',
-            'canManageObservations',
-            'observationSettings',
-            'activeObservations',
-            'archiveObservations',
-            'archiveSearch'
+            'canManageObservations'
         ));
     }
 

@@ -261,7 +261,8 @@ class SurgeryController extends Controller
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
             'department_id' => 'nullable|exists:departments,id',
-            'room_id' => 'required|exists:rooms,id',
+            'room_id' => 'nullable|exists:rooms,id',
+            'room_waiting_mode' => 'nullable|boolean',
             'location_id' => 'nullable|exists:locations,id',
             'expected_stay_days' => 'required|integer|min:1|max:365',
             'surgery_category' => 'required|string|max:255',
@@ -326,14 +327,17 @@ class SurgeryController extends Controller
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
         $surgeryData['scheduled_time'] = \Carbon\Carbon::createFromFormat('Y-m-d H:i', $request->scheduled_date.' '.$scheduledTimeStr);
 
-        // حساب أجرة الغرفة المبدئية عند الحجز (الليلة الأولى: عادية=0, VIP=100,000, VVIP=200,000)
-        if ($request->room_id) {
+        // حساب أجرة الغرفة المبدئية عند الحجز أو إبقائها بوضع الانتظار إذا لم تُخصص غرفة الآن
+        if ($request->filled('room_id')) {
             $room = Room::find($request->room_id);
             if ($room) {
                 $surgeryData['room_fee'] = Room::getInitialFeeForType($room->room_type);
                 // تحديث حالة الغرفة لمحجوزة
                 $room->update(['status' => 'occupied']);
             }
+        } else {
+            $surgeryData['room_id'] = null;
+            $surgeryData['room_fee'] = 0;
         }
 
         // handle referral letter upload or direct scanner capture
@@ -446,6 +450,7 @@ class SurgeryController extends Controller
 
         // إرفاق الخدمات الإضافية التلقائية للعملية (تخطيط قلب، فتح طبلة، خدمات فندقية)
         $surgery->attachDefaultExtraServices();
+        $surgery->syncPaymentStatus();
 
         broadcast(new SurgeryUpdated($surgery));
 
@@ -713,7 +718,7 @@ class SurgeryController extends Controller
         $request->validate([
             'patient_id' => 'required|exists:patients,id',
             'doctor_id' => 'required|exists:doctors,id',
-            'room_id' => 'required|exists:rooms,id',
+            'room_id' => 'nullable|exists:rooms,id',
             'expected_stay_days' => 'required|integer|min:1|max:365',
             'surgery_category' => 'required|string|max:255',
             'surgical_operation_id' => 'required|exists:surgical_operations,id',
@@ -730,7 +735,6 @@ class SurgeryController extends Controller
             'additional_operations.*.fee' => 'nullable',
             'additional_operations.*.notes' => 'nullable|string',
         ], [
-            'room_id.required' => 'يرجى اختيار غرفة للمريض قبل تأكيد الحجز.',
             'expected_stay_days.required' => 'يرجى تحديد عدد أيام الإقامة المتوقعة.',
         ]);
 
@@ -768,16 +772,17 @@ class SurgeryController extends Controller
             if ($surgery->room_id) {
                 Room::where('id', $surgery->room_id)->update(['status' => 'available']);
             }
-            if ($request->room_id) {
+            if ($request->filled('room_id')) {
                 $newRoom = Room::find($request->room_id);
                 if ($newRoom) {
                     $newRoom->update(['status' => 'occupied']);
                     $surgeryData['room_fee'] = Room::getInitialFeeForType($newRoom->room_type);
                 }
             } else {
+                $surgeryData['room_id'] = null;
                 $surgeryData['room_fee'] = 0;
             }
-        } elseif ($request->room_id && $surgery->room) {
+        } elseif ($request->filled('room_id') && $surgery->room) {
             // إعادة احتساب تفاصيل الإقامة الفندقية الحالية
             $stayDetails = $surgery->calculateStayDetails();
             $surgeryData['room_fee'] = $stayDetails['total_fee'];
@@ -866,6 +871,7 @@ class SurgeryController extends Controller
 
         // إرفاق الخدمات الإضافية التلقائية للعملية (تخطيط قلب، فتح طبلة، خدمات فندقية)
         $surgery->attachDefaultExtraServices();
+        $surgery->syncPaymentStatus();
 
         broadcast(new SurgeryUpdated($surgery));
 
@@ -1123,6 +1129,22 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك ببدء العملية');
         }
 
+        if ($surgery->status === 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن بدء عملية ملغاة.');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('error', 'لا يمكن بدء عملية لمريض تم تخريجه مسبقاً.');
+        }
+
+        if ($surgery->status === 'completed' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')) {
+            return redirect()->back()->with('error', 'تم إنهاء هذه العملية وخروج المريض من صالة العمليات مسبقاً ولا يمكن بدؤها أو استئنافها من جديد.');
+        }
+
+        if ($surgery->status === 'in_progress') {
+            return redirect()->back()->with('info', 'العملية قيد التنفيذ حالياً داخل صالة العمليات.');
+        }
+
         $surgery->status = 'in_progress';
         $surgery->started_at = $surgery->started_at ?? now();
         $surgery->end_time = null;
@@ -1152,6 +1174,18 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بإكمال العملية');
         }
 
+        if ($surgery->status === 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن إنهاء عملية ملغاة.');
+        }
+
+        if ($surgery->status === 'completed' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')) {
+            return redirect()->back()->with('info', 'هذه العملية مكتملة ومنتهية مسبقاً.');
+        }
+
+        if ($surgery->status !== 'in_progress') {
+            return redirect()->back()->with('error', 'لا يمكن إنهاء العملية قبل تسجيل بدئها ودخول المريض لصالة العمليات.');
+        }
+
         // إتمام محطة صالة العمليات
         $otStation = $surgery->operationTheaterStation;
         if (! $otStation) {
@@ -1160,6 +1194,24 @@ class SurgeryController extends Controller
             ]);
         }
         $otStation->markAsCompleted();
+
+        // إغلاق محطة المقيم pre_op تلقائياً إذا بقيت معلقة حتى لا تفقد الحالة من الأرشيف لاحقاً
+        $preOpStation = $surgery->residentStations()->where('phase', 'pre_op')->first();
+        if (! $preOpStation) {
+            $surgery->residentStations()->create([
+                'phase' => 'pre_op',
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+        } elseif ($preOpStation->status !== 'completed') {
+            $preOpStation->markAsCompleted();
+        }
+
+        // ضمان إنشاء محطة المقيم post_op للمتابعة بعد العملية
+        $surgery->residentStations()->firstOrCreate(
+            ['phase' => 'post_op'],
+            ['status' => 'pending']
+        );
 
         // إنشاء وتوجيه العملية لمحطة الجراح التالية
         if (! $surgery->surgeonStation) {
@@ -1195,6 +1247,14 @@ class SurgeryController extends Controller
             return redirect()->back()->with('warning', 'المريض خارج بالفعل');
         }
 
+        $clearance = $surgery->getFinancialClearanceSummary(now());
+        if (! $clearance['cleared']) {
+            return redirect()->back()->with(
+                'error',
+                'لا يمكن إخراج المريض قبل تسوية كافة المستحقات المالية في الكاشير: '.implode(' | ', $clearance['reasons'])
+            );
+        }
+
         $surgery->discharged_at = now();
         $surgery->discharge_notes = request('discharge_notes');
         $surgery->save();
@@ -1213,12 +1273,91 @@ class SurgeryController extends Controller
         return redirect()->back()->with('success', 'تم إخراج المريض بنجاح');
     }
 
+    /**
+     * تخصيص غرفة لمريض عملية (من وضع الانتظار أو تبديل الغرفة لاحقاً) حسب الصلاحية المخصصة
+     */
+    public function assignRoom(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('assign surgery room'))) {
+            abort(403, 'غير مصرح لك بتخصيص الغرف لمرضى العمليات.');
+        }
+
+        if ($surgery->status === 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن تخصيص غرفة لعملية ملغاة.');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('error', 'تم تخريج المريض مسبقاً ولا يمكن تخصيص غرفة جديدة.');
+        }
+
+        $validated = $request->validate([
+            'room_id' => 'required|exists:rooms,id',
+            'checkin_immediately' => 'nullable|boolean',
+        ]);
+
+        try {
+            $assignedRoom = DB::transaction(function () use ($validated, $surgery, $request, $user) {
+                $newRoom = Room::where('id', $validated['room_id'])->lockForUpdate()->firstOrFail();
+
+                if ($newRoom->status !== 'available' && (int) $surgery->room_id !== (int) $newRoom->id) {
+                    throw new \RuntimeException("الغرفة ({$newRoom->room_number}) مشغولة أو غير متاحة حالياً.");
+                }
+
+                if ($surgery->room_id && (int) $surgery->room_id !== (int) $newRoom->id) {
+                    Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+                }
+
+                $newRoom->update(['status' => 'occupied']);
+
+                $updates = [
+                    'room_id' => $newRoom->id,
+                    'room_fee' => Room::getInitialFeeForType($newRoom->room_type),
+                ];
+
+                if ($request->boolean('checkin_immediately') && ! $surgery->room_checkin_at) {
+                    $updates['room_checkin_at'] = now();
+                    $updates['room_checkin_by'] = $user->id;
+                }
+
+                $surgery->update($updates);
+                $surgery->refresh();
+                $surgery->syncPaymentStatus();
+
+                return $newRoom;
+            });
+
+            broadcast(new SurgeryUpdated($surgery));
+
+            \App\Services\UserActivityLogger::log(
+                action: 'surgery_assign_room',
+                category: 'surgery',
+                description: "تخصيص الغرفة رقم {$assignedRoom->room_number} ({$assignedRoom->room_type_name}) للعملية #{$surgery->id}",
+                subject: $surgery,
+                isSensitive: false
+            );
+
+            return redirect()->back()->with('success', "تم تخصيص الغرفة ({$assignedRoom->room_number}) للمريض بنجاح".($assignedRoom->daily_fee > 0 ? ' وتم تحديث الكشف المالي بالكاشير.' : '.'));
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
     public function cancel(Request $request, Surgery $surgery)
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         if (! $isAdmin && (! $user || (! $user->can('delete surgeries') && ! $user->can('cancel surgeries') && ! $user->can('control surgeries')))) {
             abort(403, 'غير مصرح لك بإلغاء العملية');
+        }
+
+        if ($surgery->status === 'completed' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')) {
+            return redirect()->back()->with('error', 'لا يمكن إلغاء عملية بعد إتمامها وإخراج المريض من صالة العمليات.');
+        }
+
+        if ($surgery->status === 'in_progress') {
+            return redirect()->back()->with('error', 'لا يمكن إلغاء عملية جارية داخل صالة العمليات؛ يجب إخراج المريض لقائمة الانتظار أولاً.');
         }
 
         $validated = $request->validate([
@@ -1275,6 +1414,14 @@ class SurgeryController extends Controller
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         if (! $isAdmin && (! $user || (! $user->can('manage surgery waiting list') && ! $user->can('control surgeries')))) {
             abort(403, 'غير مصرح لك بإعادة العملية إلى الانتظار');
+        }
+
+        if ($surgery->status === 'completed' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')) {
+            return redirect()->back()->with('error', 'لا يمكن إرجاع المريض لقائمة الانتظار بعد إنهاء العملية وخروجه من صالة العمليات.');
+        }
+
+        if ($surgery->status !== 'in_progress') {
+            return redirect()->back()->with('error', 'يمكن إرجاع المريض لقائمة الانتظار فقط إذا كان حالياً داخل صالة العمليات.');
         }
 
         $surgery->status = 'waiting';
@@ -1653,6 +1800,7 @@ class SurgeryController extends Controller
             $surgery->surgical_operation_id = $opId ?: null;
             $surgery->billing_status = 'pending_review';
             $surgery->save();
+            $surgery->syncPaymentStatus();
 
             $surgery->surgeryTypeChanges()->create([
                 'old_type' => $oldType,
@@ -1702,6 +1850,7 @@ class SurgeryController extends Controller
 
         $surgery->billing_status = 'pending_review';
         $surgery->save();
+        $surgery->syncPaymentStatus();
 
         $names = $ops->pluck('name')->join('، ');
         $msg = 'تم إضافة '.$ops->count().' عملية: '.$names;
@@ -1723,6 +1872,7 @@ class SurgeryController extends Controller
 
         $surgery->billing_status = 'pending_review';
         $surgery->save();
+        $surgery->syncPaymentStatus();
 
         return redirect()->route('surgeries.show', ['surgery' => $surgery->id, 'tab' => 'detail_type'])
             ->with('success', 'تم حذف العملية الإضافية');
@@ -1748,19 +1898,25 @@ class SurgeryController extends Controller
 
         $existingDeviceIds = $surgery->medicalDevices()->pluck('medical_devices.id')->toArray();
         $newDeviceIds = array_diff($validated['device_ids'], $existingDeviceIds);
+        $devices = \App\Models\MedicalDevice::whereIn('id', $validated['device_ids'])->get()->keyBy('id');
 
         if (! empty($newDeviceIds)) {
             $syncData = [];
             foreach ($newDeviceIds as $deviceId) {
-                $syncData[$deviceId] = ['assigned_by' => $user->id];
+                $devModel = $devices->get($deviceId);
+                $syncData[$deviceId] = [
+                    'assigned_by' => $user->id,
+                    'price' => (float) ($devModel?->usage_price ?? 0),
+                ];
             }
             $surgery->medicalDevices()->attach($syncData);
 
-            $surgery->billing_status = 'pending_review';
+            // الأجهزة الطبية تُحاسب مع الطبيب الجراح في الحسابات ولا توقف أو تُخفي فاتورة المريض في الكاشير
+            $surgery->devices_billing_status = 'pending_review';
             $surgery->save();
+            $surgery->syncSurgeonDoctorDue();
         }
 
-        $devices = \App\Models\MedicalDevice::whereIn('id', $validated['device_ids'])->get();
         $names = $devices->pluck('name')->join('، ');
         $msg = 'تم إضافة أجهزة طبية: '.$names;
 
@@ -1784,8 +1940,9 @@ class SurgeryController extends Controller
 
         $surgery->medicalDevices()->detach($device->id);
 
-        $surgery->billing_status = 'pending_review';
+        $surgery->devices_billing_status = $surgery->medicalDevices()->exists() ? 'pending_review' : 'none';
         $surgery->save();
+        $surgery->syncSurgeonDoctorDue();
 
         $targetTab = request()->input('tab', 'detail_anesthesia');
 
@@ -2063,6 +2220,10 @@ class SurgeryController extends Controller
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
         if (! $isAdmin && (! $user || ! $user->can('delete surgeries'))) {
             abort(403, 'غير مصرح لك بحذف العملية');
+        }
+
+        if ($surgery->status === 'completed' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')) {
+            return redirect()->back()->with('error', 'لا يمكن حذف أو إلغاء عملية مكتملة ومُنفّذة فعلياً.');
         }
 
         // الحماية المالية: إذا كان للعملية مبالغ مدفوعة، يتم إلغاؤها وتحرير الغرفة ونقل المبالغ للكاشير كاسترجاع

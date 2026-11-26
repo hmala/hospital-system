@@ -460,7 +460,7 @@
                                                     @endif
                                                 </span>
                                             @else
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">{{ __('بدون غرفة') }}</span>
+                                                <span class="badge bg-warning-subtle text-dark border border-warning" style="font-size: 0.72rem;"><i class="fas fa-hourglass-half me-1 text-warning"></i>{{ __('وضع انتظار الغرفة') }}</span>
                                             @endif
                                         </td>
                                     </tr>
@@ -609,7 +609,7 @@
                                                     @endif
                                                 </span>
                                             @else
-                                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">{{ __('بدون غرفة') }}</span>
+                                                <span class="badge bg-warning-subtle text-dark border border-warning" style="font-size: 0.72rem;"><i class="fas fa-hourglass-half me-1 text-warning"></i>{{ __('وضع انتظار الغرفة') }}</span>
                                             @endif
                                         </td>
                                     </tr>

@@ -105,6 +105,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgical assistants',
             'control surgeries',
             'manage rooms',
+            'assign surgery room',
             'view bed reservations',
             'create bed reservations',
             // صلاحيات قسم الخدج والحاضنات (NICU)
@@ -349,6 +350,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'assign surgery room',
+            'assign surgery room',
             'view bed reservations',
             'create bed reservations',
             // صلاحيات حجز واستقبال الخدج (الاستعلامات)
@@ -633,6 +636,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'assign surgery room',
             'view resident station',
             'view operation theater station',
             'view surgeon station',

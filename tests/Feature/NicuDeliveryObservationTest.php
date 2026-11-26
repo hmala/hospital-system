@@ -162,12 +162,19 @@ class NicuDeliveryObservationTest extends TestCase
         $this->assertEquals('free', $observation->payment_status);
         $this->assertCount(1, $observation->babies);
 
-        // Radar page shows the new tabs and active observation
+        // Radar page shows the observation link and button to dedicated live observations page
         $radarResponse = $this->actingAs($this->nicuNurse)
             ->get(route('nicu.delivery-radar.index', ['date' => today()->format('Y-m-d')]));
         $radarResponse->assertStatus(200);
         $radarResponse->assertSee('ملف المعاينة');
         $radarResponse->assertSee('معاينات الوليد الحية');
+
+        // Dedicated live observations cards page shows the active observation card
+        $obsIndexResponse = $this->actingAs($this->nicuNurse)
+            ->get(route('nicu.observations.index'));
+        $obsIndexResponse->assertStatus(200);
+        $obsIndexResponse->assertSee('بطاقات المواليد تحت المعاينة المباشرة');
+        $obsIndexResponse->assertSee('رسل باسل أحمد');
     }
 
     public function test_manual_normal_delivery_observation_update_handover_print_and_signed_archive(): void
