@@ -1266,8 +1266,13 @@
                         @endcan
                         @can('view inquiries')
                         <li class="nav-item">
-                            <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.create') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
-                                <i class="fas fa-concierge-bell"></i><span> {{ __('الاستعلامات') }}</span>
+                            <a class="nav-link {{ request()->routeIs('inquiry.create') ? 'active' : '' }}" href="{{ route('inquiry.create') }}">
+                                <i class="fas fa-concierge-bell"></i><span> {{ __('الاستعلامات (طلب جديد)') }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('inquiry.index') || request()->routeIs('inquiry.show') ? 'active' : '' }}" href="{{ route('inquiry.index') }}">
+                                <i class="fas fa-clipboard-list"></i><span> {{ __('لوحة التحويلات والإحالات') }}</span>
                                 <span class="badge bg-secondary ms-2">{{ $pendingRequestsCount }}</span>
                             </a>
                         </li>
@@ -1326,8 +1331,15 @@
                             <a class="nav-link {{ request()->routeIs('cashier.surgeries.*') ? 'active' : '' }}" href="{{ route('cashier.surgeries.index') }}">
                                 <i class="fas fa-procedures text-danger"></i><span> {{ __('كاشير العمليات') }}</span>
                                 @php
-                                    $pendingSurgeryPayments = \App\Models\Surgery::whereIn('payment_status', ['pending', 'partial'])
-                                        ->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
+                                    $pendingSurgeryPayments = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
+                                        ->where(function ($sq) {
+                                            $sq->whereIn('payment_status', ['pending', 'partial', 'partially_paid'])
+                                                ->orWhere('billing_status', 'pending_review')
+                                                ->orWhereHas('labTests', fn ($lq) => $lq->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled'))
+                                                ->orWhereHas('radiologyTests', fn ($rq) => $rq->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled'))
+                                                ->orWhereHas('extraServices', fn ($eq) => $eq->where('payment_status', '!=', 'paid'))
+                                                ->orWhereHas('consultations', fn ($cq) => $cq->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled'));
+                                        })
                                         ->count();
                                 @endphp
                                 @if($pendingSurgeryPayments > 0)
@@ -1421,7 +1433,13 @@
                             <a class="nav-link {{ $isSurgeryReviewActive ? 'active' : '' }}" href="{{ route('accountant.surgeries.index') }}">
                                 <i class="fas fa-calculator text-primary"></i><span> {{ __('مراجعة أسعار العمليات') }}</span>
                                 @php
-                                     $pendingPriceReviews = \App\Models\Surgery::where('billing_status', 'pending_review')->count();
+                                     $hasDevicesBillingCol = \Illuminate\Support\Facades\Schema::hasColumn('surgeries', 'devices_billing_status');
+                                     $pendingPriceReviews = \App\Models\Surgery::where(function ($rq) use ($hasDevicesBillingCol) {
+                                         $rq->where('billing_status', 'pending_review');
+                                         if ($hasDevicesBillingCol) {
+                                             $rq->orWhere('devices_billing_status', 'pending_review');
+                                         }
+                                     })->count();
                                 @endphp
                                 @if($pendingPriceReviews > 0)
                                     <span class="badge bg-warning text-dark ms-2">{{ $pendingPriceReviews }}</span>
@@ -1878,12 +1896,20 @@
                         @endcanany
 
                         <!-- قسم الخدج والحاضنات (NICU) -->
-                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations', 'view nicu delivery radar', 'manage nicu store'])
+                        @canany(['view incubator reservations', 'manage incubator reservations', 'create incubator reservations', 'view nicu delivery radar', 'manage nicu delivery observations', 'manage nicu store'])
                         @php
                             $isNicuActive = request()->routeIs('nicu.*') || request()->routeIs('nicu-store.*') || request()->routeIs('incubators.*') || request()->routeIs('incubator-reservations.*') || (request()->routeIs('medicine-groups.*') && request('department') === 'nicu');
                             $occupiedNicuCount = 0;
                             if (\Illuminate\Support\Facades\Schema::hasTable('incubators')) {
                                 $occupiedNicuCount = \App\Models\Incubator::where('status', 'occupied')->count();
+                            }
+                            $activeNicuObsCount = 0;
+                            if (\Illuminate\Support\Facades\Schema::hasTable('nicu_delivery_observations')) {
+                                $activeNicuObsCount = \App\Models\NicuDeliveryObservation::whereIn('status', [
+                                    \App\Models\NicuDeliveryObservation::STATUS_UNDER_OBSERVATION,
+                                    \App\Models\NicuDeliveryObservation::STATUS_READY_FOR_HANDOVER,
+                                    \App\Models\NicuDeliveryObservation::STATUS_PARTIAL,
+                                ])->count();
                             }
                         @endphp
                         <div class="sidebar-divider"></div>
@@ -1905,6 +1931,16 @@
                                     <i class="fas fa-satellite-dish text-danger"></i><span> {{ __('رادار صالات العمليات والولادة') }}</span>
                                 </a>
                             </li>
+                            @if(auth()->user()->can('manage nicu delivery observations') || auth()->user()->can('view nicu delivery radar') || auth()->user()->hasAnyRole(['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
+                            <li class="nav-item">
+                                <a class="nav-link {{ request()->routeIs('nicu.observations.*') ? 'active' : '' }}" href="{{ route('nicu.observations.index') }}">
+                                    <i class="fas fa-stopwatch text-warning"></i><span> {{ __('معاينات الوليد الحية') }}</span>
+                                    @if($activeNicuObsCount > 0)
+                                        <span class="badge bg-warning text-dark ms-auto">{{ $activeNicuObsCount }}</span>
+                                    @endif
+                                </a>
+                            </li>
+                            @endif
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('incubator-reservations.create') ? 'active' : '' }}" href="{{ route('incubator-reservations.create') }}">
                                     <i class="fas fa-plus-circle text-success"></i><span> {{ __('حجز ودخول خديج جديد') }}</span>
@@ -2191,7 +2227,7 @@
                         <!-- قسم الإدارة والإعدادات -->
                         @canany(['manage users', 'manage roles', 'manage permissions', 'view activity logs', 'manage radiology types', 'view lab tests'])
                         @php
-                            $isAdminSettingsActive = request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('activity-logs.*') || request()->routeIs('system.database-sync.*') || request()->routeIs('admin.doctor-commission-settings.*') || request()->routeIs('lab-tests.pricing-settings.*');
+                            $isAdminSettingsActive = request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') || request()->routeIs('activity-logs.*') || request()->routeIs('system.database-sync.*') || request()->routeIs('admin.doctor-commission-settings.*') || request()->routeIs('admin.extra-services.*') || request()->routeIs('lab-tests.pricing-settings.*');
                         @endphp
                         <div class="sidebar-divider"></div>
                         <div class="sidebar-section-title {{ $isAdminSettingsActive ? '' : 'collapsed' }}" data-bs-toggle="collapse" data-bs-target="#adminSettingsSection" aria-expanded="{{ $isAdminSettingsActive ? 'true' : 'false' }}">
@@ -2241,6 +2277,11 @@
                         <li class="nav-item">
                             <a class="nav-link {{ request()->routeIs('lab-tests.pricing-settings.*') ? 'active' : '' }}" href="{{ route('lab-tests.pricing-settings.index') }}">
                                 <i class="fas fa-tags"></i><span> {{ __('تسعير وتصنيف التحاليل') }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.extra-services.*') ? 'active' : '' }}" href="{{ route('admin.extra-services.index') }}">
+                                <i class="fas fa-concierge-bell text-warning"></i><span> {{ __('الخدمات المتفرقة للمستشفى') }}</span>
                             </a>
                         </li>
                         @endcanany

@@ -49,6 +49,7 @@ class ResidentStationController extends Controller
         // 1. جلب العمليات التي تحتاج مرحلة pre_op (التهيئة قبل الصالة)
         $preOpQuery = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation'])
             ->where('status', '!=', 'cancelled')
+            ->whereNull('discharged_at')
             ->where(function ($query) {
                 $query->whereIn('status', ['scheduled', 'waiting', 'checked_in'])
                     ->orWhere(function ($q) {
@@ -67,7 +68,10 @@ class ResidentStationController extends Controller
             });
 
         if ($selectedFloor) {
-            $preOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+            $preOpQuery->where(function ($fq) use ($selectedFloor) {
+                $fq->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor))
+                    ->orWhereNull('room_id');
+            });
         }
         $applySearch($preOpQuery);
 
@@ -78,6 +82,7 @@ class ResidentStationController extends Controller
         // 2. جلب العمليات التي تحتاج مرحلة post_op (المتابعة بعد خروج المريض من الصالة)
         $postOpQuery = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation', 'operationTheaterStation', 'anesthesiaStation'])
             ->where('status', '!=', 'cancelled')
+            ->whereNull('discharged_at')
             ->where(function ($query) {
                 $query->whereHas('operationTheaterStation', function ($sq) {
                     $sq->where('status', 'completed');
@@ -101,7 +106,10 @@ class ResidentStationController extends Controller
             });
 
         if ($selectedFloor) {
-            $postOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+            $postOpQuery->where(function ($fq) use ($selectedFloor) {
+                $fq->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor))
+                    ->orWhereNull('room_id');
+            });
         }
         $applySearch($postOpQuery);
 
@@ -109,13 +117,14 @@ class ResidentStationController extends Controller
             ->orderBy('scheduled_time', 'desc')
             ->get();
 
-        // 3. جلب العمليات التي أتمت كل مراحل المقيم (pre_op و post_op)
+        // 3. جلب العمليات المكتملة في الأرشيف (أتمت مرحلة ما بعد العملية أو تم تخريج المريض نهائياً)
         $completedQuery = Surgery::with(['patient.user', 'doctor.user', 'room', 'residentStations', 'preOpResidentStation', 'postOpResidentStation'])
-            ->whereHas('residentStations', function ($q) {
-                $q->where('phase', 'pre_op')->where('status', 'completed');
-            })
-            ->whereHas('residentStations', function ($q) {
-                $q->where('phase', 'post_op')->where('status', 'completed');
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($q) {
+                $q->whereHas('residentStations', function ($sq) {
+                    $sq->where('phase', 'post_op')->where('status', 'completed');
+                })
+                    ->orWhereNotNull('discharged_at');
             });
 
         if ($selectedFloor) {
@@ -126,7 +135,35 @@ class ResidentStationController extends Controller
         $completedSurgeries = $completedQuery->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('surgery-stations.resident.index', compact('preOpSurgeries', 'postOpSurgeries', 'completedSurgeries', 'availableFloors', 'selectedFloor', 'search'));
+        // 4. دمج وترتيب الحالات النشطة في قائمة موحدة واحدة (قبل الصالة، داخل الصالة، بعد الصالة)
+        $activeSurgeries = $preOpSurgeries->merge($postOpSurgeries)->unique('id')->values();
+
+        $phasePriority = function ($surgery) {
+            $isPostOp = ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')
+                || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed')
+                || $surgery->status === 'completed'
+                || ($surgery->residentStations && $surgery->residentStations->where('phase', 'post_op')->count() > 0);
+
+            if ($isPostOp) {
+                return 1; // بعد الصالة
+            }
+            if ($surgery->status === 'in_progress' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'in_progress')) {
+                return 2; // داخل الصالة
+            }
+            if ($surgery->status === 'waiting') {
+                return 3; // بانتظار الصالة
+            }
+
+            return 4; // مجدولة
+        };
+
+        $activeSurgeries = $activeSurgeries->sortBy([
+            fn ($a, $b) => $phasePriority($a) <=> $phasePriority($b),
+            ['scheduled_date', 'asc'],
+            ['scheduled_time', 'asc'],
+        ])->values();
+
+        return view('surgery-stations.resident.index', compact('activeSurgeries', 'preOpSurgeries', 'postOpSurgeries', 'completedSurgeries', 'availableFloors', 'selectedFloor', 'search'));
     }
 
     public function show(Surgery $surgery, Request $request)

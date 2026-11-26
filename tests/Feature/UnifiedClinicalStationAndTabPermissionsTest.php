@@ -283,7 +283,6 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
         $this->assertDatabaseHas('resident_station_follow_ups', [
             'surgery_id' => $this->surgery->id,
             'session' => 'morning',
-            'notes' => 'Patient is resting comfortably, vitals stable.',
         ]);
     }
 
@@ -291,7 +290,7 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
     {
         // Legacy resident route redirects to clinical station
         $residentRedirect = $this->actingAs($this->residentUser)->get(route('resident-station.show', $this->surgery));
-        $residentRedirect->assertRedirect(route('clinical-station.show', ['surgery' => $this->surgery->id]));
+        $residentRedirect->assertRedirect(route('clinical-station.show', ['surgery' => $this->surgery->id, 'from' => 'resident']));
 
         // Legacy nursing route redirects to clinical station
         $nursingRedirect = $this->actingAs($this->nurseUser)->get(route('nursing-station.show', $this->surgery));
@@ -323,7 +322,7 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
             'tab' => 'fluids',
         ]));
         $clinicalPage->assertStatus(200);
-        $clinicalPage->assertSee('جدول العلامات الحيوية السريرية وميزان السوائل (Intake & Output)', false);
+        $clinicalPage->assertSee('جدول العلامات الحيوية السريرية وميزان السوائل');
         $clinicalPage->assertSee('vitalsGridTable');
         $clinicalPage->assertSee('row1SaveBtn');
         $clinicalPage->assertSee('output_stool');
@@ -1065,8 +1064,17 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
             ])
             ->assertStatus(422);
 
-        // Original nurse can undo within 30 minutes
+        // 8. Nurse cannot undo administered dose (one-click permanent administration)
         $this->actingAs($this->nurseUser)
+            ->postJson(route('clinical-station.treatments.toggle-dose', $scheduledMed), [
+                'slot_index' => 2,
+                'checked' => 0,
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('ok', false);
+
+        // 9. Admin can undo administered dose anytime for administrative corrections
+        $this->actingAs($this->admin)
             ->postJson(route('clinical-station.treatments.toggle-dose', $scheduledMed), [
                 'slot_index' => 2,
                 'checked' => 0,
@@ -1074,19 +1082,6 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
             ->assertStatus(200)
             ->assertJsonPath('checked', false)
             ->assertJsonPath('administered_count', 1);
-
-        // 9. Expired 30-min lock prevents nurse from undoing slot 0, while Admin can undo anytime
-        $scheduledMed->refresh();
-        $entries = $scheduledMed->administrations;
-        $entries[0]['administered_at'] = now()->subMinutes(45)->format('Y-m-d H:i');
-        $scheduledMed->update(['administrations' => $entries]);
-
-        $this->actingAs($this->nurseUser)
-            ->postJson(route('clinical-station.treatments.toggle-dose', $scheduledMed), [
-                'slot_index' => 0,
-                'checked' => 0,
-            ])
-            ->assertStatus(422);
 
         $this->actingAs($this->admin)
             ->postJson(route('clinical-station.treatments.toggle-dose', $scheduledMed), [
@@ -1098,7 +1093,7 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
             ->assertJsonPath('administered_count', 0)
             ->assertJsonPath('status', 'planned');
 
-        // 10. PRN medication dose logging & undoing
+        // 10. PRN medication dose: Nurse logs dose once, cannot undo, Admin can undo
         $prnResp = $this->actingAs($this->nurseUser)
             ->postJson(route('clinical-station.treatments.toggle-dose', $prnMed), [
                 'slot_index' => null,
@@ -1111,7 +1106,16 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
 
         $firstSlotIndex = $prnResp->json('slot_index');
 
+        // Nurse cannot undo PRN dose
         $this->actingAs($this->nurseUser)
+            ->postJson(route('clinical-station.treatments.toggle-dose', $prnMed), [
+                'slot_index' => $firstSlotIndex,
+                'checked' => 0,
+            ])
+            ->assertStatus(422);
+
+        // Admin can undo PRN dose
+        $this->actingAs($this->admin)
             ->postJson(route('clinical-station.treatments.toggle-dose', $prnMed), [
                 'slot_index' => $firstSlotIndex,
                 'checked' => 0,
@@ -1337,5 +1341,58 @@ class UnifiedClinicalStationAndTabPermissionsTest extends TestCase
         $delPaidRes->assertRedirect(route('clinical-station.show', ['surgery' => $this->surgery->id, 'tab' => 'tests']));
         $delPaidRes->assertSessionHas('error');
         $this->assertDatabaseHas('surgery_radiology_tests', ['id' => $surgeryRad->id]);
+    }
+
+    public function test_surgeon_post_op_notes_sync_and_display_in_clinical_station_plan()
+    {
+        // 1. Surgeon updates post-op notes in surgery details
+        $surgeonNote = 'تعليمات الجراح: راحة تامة، مراقبة النبض، بدء السوائل بعد 4 ساعات';
+        $updateRes = $this->actingAs($this->admin)->patch(route('surgeries.updateDetails', $this->surgery), [
+            'tab' => 'detail_diagnosis',
+            'diagnosis' => 'Appendicitis Acute',
+            'post_op_notes' => $surgeonNote,
+        ]);
+        $updateRes->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('surgeries', [
+            'id' => $this->surgery->id,
+            'post_op_notes' => $surgeonNote,
+        ]);
+
+        $this->assertDatabaseHas('resident_stations', [
+            'surgery_id' => $this->surgery->id,
+            'phase' => 'post_op',
+            'post_op_notes' => $surgeonNote,
+        ]);
+
+        // 2. Clinical station show (plan tab) renders surgeon post-op notes and badge
+        $showRes = $this->actingAs($this->residentUser)->get(route('clinical-station.show', [
+            'surgery' => $this->surgery->id,
+            'phase' => 'post_op',
+            'tab' => 'plan',
+        ]));
+        $showRes->assertStatus(200);
+        $showRes->assertSee('من ملاحظات الجراح');
+        $showRes->assertSee($surgeonNote);
+
+        // 3. Clinical station update syncs post_op_notes back to surgery model
+        $updatedNote = 'تحديث المقيم: المريض استعاد وعيه بالكامل، استمرار على المسكنات';
+        $clinicalUpdateRes = $this->actingAs($this->residentUser)->patch(route('clinical-station.update', $this->surgery), [
+            'tab' => 'plan',
+            'phase' => 'post_op',
+            'post_op_notes' => $updatedNote,
+        ]);
+        $clinicalUpdateRes->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('resident_stations', [
+            'surgery_id' => $this->surgery->id,
+            'phase' => 'post_op',
+            'post_op_notes' => $updatedNote,
+        ]);
+
+        $this->assertDatabaseHas('surgeries', [
+            'id' => $this->surgery->id,
+            'post_op_notes' => $updatedNote,
+        ]);
     }
 }

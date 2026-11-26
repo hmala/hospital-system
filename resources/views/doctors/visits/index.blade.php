@@ -894,8 +894,8 @@
                                                         <i class="fas fa-check-circle me-1"></i>{{ __("مسدد بالكاشير") }}
                                                     </span>
                                                 @else
-                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning">
-                                                        <i class="fas fa-clock me-1"></i>{{ __("معلق بالكاشير") }}
+                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning" title="{{ __('يُحاسب عند الكاشير قبل تخريج المريض') }}">
+                                                        <i class="fas fa-clock me-1"></i>{{ __("بانتظار الكاشير (يُحاسب قبل التخريج)") }}
                                                     </span>
                                                 @endif
                                                 <div class="small text-muted mt-1">{{ number_format($consultation->fee, 0) }} د.ع</div>

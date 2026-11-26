@@ -144,11 +144,17 @@
                             <td>
                                 @if($test->surgery)
                                 <span class="badge bg-info">{{ $test->surgery->surgery_type }}</span>
-                                @if($test->surgery->surgery_fee_paid !== 'paid')
+                                @if($test->payment_status !== 'paid')
                                 <br>
-                                <span class="badge bg-danger mt-1" title="{{ __("لا يمكن إجراء الأشعة قبل دفع رسوم العملية") }}">
-                                    <i class="fas fa-exclamation-triangle me-1"></i>
-                                    {{ __("غير مدفوعة") }}
+                                <span class="badge bg-warning text-dark mt-1" title="{{ __("يمر للفحص ويُحاسب في الكاشير قبل تخريج المريض") }}">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ __("بانتظار الكاشير (يُحاسب قبل التخريج)") }}
+                                </span>
+                                @else
+                                <br>
+                                <span class="badge bg-success-subtle text-success border mt-1">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    {{ __("مسدد بالكاشير") }}
                                 </span>
                                 @endif
                                 @else
@@ -205,9 +211,8 @@
                                     @endif
                                     @if($test->status == 'pending')
                                     <button class="btn btn-sm btn-outline-success" 
-                                            title="{{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? __('يجب دفع رسوم العملية أولاً') : __('تحديث النتائج') }}" 
-                                            onclick="quickUpdate({{ $test->id }}, 'completed')"
-                                            {{ ($test->surgery && $test->surgery->surgery_fee_paid !== 'paid') ? 'disabled' : '' }}>
+                                            title="{{ __('تحديث النتائج') }}" 
+                                            onclick="quickUpdate({{ $test->id }}, 'completed')">
                                         <i class="fas fa-check"></i>
                                     </button>
                                     @endif

@@ -708,7 +708,12 @@
                                             @endif
                                         </span>
                                     @else
-                                        <span class="badge bg-light text-muted border">{{ __('بدون غرفة') }}</span>
+                                        <span class="badge bg-warning-subtle text-dark border border-warning"><i class="fas fa-hourglass-half me-1 text-warning"></i>{{ __('وضع انتظار الغرفة') }}</span>
+                                        @if($surgery->status !== 'cancelled' && !$surgery->discharged_at && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('assign surgery room')))
+                                            <a href="{{ route('inquiry.occupancy', ['tab' => 'waiting_room']) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0 ms-1" style="font-size: 0.7rem;" title="{{ __('تخصيص غرفة من وضع الانتظار') }}">
+                                                <i class="fas fa-bed"></i> {{ __('تخصيص') }}
+                                            </a>
+                                        @endif
                                     @endif
                                 </td>
                                 <td class="text-center">
@@ -787,7 +792,11 @@
                                     $rowStyle = 'background-color: rgba(16, 185, 129, 0.05); border-right: 4px solid #10b981;';
                                     $patientIcon = 'fas fa-check-circle text-success';
                                     $patientColor = 'text-success';
-                                    $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.8rem; letter-spacing: 0.3px;" title="خرج من الصالة (مكتملة)"><i class="fas fa-check-double me-1 text-success"></i>Post-Op</span>';
+                                    if ($surgery->discharged_at) {
+                                        $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.8rem; letter-spacing: 0.3px;" title="مكتملة ومُخرّج نهائياً"><i class="fas fa-check-double me-1 text-success"></i>مكتمل ومُخرّج</span>';
+                                    } else {
+                                        $badgeHtml = '<span class="badge py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.8rem; letter-spacing: 0.3px;" title="خرج من صالة العمليات ويقيم في الردهة للمتابعة"><i class="fas fa-procedures me-1 text-primary"></i>Post-Op (بالردهة)</span>';
+                                    }
                                 } elseif ($isOtInProgress) {
                                     $rowStyle = 'background-color: rgba(2, 132, 199, 0.05); border-right: 4px solid #0284c7;';
                                     $patientIcon = 'fas fa-procedures text-primary';
@@ -868,7 +877,12 @@
                                             @endif
                                         </span>
                                     @else
-                                        <span class="badge bg-light text-muted border">{{ __('بدون غرفة') }}</span>
+                                        <span class="badge bg-warning-subtle text-dark border border-warning"><i class="fas fa-hourglass-half me-1 text-warning"></i>{{ __('وضع انتظار الغرفة') }}</span>
+                                        @if($surgery->status !== 'cancelled' && !$surgery->discharged_at && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('assign surgery room')))
+                                            <a href="{{ route('inquiry.occupancy', ['tab' => 'waiting_room']) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0 ms-1" style="font-size: 0.7rem;" title="{{ __('تخصيص غرفة من وضع الانتظار') }}">
+                                                <i class="fas fa-bed"></i> {{ __('تخصيص') }}
+                                            </a>
+                                        @endif
                                     @endif
                                 </td>
                                 <td class="text-center">

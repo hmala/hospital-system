@@ -103,6 +103,7 @@ class NursingStationController extends Controller
         // تشمل: العمليات المجدولة، أو في قائمة الانتظار (دخول)، أو قيد التجهيز طالما لم تكتمل صالة العمليات بعد
         $preOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'preOpResidentStation', 'room', 'operationTheaterStation'])
             ->where('status', '!=', 'cancelled')
+            ->whereNull('discharged_at')
             ->where(function ($query) {
                 $query->whereIn('status', ['scheduled', 'waiting', 'checked_in'])
                     ->orWhere(function ($q) {
@@ -128,7 +129,10 @@ class NursingStationController extends Controller
             });
 
         if ($selectedFloor) {
-            $preOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+            $preOpQuery->where(function ($fq) use ($selectedFloor) {
+                $fq->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor))
+                    ->orWhereNull('room_id');
+            });
         }
         $applySearch($preOpQuery);
 
@@ -140,6 +144,7 @@ class NursingStationController extends Controller
         // تشمل: العمليات التي اكتملت صالتها أو تخديرها أو حالتها مكتملة أو بعد الصالة، ولم تكتمل محطة تمريضها بعد
         $postOpQuery = Surgery::with(['patient.user', 'doctor.user', 'nursingStation.nurse', 'postOpResidentStation', 'room', 'operationTheaterStation', 'anesthesiaStation'])
             ->where('status', '!=', 'cancelled')
+            ->whereNull('discharged_at')
             ->where(function ($query) {
                 $query->whereHas('operationTheaterStation', function ($sq) {
                     $sq->where('status', 'completed');
@@ -160,7 +165,10 @@ class NursingStationController extends Controller
             });
 
         if ($selectedFloor) {
-            $postOpQuery->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor));
+            $postOpQuery->where(function ($fq) use ($selectedFloor) {
+                $fq->whereHas('room', fn ($rq) => $rq->where('floor', $selectedFloor))
+                    ->orWhereNull('room_id');
+            });
         }
         $applySearch($postOpQuery);
 
@@ -186,7 +194,43 @@ class NursingStationController extends Controller
         $completedSurgeries = $completedQuery->orderBy('updated_at', 'desc')
             ->get();
 
+        // 9. دمج وترتيب الحالات النشطة في قائمة موحدة واحدة (قبل الصالة، داخل الصالة، بعد الصالة)
+        $activeSurgeries = $preOpSurgeries->merge($postOpSurgeries)->unique('id')->values();
+
+        $phasePriority = function ($surgery) {
+            $isPostOp = ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')
+                || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed')
+                || $surgery->status === 'completed'
+                || ($surgery->residentStations && $surgery->residentStations->where('phase', 'post_op')->count() > 0);
+
+            if ($isPostOp) {
+                return 1; // خرج من الصالة وبحاجة متابعة فورية ورعاية بعد العملية
+            }
+            if ($surgery->status === 'in_progress' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'in_progress')) {
+                return 2; // داخل صالة العمليات
+            }
+            if ($surgery->status === 'waiting') {
+                return 3; // بانتظار الصالة (مسجل دخول)
+            }
+
+            return 4; // مجدولة (قبل الصالة)
+        };
+
+        $activeSurgeries = $activeSurgeries->sortBy([
+            fn ($a, $b) => $phasePriority($a) <=> $phasePriority($b),
+            ['scheduled_date', 'asc'],
+            ['scheduled_time', 'asc'],
+        ])->values();
+
+        $availableRooms = Room::where('is_active', true)
+            ->where('room_purpose', 'beds')
+            ->where('status', 'available')
+            ->orderBy('room_type')
+            ->orderBy('room_number')
+            ->get();
+
         return view('surgery-stations.nursing.index', compact(
+            'activeSurgeries',
             'preOpSurgeries',
             'postOpSurgeries',
             'completedSurgeries',
@@ -197,7 +241,8 @@ class NursingStationController extends Controller
             'recentMovements',
             'availableFloors',
             'selectedFloor',
-            'search'
+            'search',
+            'availableRooms'
         ));
     }
 
@@ -208,7 +253,12 @@ class NursingStationController extends Controller
                 ->with('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
         }
 
-        return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id, 'from' => 'nursing'], $request->query()));
+        $params = array_merge(['surgery' => $surgery->id], $request->query());
+        if ($request->has('from')) {
+            $params['from'] = $request->input('from');
+        }
+
+        return redirect()->route('clinical-station.show', $params);
     }
 
     public function update(Request $request, Surgery $surgery)
@@ -555,6 +605,15 @@ class NursingStationController extends Controller
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
         if (! $isAdmin && (! $user || ! $user->can('view nursing station'))) {
             abort(403, 'غير مصرح لك بتخريج المريض من الغرفة.');
+        }
+
+        // بوابة براءة الذمة المالية: منع التخريج إذا كانت هناك مستحقات غير مسددة في الكاشير
+        $clearance = $surgery->getFinancialClearanceSummary(now());
+        if (! $clearance['cleared']) {
+            return redirect()->back()->with(
+                'error',
+                'لا يمكن تخريج المريض قبل تسوية كافة المستحقات المالية في الكاشير: '.implode(' | ', $clearance['reasons'])
+            );
         }
 
         $surgery->update([

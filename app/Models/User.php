@@ -161,7 +161,39 @@ class User extends Authenticatable
 
     public function isReceptionist()
     {
-        return $this->hasRole('receptionist');
+        return $this->hasRole('receptionist') || $this->isInquiryStaff();
+    }
+
+    public function isInquiryStaff(): bool
+    {
+        try {
+            if ($this->hasRole(['inquiry_staff', 'receptionist', 'consultation_receptionist', 'استعلامات', 'موظف استعلامات', 'استقبال', 'موظف استقبال'])) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // Ignore if role not found
+        }
+
+        if (in_array($this->role ?? '', ['inquiry_staff', 'receptionist', 'consultation_receptionist']) || in_array($this->user_type ?? '', ['inquiry_staff', 'receptionist', 'consultation_receptionist'])) {
+            return true;
+        }
+
+        if ($this->relationLoaded('department') && $this->department && in_array($this->department->name, ['الاستعلامات', 'الاستقبال'])) {
+            return true;
+        } elseif (! $this->relationLoaded('department') && $this->department_id && ($this->department && in_array($this->department->name, ['الاستعلامات', 'الاستقبال']))) {
+            return true;
+        }
+
+        try {
+            if (($this->can('create inquiries') || $this->can('view inquiries') || $this->can('inquiry.create.checkup')) &&
+                ! $this->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'doctor', 'الجراح', 'surgeon', 'التخدير', 'anesthesiologist', 'nurse', 'تمريض', 'surgery_staff', 'موظف عمليات', 'radiology_staff', 'lab_staff', 'accountant', 'cashier'])) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // Ignore
+        }
+
+        return false;
     }
 
     public function isStaff()

@@ -51,6 +51,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'process medical requests payments', // معالجة دفع الطلبات الطبية
             'view cashier emergency',         // عرض طوارئ الكاشير
             'process emergency payments',     // معالجة دفع الطوارئ
+            'view cashier pharmacy',          // عرض صيدلية الكاشير
+            'process pharmacy payments',      // معالجة دفع الصيدلية
             'view cashier surgeries',         // عرض عمليات الكاشير
             'process surgery payments',       // معالجة دفع العمليات
             'process refunds',                // معالجة الاسترجاع المالي
@@ -103,6 +105,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgical assistants',
             'control surgeries',
             'manage rooms',
+            'assign surgery room',
             'view bed reservations',
             'create bed reservations',
             // صلاحيات قسم الخدج والحاضنات (NICU)
@@ -353,6 +356,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'assign surgery room',
+            'assign surgery room',
             'view bed reservations',
             'create bed reservations',
             // صلاحيات حجز واستقبال الخدج (الاستعلامات)
@@ -401,6 +406,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'process consultation payments',
             'process medical requests payments',
             'process emergency payments',
+            'view cashier pharmacy',
+            'process pharmacy payments',
             'view cashier surgeries',
             'process surgery payments',
             'process refunds',
@@ -635,6 +642,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage surgery waiting list',
             'control surgeries',
             'manage rooms',
+            'assign surgery room',
             'view resident station',
             'view operation theater station',
             'view surgeon station',

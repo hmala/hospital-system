@@ -52,12 +52,23 @@ class AccountantController extends Controller
             ->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('accountant.surgeries.index', compact('surgeriesToReview'));
+        $deviceSurgeriesToReview = Surgery::with([
+            'patient.user',
+            'doctor.user',
+            'department',
+            'surgicalOperation',
+            'medicalDevices',
+        ])
+            ->where('devices_billing_status', 'pending_review')
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('accountant.surgeries.index', compact('surgeriesToReview', 'deviceSurgeriesToReview'));
     }
 
     public function reviewForm(Surgery $surgery)
     {
-        if ($surgery->billing_status !== 'pending_review') {
+        if ($surgery->billing_status !== 'pending_review' && $surgery->devices_billing_status !== 'pending_review') {
             return redirect()->route('accountant.surgeries.index')->with('info', 'هذه العملية ليست بحاجة لمراجعة الأسعار حالياً.');
         }
 
@@ -75,45 +86,64 @@ class AccountantController extends Controller
 
     public function confirmPrices(Request $request, Surgery $surgery)
     {
-        if ($surgery->billing_status !== 'pending_review') {
+        $needsOpReview = $surgery->billing_status === 'pending_review';
+        $needsDeviceReview = $surgery->devices_billing_status === 'pending_review';
+
+        if (! $needsOpReview && ! $needsDeviceReview) {
             return redirect()->route('accountant.surgeries.index')->with('error', 'عملية غير صالحة للمراجعة.');
         }
 
         $validated = $request->validate([
-            'surgery_fee' => 'required|numeric|min:0|max:99999999',
+            'surgery_fee' => ($needsOpReview ? 'required' : 'nullable').'|numeric|min:0|max:99999999',
             'additional_ops' => 'nullable|array',
             'additional_ops.*' => 'required|numeric|min:0|max:99999999',
             'device_prices' => 'nullable|array',
             'device_prices.*' => 'required|numeric|min:0|max:99999999',
         ]);
 
-        // تحديث سعر العملية الرئيسية
-        $surgery->surgery_fee = $validated['surgery_fee'];
-        $surgery->billing_status = 'reviewed';
-        $surgery->save();
+        if ($needsOpReview) {
+            // تحديث سعر العملية الرئيسية للمريض والجراح
+            if (isset($validated['surgery_fee'])) {
+                $surgery->surgery_fee = $validated['surgery_fee'];
+            }
+            $surgery->billing_status = 'reviewed';
 
-        // تحديث أسعار العمليات الإضافية
-        if (! empty($validated['additional_ops'])) {
-            foreach ($validated['additional_ops'] as $addOpId => $fee) {
-                $additionalOp = SurgeryAdditionalOperation::where('surgery_id', $surgery->id)
-                    ->where('id', $addOpId)
-                    ->first();
+            // تحديث أسعار العمليات الإضافية
+            if (! empty($validated['additional_ops'])) {
+                foreach ($validated['additional_ops'] as $addOpId => $fee) {
+                    $additionalOp = SurgeryAdditionalOperation::where('surgery_id', $surgery->id)
+                        ->where('id', $addOpId)
+                        ->first();
 
-                if ($additionalOp) {
-                    $additionalOp->fee = $fee;
-                    $additionalOp->save();
+                    if ($additionalOp) {
+                        $additionalOp->fee = $fee;
+                        $additionalOp->save();
+                    }
                 }
             }
         }
 
-        // تحديث أسعار الأجهزة الطبية
+        // تحديث أسعار الأجهزة الطبية (تُحاسب مع الجراح في الحسابات فقط ولا تُضاف لفاتورة المريض)
         if (! empty($validated['device_prices'])) {
             foreach ($validated['device_prices'] as $deviceId => $price) {
                 $surgery->medicalDevices()->updateExistingPivot($deviceId, ['price' => $price]);
             }
+            $surgery->devices_billing_status = 'reviewed';
+        } elseif ($needsDeviceReview) {
+            $surgery->devices_billing_status = 'reviewed';
         }
 
-        return redirect()->route('accountant.surgeries.index')->with('success', 'تم تأكيد الأسعار وإرسال الفاتورة للكاشير بنجاح.');
+        $surgery->save();
+        if ($needsOpReview) {
+            $surgery->syncPaymentStatus();
+        }
+        $surgery->syncSurgeonDoctorDue();
+
+        $msg = $needsOpReview
+            ? 'تم تأكيد أسعار العملية وإرسال المستحق للكاشير وتحديث حساب الجراح بنجاح.'
+            : 'تم اعتماد تسوية الأجهزة الطبية وقيدها على حساب الجراح بنجاح دون تحميل المريض أي مبلغ.';
+
+        return redirect()->route('accountant.surgeries.index')->with('success', $msg);
     }
 
     public function emergencyAnalytics(Request $request)

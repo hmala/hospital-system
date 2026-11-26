@@ -524,32 +524,49 @@ body {
                                 @error('scheduled_date') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
 
-                            <!-- ورقة التحويل الطبي بالسكانر -->
+                            <!-- ورقة التحويل الطبي بالسكانر / الرفع -->
                             <div class="mb-2">
-                                <label class="form-label text-muted">{{ __('ورقة التحويل الطبي (سكانر / رفع ملف)') }}</label>
-                                <div class="d-flex gap-1" id="referral_letter_container">
-                                    <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:34px;">
-                                        <i class="fas fa-print me-1"></i> {{ __('مسح بالسكانر') }}
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <label class="form-label text-muted mb-0 small fw-bold">{{ __('ورقة التحويل الطبي (سكانر / رفع):') }}</label>
+                                    <span id="scannerStatusIndicator" class="badge bg-light text-muted border py-0 px-2" style="font-size: 0.72rem;" title="{{ __('حالة السكانر') }}">
+                                        <i class="fas fa-circle text-secondary me-1" style="font-size: 7px;"></i>{{ __('غير مفحوص') }}
+                                    </span>
+                                </div>
+                                <div class="d-flex gap-1 flex-wrap" id="referral_letter_container">
+                                    <!-- زر كشف وقراءة السكانر المرتبط بالحاسبة -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary" id="detect_scanner_btn" onclick="detectScannerDevice(true)" style="height:36px;" title="{{ __('قراءة واكتشاف جهاز السكانر المتصل بالحاسبة') }}">
+                                        <i class="fas fa-search me-1" id="detect_spinner"></i> {{ __('كشف السكانر') }}
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:34px;">
+
+                                    <!-- زر المسح من السكانر المكتبي USB -->
+                                    <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:36px; min-width: 95px;">
+                                        <i class="fas fa-print me-1"></i> <span id="scan_btn_label">{{ __('مسح بالسكانر') }}</span>
+                                    </button>
+
+                                    <!-- زر رفع ملف -->
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:36px;" title="{{ __('رفع ملف أو صورة من جهازك') }}">
                                         <i class="fas fa-upload me-1"></i> {{ __('رفع ملف') }}
                                     </button>
+
                                     <input type="file" name="referral_letter" id="referral_letter" class="d-none @error('referral_letter') is-invalid @enderror" accept="image/*,application/pdf">
                                     <textarea id="scan_data_receiver" name="scanned_referral_letter" style="display:none;"></textarea>
                                 </div>
                                 <div id="referral_letter_preview" class="mt-2" style="{{ $surgery->referral_letter_path ? '' : 'display: none;' }}">
-                                    <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small">
-                                        <span id="preview_text">
-                                            <i class="fas fa-check-circle me-1"></i> 
-                                            @if($surgery->referral_letter_path)
-                                                <a href="{{ asset('storage/' . $surgery->referral_letter_path) }}" target="_blank" class="text-success fw-bold text-decoration-underline">
-                                                    {{ __('عرض ورقة التحويل الحالية') }}
-                                                </a>
-                                            @else
-                                                {{ __('تم مسح/رفع ورقة التحويل بنجاح') }}
-                                            @endif
-                                        </span>
-                                        <button type="button" class="btn btn-xs btn-outline-danger py-0" onclick="clearScannedDoc()">
+                                    <div class="alert alert-success py-1 px-2 d-flex justify-content-between align-items-center mb-0 small rounded-3 shadow-xs border-success">
+                                        <div class="d-flex align-items-center gap-2 text-truncate">
+                                            <i class="fas fa-check-circle text-success"></i>
+                                            <span id="preview_text" class="fw-bold">
+                                                @if($surgery->referral_letter_path)
+                                                    {{ __('يوجد ورقة تحويل محفوظة مسبقاً') }}
+                                                @else
+                                                    {{ __('تم مسح/رفع ورقة التحويل بنجاح') }}
+                                                @endif
+                                            </span>
+                                            <button type="button" class="btn btn-link btn-xs text-primary p-0 text-decoration-none fw-bold" onclick="viewCapturedDocument()">
+                                                <i class="fas fa-eye me-1"></i>{{ __('معاينة') }}
+                                            </button>
+                                        </div>
+                                        <button type="button" class="btn btn-xs btn-outline-danger py-0 px-2 rounded-pill" onclick="clearScannedDoc()">
                                             <i class="fas fa-times me-1"></i> {{ __('إلغاء') }}
                                         </button>
                                     </div>
@@ -707,6 +724,21 @@ body {
                     <div id="collapseRoomStay" class="collapse show">
                         <div class="compact-card-body">
                             <input type="hidden" name="expected_stay_days" id="expected_stay_days" value="1">
+                            <input type="hidden" name="room_waiting_mode" id="room_waiting_mode" value="{{ old('room_waiting_mode', $currentRoom ? '0' : '1') }}">
+
+                            <!-- خيار تخصيص الغرفة الآن أو وضع الانتظار -->
+                            <div class="d-flex flex-wrap gap-2 mb-2 p-2 bg-light rounded border">
+                                <button type="button" class="btn btn-sm {{ $currentRoom ? 'btn-primary' : 'btn-outline-primary' }} fw-bold rounded-pill px-3" id="btnRoomDirectMode">
+                                    <i class="fas fa-bed me-1"></i> {{ __('تخصيص غرفة مباشرة') }}
+                                </button>
+                                <button type="button" class="btn btn-sm {{ !$currentRoom ? 'btn-warning text-dark' : 'btn-outline-warning text-dark' }} fw-bold rounded-pill px-3" id="btnRoomWaitingMode">
+                                    <i class="fas fa-hourglass-half me-1"></i> {{ __('وضع الانتظار (بدون غرفة حالياً)') }}
+                                </button>
+                            </div>
+                            <div id="room_waiting_banner" class="alert alert-warning py-2 px-3 mb-2 {{ !$currentRoom ? '' : 'd-none' }} small fw-bold border-warning">
+                                <i class="fas fa-hourglass-half me-1"></i>
+                                {{ __('وضع انتظار الغرفة مفعل: لن يتم ربط أو إشغال غرفة حالياً حتى يتم تخصيصها لاحقاً.') }}
+                            </div>
                             <div class="row g-2 mb-2 align-items-center">
                                 <div class="col-md-9">
                                     <div class="px-3 py-2 bg-light rounded border d-flex justify-content-between align-items-center small flex-wrap gap-2">
@@ -874,6 +906,30 @@ body {
         </div>
     </div>
 </div>
+
+<!-- مودال معاينة الوثيقة الممسوحة أو المرفوعة (Document Full Preview Modal) -->
+<div class="modal fade" id="documentPreviewModal" tabindex="-1" aria-labelledby="documentPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+            <div class="modal-header py-2 px-3 border-bottom">
+                <h6 class="modal-title fw-bold text-dark" id="documentPreviewModalLabel">
+                    <i class="fas fa-file-invoice text-primary me-1"></i> {{ __('معاينة ورقة التحويل الطبي الممسوحة') }}
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-2 text-center bg-light" style="min-height: 300px; max-height: 75vh; overflow-y: auto;">
+                <img id="documentPreviewImg" src="" alt="{{ __('ورقة التحويل') }}" class="img-fluid rounded shadow-sm border" style="max-height: 70vh; display: none;">
+                <div id="documentPdfPreview" class="alert alert-info my-4" style="display: none;">
+                    <i class="fas fa-file-pdf fa-2x mb-2 d-block text-danger"></i>
+                    <strong>{{ __('ملف PDF مرفوع:') }}</strong> <span id="documentPdfName">-</span>
+                </div>
+            </div>
+            <div class="modal-footer py-2 px-3 bg-white">
+                <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">{{ __('إغلاق') }}</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @php
@@ -916,7 +972,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // تهيئة Select2
     if (typeof $.fn.select2 !== 'undefined') {
-        $('#doctor_id, #patient_id, #surgery_category').select2({
+        $('#doctor_id, #surgery_category').select2({
             theme: 'bootstrap-5',
             dir: 'rtl',
             width: '100%',
@@ -926,6 +982,64 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             placeholder: function() { return $(this).data('placeholder') || 'اختر...'; },
             allowClear: true
+        });
+
+        // تهيئة قائمة المرضى ببحث AJAX لحظي فائق السرعة دون تحميل 10 آلاف مريض
+        $('#patient_id').select2({
+            theme: 'bootstrap-5',
+            dir: 'rtl',
+            width: '100%',
+            placeholder: 'اختر أو ابحث عن المريض بالاسم أو الهاتف أو رقم الملف...',
+            allowClear: true,
+            language: {
+                noResults: function() { return 'لا توجد نتائج مطابقة'; },
+                searching: function() { return 'جاري البحث في سجل المرضى...'; },
+                inputTooShort: function() { return 'يرجى كتابة حرف واحد على الأقل للبحث'; }
+            },
+            ajax: {
+                url: '{{ route('inquiry.search.patients') }}',
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        query: params.term
+                    };
+                },
+                processResults: function (data) {
+                    return {
+                        results: (data || []).map(function (p) {
+                            const insLabel = p.insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : (p.insurance_type === 'hi' ? 'هيئة الضمان الصحي الوطني' : 'بدون ضمان');
+                            return {
+                                id: p.id,
+                                text: `${p.name} (${p.age || '-'} سنة) - ملف #${p.id}`,
+                                patientData: {
+                                    id: p.id,
+                                    name: p.name,
+                                    age: p.age,
+                                    gender: p.gender,
+                                    phone: p.phone,
+                                    insurance_type: p.insurance_type,
+                                    insurance_label: insLabel,
+                                    insurance_card_no: p.insurance_card_no || '',
+                                    history_url: p.history_url,
+                                    dossier_url: p.dossier_url
+                                }
+                            };
+                        })
+                    };
+                },
+                cache: true
+            }
+        });
+
+        $('#patient_id').on('select2:select', function(e) {
+            const data = e.params.data;
+            if (data && data.patientData) {
+                const opt = $(this).find('option[value="' + data.id + '"]');
+                opt.data('patient', data.patientData);
+                opt.attr('data-patient', JSON.stringify(data.patientData));
+                $(this).trigger('change');
+            }
         });
 
         // قائمة الطبيب المرسل
@@ -1383,7 +1497,78 @@ document.addEventListener('DOMContentLoaded', function() {
     const floorPillsContent = document.getElementById('floorPillsContent');
     let selectedRoomFee = {{ $currentRoomFee }};
 
+    const roomWaitingModeInput = document.getElementById('room_waiting_mode');
+    const btnRoomDirectMode = document.getElementById('btnRoomDirectMode');
+    const btnRoomWaitingMode = document.getElementById('btnRoomWaitingMode');
+    const roomWaitingBanner = document.getElementById('room_waiting_banner');
+
+    function setRoomWaitingMode(isWaiting) {
+        if (!roomWaitingModeInput) return;
+        roomWaitingModeInput.value = isWaiting ? '1' : '0';
+
+        if (isWaiting) {
+            if (btnRoomDirectMode) {
+                btnRoomDirectMode.classList.remove('btn-primary');
+                btnRoomDirectMode.classList.add('btn-outline-primary');
+            }
+            if (btnRoomWaitingMode) {
+                btnRoomWaitingMode.classList.remove('btn-outline-warning');
+                btnRoomWaitingMode.classList.add('btn-warning');
+            }
+            if (roomWaitingBanner) roomWaitingBanner.classList.remove('d-none');
+            if (roomValidationError) roomValidationError.classList.add('d-none');
+            if (floorPillsContent) floorPillsContent.style.border = '';
+
+            document.querySelectorAll('.room-tile').forEach(t => {
+                t.style.borderColor = t.dataset.origBorder || t.style.borderColor;
+                t.style.borderWidth = t.dataset.origWidth || '2px';
+                t.style.boxShadow = '';
+                const icon = t.querySelector('.room-actions');
+                if (icon) icon.style.display = 'none';
+            });
+            if (roomIdInput) roomIdInput.value = '';
+            selectedRoomFee = 0;
+            if (selectedRoomNameEl) selectedRoomNameEl.textContent = '⏳ وضع انتظار الغرفة';
+            if (headerRoomBadge) {
+                headerRoomBadge.textContent = '⏳ وضع انتظار الغرفة';
+                headerRoomBadge.className = 'badge bg-warning text-dark';
+            }
+            const statusSpan = document.getElementById('selected_room_status');
+            if (statusSpan) {
+                statusSpan.textContent = 'وضع الانتظار (تُخصص لاحقاً)';
+                statusSpan.className = 'fw-bold text-warning-emphasis';
+            }
+            if (clearRoomSection) clearRoomSection.style.display = 'none';
+            if (typeof calculateRoomFee === 'function') calculateRoomFee();
+        } else {
+            if (btnRoomDirectMode) {
+                btnRoomDirectMode.classList.remove('btn-outline-primary');
+                btnRoomDirectMode.classList.add('btn-primary');
+            }
+            if (btnRoomWaitingMode) {
+                btnRoomWaitingMode.classList.remove('btn-warning');
+                btnRoomWaitingMode.classList.add('btn-outline-warning');
+            }
+            if (roomWaitingBanner) roomWaitingBanner.classList.add('d-none');
+        }
+    }
+
+    if (btnRoomDirectMode) {
+        btnRoomDirectMode.addEventListener('click', function() { setRoomWaitingMode(false); });
+    }
+    if (btnRoomWaitingMode) {
+        btnRoomWaitingMode.addEventListener('click', function() { setRoomWaitingMode(true); });
+    }
+    if (roomWaitingModeInput && roomWaitingModeInput.value === '1') {
+        setRoomWaitingMode(true);
+    }
+
     function validateRoomSelection() {
+        if (roomWaitingModeInput && roomWaitingModeInput.value === '1') {
+            if (roomValidationError) roomValidationError.classList.add('d-none');
+            if (floorPillsContent) floorPillsContent.style.border = '';
+            return true;
+        }
         const val = roomIdInput ? roomIdInput.value : '';
         if (!val) {
             if (roomValidationError) roomValidationError.classList.remove('d-none');
@@ -1403,7 +1588,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const toast = document.createElement('div');
             toast.className = 'room-required-toast alert alert-danger position-fixed shadow-lg';
             toast.style.cssText = 'top:25px;left:50%;transform:translateX(-50%);z-index:9999;border-right:6px solid #dc3545;font-weight:bold;font-size:0.95rem;background:#fff;';
-            toast.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i> يرجى اختيار غرفة للمريض من قائمة الغرف المتاحة.';
+            toast.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i> يرجى اختيار غرفة متاحة أو تفعيل «وضع الانتظار للغرفة».';
             document.body.appendChild(toast);
             setTimeout(() => toast.remove(), 4500);
 
@@ -1476,6 +1661,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function selectRoom(tile) {
         if (tile.dataset.available === '0') return;
+
+        if (typeof setRoomWaitingMode === 'function') {
+            setRoomWaitingMode(false);
+        }
 
         if (roomValidationError) roomValidationError.classList.add('d-none');
         if (floorPillsContent) floorPillsContent.style.border = '';
@@ -1551,23 +1740,129 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 
-    // ===== نظام الأرشفة التلقائي - يعمل مع أي سكانر =====
+    // ===== نظام الأرشفة والسكانر الذكي المتكامل (سكانر USB + كشف مباشر + كاميرا + رفع) =====
     const referralInput = document.getElementById('referral_letter');
     const previewContainer = document.getElementById('referral_letter_preview');
+    const hiddenScanInput = document.getElementById('scan_data_receiver');
 
+    // 1. كشف وقراءة السكانر المتصل بالحاسبة وتفعيل الزر
+    window.detectScannerDevice = async function(showFeedback = true) {
+        const detectBtn = document.getElementById('detect_scanner_btn');
+        const spinner = document.getElementById('detect_spinner');
+        const scanBtn = document.getElementById('scan_btn');
+        const scanBtnLabel = document.getElementById('scan_btn_label');
+        const indicator = document.getElementById('scannerStatusIndicator');
+
+        if (detectBtn) detectBtn.disabled = true;
+        if (spinner) spinner.className = 'fas fa-spinner fa-spin me-1';
+        if (indicator) {
+            indicator.className = 'badge bg-warning-subtle text-warning border border-warning-subtle py-0 px-2';
+            indicator.innerHTML = '<span class="spinner-grow spinner-grow-sm me-1" style="width:7px;height:7px;"></span>جاري قراءة السكانر...';
+        }
+
+        const endpoints = [
+            'http://127.0.0.1:5000/status',
+            'http://127.0.0.1:37426/status',
+            'http://localhost:5000/status',
+            'http://localhost:37426/status'
+        ];
+
+        let foundScanner = null;
+        let bridgeRunning = false;
+
+        for (const url of endpoints) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2500);
+                const res = await fetch(url, { method: 'GET', mode: 'cors', signal: controller.signal });
+                clearTimeout(timeoutId);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    bridgeRunning = true;
+                    if (data.scanners && data.scanners.length > 0) {
+                        foundScanner = data.scanners[0].name || data.scanners[0].id || 'سكانر متصل';
+                    } else if (data.status === 'ready' || data.status === 'ok') {
+                        foundScanner = data.message || 'سكانر جاهز';
+                    }
+                    break;
+                }
+            } catch (e) {
+                // Ignore and try next
+            }
+        }
+
+        if (detectBtn) detectBtn.disabled = false;
+        if (spinner) spinner.className = 'fas fa-search me-1';
+
+        if (foundScanner) {
+            if (indicator) {
+                indicator.className = 'badge bg-success text-white py-0 px-2';
+                indicator.innerHTML = '<i class="fas fa-check-circle me-1" style="font-size: 8px;"></i>متصل: ' + foundScanner;
+            }
+            if (scanBtn) {
+                scanBtn.className = 'btn btn-sm btn-success flex-grow-1 shadow-sm';
+            }
+            if (scanBtnLabel) {
+                scanBtnLabel.innerText = 'مسح من: ' + foundScanner;
+            }
+            if (window.toastr) {
+                toastr.success('تم اكتشاف وقراءة السكانر بنجاح وهو جاهز للمسح: ' + foundScanner);
+            }
+        } else if (bridgeRunning) {
+            if (indicator) {
+                indicator.className = 'badge bg-warning text-dark py-0 px-2';
+                indicator.innerHTML = '<i class="fas fa-exclamation-circle me-1" style="font-size: 8px;"></i>البرنامج يعمل ولكن لم يتم اكتشاف جهاز سكانر';
+            }
+            if (showFeedback) {
+                if (window.toastr) {
+                    toastr.warning('برنامج السكانر يعمل ولكن لم يتم العثور على جهاز سكانر متصل بالحاسبة. تأكد من توصيل كابل USB.');
+                } else {
+                    alert('برنامج السكانر يعمل ولكن لم يتم العثور على جهاز سكانر متصل بالحاسبة.');
+                }
+            }
+        } else {
+            if (indicator) {
+                indicator.className = 'badge bg-secondary text-white py-0 px-2';
+                indicator.innerHTML = '<i class="fas fa-times-circle me-1" style="font-size: 8px;"></i>السكانر غير متصل';
+            }
+            if (showFeedback) {
+                if (window.toastr) {
+                    toastr.error('تعذر الاتصال ببرنامج السكانر المحلي (127.0.0.1:5000). تأكد من تشغيل البرنامج على الحاسبة.');
+                } else {
+                    alert('تعذر الاتصال ببرنامج السكانر المحلي (127.0.0.1:5000). يرجى التأكد من تشغيل البرنامج.');
+                }
+            }
+        }
+    };
+
+    // فحص خفيف أولي في الخلفية بعد تحميل الصفحة
+    setTimeout(() => {
+        detectScannerDevice(false);
+    }, 1200);
+
+    // 2. سحب من سكانر USB
     window.scanFromDevice = async function() {
         const btn = document.getElementById('scan_btn');
         const origText = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> جاري المسح...';
 
-        const endpoints = ['http://127.0.0.1:5000/scan', 'http://127.0.0.1:37426/scan'];
+        const endpoints = [
+            'http://127.0.0.1:5000/scan',
+            'http://127.0.0.1:37426/scan',
+            'http://localhost:5000/scan',
+            'http://localhost:37426/scan'
+        ];
         let response = null;
         let lastError = null;
 
         for (const url of endpoints) {
             try {
-                const res = await fetch(url, { method: 'POST', mode: 'cors' });
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                const res = await fetch(url, { method: 'POST', mode: 'cors', signal: controller.signal });
+                clearTimeout(timeoutId);
                 if (res.ok) {
                     response = res;
                     break;
@@ -1579,28 +1874,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             if (!response) {
-                throw lastError || new Error('تعذر الاتصال بالسكانر');
+                throw lastError || new Error('تعذر الاتصال بخادم السكانر المحلي');
             }
             const blob = await response.blob();
             const reader = new FileReader();
             reader.onloadend = function() {
                 const base64data = reader.result;
-                const hiddenInput = document.getElementById('scan_data_receiver');
-                if (hiddenInput) hiddenInput.value = base64data;
+                if (hiddenScanInput) hiddenScanInput.value = base64data;
+                const previewTxt = document.getElementById('preview_text');
+                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-check-circle me-1 text-success"></i> تم سحب الوثيقة من السكانر بنجاح';
                 if (previewContainer) previewContainer.style.display = 'block';
             };
             reader.readAsDataURL(blob);
         } catch (err) {
-            console.error('Scanner error:', err);
-            if (window.location.protocol === 'https:') {
-                alert('⚠️ تعذر الاتصال بالسكانر المحلي!\n\n1. تأكد من تشغيل ملف (تشغيل_السكانر_التلقائي.bat) على حاسبتك.\n2. على هوستنجر (HTTPS): اضغط علامة القفل/الضبط بجانب الرابط في كروم ⬅️ إعدادات الموقع ⬅️ غيّر (محتوى غير آمن / Insecure content) إلى سماح (Allow).\n\nأو يمكنك استخدام زر "رفع ملف" كبديل سريع.');
+            console.warn('Scanner error:', err);
+            if (window.toastr) {
+                toastr.error('تعذر إجراء المسح من السكانر. تأكد من تشغيل البرنامج ووضع الورقة داخل السكانر.');
             } else {
-                alert('برنامج السكانر غير مشغل أو غير متصل. تأكد من تشغيل (تشغيل_السكانر_التلقائي.bat) أو استخدم زر "رفع ملف".');
+                alert('تعذر إجراء المسح من السكانر. تأكد من تشغيل البرنامج ووضع الورقة داخل السكانر.');
             }
         } finally {
             btn.disabled = false;
             btn.innerHTML = origText;
         }
+    };
+
+    // 3. معاينة الوثيقة الممسوحة أو الملتقطة
+    window.viewCapturedDocument = function() {
+        const previewModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('documentPreviewModal'));
+        const img = document.getElementById('documentPreviewImg');
+        const pdfDiv = document.getElementById('documentPdfPreview');
+        const pdfName = document.getElementById('documentPdfName');
+
+        if (hiddenScanInput && hiddenScanInput.value) {
+            img.src = hiddenScanInput.value;
+            img.style.display = 'inline-block';
+            if (pdfDiv) pdfDiv.style.display = 'none';
+            previewModal.show();
+            return;
+        }
+
+        if (referralInput && referralInput.files && referralInput.files[0]) {
+            const file = referralInput.files[0];
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    img.style.display = 'inline-block';
+                    if (pdfDiv) pdfDiv.style.display = 'none';
+                    previewModal.show();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                img.style.display = 'none';
+                if (pdfDiv) {
+                    pdfDiv.style.display = 'block';
+                    if (pdfName) pdfName.innerText = file.name;
+                }
+                previewModal.show();
+            }
+            return;
+        }
+
+        @if($surgery->referral_letter_path)
+            window.open('{{ asset("storage/" . $surgery->referral_letter_path) }}', '_blank');
+        @else
+            alert('لا توجد وثيقة للمعاينة حالياً');
+        @endif
     };
 
     window.clearScannedDoc = function() {
@@ -1613,6 +1953,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (referralInput) {
         referralInput.addEventListener('change', function(e) {
             if (this.files && this.files[0]) {
+                const previewTxt = document.getElementById('preview_text');
+                if (previewTxt) previewTxt.innerHTML = '<i class="fas fa-file-alt me-1 text-primary"></i> تم اختيار الملف: ' + this.files[0].name;
                 if (previewContainer) previewContainer.style.display = 'block';
             }
         });

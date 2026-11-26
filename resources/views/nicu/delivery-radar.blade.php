@@ -154,12 +154,13 @@
             </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            @if($canManageObservations ?? false)
-                <button type="button" class="btn btn-danger shadow-sm rounded-3" data-bs-toggle="modal" data-bs-target="#manualObservationModal">
-                    <i class="fas fa-baby-carriage me-1"></i>
-                    بدء معاينة ولادة طبيعية / خارج الرادار
-                </button>
-            @endif
+            <a href="{{ route('nicu.observations.index') }}" class="btn btn-warning text-dark shadow-sm rounded-3 fw-bold">
+                <i class="fas fa-stopwatch me-1"></i>
+                معاينات الوليد الحية
+                @if(($stats['observing'] ?? 0) > 0)
+                    <span class="badge bg-danger text-white ms-1">{{ $stats['observing'] }}</span>
+                @endif
+            </a>
             @if($canManageSettings)
                 <a href="{{ route('nicu.delivery-radar.settings') }}" class="btn btn-outline-dark shadow-sm rounded-3">
                     <i class="fas fa-sliders-h me-1 text-primary"></i>
@@ -236,50 +237,23 @@
         </div>
 
         <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 h-100 bg-white border-start border-success border-4">
-                <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-success small fw-bold d-block mb-1">معاينات الساعتين النشطة</span>
-                        <h3 class="fw-bold mb-0 text-success">{{ $stats['observing'] ?? 0 }}</h3>
-                        <small class="text-muted">مجدولة: {{ $stats['scheduled'] }} | منتهية: {{ $stats['completed'] }}</small>
-                    </div>
-                    <div class="p-3 bg-success bg-opacity-10 text-success rounded-3">
-                        <i class="fas fa-stopwatch fa-2x"></i>
+            <a href="{{ route('nicu.observations.index') }}" class="text-decoration-none">
+                <div class="card border-0 shadow-sm rounded-4 h-100 bg-white border-start border-success border-4">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-success small fw-bold d-block mb-1">معاينات الوليد الحية</span>
+                            <h3 class="fw-bold mb-0 text-success">{{ $stats['observing'] ?? 0 }}</h3>
+                            <small class="text-muted">مجدولة: {{ $stats['scheduled'] }} | منتهية: {{ $stats['completed'] }}</small>
+                        </div>
+                        <div class="p-3 bg-success bg-opacity-10 text-success rounded-3">
+                            <i class="fas fa-stopwatch fa-2x"></i>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
     </div>
 
-    {{-- ألسنة التبويب الرئيسية: 1- رادار العمليات | 2- المعاينات الحية (ساعتان) | 3- الأرشيف والتسليم --}}
-    @php
-        $initialTab = request('tab', ($archiveSearch ?? '') !== '' ? 'archive' : 'radar');
-    @endphp
-    <ul class="nav nav-pills mb-3 gap-2" id="radarHubTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-3 fw-bold px-4 {{ $initialTab === 'radar' ? 'active' : '' }}" id="hub-radar-tab" data-bs-toggle="pill" data-bs-target="#hub-radar-pane" type="button" role="tab">
-                <i class="fas fa-satellite-dish me-1"></i>
-                رادار عمليات اليوم ({{ $surgeries->count() }})
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-3 fw-bold px-4 {{ $initialTab === 'observations' ? 'active' : '' }}" id="hub-obs-tab" data-bs-toggle="pill" data-bs-target="#hub-obs-pane" type="button" role="tab">
-                <i class="fas fa-stopwatch me-1"></i>
-                معاينات الوليد الحية ({{ ($observationSettings['duration_minutes'] ?? 120) }} دقيقة)
-                <span class="badge bg-danger ms-1">{{ $activeObservations->count() }}</span>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-3 fw-bold px-4 {{ $initialTab === 'archive' ? 'active' : '' }}" id="hub-archive-tab" data-bs-toggle="pill" data-bs-target="#hub-archive-pane" type="button" role="tab">
-                <i class="fas fa-archive me-1"></i>
-                أرشيف التسليم والتحويل ({{ $archiveObservations->count() }})
-            </button>
-        </li>
-    </ul>
-
-    <div class="tab-content" id="radarHubTabContent">
-        {{-- التبويب 1: رادار العمليات --}}
-        <div class="tab-pane fade {{ $initialTab === 'radar' ? 'show active' : '' }}" id="hub-radar-pane" role="tabpanel">
     {{-- كارت الحاوية الرئيسي للرادار --}}
     <div class="radar-canvas-card">
         {{-- شريط اختيار أيام الأسبوع وفلتر التاريخ --}}
@@ -554,238 +528,9 @@
             </table>
         </div>
     </div>
-        </div>
-
-        {{-- التبويب 2: لوحة المعاينات الحية (ساعتان) --}}
-        <div class="tab-pane fade {{ $initialTab === 'observations' ? 'show active' : '' }}" id="hub-obs-pane" role="tabpanel">
-            <div class="radar-canvas-card">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 pb-2 border-bottom">
-                    <div>
-                        <h5 class="fw-bold text-dark mb-0">
-                            <i class="fas fa-stopwatch text-danger me-2"></i>
-                            المواليد تحت المعاينة السريرية الحالية ({{ $observationSettings['duration_minutes'] ?? 120 }} دقيقة)
-                        </h5>
-                        <small class="text-muted">يتحول المؤقت إلى اللون الأخضر تلقائياً عند إتمام المدة المحددة لتوثيق التسليم للأهل أو التحويل لحاضنة NICU</small>
-                    </div>
-                    @if($canManageObservations ?? false)
-                        <button type="button" class="btn btn-sm btn-danger rounded-3 fw-bold" data-bs-toggle="modal" data-bs-target="#manualObservationModal">
-                            <i class="fas fa-plus me-1"></i> إضافة ولادة طبيعية / خارج الصالة
-                        </button>
-                    @endif
-                </div>
-
-                @if($activeObservations->isEmpty())
-                    <div class="text-center py-5 text-muted">
-                        <i class="fas fa-baby fa-3x mb-3 opacity-50"></i>
-                        <h6 class="fw-bold text-dark">لا توجد حالات تحت معاينة الساعتين حالياً</h6>
-                        <p class="small mb-0">يمكنك بدء المعاينة مباشرة من تبويب «رادار عمليات اليوم» أو إضافة حالة ولادة طبيعية يدوياً.</p>
-                    </div>
-                @else
-                    <div class="row g-3">
-                        @foreach($activeObservations as $obs)
-                            <div class="col-md-6 col-xl-4">
-                                <div class="card h-100 border shadow-sm rounded-4 overflow-hidden">
-                                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2 px-3">
-                                        <span class="badge {{ $obs->status_badge_class }} rounded-pill">{{ $obs->status_label }}</span>
-                                        <div class="live-obs-timer badge px-3 py-2 font-monospace {{ $obs->isDurationCompleted() ? 'bg-success' : 'bg-warning text-dark' }}"
-                                             data-started-at="{{ $obs->started_at?->toIso8601String() }}"
-                                             data-target-minutes="{{ $obs->target_duration_minutes }}">
-                                            {{ str_pad(intdiv($obs->elapsed_minutes, 60), 2, '0', STR_PAD_LEFT) }}:{{ str_pad($obs->elapsed_minutes % 60, 2, '0', STR_PAD_LEFT) }} / {{ $obs->target_duration_minutes }}m
-                                        </div>
-                                    </div>
-                                    <div class="card-body p-3">
-                                        <h6 class="fw-bold text-dark mb-1">{{ $obs->mother_name }}</h6>
-                                        <div class="small text-muted mb-2">
-                                            <span>{{ $obs->operative_description ?? '-' }}</span>
-                                            <span class="mx-1">•</span>
-                                            <span>{{ $obs->case_of_delivery }} ({{ $obs->no_of_borns }})</span>
-                                        </div>
-                                        <div class="d-flex flex-column gap-1 mb-3">
-                                            @foreach($obs->babies as $b)
-                                                <div class="p-2 rounded-3 bg-light border small d-flex justify-content-between align-items-center">
-                                                    <div>
-                                                        <strong>{{ $b->born_name }}</strong>
-                                                        <span class="text-muted">({{ $b->gender ?? '-' }}{{ $b->weight_kg ? ' | ' . $b->weight_kg . ' Kg' : '' }})</span>
-                                                    </div>
-                                                    <span class="badge bg-white text-dark border">{{ $b->disposition_label }}</span>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            <a href="{{ route('nicu.observations.show', $obs) }}" class="btn btn-sm btn-primary flex-grow-1 rounded-3 fw-bold">
-                                                <i class="fas fa-folder-open me-1"></i> فتح الملف والتسليم
-                                            </a>
-                                            <a href="{{ route('nicu.observations.print', $obs) }}" target="_blank" class="btn btn-sm btn-outline-dark rounded-3" title="طباعة A4">
-                                                <i class="fas fa-print"></i>
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-        </div>
-
-        {{-- التبويب 3: أرشيف التسليم والتحويل والبحث --}}
-        <div class="tab-pane fade {{ $initialTab === 'archive' ? 'show active' : '' }}" id="hub-archive-pane" role="tabpanel">
-            <div class="radar-canvas-card">
-                <form action="{{ route('nicu.delivery-radar.index') }}" method="GET" class="row g-2 align-items-center mb-3">
-                    <input type="hidden" name="date" value="{{ $selectedDate }}">
-                    <input type="hidden" name="tab" value="archive">
-                    <div class="col-md-6">
-                        <div class="input-group input-group-sm">
-                            <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" name="archive_search" class="form-control" value="{{ $archiveSearch ?? '' }}" placeholder="ابحث باسم الأم، المولود، المستلم (الأب)، رقم الهوية، أو الهاتف...">
-                            <button type="submit" class="btn btn-primary px-3">بحث بالأرشيف</button>
-                        </div>
-                    </div>
-                    @if(($archiveSearch ?? '') !== '')
-                        <div class="col-auto">
-                            <a href="{{ route('nicu.delivery-radar.index', ['date' => $selectedDate, 'tab' => 'archive']) }}" class="btn btn-sm btn-outline-secondary">مسح البحث</a>
-                        </div>
-                    @endif
-                </form>
-
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light small">
-                            <tr>
-                                <th>#</th>
-                                <th>تاريخ الولادة</th>
-                                <th>الأم والمصدر</th>
-                                <th>المواليد والحسم</th>
-                                <th>بيانات المستلم (الأهل)</th>
-                                <th>الورقة المؤرشفة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($archiveObservations as $arch)
-                                <tr>
-                                    <td><span class="badge bg-light text-muted border">#{{ $arch->id }}</span></td>
-                                    <td class="small">{{ $arch->delivery_date?->format('Y-m-d') ?? $arch->started_at?->format('Y-m-d') }}</td>
-                                    <td>
-                                        <div class="fw-bold text-dark">{{ $arch->mother_name }}</div>
-                                        <small class="text-muted">{{ $arch->operative_description ?? '-' }}</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge {{ $arch->status_badge_class }} rounded-pill mb-1">{{ $arch->status_label }}</span>
-                                        <div class="small text-muted">
-                                            {{ $arch->babies->pluck('born_name')->implode('، ') }}
-                                        </div>
-                                    </td>
-                                    <td class="small">
-                                        @if($arch->recipient_name)
-                                            <div class="fw-bold">{{ $arch->recipient_name }} ({{ $arch->recipient_relation ?? 'الأب' }})</div>
-                                            <div class="text-muted">{{ $arch->recipient_phone }} | هوية: {{ $arch->recipient_id_number }}</div>
-                                        @else
-                                            <span class="text-muted">-</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($arch->signed_form_path)
-                                            <a href="{{ route('nicu.observations.signed-form.download', $arch) }}" target="_blank" class="badge bg-success text-decoration-none">
-                                                <i class="fas fa-file-check me-1"></i> محفوظة
-                                            </a>
-                                        @else
-                                            <span class="badge bg-light text-muted border">غير مرفوعة</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1">
-                                            <a href="{{ route('nicu.observations.show', $arch) }}" class="btn btn-xs btn-outline-primary rounded-2 px-2 py-1 small">فتح</a>
-                                            <a href="{{ route('nicu.observations.print', $arch) }}" target="_blank" class="btn btn-xs btn-outline-dark rounded-2 px-2 py-1 small" title="طباعة A4">
-                                                <i class="fas fa-print"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center py-4 text-muted">لا توجد سجلات معاينة مطابقة في الأرشيف.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
-{{-- مودال فتح معاينة ولادة طبيعية / حالة خارج رادار العمليات --}}
-@if($canManageObservations ?? false)
-<div class="modal fade" id="manualObservationModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header bg-danger text-white rounded-top-4">
-                <h5 class="modal-title fw-bold">
-                    <i class="fas fa-baby-carriage me-2"></i>
-                    بدء معاينة (ساعتان) لولادة طبيعية / حالة غير مدرجة بالعمليات
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('nicu.observations.store-manual') }}" method="POST">
-                @csrf
-                <div class="modal-body p-4">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">اسم الأم الكامل <span class="text-danger">*</span></label>
-                            <input type="text" name="mother_name" class="form-control" required placeholder="مثال: رسل باسل أحمد">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-bold">نوع الولادة / الوصف</label>
-                            <input type="text" name="operative_description" class="form-control" value="ولادة طبيعية" placeholder="ولادة طبيعية / قيصرية طارئة">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">تاريخ الولادة</label>
-                            <input type="date" name="delivery_date" class="form-control" value="{{ now()->format('Y-m-d') }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">وقت الولادة</label>
-                            <input type="text" name="delivery_time" class="form-control" value="{{ now()->format('h:i a') }}">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">عدد المواليد</label>
-                            <input type="number" name="no_of_borns" min="1" max="6" class="form-control" value="1">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">جنس المولود الأول</label>
-                            <select name="baby_gender" class="form-select">
-                                <option value="">-- يحدد لاحقاً --</option>
-                                <option value="Male">Male (ذكر)</option>
-                                <option value="Female">Female (أنثى)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">الوزن (Kg)</label>
-                            <input type="number" step="0.01" min="0.2" max="10" name="baby_weight_kg" class="form-control" placeholder="3.0">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label small fw-bold">الطبيبة المشرفة / القابلة</label>
-                            <input type="text" name="requesting_doctor_name" class="form-control" placeholder="اسم الطبيبة">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label small fw-bold">ملاحظة الولادة (Delivery Note)</label>
-                            <textarea name="delivery_note" rows="2" class="form-control" placeholder="ملاحظات أولية عن الولادة وحالة الوليد..."></textarea>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light rounded-bottom-4">
-                    <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-danger rounded-3 fw-bold px-4">
-                        <i class="fas fa-stopwatch me-1"></i> فتح ملف المعاينة وبدء المؤقت
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
-
-{{-- سكريبت البحث المباشر ومؤقتات المعاينة الحية --}}
+{{-- سكريبت البحث المباشر اللحظي --}}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const searchInput = document.getElementById('radarLiveSearch');
@@ -821,28 +566,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
-    }
-
-    // تحديث مؤقتات لوحة المعاينات الحية كل ثانية
-    const liveTimers = document.querySelectorAll('.live-obs-timer');
-    if (liveTimers.length > 0) {
-        const refreshTimers = () => {
-            const now = new Date();
-            liveTimers.forEach(el => {
-                const startedAt = new Date(el.dataset.startedAt);
-                const targetMins = parseInt(el.dataset.targetMinutes || '120', 10);
-                const elapsedMins = Math.max(0, Math.floor((now - startedAt) / 60000));
-                const hrs = String(Math.floor(elapsedMins / 60)).padStart(2, '0');
-                const mins = String(elapsedMins % 60).padStart(2, '0');
-                el.textContent = `${hrs}:${mins} / ${targetMins}m`;
-                if (elapsedMins >= targetMins) {
-                    el.classList.remove('bg-warning', 'text-dark');
-                    el.classList.add('bg-success', 'text-white');
-                }
-            });
-        };
-        refreshTimers();
-        setInterval(refreshTimers, 15000);
     }
 });
 </script>

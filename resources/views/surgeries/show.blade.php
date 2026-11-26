@@ -815,28 +815,16 @@
                                                 </li>
                                             @endif
 
-                                            @if($surgery->status === 'completed')
+                                            @if($surgery->status === 'completed' || $isOtCompleted)
                                                 <li>
-                                                    <form action="{{ route('surgeries.start', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownRestartSurgery" onsubmit="broadcastSurgeryLiveUpdate()">
-                                                        @csrf
-                                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-primary fw-bold" onclick="return confirm(@js(__('تأكيد استئناف العملية وإعادة إدخال المريض لصالة العمليات (Intra-Op)؟')))">
-                                                            <i class="fas fa-undo text-primary" style="width: 16px;"></i>
-                                                            <span>{{ __('استئناف العملية (إعادة دخول الصالة)') }}</span>
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                                <li>
-                                                    <form action="{{ route('surgeries.return-to-waiting', $surgery) }}" method="POST" class="surgery-live-action-form mb-0" id="formDropdownReturnFromCompleted" onsubmit="broadcastSurgeryLiveUpdate()">
-                                                        @csrf
-                                                        <button type="submit" class="dropdown-item py-2 d-flex align-items-center gap-2 text-warning fw-semibold" onclick="return confirm(@js(__('تأكيد إرجاع المريض إلى قائمة الانتظار (Pre-Op)؟')))">
-                                                            <i class="fas fa-clock text-warning" style="width: 16px;"></i>
-                                                            <span class="text-dark">{{ __('إرجاعه لقائمة الانتظار (Pre-Op)') }}</span>
-                                                        </button>
-                                                    </form>
+                                                    <div class="px-3 py-2 small text-success fw-bold d-flex align-items-center gap-2">
+                                                        <i class="fas fa-lock text-success"></i>
+                                                        <span>{{ __('تم إنهاء العملية وتثبيتها نهائياً (مقفلة)') }}</span>
+                                                    </div>
                                                 </li>
                                             @endif
 
-                                            @if($surgery->status !== 'cancelled')
+                                            @if($surgery->status !== 'cancelled' && $surgery->status !== 'completed' && !$isOtCompleted && $surgery->status !== 'in_progress')
                                                 <li><hr class="dropdown-divider my-1"></li>
                                                 <li>
                                                     <button type="button" class="dropdown-item py-2 d-flex align-items-center gap-2 text-danger" data-bs-toggle="modal" data-bs-target="#cancelSurgeryModal">

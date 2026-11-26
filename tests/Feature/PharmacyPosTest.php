@@ -5,10 +5,7 @@ namespace Tests\Feature;
 use App\Models\HealthInsuranceCategory;
 use App\Models\Medicine;
 use App\Models\MedicineBatch;
-use App\Models\Patient;
 use App\Models\PharmacySale;
-use App\Models\Prescription;
-use App\Models\PrescriptionItem;
 use App\Models\User;
 use Database\Seeders\HealthInsuranceCategorySeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -115,7 +112,8 @@ class PharmacyPosTest extends TestCase
             'total_amount' => 6000,
             'patient_share' => 6000,
             'insurance_share' => 0,
-            'payment_status' => 'paid',
+            'payment_status' => 'pending_cashier',
+            'payment_route' => 'central_cashier',
         ]);
 
         // تم خصم علبتين من الوجبة: 50 - 2 = 48

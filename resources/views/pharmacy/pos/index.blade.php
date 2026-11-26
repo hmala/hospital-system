@@ -287,9 +287,9 @@
                                 <span>تعليق (F4)</span>
                             </button>
 
-                            <button type="button" class="btn btn-success px-4 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2 flex-grow-1 justify-content-center" onclick="submitPosSale(false)" id="btnCheckoutSale">
-                                <i class="fas fa-check-circle fa-lg"></i>
-                                <span>تأكيد وصرف (F9)</span>
+                            <button type="button" class="btn btn-success px-4 py-2.5 rounded-3 fw-bold shadow-sm d-flex align-items-center gap-2 flex-grow-1 justify-content-center" onclick="submitPosSale(false)" id="btnCheckoutSale" title="إرسال الفاتورة للكاشير المركزي للدفع (F9)">
+                                <i class="fas fa-paper-plane fa-lg"></i>
+                                <span>إرسال للكاشير المركزي للدفع (F9)</span>
                             </button>
                         </div>
                     </div>
@@ -483,8 +483,8 @@
                     </button>
 
                     <button type="button" class="btn btn-success btn-lg px-4 py-2 fw-bold shadow-sm rounded-3 d-flex align-items-center gap-2" id="modalBtnExecuteDispense" onclick="executeDispenseFromModal()">
-                        <i class="fas fa-check-circle fa-lg"></i>
-                        <span>تأكيد صرف وتجهيز الدواء</span>
+                        <i class="fas fa-paper-plane fa-lg"></i>
+                        <span>إرسال للكاشير المركزي للدفع</span>
                     </button>
                 </div>
             </div>
@@ -1219,7 +1219,11 @@
             const isEmerg = rx.is_emergency;
             let statusBadge = '<span class="badge bg-primary-subtle text-primary border border-primary-subtle">جديدة</span>';
 
-            if (isEmerg) {
+            if (rx.stage === 'paid_ready_to_dispense') {
+                statusBadge = '<span class="badge bg-success text-white border border-success"><i class="fas fa-check-circle me-1"></i>مدفوعة بالكاشير</span>';
+            } else if (rx.stage === 'pending_cashier') {
+                statusBadge = '<span class="badge bg-warning text-dark border border-warning"><i class="fas fa-hourglass-half me-1"></i>بانتظار الكاشير</span>';
+            } else if (isEmerg) {
                 statusBadge = '<span class="badge bg-danger">🚨 طوارئ</span>';
             } else if (rx.stage === 'approved_ready') {
                 statusBadge = '<span class="badge bg-success-subtle text-success border border-success">معتمدة جاهزة</span>';
@@ -1230,8 +1234,43 @@
             const itemsPreview = (rx.items_summary || []).map(i => i.name).join('، ');
             const itemsCount = (rx.items_summary || []).length;
 
+            let rowClass = isEmerg ? 'table-danger' : '';
+            if (rx.stage === 'paid_ready_to_dispense') {
+                rowClass = 'table-success bg-success-subtle';
+            } else if (rx.stage === 'pending_cashier') {
+                rowClass = 'table-warning bg-warning-subtle';
+            } else if (rx.stage === 'approved_ready') {
+                rowClass = 'table-success-subtle';
+            }
+
+            let actionHtml = '';
+            if (rx.stage === 'paid_ready_to_dispense' && rx.sale_id) {
+                actionHtml = `
+                    <button type="button" class="btn btn-success btn-sm fw-bold px-3 py-1 shadow-sm d-flex align-items-center gap-1 mx-auto" onclick="confirmHandoffSale(${rx.sale_id})" title="تسليم وصرف الأدوية للمريض الآن">
+                        <i class="fas fa-hand-holding-medical"></i> تسليم الدواء
+                    </button>
+                `;
+            } else if (rx.stage === 'pending_cashier') {
+                actionHtml = `
+                    <span class="badge bg-warning text-dark border px-2 py-1 font-monospace" style="font-size: 0.72rem;" title="الفاتورة مرسلة وبانتظار سداد المريض عند الكاشير المركزي">
+                        <i class="fas fa-cash-register me-1 text-dark"></i> عند الكاشير
+                    </span>
+                `;
+            } else {
+                actionHtml = `
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-primary btn-sm fw-bold px-2 py-1 shadow-xs" onclick="loadPrescriptionIntoCart(${rx.id})" title="تحميل أدوية الوصفة للسلة">
+                            <i class="fas fa-arrow-right"></i> تحميل
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" onclick="openDispensingModal(${rx.id})" title="فحص الأدوية واقتراح البدائل">
+                            <i class="fas fa-sliders-h"></i>
+                        </button>
+                    </div>
+                `;
+            }
+
             html += `
-                <tr class="${isEmerg ? 'table-danger' : (rx.stage === 'approved_ready' ? 'table-success-subtle' : '')}" style="cursor: pointer;" onclick="loadPrescriptionIntoCart(${rx.id})" title="انقر لتحميل الوصفة إلى سلة الكاشير">
+                <tr class="${rowClass}" style="cursor: pointer;" onclick="loadPrescriptionIntoCart(${rx.id})" title="انقر لتحميل الوصفة إلى سلة الكاشير">
                     <td>
                         <div class="fw-bold ${isEmerg ? 'text-danger' : 'text-primary'} font-monospace small">
                             ${rx.prescription_number}
@@ -1258,14 +1297,7 @@
                         ${statusBadge}
                     </td>
                     <td class="text-center" onclick="event.stopPropagation()">
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-primary btn-sm fw-bold px-2 py-1 shadow-xs" onclick="loadPrescriptionIntoCart(${rx.id})" title="تحميل أدوية الوصفة للسلة">
-                                <i class="fas fa-arrow-right"></i> تحميل
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" onclick="openDispensingModal(${rx.id})" title="فحص الأدوية واقتراح البدائل">
-                                <i class="fas fa-sliders-h"></i>
-                            </button>
-                        </div>
+                        ${actionHtml}
                     </td>
                 </tr>
             `;
@@ -1389,7 +1421,7 @@
             patient_id: currentLoadedPrescription ? currentLoadedPrescription.patient_id : null,
             insurance_type: insuranceType,
             health_insurance_category_id: categoryId,
-            payment_route: 'pharmacy_cashier',
+            payment_route: 'central_cashier',
             is_held: isHeld ? 1 : 0,
             notes: currentLoadedPrescription ? `صرف عبر نقطة البيع للوصفة ${currentLoadedPrescription.prescription_number}` : 'بيع مباشر OTC',
             items: posCart.map(item => ({
@@ -1708,6 +1740,34 @@
             btn.disabled = false;
             console.error('Error dispensing prescription:', err);
             alert('حدث خطأ في الاتصال أثناء الصرف.');
+        });
+    }
+
+    function confirmHandoffSale(saleId) {
+        if (!confirm('هل تم تسليم الأدوية للمريض بالكامل وترغب بتأكيد الصرف النهائي؟')) return;
+        fetch(`{{ url('pharmacy/pos/sales') }}/${saleId}/handoff`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                try {
+                    document.getElementById('dispenseAudio').play();
+                } catch(e) {}
+                alert(`✅ ${data.message}`);
+                refreshPrescriptionsQueue(false);
+            } else {
+                alert(`❌ ${data.message}`);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('حدث خطأ أثناء تأكيد تسليم الأدوية.');
         });
     }
 

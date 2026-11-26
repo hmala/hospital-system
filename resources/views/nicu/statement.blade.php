@@ -304,9 +304,62 @@
             </div>
         @endif
 
-        <!-- 4. سجل المدفوعات والتسديد في الصندوق -->
+        <!-- 4. الخدمات الإضافية والفندقية للخدج -->
+        @php
+            $statementExtras = $stayDetails['extra_services'] ?? collect();
+        @endphp
+        @if($statementExtras->isNotEmpty())
+            <h5 class="fw-bold text-dark mb-2">4. الخدمات الإضافية والفندقية للخدج (Extra & Hotel Services)</h5>
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>الخدمة والتفاصيل</th>
+                            <th class="text-center">التصنيف</th>
+                            <th class="text-center">سعر الوحدة</th>
+                            <th class="text-center">الكمية</th>
+                            <th class="text-end">الإجمالي</th>
+                            @if($stayDetails['is_insured'])
+                                <th class="text-center">حالة التغطية</th>
+                                <th class="text-end table-warning text-dark">تحمل المريض (كاش)</th>
+                            @endif
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($statementExtras as $extra)
+                            <tr>
+                                <td>
+                                    <strong>{{ $extra->name }}</strong>
+                                    @if($extra->notes)
+                                        <small class="text-muted d-block">{{ $extra->notes }}</small>
+                                    @endif
+                                </td>
+                                <td class="text-center"><span class="badge {{ $extra->category_badge_class }}">{{ $extra->category_label }}</span></td>
+                                <td class="text-center">{{ number_format($extra->price) }} د.ع</td>
+                                <td class="text-center fw-bold">{{ $extra->quantity }}</td>
+                                <td class="text-end fw-bold">{{ number_format($extra->total_amount) }} د.ع</td>
+                                @if($stayDetails['is_insured'])
+                                    <td class="text-center"><span class="badge bg-secondary">خارج الضمان (كاش 100%)</span></td>
+                                    <td class="text-end fw-bold text-primary">{{ number_format($extra->total_amount) }} د.ع</td>
+                                @endif
+                            </tr>
+                        @endforeach
+                        <tr class="table-light">
+                            <td colspan="4" class="fw-bold text-end">مجموع الخدمات الإضافية والفندقية:</td>
+                            <td class="text-end fw-bold fs-6">{{ number_format($stayDetails['total_extra_services_cost'] ?? 0) }} د.ع</td>
+                            @if($stayDetails['is_insured'])
+                                <td class="text-center small text-muted">-</td>
+                                <td class="text-end fw-bold text-primary fs-6">{{ number_format($stayDetails['total_extra_services_cost'] ?? 0) }} د.ع</td>
+                            @endif
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        <!-- 5. سجل المدفوعات والتسديد في الصندوق -->
         @if(isset($stayDetails['payments']) && $stayDetails['payments']->isNotEmpty())
-            <h5 class="fw-bold text-success mb-2">4. سجل التسديد والمدفوعات في الصندوق (Payments & Settlements)</h5>
+            <h5 class="fw-bold text-success mb-2">5. سجل التسديد والمدفوعات في الصندوق (Payments & Settlements)</h5>
             <div class="table-responsive mb-4">
                 <table class="table table-bordered align-middle">
                     <thead class="table-success bg-opacity-10">
@@ -417,6 +470,20 @@
                             <div class="d-flex justify-content-between mb-2 small ps-3">
                                 <span class="text-primary"><i class="fas fa-user me-1"></i> مساهمة المريض بالاستشارات:</span>
                                 <span class="text-primary fw-bold">{{ number_format($stayDetails['patient_consultations_share'] ?? 0) }} د.ع</span>
+                            </div>
+                        @endif
+                    @endif
+
+                    <!-- 5. الخدمات الإضافية والفندقية -->
+                    @if(($stayDetails['total_extra_services_cost'] ?? 0) > 0)
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">مجموع الخدمات الإضافية والفندقية:</span>
+                            <strong>{{ number_format($stayDetails['total_extra_services_cost']) }} د.ع</strong>
+                        </div>
+                        @if($stayDetails['is_insured'])
+                            <div class="d-flex justify-content-between mb-2 small ps-3">
+                                <span class="text-primary"><i class="fas fa-user me-1"></i> تحمل المريض (كاش 100% - خارج الضمان):</span>
+                                <span class="text-primary fw-bold">{{ number_format($stayDetails['total_extra_services_cost']) }} د.ع</span>
                             </div>
                         @endif
                     @endif

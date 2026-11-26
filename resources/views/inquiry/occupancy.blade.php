@@ -30,11 +30,26 @@
     @php
         $bedReservations = collect($allOccupancies)->where('type_en', 'bed_reservation');
         $surgeries = collect($allOccupancies)->where('type_en', 'surgery');
+        $waitingRoomList = $waitingRoomSurgeries ?? collect();
+        $canAssignSurgeryRoom = auth()->user() && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()->can('assign surgery room'));
     @endphp
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-check-circle me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-times-circle me-2"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
     <!-- كروت الإحصائيات السريعة -->
     <div class="row mb-4 g-3">
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <div class="card border-0 shadow-sm text-white bg-primary bg-gradient h-100" style="border-radius: 12px;">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
@@ -47,7 +62,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <div class="card border-0 shadow-sm text-white bg-info bg-gradient h-100" style="border-radius: 12px;">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
@@ -60,15 +75,28 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4 col-sm-6">
+        <div class="col-md-3 col-sm-6">
             <div class="card border-0 shadow-sm text-white bg-danger bg-gradient h-100" style="border-radius: 12px;">
                 <div class="card-body p-3">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="small opacity-75 d-block mb-1">حالات حجز العمليات</span>
+                            <span class="small opacity-75 d-block mb-1">عمليات لها غرف مخصصة</span>
                             <h3 class="mb-0 fw-bold">{{ $surgeries->count() }}</h3>
                         </div>
                         <i class="fas fa-procedures fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-sm-6">
+            <div class="card border-0 shadow-sm text-dark bg-warning bg-gradient h-100" style="border-radius: 12px;">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="small opacity-75 d-block mb-1 fw-bold">بوضع انتظار الغرفة</span>
+                            <h3 class="mb-0 fw-bold">{{ $waitingRoomList->count() }}</h3>
+                        </div>
+                        <i class="fas fa-hourglass-half fa-2x opacity-50"></i>
                     </div>
                 </div>
             </div>
@@ -133,9 +161,10 @@
     <!-- التبويبات وجداول السجلات -->
     <div class="card border-0 shadow-sm" style="border-radius: 12px;">
         <div class="card-header bg-white p-3 border-bottom">
+            @php $activeOccTab = request('tab', $waitingRoomList->isNotEmpty() && request('tab') === 'waiting_room' ? 'waiting_room' : 'bed'); @endphp
             <ul class="nav nav-pills card-header-pills" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active fw-bold px-4" id="tab-bed" data-bs-toggle="tab" data-bs-target="#bed" type="button" role="tab" aria-controls="bed" aria-selected="true">
+                    <button class="nav-link {{ $activeOccTab !== 'waiting_room' ? 'active' : '' }} fw-bold px-4" id="tab-bed" data-bs-toggle="tab" data-bs-target="#bed" type="button" role="tab" aria-controls="bed" aria-selected="{{ $activeOccTab !== 'waiting_room' ? 'true' : 'false' }}">
                         <i class="fas fa-bed me-2 text-info"></i>
                         حالات الرقود ({{ $bedReservations->count() }})
                     </button>
@@ -146,13 +175,19 @@
                         العمليات الجراحية ({{ $surgeries->count() }})
                     </button>
                 </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {{ $activeOccTab === 'waiting_room' ? 'active' : '' }} fw-bold px-4 ms-2" id="tab-waiting-room" data-bs-toggle="tab" data-bs-target="#waiting-room" type="button" role="tab" aria-controls="waiting-room" aria-selected="{{ $activeOccTab === 'waiting_room' ? 'true' : 'false' }}">
+                        <i class="fas fa-hourglass-half me-2 text-warning"></i>
+                        وضع انتظار الغرفة ({{ $waitingRoomList->count() }})
+                    </button>
+                </li>
             </ul>
         </div>
 
         <div class="card-body p-0">
             <div class="tab-content">
                 <!-- تبويب الرقود -->
-                <div class="tab-pane fade show active" id="bed" role="tabpanel" aria-labelledby="tab-bed">
+                <div class="tab-pane fade {{ $activeOccTab !== 'waiting_room' ? 'show active' : '' }}" id="bed" role="tabpanel" aria-labelledby="tab-bed">
                     @if($bedReservations->count())
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0 text-center filterable-table">
@@ -321,6 +356,104 @@
                             <i class="fas fa-procedures fa-3x mb-3 text-secondary opacity-50"></i>
                             <h5 class="fw-bold">لا توجد عمليات مسجلة حالياً</h5>
                             <p class="small text-muted">جرب تغيير معايير البحث أو الفلترة</p>
+                        </div>
+                    @endif
+                </div>
+
+                <!-- تبويب وضع انتظار الغرفة -->
+                <div class="tab-pane fade {{ $activeOccTab === 'waiting_room' ? 'show active' : '' }}" id="waiting-room" role="tabpanel" aria-labelledby="tab-waiting-room">
+                    @if($waitingRoomList->count())
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 text-center filterable-table">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 45px;">#</th>
+                                        <th class="text-start">المريض</th>
+                                        <th>العملية الجراحية</th>
+                                        <th>الطبيب الجراح</th>
+                                        <th>التاريخ / الوقت</th>
+                                        <th>حالة العملية</th>
+                                        <th style="min-width: 310px;">تخصيص الغرفة الفوري</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($waitingRoomList as $wSurgery)
+                                        <tr class="table-row-item">
+                                            <td>{{ $loop->iteration }}</td>
+                                            <td class="text-start">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle bg-warning bg-opacity-20 text-warning-emphasis d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px; font-weight: bold; min-width: 35px;">
+                                                        {{ mb_substr($wSurgery->patient?->user?->name ?? 'م', 0, 1) }}
+                                                    </div>
+                                                    <div>
+                                                        <strong class="text-dark d-block search-target">{{ $wSurgery->patient?->user?->name ?? 'غير معروف' }}</strong>
+                                                        <small class="text-muted search-target">{{ $wSurgery->patient?->file_number ?? '' }} {{ $wSurgery->patient?->user?->phone ? '• ' . $wSurgery->patient->user->phone : '' }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="fw-semibold text-primary search-target">{{ $wSurgery->surgery_type ?? '-' }}</td>
+                                            <td class="search-target">
+                                                @if($wSurgery->doctor?->user)
+                                                    <span class="fw-semibold text-dark"><i class="fas fa-user-md text-danger me-1"></i>د. {{ $wSurgery->doctor->user->name }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div>{{ $wSurgery->scheduled_date ? $wSurgery->scheduled_date->format('Y-m-d') : '-' }}</div>
+                                                <small class="text-muted">{{ $wSurgery->scheduled_time ? $wSurgery->scheduled_time->format('H:i') : '-' }}</small>
+                                            </td>
+                                            <td>
+                                                @if($wSurgery->status === 'scheduled')
+                                                    <span class="badge bg-primary">مجدولة</span>
+                                                @elseif($wSurgery->status === 'waiting')
+                                                    <span class="badge bg-warning text-dark">في الانتظار</span>
+                                                @elseif($wSurgery->status === 'in_progress')
+                                                    <span class="badge bg-info">جارية</span>
+                                                @elseif($wSurgery->status === 'completed')
+                                                    <span class="badge bg-success">مكتملة</span>
+                                                @else
+                                                    <span class="badge bg-light text-dark border">{{ $wSurgery->status }}</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($canAssignSurgeryRoom)
+                                                    @if(isset($availableRooms) && $availableRooms->count())
+                                                        <form action="{{ route('surgeries.assign-room', $wSurgery) }}" method="POST" class="d-flex flex-wrap align-items-center justify-content-center gap-2">
+                                                            @csrf
+                                                            <select name="room_id" class="form-select form-select-sm" style="max-width: 175px;" required>
+                                                                <option value="">-- اختر غرفة --</option>
+                                                                @foreach($availableRooms as $availRoom)
+                                                                    <option value="{{ $availRoom->id }}">
+                                                                        غرفة {{ $availRoom->room_number }} ({{ strtoupper($availRoom->room_type) }} - {{ $availRoom->floor }})
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                            <div class="form-check form-check-inline m-0" title="تسجيل دخول المريض للغرفة مباشرة فور التخصيص">
+                                                                <input class="form-check-input" type="checkbox" name="checkin_immediately" value="1" id="occCheckin{{ $wSurgery->id }}">
+                                                                <label class="form-check-label small" for="occCheckin{{ $wSurgery->id }}">دخول فوري</label>
+                                                            </div>
+                                                            <button type="submit" class="btn btn-sm btn-warning fw-bold shadow-sm">
+                                                                <i class="fas fa-bed me-1"></i> تخصيص
+                                                            </button>
+                                                        </form>
+                                                    @else
+                                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">لا توجد غرف متاحة حالياً</span>
+                                                    @endif
+                                                @else
+                                                    <span class="badge bg-secondary-subtle text-secondary border">بانتظار صلاحية تخصيص الغرفة</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <div class="text-center py-5 text-muted">
+                            <i class="fas fa-hourglass-half fa-3x mb-3 text-warning opacity-50"></i>
+                            <h5 class="fw-bold">لا توجد عمليات في وضع انتظار الغرفة حالياً</h5>
+                            <p class="small text-muted">جميع العمليات المحجوزة لديها غرف مخصصة</p>
                         </div>
                     @endif
                 </div>

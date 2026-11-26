@@ -84,6 +84,10 @@ Route::get('/', function () {
             return redirect()->route('doctor.visits.index');
         }
 
+        if ($user->isInquiryStaff()) {
+            return redirect()->route('inquiry.create');
+        }
+
         return redirect('/dashboard');
     }
 
@@ -502,6 +506,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/surgeries/{surgery}/lab-tests/{labTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryLabTest'])->name('surgeries.lab-tests.remove');
         Route::delete('/surgeries/{surgery}/radiology-tests/{radiologyTest}', [\App\Http\Controllers\CashierController::class, 'removeSurgeryRadiologyTest'])->name('surgeries.radiology-tests.remove');
         Route::delete('/surgeries/{surgery}/consultations/{consultation}', [\App\Http\Controllers\CashierController::class, 'cancelSurgeryConsultation'])->name('surgeries.consultations.cancel');
+        Route::get('/pharmacy/{sale}/payment', [\App\Http\Controllers\CashierController::class, 'showPharmacyPaymentForm'])->name('pharmacy.payment.form');
+        Route::post('/pharmacy/{sale}/payment', [\App\Http\Controllers\CashierController::class, 'processPharmacyPayment'])->name('pharmacy.payment.process');
         Route::get('/receipt/{payment}', [\App\Http\Controllers\CashierController::class, 'showReceipt'])->name('receipt');
         Route::get('/receipt/{payment}/print', [\App\Http\Controllers\CashierController::class, 'printReceipt'])->name('receipt.print');
         Route::get('/payments/void-logs', [\App\Http\Controllers\PaymentVoidController::class, 'logs'])->name('payments.void.logs');
@@ -518,6 +524,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/statements', [\App\Http\Controllers\CashierController::class, 'statements'])->name('statements');
         Route::get('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'showNicuPaymentForm'])->name('nicu.payment.form');
         Route::post('/nicu/{reservation}/payment', [\App\Http\Controllers\CashierController::class, 'processNicuPayment'])->name('nicu.payment');
+        Route::post('/nicu/{reservation}/extra-services', [\App\Http\Controllers\CashierController::class, 'addNicuExtraService'])->name('nicu.extra-services.add');
+        Route::patch('/nicu/{reservation}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'updateNicuExtraService'])->name('nicu.extra-services.update');
+        Route::delete('/nicu/{reservation}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'removeNicuExtraService'])->name('nicu.extra-services.remove');
         Route::get('/nicu/receipt/{nicuPayment}', [\App\Http\Controllers\CashierController::class, 'showNicuReceipt'])->name('nicu.receipt');
         Route::get('/nicu/receipt/{nicuPayment}/print', [\App\Http\Controllers\CashierController::class, 'printNicuReceipt'])->name('nicu.receipt.print');
         Route::get('/nicu/{reservation}/itemized-receipt/print', [\App\Http\Controllers\CashierController::class, 'printNicuItemizedReceipt'])->name('nicu.itemized-receipt.print');
@@ -806,6 +815,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('doctor-commission-settings/recalculate-today', [\App\Http\Controllers\Admin\DoctorCommissionSettingController::class, 'recalculateToday'])
             ->name('doctor-commission-settings.recalculate-today');
         Route::resource('packages', \App\Http\Controllers\Admin\PackageController::class)->except(['show']);
+
+        // الخدمات المتفرقة للمستشفى (إدارة أسعار وتصنيفات الخدمات الإضافية والفندقية)
+        Route::get('extra-services', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'index'])->name('extra-services.index');
+        Route::post('extra-services', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'store'])->name('extra-services.store');
+        Route::put('extra-services/{extraService}', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'update'])->name('extra-services.update');
+        Route::patch('extra-services/{extraService}/quick-price', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'updateQuickPrice'])->name('extra-services.quick-price');
+        Route::post('extra-services/{extraService}/toggle', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'toggle'])->name('extra-services.toggle');
+        Route::delete('extra-services/{extraService}', [\App\Http\Controllers\Admin\HospitalExtraServiceController::class, 'destroy'])->name('extra-services.destroy');
     });
 
     // إدارة العمليات
@@ -823,6 +840,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
+    Route::post('/surgeries/{surgery}/assign-room', [SurgeryController::class, 'assignRoom'])->name('surgeries.assign-room');
     Route::post('/surgeries/{surgery}/cancel', [SurgeryController::class, 'cancel'])->name('surgeries.cancel');
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
     Route::post('/surgeries/theaters/quick-store', [SurgeryController::class, 'quickStoreTheater'])->name('surgeries.theaters.quick-store');
@@ -894,6 +912,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'update'])->name('clinical-station.update');
         Route::post('/clinical/{surgery}/follow-ups', [\App\Http\Controllers\ClinicalStationController::class, 'storeFollowUp'])->name('clinical-station.follow-ups.store');
         Route::post('/clinical/{surgery}/treatments', [\App\Http\Controllers\ClinicalStationController::class, 'storeTreatment'])->name('clinical-station.treatments.store');
+        Route::post('/clinical/{surgery}/treatments/apply-package', [\App\Http\Controllers\ClinicalStationController::class, 'applyMedicinePackage'])->name('clinical-station.treatments.apply-package');
+        Route::post('/clinical/{surgery}/treatments/save-package', [\App\Http\Controllers\ClinicalStationController::class, 'saveMedicinePackage'])->name('clinical-station.treatments.save-package');
         Route::post('/clinical/treatments/{treatment}/administer', [\App\Http\Controllers\ClinicalStationController::class, 'administerTreatment'])->name('clinical-station.treatments.administer');
         Route::post('/clinical/treatments/{treatment}/toggle-dose', [\App\Http\Controllers\ClinicalStationController::class, 'toggleTreatmentDose'])->name('clinical-station.treatments.toggle-dose');
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
@@ -1027,6 +1047,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/delivery-radar/toggle/{surgicalOperation}', [\App\Http\Controllers\NicuDeliveryRadarController::class, 'toggleOperation'])->name('delivery-radar.toggle');
 
         // معاينة المواليد بعد الولادة (ساعتان) واستمارة Obstetric Case Sheet
+        Route::get('/observations', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'index'])->name('observations.index');
         Route::post('/observations/from-surgery/{surgery}', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'startFromSurgery'])->name('observations.from-surgery');
         Route::post('/observations/manual', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'storeManual'])->name('observations.store-manual');
         Route::get('/observations/{observation}', [\App\Http\Controllers\NicuDeliveryObservationController::class, 'show'])->name('observations.show');
@@ -1332,6 +1353,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('pos/sales/{sale}/print', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'printReceipt'])->name('pos.sales.print');
         Route::get('pos/sales', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'history'])->name('pos.sales.history');
         Route::get('pos/sales/{sale}', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'showSale'])->name('pos.sales.show');
+        Route::post('pos/sales/{sale}/handoff', [\App\Http\Controllers\Pharmacy\PharmacyPosController::class, 'completeHandoff'])->name('pos.sales.handoff');
     });
 
     // مسارات التحكم بالطابور والاستدعاء (تحتاج تسجيل دخول)

@@ -62,9 +62,9 @@
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-body p-3">
-                    <span class="text-muted small fw-bold d-block mb-1">{{ __('استقطاعات الباقة') }}</span>
-                    <h4 class="mb-0 fw-bold text-danger">{{ number_format($totals['total_deductions'] ?? 0, 0) }}</h4>
-                    <small class="text-danger">{{ __('د.ع لصالح المستشفى') }}</small>
+                    <span class="text-muted small fw-bold d-block mb-1">{{ __('استقطاعات الباقة والأجهزة') }}</span>
+                    <h4 class="mb-0 fw-bold text-danger">{{ number_format(($totals['total_deductions'] ?? 0) + ($totals['total_devices_deductions'] ?? 0), 0) }}</h4>
+                    <small class="text-danger">{{ __('باقة:') }} {{ number_format($totals['total_deductions'] ?? 0, 0) }} | {{ __('أجهزة:') }} {{ number_format($totals['total_devices_deductions'] ?? 0, 0) }}</small>
                 </div>
             </div>
         </div>
@@ -117,7 +117,7 @@
                             <th>{{ __('التخصص والقسم') }}</th>
                             <th class="text-center">{{ __('العمليات') }}</th>
                             <th class="text-end">{{ __('أتعاب الجراحة الاسمية') }}</th>
-                            <th class="text-end">{{ __('استقطاعات الباقة (المستشفى)') }}</th>
+                            <th class="text-end">{{ __('الباقة والأجهزة') }}</th>
                             <th class="text-end">{{ __('صافي المستحق') }}</th>
                             <th class="text-end">{{ __('إجمالي المصروف') }}</th>
                             <th class="text-end">{{ __('الرصيد المتبقي') }}</th>
@@ -148,8 +148,12 @@
                                     {{ number_format($item->gross_fees, 0) }} <small class="text-muted">{{ __('د.ع') }}</small>
                                 </td>
                                 <td class="text-end font-monospace text-danger fw-bold">
-                                    @if($item->package_deductions > 0)
-                                        -{{ number_format($item->package_deductions, 0) }} <small class="text-muted">{{ __('د.ع') }}</small>
+                                    @php $docTotalDed = ($item->package_deductions ?? 0) + ($item->devices_deductions ?? 0); @endphp
+                                    @if($docTotalDed > 0)
+                                        -{{ number_format($docTotalDed, 0) }} <small class="text-muted">{{ __('د.ع') }}</small>
+                                        @if(($item->devices_deductions ?? 0) > 0)
+                                            <small class="d-block text-info" style="font-size: 0.72rem;">{{ __('أجهزة:') }} {{ number_format($item->devices_deductions, 0) }}</small>
+                                        @endif
                                     @else
                                         <span class="text-muted">0</span>
                                     @endif

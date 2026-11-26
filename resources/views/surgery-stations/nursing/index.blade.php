@@ -39,6 +39,12 @@
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                     @endif
+                    @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i> {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    @endif
 
                     <!-- Floor Filter Bar & Search (شريط تصفية الطوابق والبحث السريع) -->
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2.5 bg-light rounded-4 border">
@@ -108,250 +114,239 @@
                     <!-- Tabs Switcher -->
                     <ul class="nav nav-pills mb-4 gap-2 bg-light p-1.5 rounded-pill shadow-sm overflow-auto flex-nowrap" id="nursingTabs" role="tablist" style="width: fit-content; max-width: 100%;">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active rounded-pill fw-bold px-4 py-2 text-nowrap" id="pre-op-patients-tab" data-bs-toggle="tab" data-bs-target="#pre-op-patients" type="button" role="tab" aria-selected="true">
-                                <i class="fas fa-notes-medical me-1 text-primary"></i> {{ __('حالات التهيئة قبل الصالة') }}
-                                <span class="badge bg-primary text-white rounded-pill ms-1.5">{{ $preOpSurgeries->count() }}</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="post-op-patients-tab" data-bs-toggle="tab" data-bs-target="#post-op-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-procedures me-1 text-info"></i> {{ __('حالات المتابعة بعد الصالة') }}
-                                <span class="badge bg-info text-white rounded-pill ms-1.5">{{ $postOpSurgeries->count() }}</span>
+                            <button class="nav-link active rounded-pill fw-bold px-4 py-2 text-nowrap" id="active-patients-tab" data-bs-toggle="tab" data-bs-target="#active-patients" type="button" role="tab" aria-selected="true">
+                                <i class="fas fa-procedures me-1.5 text-primary"></i> {{ __('مرضى الرقود والعمليات النشطة') }}
+                                <span class="badge bg-primary text-white rounded-pill ms-1.5">{{ $activeSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="completed-patients-tab" data-bs-toggle="tab" data-bs-target="#completed-patients" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-archive me-1 text-success"></i> {{ __('أرشيف الحالات المكتملة') }}
+                                <i class="fas fa-archive me-1.5 text-success"></i> {{ __('أرشيف الحالات المكتملة') }}
                                 <span class="badge bg-success text-white rounded-pill ms-1.5">{{ $completedSurgeries->count() }}</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link rounded-pill fw-bold px-4 py-2 text-nowrap" id="floor-store-tab" data-bs-toggle="tab" data-bs-target="#floor-store" type="button" role="tab" aria-selected="false">
-                                <i class="fas fa-boxes me-1 text-warning"></i> {{ __('مخزن وعُهدة الطابق') }}
+                                <i class="fas fa-boxes me-1.5 text-warning"></i> {{ __('مخزن وعُهدة الطابق') }}
                                 <span class="badge bg-warning text-dark rounded-pill ms-1.5">{{ $stockBatches->count() }}</span>
                             </button>
                         </li>
                     </ul>
 
                     <div class="tab-content" id="nursingTabsContent">
-                        <!-- TAB 1: PRE-OP PATIENTS -->
-                        <div class="tab-pane fade show active" id="pre-op-patients" role="tabpanel" aria-labelledby="pre-op-patients-tab">
+                        <!-- TAB 1: UNIFIED ACTIVE PATIENTS (قبل الصالة، داخل الصالة، بعد الصالة) -->
+                        <div class="tab-pane fade show active" id="active-patients" role="tabpanel" aria-labelledby="active-patients-tab">
+                            {{-- أزرار الفلترة السريعة للمراحل داخل التبويب الموحد --}}
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 px-1">
+                                <div class="d-flex align-items-center gap-1.5 flex-wrap" id="nursingPhaseFilters">
+                                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-3 py-1 fw-bold nursing-phase-filter active" data-phase="all">
+                                        <i class="fas fa-list me-1"></i> {{ __('كافة الحالات النشطة') }} ({{ $activeSurgeries->count() }})
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold nursing-phase-filter" data-phase="pre_op">
+                                        <i class="fas fa-hourglass-start me-1"></i> {{ __('قبل الصالة') }} ({{ $preOpSurgeries->count() }})
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-bold nursing-phase-filter" data-phase="in_theater">
+                                        <i class="fas fa-procedures me-1"></i> {{ __('داخل صالة العمليات') }}
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-bold nursing-phase-filter" data-phase="post_op">
+                                        <i class="fas fa-heartbeat me-1"></i> {{ __('بعد الصالة / الرقود') }} ({{ $postOpSurgeries->count() }})
+                                    </button>
+                                </div>
+                                <div class="small text-muted d-none d-md-block">
+                                    <i class="fas fa-info-circle me-1 text-primary"></i> {{ __('مرتبة حسب الأولوية السريرية وتحديث تلقائي للمراحل') }}
+                                </div>
+                            </div>
+
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="py-3">{{ __('رقم الملف') }}</th>
-                                            <th class="py-3">{{ __('اسم المريض') }}</th>
-                                            <th class="py-3">{{ __('العملية') }}</th>
-                                            <th class="py-3">{{ __('التاريخ والوقت المحدد') }}</th>
-                                            <th class="py-3">{{ __('الممرض/ة المسؤول') }}</th>
-                                            <th class="py-3">{{ __('حالة المحطة') }}</th>
-                                            <th class="py-3 text-center">{{ __('الإجراءات') }}</th>
+                                            <th class="py-3" style="min-width: 280px;">{{ __('اسم المريض') }}</th>
+                                            <th class="py-3" style="width: 220px;">{{ __('المرحلة') }}</th>
+                                            <th class="py-3" style="min-width: 220px;">{{ __('الحالة السريرية') }}</th>
+                                            <th class="py-3 text-center" style="width: 200px;">{{ __('الإجراءات') }}</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        @forelse($preOpSurgeries as $surgery)
-                                        <tr>
-                                            <td class="fw-bold text-primary">{{ $surgery->patient?->file_number ?? $surgery->id }}</td>
+                                    <tbody id="activePatientsTableBody">
+                                        @forelse($activeSurgeries as $surgery)
+                                        @php
+                                            $isPostOp = ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')
+                                                || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed')
+                                                || $surgery->status === 'completed'
+                                                || ($surgery->residentStations && $surgery->residentStations->where('phase', 'post_op')->count() > 0);
+
+                                            $isInTheater = ($surgery->status === 'in_progress')
+                                                || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'in_progress');
+
+                                            $phaseCategory = $isPostOp ? 'post_op' : ($isInTheater ? 'in_theater' : 'pre_op');
+                                        @endphp
+                                        <tr class="nursing-patient-row" data-phase="{{ $phaseCategory }}">
+                                            {{-- 1. اسم المريض وتفاصيل العملية والغرفة والملف والموعد --}}
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-2 d-flex justify-content-center align-items-center me-2 shadow-xs" style="width: 38px; height: 38px;">
+                                                    <div class="rounded-circle p-2 d-flex justify-content-center align-items-center me-2.5 shadow-xs flex-shrink-0 {{ $isPostOp ? 'bg-success bg-opacity-10 text-success' : ($isInTheater ? 'bg-primary bg-opacity-10 text-primary' : 'bg-warning bg-opacity-15 text-warning-emphasis') }}" style="width: 40px; height: 40px;">
                                                         <i class="fas fa-user-injured fs-6"></i>
                                                     </div>
                                                     <div>
-                                                        <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
-                                                        @if($surgery->room)
-                                                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
-                                                                <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                            <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
+                                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size: 0.72rem;">
+                                                                {{ __('ملف:') }} {{ $surgery->patient?->file_number ?? $surgery->id }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
+                                                            <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                                <i class="fas fa-procedures text-primary me-1"></i> {{ $surgery->surgery_name }}
+                                                            </span>
+                                                            @if($surgery->room)
+                                                                <span class="badge bg-light text-dark border rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
                                                                     <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
                                                                 </span>
-                                                                @if($surgery->room_checkin_at)
-                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
-                                                                        <i class="fas fa-check-circle me-1"></i> تم الدخول ({{ $surgery->room_checkin_at->format('h:i A') }})
-                                                                    </span>
-                                                                @else
-                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار استلام الغرفة
-                                                                    </span>
-                                                                @endif
                                                                 @if($surgery->discharged_at)
                                                                     <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-sign-out-alt me-1"></i> تم التخريج
+                                                                        <i class="fas fa-sign-out-alt me-1"></i> {{ __('تم التخريج') }}
                                                                     </span>
                                                                 @endif
-                                                            </div>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5">{{ $surgery->surgery_name }}</span>
-                                            </td>
-                                            <td>
-                                                <div>
-                                                    <span class="text-dark d-block"><i class="far fa-calendar-alt text-muted me-1"></i> {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}</span>
-                                                    <small class="text-muted"><i class="far fa-clock text-muted me-1"></i> {{ $surgery->scheduled_time ? \Carbon\Carbon::parse($surgery->scheduled_time)->format('h:i A') : '-' }}</small>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                @if($surgery->nursingStation?->nurse?->full_name)
-                                                    <span class="text-secondary"><i class="fas fa-user-nurse text-muted me-1"></i> {{ $surgery->nursingStation->nurse->full_name }}</span>
-                                                @else
-                                                    <span class="text-muted italic"><i class="fas fa-user-nurse text-muted me-1"></i> لم يحدد بعد</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($surgery->status === 'waiting')
-                                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-1.5 fw-bold shadow-xs">
-                                                        <i class="fas fa-clock me-1"></i> بانتظار الصالة (مسجل دخول)
-                                                    </span>
-                                                @elseif($surgery->status === 'in_progress')
-                                                    <span class="badge bg-primary text-white rounded-pill px-3 py-1.5 fw-bold shadow-xs">
-                                                        <i class="fas fa-spinner fa-spin me-1"></i> قيد التجهيز / الصالة
-                                                    </span>
-                                                @elseif($surgery->nursingStation?->status === 'in_progress')
-                                                    <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 fw-bold">
-                                                        <i class="fas fa-spinner fa-spin me-1"></i> تهيئة جارية
-                                                    </span>
-                                                @else
-                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1.5 fw-medium">
-                                                        <i class="far fa-calendar-check me-1"></i> مجدولة
-                                                    </span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                @if($surgery->room_id && !$surgery->room_checkin_at)
-                                                    <form action="{{ route('nursing-station.room-checkin', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تسجيل استلام المريض للغرفة الآن؟ سيبدأ احتساب الإقامة الفندقية.')">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1.5 shadow-sm fw-bold">
-                                                            <i class="fas fa-bed me-1"></i> تسجيل دخول الغرفة
-                                                        </button>
-                                                    </form>
-                                                @else
-                                                    <div class="d-inline-flex align-items-center gap-1">
-                                                        <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
-                                                            <i class="fas fa-eye me-1"></i> عرض وتعديل
-                                                        </a>
-                                                        @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
-                                                            <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
-                                                                @csrf
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm" title="تخريج المريض وإخلاء السرير">
-                                                                    <i class="fas fa-sign-out-alt me-1"></i> تخريج
-                                                                </button>
-                                                            </form>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                        @empty
-                                        <tr>
-                                            <td colspan="7" class="text-center py-5 text-muted">
-                                                <i class="fas fa-folder-open fa-3x mb-3 text-secondary opacity-50"></i>
-                                                <p class="mb-0 fw-semibold">لا توجد حالات تهيئة قبل الصالة حالياً</p>
-                                            </td>
-                                        </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- TAB 2: POST-OP PATIENTS -->
-                        <div class="tab-pane fade" id="post-op-patients" role="tabpanel" aria-labelledby="post-op-patients-tab">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th class="py-3">رقم الملف</th>
-                                            <th class="py-3">اسم المريض</th>
-                                            <th class="py-3">العملية</th>
-                                            <th class="py-3">التاريخ والوقت المحدد</th>
-                                            <th class="py-3">الممرض/ة المسؤول</th>
-                                            <th class="py-3">حالة المحطة</th>
-                                            <th class="py-3 text-center">الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($postOpSurgeries as $surgery)
-                                        <tr>
-                                            <td class="fw-bold text-primary">{{ $surgery->patient?->file_number ?? $surgery->id }}</td>
-                                            <td>
-                                                <div class="d-flex align-items-center">
-                                                    <div class="bg-info bg-opacity-10 text-info rounded-circle p-2 d-flex justify-content-center align-items-center me-2 shadow-xs" style="width: 38px; height: 38px;">
-                                                        <i class="fas fa-user-injured fs-6"></i>
-                                                    </div>
-                                                    <div>
-                                                        <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
-                                                        @if($surgery->room)
-                                                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
-                                                                <span class="badge bg-light text-info border border-info-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
-                                                                    <i class="fas fa-bed text-info me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                            @else
+                                                                <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-2 py-0.5" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-hourglass-half text-warning me-1"></i> {{ __('وضع انتظار الغرفة') }}
                                                                 </span>
-                                                                @if($surgery->room_checkin_at)
-                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
-                                                                        <i class="fas fa-check-circle me-1"></i> تم الدخول ({{ $surgery->room_checkin_at->format('h:i A') }})
-                                                                    </span>
-                                                                @else
-                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار استلام الغرفة
-                                                                    </span>
+                                                            @endif
+                                                            <span class="text-muted small" style="font-size: 0.73rem;">
+                                                                <i class="far fa-calendar-alt me-1"></i> {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}
+                                                                @if($surgery->scheduled_time)
+                                                                    <i class="far fa-clock ms-1 me-1"></i> {{ \Carbon\Carbon::parse($surgery->scheduled_time)->format('h:i A') }}
                                                                 @endif
-                                                                @if($surgery->discharged_at)
-                                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-sign-out-alt me-1"></i> تم التخريج
-                                                                    </span>
-                                                                @endif
-                                                            </div>
-                                                        @endif
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
+                                            {{-- 2. المرحلة --}}
                                             <td>
-                                                <span class="badge bg-light text-info border border-info-subtle rounded-pill px-2.5 py-1.5">{{ $surgery->surgery_name }}</span>
+                                                @if($isPostOp)
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" style="width: fit-content;">
+                                                            <i class="fas fa-procedures text-success"></i> {{ __('بعد الصالة (عناية الرقود)') }}
+                                                        </span>
+                                                        <small class="text-muted" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-check-circle text-success me-1"></i> {{ __('اكتملت الجراحة وجاري التعافي') }}
+                                                        </small>
+                                                    </div>
+                                                @elseif($isInTheater)
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" style="width: fit-content;">
+                                                            <i class="fas fa-spinner fa-spin text-primary"></i> {{ __('داخل صالة العمليات') }}
+                                                        </span>
+                                                        <small class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-door-closed me-1"></i> {{ $surgery->operationTheater?->name ?? __('الصالة الجراحية') }}</small>
+                                                    </div>
+                                                @else
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" style="width: fit-content;">
+                                                            <i class="fas fa-hourglass-start text-warning"></i> {{ __('قبل الصالة (تهيئة)') }}
+                                                        </span>
+                                                        <small class="text-muted" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-clipboard-check me-1"></i> {{ __('فحوصات وتهيئة ما قبل الجراحة') }}
+                                                        </small>
+                                                    </div>
+                                                @endif
                                             </td>
+
+                                            {{-- 3. الحالة السريرية --}}
                                             <td>
-                                                <div>
-                                                    <span class="text-dark d-block"><i class="far fa-calendar-alt text-muted me-1"></i> {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}</span>
-                                                    <small class="text-muted"><i class="far fa-clock text-muted me-1"></i> {{ $surgery->scheduled_time ? \Carbon\Carbon::parse($surgery->scheduled_time)->format('h:i A') : '-' }}</small>
+                                                <div class="d-flex flex-column gap-1">
+                                                    {{-- وضع استلام الغرفة والإقامة --}}
+                                                    <div>
+                                                        @if($surgery->discharged_at)
+                                                            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-sign-out-alt me-1"></i> {{ __('تم التخريج') }}
+                                                            </span>
+                                                        @elseif($surgery->room_checkin_at)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
+                                                                <i class="fas fa-check-circle me-1"></i> {{ __('تم استلام الغرفة') }} ({{ $surgery->room_checkin_at->format('h:i A') }})
+                                                            </span>
+                                                        @elseif($surgery->room_id)
+                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-hourglass-start me-1"></i> {{ __('بانتظار استلام الغرفة') }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge bg-light text-muted border rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-bed me-1"></i> {{ __('بدون غرفة رقود') }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- تفاصيل المتابعة --}}
+                                                    <div>
+                                                        @if($isPostOp)
+                                                            @if($surgery->nursingStation?->status === 'in_progress')
+                                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-heartbeat me-1"></i> {{ __('متابعة ورعاية جارية') }}
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-procedures me-1"></i> {{ __('خرج من صالة العمليات') }}
+                                                                </span>
+                                                            @endif
+                                                        @elseif($isInTheater)
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-cut me-1"></i> {{ __('العملية جارية بالصالة') }}
+                                                            </span>
+                                                        @else
+                                                            @if($surgery->status === 'waiting')
+                                                                <span class="badge bg-warning text-dark rounded-pill px-2.5 py-0.5 fw-bold shadow-xs" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-clock me-1"></i> {{ __('بانتظار الصالة (مسجل دخول)') }}
+                                                                </span>
+                                                            @elseif($surgery->nursingStation?->status === 'in_progress')
+                                                                <span class="badge bg-info text-dark rounded-pill px-2.5 py-0.5 fw-bold" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-spinner fa-spin me-1"></i> {{ __('تهيئة جارية') }}
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-0.5 fw-medium" style="font-size: 0.73rem;">
+                                                                    <i class="far fa-calendar-check me-1"></i> {{ __('مجدولة') }}
+                                                                </span>
+                                                            @endif
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- الكادر المسؤول --}}
+                                                    <div class="text-muted" style="font-size: 0.73rem;">
+                                                        @if($surgery->nursingStation?->nurse?->full_name)
+                                                            <span><i class="fas fa-user-nurse text-primary me-1"></i> {{ $surgery->nursingStation->nurse->full_name }}</span>
+                                                        @else
+                                                            <span class="text-muted fst-italic"><i class="fas fa-user-nurse text-muted me-1"></i> {{ __('لم يحدد بعد') }}</span>
+                                                        @endif
+                                                    </div>
                                                 </div>
-                                            </td>
-                                            <td>
-                                                @if($surgery->nursingStation?->nurse?->full_name)
-                                                    <span class="text-secondary"><i class="fas fa-user-nurse text-muted me-1"></i> {{ $surgery->nursingStation->nurse->full_name }}</span>
-                                                @else
-                                                    <span class="text-muted italic"><i class="fas fa-user-nurse text-muted me-1"></i> لم يحدد بعد</span>
-                                                @endif
-                                            </td>
-                                            <td>
-                                                @if($surgery->nursingStation?->status === 'in_progress')
-                                                    <span class="badge bg-info text-dark rounded-pill px-3 py-1.5 fw-bold shadow-xs">
-                                                        <i class="fas fa-heartbeat me-1"></i> متابعة ورعاية جارية
-                                                    </span>
-                                                @else
-                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs">
-                                                        <i class="fas fa-check-circle me-1"></i> خرج من صالة العمليات
-                                                    </span>
-                                                @endif
                                             </td>
                                             <td class="text-center">
                                                 @if($surgery->room_id && !$surgery->room_checkin_at)
                                                     <form action="{{ route('nursing-station.room-checkin', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تسجيل استلام المريض للغرفة الآن؟ سيبدأ احتساب الإقامة الفندقية.')">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1.5 shadow-sm fw-bold">
-                                                            <i class="fas fa-bed me-1"></i> تسجيل دخول الغرفة
+                                                            <i class="fas fa-bed me-1"></i> {{ __('تسجيل دخول الغرفة') }}
                                                         </button>
                                                     </form>
                                                 @else
-                                                    <div class="d-inline-flex align-items-center gap-1">
-                                                        <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-info rounded-pill px-3 py-1.5 text-white shadow-sm">
-                                                            <i class="fas fa-eye me-1"></i> عرض وتعديل
+                                                    <div class="d-inline-flex align-items-center gap-1 flex-wrap justify-content-center">
+                                                        @if(!$surgery->room_id && !$surgery->discharged_at && (auth()->user()?->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()?->can('assign surgery room')))
+                                                            <button type="button"
+                                                                    class="btn btn-sm btn-warning rounded-pill px-3 py-1.5 shadow-sm fw-bold assign-room-trigger"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#assignSurgeryRoomModal"
+                                                                    data-assign-url="{{ route('surgeries.assign-room', $surgery) }}"
+                                                                    data-patient-name="{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'المريض' }}">
+                                                                <i class="fas fa-door-open me-1"></i> تخصيص غرفة
+                                                            </button>
+                                                        @endif
+                                                        <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
+                                                            <i class="fas fa-eye me-1"></i> {{ __('عرض وتعديل') }}
                                                         </a>
                                                         @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
                                                             <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
                                                                 @csrf
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm" title="تخريج المريض وإخلاء السرير">
-                                                                    <i class="fas fa-sign-out-alt me-1"></i> تخريج
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm" title="{{ __('تخريج المريض وإخلاء السرير') }}">
+                                                                    <i class="fas fa-sign-out-alt me-1"></i> {{ __('تخريج') }}
                                                                 </button>
                                                             </form>
                                                         @endif
@@ -361,12 +356,18 @@
                                         </tr>
                                         @empty
                                         <tr>
-                                            <td colspan="7" class="text-center py-5 text-muted">
-                                                <i class="fas fa-folder-open fa-3x mb-3 text-secondary opacity-50"></i>
-                                                <p class="mb-0 fw-semibold">لا توجد حالات متابعة بعد الصالة حالياً</p>
+                                            <td colspan="4" class="text-center py-5 text-muted">
+                                                <i class="fas fa-procedures fa-3x mb-3 text-secondary opacity-50"></i>
+                                                <p class="mb-0 fw-semibold">{{ __('لا توجد حالات رقود أو عمليات نشطة حالياً') }}</p>
                                             </td>
                                         </tr>
                                         @endforelse
+                                        <tr id="noActiveMatchRow" style="display: none;">
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                <i class="fas fa-filter fa-2x mb-2 text-secondary opacity-50"></i>
+                                                <p class="mb-0 fw-semibold">{{ __('لا توجد حالات تطابق فلتر المرحلة المحدد') }}</p>
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -402,6 +403,12 @@
                                                             <div class="mt-0.5">
                                                                 <span class="badge bg-light text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
                                                                     <i class="fas fa-bed text-success me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
+                                                                </span>
+                                                            </div>
+                                                        @else
+                                                            <div class="mt-1">
+                                                                <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-2 py-0.5" style="font-size: 0.74rem;">
+                                                                    <i class="fas fa-hourglass-half text-warning me-1"></i> وضع انتظار الغرفة
                                                                 </span>
                                                             </div>
                                                         @endif
@@ -668,25 +675,153 @@
         </div>
     </div>
 </div>
+
+{{-- مودال تخصيص غرفة لمرضى وضع الانتظار --}}
+@if(auth()->user()?->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()?->can('assign surgery room'))
+<div class="modal fade" id="assignSurgeryRoomModal" tabindex="-1" aria-labelledby="assignSurgeryRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-warning bg-opacity-25 border-bottom">
+                <h5 class="modal-title fw-bold text-dark" id="assignSurgeryRoomModalLabel">
+                    <i class="fas fa-door-open text-warning-emphasis me-2"></i> تخصيص غرفة للمريض
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="assignSurgeryRoomForm" method="POST" action="">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border mb-3 py-2">
+                        <small class="text-muted d-block">المريض:</small>
+                        <strong id="assignRoomPatientName" class="text-primary fs-6">-</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label for="assignRoomSelect" class="form-label fw-bold">اختر الغرفة المتاحة <span class="text-danger">*</span></label>
+                        @if(isset($availableRooms) && $availableRooms->count())
+                            <select name="room_id" id="assignRoomSelect" class="form-select" required>
+                                <option value="">-- اختر غرفة --</option>
+                                @foreach($availableRooms as $availRoom)
+                                    <option value="{{ $availRoom->id }}">
+                                        غرفة {{ $availRoom->room_number }} ({{ strtoupper($availRoom->room_type) }} - {{ $availRoom->floor }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        @else
+                            <div class="alert alert-danger mb-0 small">لا توجد غرف متاحة حالياً للتخصيص.</div>
+                        @endif
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="checkin_immediately" value="1" id="assignRoomCheckinNow" checked>
+                        <label class="form-check-label fw-semibold" for="assignRoomCheckinNow">
+                            تسجيل دخول المريض للغرفة مباشرة (بدء الإقامة الآن)
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">إلغاء</button>
+                    @if(isset($availableRooms) && $availableRooms->count())
+                        <button type="submit" class="btn btn-warning fw-bold rounded-pill px-4">
+                            <i class="fas fa-check me-1"></i> تأكيد تخصيص الغرفة
+                        </button>
+                    @endif
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const assignModal = document.getElementById('assignSurgeryRoomModal');
+    const assignForm = document.getElementById('assignSurgeryRoomForm');
+    const assignPatientName = document.getElementById('assignRoomPatientName');
+    if (assignModal && assignForm) {
+        document.querySelectorAll('.assign-room-trigger').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                assignForm.setAttribute('action', this.dataset.assignUrl || '');
+                if (assignPatientName) {
+                    assignPatientName.textContent = this.dataset.patientName || 'المريض';
+                }
+            });
+        });
+    }
+});
+</script>
+@endpush
+@endif
 @endsection
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const patientSearchInput = document.getElementById('nursingPatientSearchInput');
+        const phaseFilterBtns = document.querySelectorAll('.nursing-phase-filter');
+        const nursingRows = document.querySelectorAll('#activePatientsTableBody .nursing-patient-row');
+        const noActiveMatchRow = document.getElementById('noActiveMatchRow');
+        let currentActivePhase = 'all';
+
+        function filterActiveNursingTable() {
+            const query = (patientSearchInput ? patientSearchInput.value : '').trim().toLowerCase();
+            let visibleCount = 0;
+
+            nursingRows.forEach(row => {
+                const phase = row.getAttribute('data-phase') || '';
+                const text = row.innerText.toLowerCase();
+                const matchesQuery = !query || text.includes(query);
+                const matchesPhase = (currentActivePhase === 'all') || (phase === currentActivePhase);
+
+                if (matchesQuery && matchesPhase) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (noActiveMatchRow) {
+                noActiveMatchRow.style.display = (visibleCount === 0 && nursingRows.length > 0) ? '' : 'none';
+            }
+        }
+
         if (patientSearchInput) {
             patientSearchInput.addEventListener('input', function() {
-                const query = this.value.trim().toLowerCase();
                 const activePane = document.querySelector('#nursingTabsContent .tab-pane.active');
-                if (!activePane) return;
-                const rows = activePane.querySelectorAll('tbody tr');
-                rows.forEach(row => {
-                    if (row.querySelector('.text-muted.py-5') || row.children.length === 1) return;
-                    const text = row.innerText.toLowerCase();
-                    row.style.display = text.includes(query) ? '' : 'none';
-                });
+                if (activePane && activePane.id === 'active-patients') {
+                    filterActiveNursingTable();
+                } else if (activePane) {
+                    const query = this.value.trim().toLowerCase();
+                    const rows = activePane.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        if (row.querySelector('.text-muted.py-5') || row.children.length === 1) return;
+                        const text = row.innerText.toLowerCase();
+                        row.style.display = text.includes(query) ? '' : 'none';
+                    });
+                }
             });
         }
+
+        phaseFilterBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                phaseFilterBtns.forEach(b => {
+                    b.classList.remove('active', 'btn-dark', 'btn-warning', 'btn-primary', 'btn-success');
+                    const p = b.getAttribute('data-phase');
+                    if (p === 'pre_op') b.classList.add('btn-outline-warning');
+                    else if (p === 'in_theater') b.classList.add('btn-outline-primary');
+                    else if (p === 'post_op') b.classList.add('btn-outline-success');
+                    else b.classList.add('btn-outline-secondary');
+                });
+
+                this.classList.add('active');
+                this.classList.remove('btn-outline-secondary', 'btn-outline-warning', 'btn-outline-primary', 'btn-outline-success');
+                const p = this.getAttribute('data-phase');
+                if (p === 'pre_op') this.classList.add('btn-warning');
+                else if (p === 'in_theater') this.classList.add('btn-primary');
+                else if (p === 'post_op') this.classList.add('btn-success');
+                else this.classList.add('btn-dark');
+
+                currentActivePhase = p;
+                filterActiveNursingTable();
+            });
+        });
 
         const searchInput = document.getElementById('floorStockSearchInput');
         const clearBtn = document.getElementById('clearFloorStockSearch');

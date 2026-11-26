@@ -88,9 +88,9 @@
         <div class="col-12 col-sm-6 col-xl-2">
             <div class="card border-0 shadow-sm rounded-4 h-100 bg-white">
                 <div class="card-body p-3">
-                    <span class="text-muted small fw-bold d-block mb-1">{{ __('استقطاعات الباقة') }}</span>
-                    <h4 class="mb-0 fw-bold text-danger">-{{ number_format($stats['package_deductions'], 0) }}</h4>
-                    <small class="text-danger">{{ __('د.ع لصالح المستشفى') }}</small>
+                    <span class="text-muted small fw-bold d-block mb-1">{{ __('استقطاعات الباقة والأجهزة') }}</span>
+                    <h4 class="mb-0 fw-bold text-danger">-{{ number_format(($stats['package_deductions'] ?? 0) + ($stats['devices_deductions'] ?? 0), 0) }}</h4>
+                    <small class="text-danger">{{ __('باقة:') }} {{ number_format($stats['package_deductions'] ?? 0, 0) }} | {{ __('أجهزة:') }} {{ number_format($stats['devices_deductions'] ?? 0, 0) }}</small>
                 </div>
             </div>
         </div>
@@ -203,7 +203,7 @@
                             <th>{{ __('المريض') }}</th>
                             <th>{{ __('نوع الحساب') }}</th>
                             <th class="text-end">{{ __('أتعاب الجراحة الاسمية') }}</th>
-                            <th class="text-end">{{ __('استقطاعات الباقة (المستشفى)') }}</th>
+                            <th class="text-end">{{ __('الباقة والأجهزة') }}</th>
                             <th class="text-end">{{ __('صافي مستحق الجراح') }}</th>
                             <th class="text-center">{{ __('سداد الكاشير') }}</th>
                             <th class="text-center pe-4">{{ __('تصفية المستحق') }}</th>
@@ -214,10 +214,12 @@
                             @php
                                 $patient = $surgery->patient;
                                 $payment = $surgery->payments->first();
-                                $isIns = in_array($surgery->insurance_type, ['hi', 'moi', 'health_insurance']);
-                                $grossFee = (float) (($surgery->surgery_fee ?? 0) + $surgery->additionalOperations->sum('fee'));
-                                $deductions = (float) ($payment?->doctor_deductions_amount ?? 0);
-                                $netFee = $isIns ? $grossFee : max(0.0, $grossFee - $deductions);
+                                $fin = $surgery->calculateSurgeonFinancials();
+                                $isIns = $fin['is_insurance'];
+                                $grossFee = $fin['gross_fees'];
+                                $deductions = $fin['package_deductions'];
+                                $devicesDed = $fin['devices_deductions'];
+                                $netFee = $fin['net_earned'];
                                 $due = $payment ? \App\Models\DoctorDue::where('payment_id', $payment->id)->where('doctor_id', $doctor->id)->first() : null;
                                 $isSettled = $due && $due->status === 'paid';
                                 $itemsSnapshot = $payment && is_array($payment->included_package_items) 
@@ -267,19 +269,26 @@
                                     {{ number_format($grossFee, 0) }} <small class="text-muted">{{ __('د.ع') }}</small>
                                 </td>
 
-                                {{-- استقطاعات الباقة وزر المودال --}}
+                                {{-- استقطاعات الباقة والأجهزة وزر المودال --}}
                                 <td class="text-end">
-                                    @if($deductions > 0)
-                                        <span class="fw-bold text-danger font-monospace">-{{ number_format($deductions, 0) }} {{ __('د.ع') }}</span>
-                                        <button type="button" 
-                                                class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0 d-block ms-auto mt-1 show-package-breakdown-btn"
-                                                style="font-size: 0.7rem;"
-                                                data-surgery="#{{ $surgery->id }} - {{ $surgery->surgery_type }}"
-                                                data-receipt="{{ $payment?->receipt_number ?? $payment?->id }}"
-                                                data-deductions="{{ number_format($deductions, 0) }} {{ __('د.ع') }}"
-                                                data-items="{{ json_encode($itemsSnapshot, JSON_UNESCAPED_UNICODE) }}">
-                                            <i class="fas fa-list me-1"></i> {{ __('تفاصيل') }} ({{ count($itemsSnapshot) }})
-                                        </button>
+                                    @if($deductions > 0 || $devicesDed > 0)
+                                        <span class="fw-bold text-danger font-monospace">-{{ number_format(($isIns ? 0 : $deductions) + $devicesDed, 0) }} {{ __('د.ع') }}</span>
+                                        @if($devicesDed > 0)
+                                            <small class="d-block text-info fw-semibold" style="font-size: 0.72rem;">
+                                                <i class="fas fa-stethoscope me-1"></i>{{ __('أجهزة:') }} -{{ number_format($devicesDed, 0) }} {{ __('د.ع') }}
+                                            </small>
+                                        @endif
+                                        @if($deductions > 0)
+                                            <button type="button" 
+                                                    class="btn btn-xs btn-outline-danger rounded-pill px-2 py-0 d-block ms-auto mt-1 show-package-breakdown-btn"
+                                                    style="font-size: 0.7rem;"
+                                                    data-surgery="#{{ $surgery->id }} - {{ $surgery->surgery_type }}"
+                                                    data-receipt="{{ $payment?->receipt_number ?? $payment?->id }}"
+                                                    data-deductions="{{ number_format($deductions, 0) }} {{ __('د.ع') }}"
+                                                    data-items="{{ json_encode($itemsSnapshot, JSON_UNESCAPED_UNICODE) }}">
+                                                <i class="fas fa-list me-1"></i> {{ __('تفاصيل الباقة') }} ({{ count($itemsSnapshot) }})
+                                            </button>
+                                        @endif
                                     @else
                                         <span class="text-muted font-monospace">0</span>
                                         @if($isIns)

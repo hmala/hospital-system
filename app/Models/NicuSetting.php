@@ -30,10 +30,18 @@ class NicuSetting extends Model
 
     public static function getValue(string $key, $default = null): mixed
     {
-        $setting = static::where('key', $key)->first();
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('nicu_settings')) {
+                return $default ?? static::DEFAULTS[$key] ?? null;
+            }
 
-        if ($setting !== null && $setting->value !== null) {
-            return $setting->value;
+            $setting = static::where('key', $key)->first();
+
+            if ($setting !== null && $setting->value !== null) {
+                return $setting->value;
+            }
+        } catch (\Throwable $e) {
+            return $default ?? static::DEFAULTS[$key] ?? null;
         }
 
         if ($default !== null) {

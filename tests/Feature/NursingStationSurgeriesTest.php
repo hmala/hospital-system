@@ -250,6 +250,70 @@ class NursingStationSurgeriesTest extends TestCase
         $response->assertStatus(200);
         $this->assertFalse($response->viewData('preOpSurgeries')->contains('id', $surgery->id));
         $this->assertTrue($response->viewData('postOpSurgeries')->contains('id', $surgery->id));
+        $this->assertTrue($response->viewData('activeSurgeries')->contains('id', $surgery->id));
+        $response->assertSee('مرضى الرقود والعمليات النشطة');
         $response->assertSee('خرج من صالة العمليات');
+    }
+
+    public function test_active_surgeries_unifies_pre_op_and_post_op_with_phase_badges(): void
+    {
+        $subFloor = Location::create(['name' => 'ردهة الطابق الرابع', 'type' => 'sub']);
+        $nurse = User::factory()->create(['name' => 'ممرضة الطابق', 'location_id' => $subFloor->id]);
+        $nurse->assignRole('nurse');
+        $nurse->givePermissionTo('view nursing station');
+
+        $room = Room::create([
+            'room_number' => '401',
+            'room_type' => 'standard',
+            'floor' => 'الطابق الرابع',
+            'daily_fee' => 50000,
+            'status' => 'occupied',
+            'beds_count' => 1,
+            'is_active' => true,
+        ]);
+
+        $uPre = User::factory()->create(['name' => 'مريض قبل الصالة']);
+        $patientPre = Patient::create(['user_id' => $uPre->id, 'national_id' => '99988877711122']);
+
+        $uPost = User::factory()->create(['name' => 'مريض بعد الصالة']);
+        $patientPost = Patient::create(['user_id' => $uPost->id, 'national_id' => '99988877711133']);
+
+        $surgeryPre = Surgery::create([
+            'patient_id' => $patientPre->id,
+            'department_id' => $this->dept->id,
+            'room_id' => $room->id,
+            'surgery_type' => 'عملية قبل الصالة',
+            'surgery_category' => 'جراحة عامة',
+            'status' => 'waiting',
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => now(),
+        ]);
+
+        $surgeryPost = Surgery::create([
+            'patient_id' => $patientPost->id,
+            'department_id' => $this->dept->id,
+            'room_id' => $room->id,
+            'surgery_type' => 'عملية بعد الصالة',
+            'surgery_category' => 'جراحة عامة',
+            'status' => 'completed',
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => now(),
+        ]);
+        $surgeryPost->operationTheaterStation()->create([
+            'status' => 'completed',
+            'started_at' => now()->subHours(2),
+            'completed_at' => now()->subHour(),
+        ]);
+
+        $response = $this->actingAs($nurse)->get(route('nursing-station.index', ['floor' => 'الطابق الرابع']));
+        $response->assertStatus(200);
+
+        $activeSurgeries = $response->viewData('activeSurgeries');
+        $this->assertTrue($activeSurgeries->contains('id', $surgeryPre->id));
+        $this->assertTrue($activeSurgeries->contains('id', $surgeryPost->id));
+
+        $response->assertSee('مرضى الرقود والعمليات النشطة');
+        $response->assertSee('قبل الصالة (تهيئة)');
+        $response->assertSee('بعد الصالة (عناية الرقود)');
     }
 }

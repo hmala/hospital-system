@@ -28,6 +28,8 @@ class Surgery extends Model
         'started_at',
         'status',
         'payment_status',
+        'billing_status',
+        'devices_billing_status',
         'insurance_type',
         'surgery_fee_paid',
         'payment_id',
@@ -679,5 +681,259 @@ class Surgery extends Model
                 ]);
             }
         }
+    }
+
+    /**
+     * إجمالي تكلفة الأجهزة الطبية المستخدمة في العملية (تُحاسب مع الجراح في الحسابات فقط ولا تُحمّل على المريض)
+     */
+    public function getDevicesTotalFee(): float
+    {
+        $devices = $this->relationLoaded('medicalDevices')
+            ? $this->medicalDevices
+            : $this->medicalDevices()->get();
+
+        return (float) $devices->sum(function ($device) {
+            return (float) ($device->pivot->price ?? $device->usage_price ?? 0);
+        });
+    }
+
+    /**
+     * إجمالي أجور العملية الجراحية للمريض (العملية الأساسية + العمليات المرافقة فقط، دون الأجهزة الطبية)
+     */
+    public function getTotalSurgeryPatientFee(): float
+    {
+        $additionalOps = $this->relationLoaded('additionalOperations')
+            ? $this->additionalOperations
+            : $this->additionalOperations()->get();
+
+        return (float) ($this->surgery_fee ?? 0) + (float) $additionalOps->sum('fee');
+    }
+
+    /**
+     * حساب المستحقات والذمم المالية المعلقة للمريض وبراءة الذمة
+     */
+    public function calculatePendingItemsBreakdown($asOfTime = null): array
+    {
+        $this->loadMissing([
+            'patient',
+            'room',
+            'additionalOperations',
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
+            'consultations',
+            'extraServices',
+        ]);
+
+        $isCancelled = $this->status === 'cancelled';
+        $isPricePendingReview = ($this->billing_status === 'pending_review');
+
+        $totalSurgeryFee = $isCancelled ? 0.0 : $this->getTotalSurgeryPatientFee();
+        $surgeryPaidAmount = (float) ($this->surgery_fee_paid_amount ?? 0);
+        $remainingSurgeryFee = $isCancelled ? 0.0 : max(0.0, $totalSurgeryFee - $surgeryPaidAmount);
+        $excessSurgeryFee = $isCancelled
+            ? max(0.0, (float) $this->payments()->sum('amount'))
+            : max(0.0, $surgeryPaidAmount - $totalSurgeryFee);
+
+        $stayDetails = $this->calculateStayDetails($asOfTime);
+        $insuranceType = $this->insurance_type ?: ($this->patient?->insurance_type ?: 'none');
+        $isInsurance = in_array($insuranceType, ['hi', 'moi'], true);
+        $isStayIns = $isInsurance && ($stayDetails['is_insurance_calculated'] ?? false);
+
+        $targetRoomFee = $isCancelled
+            ? 0.0
+            : (float) ($isStayIns ? ($stayDetails['patient_stay_share'] ?? 0) : ($stayDetails['total_fee'] ?? ($this->room_fee ?? 0)));
+        $roomPaidAmount = (float) ($this->room_fee_paid_amount ?? 0);
+        $remainingRoomFee = $isCancelled ? 0.0 : max(0.0, $targetRoomFee - $roomPaidAmount);
+        $excessRoomFee = $isCancelled ? 0.0 : max(0.0, $roomPaidAmount - $targetRoomFee);
+
+        $pendingLabTests = $isCancelled
+            ? collect()
+            : $this->labTests->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled');
+        $pendingRadiologyTests = $isCancelled
+            ? collect()
+            : $this->radiologyTests->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled');
+        $pendingConsultations = $isCancelled
+            ? collect()
+            : $this->consultations->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled');
+        $pendingExtraServices = $isCancelled
+            ? collect()
+            : $this->extraServices->where('payment_status', '!=', 'paid');
+
+        $hasUnpaidItems = ! $isCancelled && (
+            $remainingSurgeryFee > 0
+            || $remainingRoomFee > 0
+            || $pendingLabTests->isNotEmpty()
+            || $pendingRadiologyTests->isNotEmpty()
+            || $pendingConsultations->isNotEmpty()
+            || $pendingExtraServices->isNotEmpty()
+        );
+
+        $hasRefundDue = ($isCancelled && (($surgeryPaidAmount + $roomPaidAmount) > 0 || $this->payments()->where('amount', '>', 0)->exists()))
+            || (! $isCancelled && ($excessSurgeryFee > 0 || $excessRoomFee > 0));
+
+        return [
+            'is_cancelled' => $isCancelled,
+            'is_price_pending_review' => $isPricePendingReview,
+            'total_surgery_fee' => $totalSurgeryFee,
+            'surgery_paid_amount' => $surgeryPaidAmount,
+            'remaining_surgery_fee' => $remainingSurgeryFee,
+            'excess_surgery_fee' => $excessSurgeryFee,
+            'stay_details' => $stayDetails,
+            'target_room_fee' => $targetRoomFee,
+            'room_paid_amount' => $roomPaidAmount,
+            'remaining_room_fee' => $remainingRoomFee,
+            'excess_room_fee' => $excessRoomFee,
+            'pending_lab_count' => $pendingLabTests->count(),
+            'pending_radiology_count' => $pendingRadiologyTests->count(),
+            'pending_consultations_count' => $pendingConsultations->count(),
+            'pending_extra_services_count' => $pendingExtraServices->count(),
+            'pending_extra_services_fee' => (float) $pendingExtraServices->sum('total_amount'),
+            'pending_consultations_fee' => (float) $pendingConsultations->sum('fee'),
+            'has_unpaid_items' => $hasUnpaidItems,
+            'has_refund_due' => $hasRefundDue,
+            'has_any_pending_reason' => $hasUnpaidItems || $hasRefundDue || $isPricePendingReview,
+        ];
+    }
+
+    /**
+     * التحقق من براءة الذمة المالية الكاملة للمريض قبل السماح بالتخريج
+     */
+    public function getFinancialClearanceSummary($asOfTime = null): array
+    {
+        $breakdown = $this->calculatePendingItemsBreakdown($asOfTime);
+        $reasons = [];
+
+        if ($breakdown['is_price_pending_review']) {
+            $reasons[] = 'تعديل العملية بانتظار اعتماد التسعيرة في قسم الحسابات';
+        }
+        if ($breakdown['remaining_surgery_fee'] > 0) {
+            $reasons[] = 'متبقي رسوم العملية الجراحية: '.number_format($breakdown['remaining_surgery_fee'], 0).' د.ع';
+        }
+        if ($breakdown['remaining_room_fee'] > 0) {
+            $reasons[] = 'متبقي أجور الغرفة والإقامة الفندقية: '.number_format($breakdown['remaining_room_fee'], 0).' د.ع';
+        }
+        if ($breakdown['pending_lab_count'] > 0) {
+            $reasons[] = 'تحاليل مختبر غير مسددة ('.$breakdown['pending_lab_count'].')';
+        }
+        if ($breakdown['pending_radiology_count'] > 0) {
+            $reasons[] = 'فحوصات أشعة غير مسددة ('.$breakdown['pending_radiology_count'].')';
+        }
+        if ($breakdown['pending_consultations_count'] > 0) {
+            $reasons[] = 'استشارات طبية غير مسددة ('.$breakdown['pending_consultations_count'].')';
+        }
+        if ($breakdown['pending_extra_services_count'] > 0) {
+            $reasons[] = 'خدمات إضافية/علاج فيزيائي غير مسددة ('.$breakdown['pending_extra_services_count'].')';
+        }
+
+        return [
+            'cleared' => empty($reasons),
+            'reasons' => $reasons,
+            'breakdown' => $breakdown,
+        ];
+    }
+
+    /**
+     * مزامنة حالة الدفع الإجمالية للعملية وحالة رسم العملية عند إضافة بنود أو تعديل الأسعار أو الغرف
+     */
+    public function syncPaymentStatus(): string
+    {
+        if ($this->status === 'cancelled') {
+            return $this->payment_status ?? 'cancelled';
+        }
+
+        $breakdown = $this->calculatePendingItemsBreakdown();
+
+        $surgeryFeePaidStatus = 'pending';
+        if ($breakdown['remaining_surgery_fee'] <= 0 && ($breakdown['total_surgery_fee'] > 0 || $breakdown['surgery_paid_amount'] > 0 || $this->surgery_fee_paid === 'paid')) {
+            $surgeryFeePaidStatus = 'paid';
+        } elseif ($breakdown['surgery_paid_amount'] > 0) {
+            $surgeryFeePaidStatus = 'partial';
+        }
+
+        $hasAnyPaidItem = $breakdown['surgery_paid_amount'] > 0
+            || $breakdown['room_paid_amount'] > 0
+            || $this->payments()->where('amount', '>', 0)->exists()
+            || $this->labTests()->where('payment_status', 'paid')->exists()
+            || $this->radiologyTests()->where('payment_status', 'paid')->exists()
+            || $this->extraServices()->where('payment_status', 'paid')->exists()
+            || $this->consultations()->where('payment_status', 'paid')->exists();
+
+        if (! $breakdown['has_unpaid_items'] && ($hasAnyPaidItem || $breakdown['total_surgery_fee'] <= 0)) {
+            $paymentStatus = 'paid';
+        } elseif ($hasAnyPaidItem) {
+            $paymentStatus = 'partial';
+        } else {
+            $paymentStatus = 'pending';
+        }
+
+        $this->forceFill([
+            'surgery_fee_paid' => $surgeryFeePaidStatus,
+            'payment_status' => $paymentStatus,
+        ])->save();
+
+        return $paymentStatus;
+    }
+
+    /**
+     * احتساب تفاصيل مستحقات الطبيب الجراح (شاملة استقطاعات الباقة واستقطاعات الأجهزة الطبية)
+     */
+    public function calculateSurgeonFinancials(): array
+    {
+        $this->loadMissing(['additionalOperations', 'medicalDevices', 'payments']);
+
+        $grossFees = $this->getTotalSurgeryPatientFee();
+        $packageDeductions = (float) $this->payments->where('payment_type', 'surgery')->sum('doctor_deductions_amount');
+        $devicesDeductions = $this->getDevicesTotalFee();
+        $isIns = in_array($this->insurance_type, ['hi', 'moi', 'health_insurance'], true);
+
+        // استقطاع الباقة يخصم من النقدي فقط، بينما الأجهزة الطبية المستخدمة في الصالة تُحاسب مع الجراح في جميع الحالات
+        $afterPackage = $isIns ? $grossFees : max(0.0, $grossFees - $packageDeductions);
+        $netEarned = max(0.0, $afterPackage - $devicesDeductions);
+
+        return [
+            'gross_fees' => $grossFees,
+            'package_deductions' => $packageDeductions,
+            'devices_deductions' => $devicesDeductions,
+            'total_deductions' => ($isIns ? 0.0 : $packageDeductions) + $devicesDeductions,
+            'net_earned' => $netEarned,
+            'is_insurance' => $isIns,
+        ];
+    }
+
+    /**
+     * مزامنة قيد مستحق الجراح غير المصروف في جدول DoctorDue عند مراجعة الأسعار أو الأجهزة
+     */
+    public function syncSurgeonDoctorDue(): void
+    {
+        if (! $this->doctor_id || $this->status === 'cancelled') {
+            return;
+        }
+
+        $payment = $this->payments()->where('payment_type', 'surgery')->latest()->first();
+        if (! $payment) {
+            return;
+        }
+
+        $due = DoctorDue::where('doctor_id', $this->doctor_id)
+            ->where('payment_id', $payment->id)
+            ->first();
+
+        if (! $due || $due->status === 'paid') {
+            return;
+        }
+
+        $fin = $this->calculateSurgeonFinancials();
+        $noteParts = ['أتعاب جراحة العملية #'.$this->id.' ('.number_format($fin['gross_fees'], 0).' د.ع)'];
+        if (! $fin['is_insurance'] && $fin['package_deductions'] > 0) {
+            $noteParts[] = 'استقطاعات باقة: '.number_format($fin['package_deductions'], 0).' د.ع';
+        }
+        if ($fin['devices_deductions'] > 0) {
+            $noteParts[] = 'أجهزة طبية: '.number_format($fin['devices_deductions'], 0).' د.ع';
+        }
+
+        $due->update([
+            'amount' => $fin['net_earned'],
+            'notes' => implode(' | ', $noteParts),
+        ]);
     }
 }

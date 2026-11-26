@@ -67,11 +67,11 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($surgeriesToReview as $surgery)
+                                @foreach($surgeriesToReview as $surgery)
                                 <tr>
                                     <td class="ps-4">
                                         <div class="fw-bold">{{ $surgery->patient->user->name ?? 'غير معروف' }}</div>
-                                        <small class="text-muted">ID: #{{ $surgery->patient_id }}</small>
+                                        <small class="text-muted">ID: #{{ $surgery->patient_id }} | عملية #{{ $surgery->id }}</small>
                                     </td>
                                     <td>
                                         <span class="badge bg-warning bg-opacity-10 text-warning px-3 py-2">
@@ -85,6 +85,63 @@
                                         <a href="{{ route('accountant.surgeries.review', $surgery) }}" class="btn btn-primary btn-sm px-3">
                                             <i class="fas fa-coins me-1"></i>
                                             تسعير العملية
+                                        </a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0 fw-bold text-info">
+                <i class="fas fa-stethoscope me-2"></i>تسوية الأجهزة الطبية مع الجراح (لا تضاف لفاتورة المريض)
+            </h5>
+            <span class="badge bg-info-subtle text-info border">{{ ($deviceSurgeriesToReview ?? collect())->count() }} عملية</span>
+        </div>
+        <div class="card-body p-0">
+            @if(($deviceSurgeriesToReview ?? collect())->isEmpty())
+                <div class="text-center py-4 text-muted">
+                    <i class="fas fa-check-circle fa-2x text-success opacity-50 mb-2 d-block"></i>
+                    لا توجد أجهزة طبية بانتظار تسعيرها أو استقطاعها مع الأطباء الجراحين حالياً.
+                </div>
+            @else
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">العملية والمريض</th>
+                                <th>الطبيب الجراح</th>
+                                <th>الأجهزة المستخدمة</th>
+                                <th>تاريخ التحديث</th>
+                                <th class="text-center pe-4">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($deviceSurgeriesToReview as $dSurgery)
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="fw-bold">#{{ $dSurgery->id }} - {{ $dSurgery->surgery_type }}</div>
+                                        <small class="text-muted">{{ $dSurgery->patient->user->name ?? 'غير معروف' }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold">د. {{ $dSurgery->doctor->user->name ?? $dSurgery->surgeon_name ?? 'غير محدد' }}</span>
+                                    </td>
+                                    <td>
+                                        @foreach($dSurgery->medicalDevices as $dev)
+                                            <span class="badge bg-info-subtle text-dark border mb-1">
+                                                {{ $dev->name }} ({{ number_format($dev->pivot->price ?? $dev->usage_price ?? 0, 0) }} د.ع)
+                                            </span>
+                                        @endforeach
+                                    </td>
+                                    <td>{{ $dSurgery->updated_at->format('Y-m-d H:i') }}</td>
+                                    <td class="text-center pe-4">
+                                        <a href="{{ route('accountant.surgeries.review', $dSurgery) }}" class="btn btn-info text-white btn-sm px-3">
+                                            <i class="fas fa-calculator me-1"></i> اعتماد الأجهزة للجراح
                                         </a>
                                     </td>
                                 </tr>

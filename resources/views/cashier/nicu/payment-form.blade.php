@@ -59,6 +59,85 @@
         color: #ffffff !important;
         box-shadow: 0 2px 6px rgba(59, 130, 246, 0.35);
     }
+
+    /* Extra Services Smart Autocomplete (ICD-10 Style for NICU) */
+    .extra-service-autocomplete-wrapper {
+        position: relative;
+        overflow: visible !important;
+    }
+    .extra-services-autocomplete-dropdown {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        left: 0;
+        width: 100% !important;
+        min-width: 340px;
+        z-index: 1065 !important;
+        max-height: 380px;
+        overflow-y: auto;
+        background: #ffffff !important;
+        border: 2px solid #0d9488 !important;
+        border-radius: 12px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(13, 148, 136, 0.16) !important;
+    }
+    .extra-service-dropdown-header {
+        background: linear-gradient(135deg, #f0fdfa, #ccfbf1);
+        border-bottom: 1px solid #99f6e4;
+        padding: 8px 14px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #115e59;
+    }
+    .extra-service-item {
+        padding: 9px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-align: right;
+        background: #ffffff;
+    }
+    .extra-service-item:hover, .extra-service-item.active {
+        background-color: #f0fdfa !important;
+        border-right: 4px solid #0d9488;
+    }
+    .extra-service-item:last-child {
+        border-bottom: none;
+    }
+    .extra-service-price-badge {
+        font-family: monospace;
+        font-weight: 700;
+        font-size: 0.85rem;
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+        padding: 2px 8px;
+        border-radius: 6px;
+        white-space: nowrap;
+    }
+    .extra-service-cat-badge {
+        font-size: 0.72rem;
+        padding: 2px 7px;
+        border-radius: 5px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .extra-service-custom-option {
+        background-color: #f8fafc;
+        border-top: 2px dashed #0d9488;
+        font-weight: 700;
+        color: #0f766e;
+        padding: 10px 14px;
+    }
+    .extra-service-custom-option:hover {
+        background-color: #ccfbf1 !important;
+    }
+    .price-flash-highlight {
+        animation: priceFlash 1.2s ease-out;
+    }
+    @keyframes priceFlash {
+        0% { background-color: #d1fae5; border-color: #10b981; }
+        100% { background-color: #ffffff; border-color: #dee2e6; }
+    }
 </style>
 
 @php
@@ -81,19 +160,29 @@
     $serviceBreakdown = $stayDetails['service_breakdown'] ?? [];
     $consultations = $stayDetails['consultations'] ?? collect();
     $medicalOrders = $stayDetails['medical_orders'] ?? collect();
+    $extraServices = $stayDetails['extra_services'] ?? collect();
+    $totalExtraServicesCost = (float)($stayDetails['total_extra_services_cost'] ?? 0);
     $previousPayments = $stayDetails['payments'] ?? collect();
+    $availableExtraServices = $availableExtraServices ?? collect();
 
     $labOrders = $medicalOrders->where('order_type', 'lab');
     $radiologyOrders = $medicalOrders->where('order_type', 'radiology');
     $medicationOrders = $medicalOrders->where('order_type', 'medication');
+
+    $canManageExtraCatalog = auth()->check() && (
+        auth()->user()->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'مدير النظام'])
+        || auth()->user()->can('manage settings')
+        || auth()->user()->can('manage users')
+        || auth()->user()->can('manage nicu services')
+    );
 @endphp
 
 <div class="container-fluid py-2">
     <div class="row justify-content-center">
         <div class="col-md-11">
-            <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: hidden;">
+            <div class="card border-0 shadow-sm" style="border-radius: 16px; overflow: visible;">
                 <!-- Header -->
-                <div class="card-header text-white p-3" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);">
+                <div class="card-header text-white p-3" style="background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); border-radius: 16px 16px 0 0;">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center gap-2">
                             <div class="bg-white text-teal rounded-circle p-2 shadow-xs d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; color: #0d9488;">
@@ -313,6 +402,110 @@
                         </div>
                     @endif
 
+                    <!-- صندوق إضافة الخدمات الإضافية والفندقية الذكي لقسم الخدج (مستوحى من محرك ICD-10 ومطابق لترتيب العمليات) -->
+                    <div class="card border border-warning border-opacity-50 rounded-4 mb-4 shadow-sm bg-white overflow-visible position-relative" style="z-index: 1050;">
+                        <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-2.5 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                                <span class="badge bg-warning text-dark p-2 rounded-circle">
+                                    <i class="fas fa-concierge-bell"></i>
+                                </span>
+                                <span>{{ __('إضافة خدمات إضافية وفندقية للخدج والحاضنة (علاج ضوئي، مرافق، طبلة، مستلزمات، غرامات...)') }}</span>
+                            </h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-warning bg-opacity-20 text-dark border border-warning border-opacity-50 px-2.5 py-1 rounded-pill small">
+                                    <i class="fas fa-magic me-1"></i> {{ __('تصنيف ذكي وبحث فوري مثل ICD-10') }}
+                                </span>
+                                @if($canManageExtraCatalog)
+                                    <a href="{{ route('admin.extra-services.index', ['department' => 'nicu']) }}" class="btn btn-xs btn-outline-dark rounded-pill px-2.5 py-0.5 small fw-bold" target="_blank" title="{{ __('إدارة وتعديل أسعار الخدمات المتفرقة للخدج') }}">
+                                        <i class="fas fa-sliders-h me-1"></i> {{ __('إدارة الأسعار') }}
+                                    </a>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <!-- شرائح التصفية السريعة لفئات الخدج -->
+                            <div class="d-flex flex-wrap align-items-center gap-1.5 mb-2.5">
+                                <span class="small text-muted fw-bold me-1"><i class="fas fa-filter me-1 text-warning"></i> {{ __('تصنيف سريع:') }}</span>
+                                <button type="button" class="btn btn-sm btn-warning fw-bold rounded-pill px-2.5 py-0.5 extra-cat-filter-btn active" data-category="all" style="font-size: 11px;">
+                                    {{ __('الكل') }} ({{ $availableExtraServices->count() }})
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="clinical" style="font-size: 11px;">
+                                    <i class="fas fa-stethoscope text-danger me-1"></i> {{ __('سريرية وإجراءات') }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="care" style="font-size: 11px;">
+                                    <i class="fas fa-baby-carriage text-success me-1"></i> {{ __('عناية ومستلزمات') }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="administrative" style="font-size: 11px;">
+                                    <i class="fas fa-file-invoice text-info me-1"></i> {{ __('إدارية ووثائق') }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="accommodation" style="font-size: 11px;">
+                                    <i class="fas fa-bed text-primary me-1"></i> {{ __('فندقية ومرافق') }}
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="fine" style="font-size: 11px;">
+                                    <i class="fas fa-exclamation-triangle text-danger me-1"></i> {{ __('غرامات ومخالفات') }}
+                                </button>
+                            </div>
+
+                            <form action="{{ route('cashier.nicu.extra-services.add', $reservation) }}" method="POST" id="addNicuExtraServiceForm">
+                                @csrf
+                                <div class="row g-2 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('اسم الخدمة الإضافية (ابحث أو اختر أو اكتب خدمة جديدة) *') }}</label>
+                                        <div class="position-relative extra-service-autocomplete-wrapper">
+                                            <div class="input-group input-group-sm shadow-xs">
+                                                <span class="input-group-text bg-white border-warning text-warning"><i class="fas fa-search" id="extra-service-search-icon"></i></span>
+                                                <input type="text" class="form-control form-control-sm fw-bold border-warning" id="service_name_input" name="service_name" placeholder="{{ __('انقر لاختيار خدمة للخدج أو اكتب للبحث الذكي...') }}" required autocomplete="off">
+                                                <button type="button" class="btn btn-outline-secondary px-2 d-none" id="btn-clear-extra-service" title="{{ __('مسح') }}">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                            <input type="hidden" name="service_id" id="service_id_hidden">
+                                            <input type="hidden" name="service_category" id="service_category_hidden" value="clinical">
+
+                                            <!-- القائمة المنسدلة الذكية للخدمات الإضافية -->
+                                            <div id="extra_services_dropdown" class="extra-services-autocomplete-dropdown shadow-lg d-none"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('السعر المعتمد للوحدة (IQD) *') }}</label>
+                                        <div class="input-group input-group-sm shadow-xs">
+                                            <span class="input-group-text bg-light text-success fw-bold">IQD</span>
+                                            <input type="number" class="form-control form-control-sm fw-bold text-success fs-6" id="service_price_input" name="service_price" min="0" step="any" placeholder="0" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-1">
+                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('الكمية') }}</label>
+                                        <input type="number" class="form-control form-control-sm text-center fw-bold" id="service_qty_input" name="service_quantity" min="1" value="1">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('ملاحظات (اختياري)') }}</label>
+                                        <input type="text" class="form-control form-control-sm" name="service_notes" placeholder="{{ __('ملاحظة أو تفصيل...') }}">
+                                    </div>
+                                    <div class="col-md-1">
+                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs" id="btnAddExtraService">
+                                            <i class="fas fa-plus me-1"></i> {{ __('إضافة') }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- بطاقة تأكيد الخدمة المختارة النشطة -->
+                                <div id="selected_extra_service_card" class="mt-2.5 p-2 px-3 rounded-3 border bg-warning bg-opacity-10 border-warning border-opacity-25 d-flex align-items-center justify-content-between d-none">
+                                    <div class="d-flex align-items-center gap-2.5">
+                                        <span class="badge bg-warning text-dark font-monospace px-2.5 py-1" id="selected_extra_cat_badge">{{ __('خدمة خدج إضافية') }}</span>
+                                        <div>
+                                            <strong class="text-dark small d-block" id="selected_extra_name_text">{{ __('اسم الخدمة') }}</strong>
+                                            <span class="text-muted small" style="font-size: 11px;">{{ __('السعر المعتمد بالدليل:') }} <strong class="text-success" id="selected_extra_price_text">0 {{ __('د.ع') }}</strong></span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-link text-danger text-decoration-none p-0 d-flex align-items-center gap-1" id="btn_change_extra_service">
+                                        <i class="fas fa-times-circle"></i>
+                                        <span style="font-size: 11px;">{{ __('تغيير أو اختيار خدمة أخرى') }}</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
                     <!-- Itemized Breakdown Tables (قائمة الخدمات والبنود السريرية المفصلة) -->
                     <div class="card border-0 shadow-xs mb-4 rounded-3 bg-white overflow-hidden">
                         <div class="card-header bg-white p-3 border-bottom d-flex justify-content-between align-items-center">
@@ -320,7 +513,7 @@
                                 <i class="fas fa-list-check text-primary me-2"></i>
                                 {{ __('كشف البنود والخدمات السريرية المفصلة للطفل') }}
                             </h6>
-                            <span class="badge bg-light text-muted border">{{ __('شامل الإقامة، التحاليل، الأشعة، والاستشارات') }}</span>
+                            <span class="badge bg-light text-muted border">{{ __('شامل الإقامة، التحاليل، الأشعة، الاستشارات، والخدمات الإضافية') }}</span>
                         </div>
                         <div class="card-body p-0">
                             <!-- 1. باقات الرعاية والحاضنة -->
@@ -594,10 +787,90 @@
                                 </div>
                             @endif
 
-                            <!-- 6. سجل الدفعات المسددة سابقاً -->
+                            <!-- 6. الخدمات الإضافية والفندقية المضافة للخديج -->
+                            @if($extraServices->count() > 0)
+                                <div class="p-3 bg-warning bg-opacity-10 border-bottom border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <strong class="text-dark small">
+                                        <i class="fas fa-concierge-bell text-warning me-1"></i>
+                                        {{ __('6. الخدمات الإضافية والفندقية للخدج') }} ({{ $extraServices->count() }} {{ __('خدمة') }}):
+                                    </strong>
+                                    @if($isInsured)
+                                        <span class="badge bg-secondary-subtle text-secondary border small">{{ __('خدمات إضافية خارج تغطية الضمان (كاش 100%)') }}</span>
+                                    @endif
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered align-middle mb-0 text-center">
+                                        <thead class="table-light small">
+                                            <tr>
+                                                <th class="text-start ps-3">{{ __('اسم الخدمة والتفاصيل') }}</th>
+                                                <th>{{ __('التصنيف') }}</th>
+                                                <th style="width: 150px;">{{ __('سعر الوحدة (د.ع)') }}</th>
+                                                <th style="width: 85px;">{{ __('الكمية') }}</th>
+                                                <th class="text-end">{{ __('الإجمالي') }}</th>
+                                                <th style="width: 120px;">{{ __('إجراء') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($extraServices as $extra)
+                                                <tr>
+                                                    <td class="text-start ps-3">
+                                                        <strong class="text-dark d-block">{{ $extra->name }}</strong>
+                                                        @if($extra->notes)
+                                                            <small class="text-muted"><i class="fas fa-sticky-note me-1"></i>{{ $extra->notes }}</small>
+                                                        @endif
+                                                        <small class="text-muted d-block" style="font-size: 10px;">
+                                                            {{ optional($extra->created_at)->format('Y-m-d h:i A') }}
+                                                            @if($extra->createdBy) • {{ $extra->createdBy->name }} @endif
+                                                        </small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge {{ $extra->category_badge_class }}">{{ $extra->category_label }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <form action="{{ route('cashier.nicu.extra-services.update', [$reservation, $extra]) }}" method="POST" id="update-extra-form-{{ $extra->id }}" class="d-none">
+                                                            @csrf
+                                                            @method('PATCH')
+                                                        </form>
+                                                        <input type="number" name="price" value="{{ (float)$extra->price }}" min="0" step="any" form="update-extra-form-{{ $extra->id }}" class="form-control form-control-sm text-center fw-bold text-success font-monospace mx-auto" style="width: 115px;">
+                                                    </td>
+                                                    <td>
+                                                        <input type="number" name="quantity" value="{{ (int)$extra->quantity }}" min="1" form="update-extra-form-{{ $extra->id }}" class="form-control form-control-sm text-center fw-bold mx-auto" style="width: 65px;">
+                                                    </td>
+                                                    <td class="text-end font-monospace fw-bold text-dark">
+                                                        {{ number_format((float)$extra->total_amount, 0) }} {{ __('د.ع') }}
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex justify-content-center gap-1">
+                                                            <button type="submit" form="update-extra-form-{{ $extra->id }}" class="btn btn-xs btn-outline-success py-0 px-2" title="{{ __('حفظ التعديل') }}">
+                                                                <i class="fas fa-save"></i>
+                                                            </button>
+                                                            <form action="{{ route('cashier.nicu.extra-services.remove', [$reservation, $extra]) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('هل أنت متأكد من حذف هذه الخدمة الإضافية؟') }}');">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-xs btn-outline-danger py-0 px-2" title="{{ __('حذف الخدمة') }}">
+                                                                    <i class="fas fa-trash-alt"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="table-light small">
+                                            <tr class="fw-bold">
+                                                <td colspan="4" class="text-end">{{ __('مجموع الخدمات الإضافية والفندقية:') }}</td>
+                                                <td class="text-end font-monospace text-primary fs-6">{{ number_format($totalExtraServicesCost, 0) }} {{ __('د.ع') }}</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            @endif
+
+                            <!-- 7. سجل الدفعات المسددة سابقاً -->
                             @if($previousPayments->count() > 0)
                                 <div class="p-3 bg-light border-bottom border-top">
-                                    <strong class="text-success small"><i class="fas fa-history me-1"></i> {{ __('6. سجل الدفعات المسددة سابقاً في الصندوق') }} ({{ $previousPayments->count() }} {{ __('دفعات') }}):</strong>
+                                    <strong class="text-success small"><i class="fas fa-history me-1"></i> {{ __('7. سجل الدفعات المسددة سابقاً في الصندوق') }} ({{ $previousPayments->count() }} {{ __('دفعات') }}):</strong>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-bordered align-middle mb-0 text-center">
@@ -878,6 +1151,267 @@ document.addEventListener('DOMContentLoaded', function() {
         paymentForm.addEventListener('submit', function() {
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> ' + '{{ __('جاري حفظ التسديد وإصدار الوصل...') }}';
+        });
+    }
+
+    // =========================================================================
+    // محرك البحث والفرز الذكي للخدمات الإضافية لقسم الخدج (مستوحى من محرك ICD-10)
+    // =========================================================================
+    @php
+        $extraServicesCatalogJson = $availableExtraServices->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'name' => $s->name,
+                'category' => $s->category ?? 'general',
+                'price' => (float) $s->default_price,
+                'formatted_price' => number_format($s->default_price, 0),
+            ];
+        })->values();
+    @endphp
+
+    const extraServicesCatalog = @json($extraServicesCatalogJson, JSON_UNESCAPED_UNICODE);
+    const extraCategoryMap = {
+        clinical: { name: '{{ __('سريرية وإجراءات') }}', icon: 'fa-stethoscope', badgeClass: 'bg-danger-subtle text-danger border border-danger border-opacity-25' },
+        medical: { name: '{{ __('فحوصات وسريرية') }}', icon: 'fa-heartbeat', badgeClass: 'bg-danger-subtle text-danger border border-danger border-opacity-25' },
+        care: { name: '{{ __('عناية ومستلزمات') }}', icon: 'fa-baby-carriage', badgeClass: 'bg-success-subtle text-success border border-success border-opacity-25' },
+        administrative: { name: '{{ __('إدارية ووثائق') }}', icon: 'fa-file-invoice', badgeClass: 'bg-info-subtle text-info border border-info border-opacity-25' },
+        accommodation: { name: '{{ __('فندقية ومرافق') }}', icon: 'fa-bed', badgeClass: 'bg-primary-subtle text-primary border border-primary border-opacity-25' },
+        decorating: { name: '{{ __('تزيين الغرف') }}', icon: 'fa-ribbon', badgeClass: 'bg-warning-subtle text-dark border border-warning border-opacity-25' },
+        fine: { name: '{{ __('غرامات ومخالفات') }}', icon: 'fa-exclamation-triangle', badgeClass: 'bg-warning-subtle text-dark border border-warning' },
+        general: { name: '{{ __('خدمات عامة') }}', icon: 'fa-tag', badgeClass: 'bg-light text-secondary border' },
+    };
+
+    let currentExtraCategory = 'all';
+    const serviceNameInput = document.getElementById('service_name_input');
+    const servicePriceInput = document.getElementById('service_price_input');
+    const serviceIdHidden = document.getElementById('service_id_hidden');
+    const serviceCategoryHidden = document.getElementById('service_category_hidden');
+    const extraDropdown = document.getElementById('extra_services_dropdown');
+    const clearExtraBtn = document.getElementById('btn-clear-extra-service');
+    const selectedExtraCard = document.getElementById('selected_extra_service_card');
+    const selectedExtraNameText = document.getElementById('selected_extra_name_text');
+    const selectedExtraCatBadge = document.getElementById('selected_extra_cat_badge');
+    const selectedExtraPriceText = document.getElementById('selected_extra_price_text');
+    const btnChangeExtra = document.getElementById('btn_change_extra_service');
+    const extraWrapper = document.querySelector('.extra-service-autocomplete-wrapper');
+
+    function escapeExtraHtml(text) {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function renderExtraServicesDropdown(query = '') {
+        if (!extraDropdown) return;
+        const q = (query || '').trim().toLowerCase();
+
+        const matches = extraServicesCatalog.filter(item => {
+            const matchesCat = (currentExtraCategory === 'all')
+                || (item.category === currentExtraCategory)
+                || (currentExtraCategory === 'clinical' && item.category === 'medical');
+            if (!matchesCat) return false;
+            if (!q) return true;
+            const name = (item.name || '').toLowerCase();
+            const catName = (extraCategoryMap[item.category]?.name || '').toLowerCase();
+            return name.includes(q) || catName.includes(q);
+        });
+
+        const catTitle = currentExtraCategory === 'all'
+            ? '{{ __('جميع خدمات الخدج الإضافية') }}'
+            : (extraCategoryMap[currentExtraCategory]?.name || '{{ __('الخدمات') }}');
+
+        let html = `
+            <div class="extra-service-dropdown-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-list me-1"></i> {{ __('دليل خدمات الخدج:') }} <strong>${escapeExtraHtml(catTitle)}</strong></span>
+                <span class="badge bg-warning text-dark border border-warning" style="font-size: 10px;">${matches.length} {{ __('خدمة') }}</span>
+            </div>
+        `;
+
+        if (matches.length > 0) {
+            html += '<div class="list-group list-group-flush">';
+            matches.forEach(item => {
+                const catMeta = extraCategoryMap[item.category] || extraCategoryMap.general;
+                html += `
+                    <div class="extra-service-item d-flex align-items-center justify-content-between"
+                         data-id="${item.id}"
+                         data-name="${escapeExtraHtml(item.name)}"
+                         data-price="${item.price}"
+                         data-formatted-price="${item.formatted_price}"
+                         data-category="${item.category}">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge ${catMeta.badgeClass} extra-service-cat-badge">
+                                <i class="fas ${catMeta.icon} me-1"></i>${catMeta.name}
+                            </span>
+                            <strong class="text-dark extra-service-name">${escapeExtraHtml(item.name)}</strong>
+                        </div>
+                        <span class="extra-service-price-badge">
+                            ${item.formatted_price} {{ __('د.ع') }}
+                        </span>
+                    </div>
+                `;
+            });
+            html += '</div>';
+        } else {
+            html += `
+                <div class="p-3 text-center text-muted small">
+                    <i class="fas fa-search me-1"></i> {{ __('لا توجد خدمات مطابقة في هذه الفئة') }}
+                </div>
+            `;
+        }
+
+        if (q.length > 0) {
+            const activeCatName = currentExtraCategory !== 'all'
+                ? (extraCategoryMap[currentExtraCategory]?.name || '{{ __('عام') }}')
+                : '{{ __('سريرية وإجراءات') }}';
+            html += `
+                <div class="extra-service-item extra-service-custom-option d-flex align-items-center justify-content-between"
+                     data-custom="1"
+                     data-name="${escapeExtraHtml(query)}">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-plus-circle text-success fs-6"></i>
+                        <div>
+                            <span class="d-block fw-bold text-dark">{{ __('إضافة كخدمة خدج جديدة:') }} <strong>"${escapeExtraHtml(query)}"</strong></span>
+                            <small class="text-muted" style="font-size: 10px;">✨ {{ __('سيتم حفظها تلقائياً في دليل خدمات الخدج') }} (${escapeExtraHtml(activeCatName)})</small>
+                        </div>
+                    </div>
+                    <span class="badge bg-warning text-dark border border-warning" style="font-size: 10px;">{{ __('حفظ بالدليل') }}</span>
+                </div>
+            `;
+        }
+
+        extraDropdown.innerHTML = html;
+        extraDropdown.classList.remove('d-none');
+    }
+
+    function selectExtraServiceItem(id, name, price, formattedPrice, category) {
+        if (serviceNameInput) serviceNameInput.value = name;
+        if (serviceIdHidden) serviceIdHidden.value = id || '';
+        if (serviceCategoryHidden && category) serviceCategoryHidden.value = category;
+        if (servicePriceInput) {
+            servicePriceInput.value = price;
+            servicePriceInput.classList.remove('price-flash-highlight');
+            void servicePriceInput.offsetWidth;
+            servicePriceInput.classList.add('price-flash-highlight');
+        }
+
+        if (clearExtraBtn) clearExtraBtn.classList.remove('d-none');
+        if (extraDropdown) extraDropdown.classList.add('d-none');
+
+        if (selectedExtraCard && id) {
+            const catMeta = extraCategoryMap[category] || extraCategoryMap.general;
+            if (selectedExtraNameText) selectedExtraNameText.textContent = name;
+            if (selectedExtraCatBadge) {
+                selectedExtraCatBadge.textContent = catMeta.name;
+                selectedExtraCatBadge.className = 'badge font-monospace px-2.5 py-1 ' + catMeta.badgeClass;
+            }
+            if (selectedExtraPriceText) selectedExtraPriceText.textContent = (formattedPrice || price) + '{{ __(' د.ع') }}';
+            selectedExtraCard.classList.remove('d-none');
+        }
+    }
+
+    if (serviceNameInput && extraDropdown) {
+        serviceNameInput.addEventListener('focus', function() {
+            renderExtraServicesDropdown(this.value.trim());
+        });
+
+        serviceNameInput.addEventListener('click', function() {
+            renderExtraServicesDropdown(this.value.trim());
+        });
+
+        serviceNameInput.addEventListener('input', function() {
+            const val = this.value.trim();
+            if (val.length > 0) {
+                if (clearExtraBtn) clearExtraBtn.classList.remove('d-none');
+            } else {
+                if (clearExtraBtn) clearExtraBtn.classList.add('d-none');
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+            }
+            renderExtraServicesDropdown(val);
+        });
+
+        extraDropdown.addEventListener('click', function(e) {
+            const item = e.target.closest('.extra-service-item');
+            if (!item) return;
+
+            if (item.dataset.custom === '1') {
+                const customName = item.dataset.name;
+                if (serviceNameInput) serviceNameInput.value = customName;
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (clearExtraBtn) clearExtraBtn.classList.remove('d-none');
+                if (extraDropdown) extraDropdown.classList.add('d-none');
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+                if (servicePriceInput) {
+                    servicePriceInput.focus();
+                    servicePriceInput.select();
+                }
+                return;
+            }
+
+            selectExtraServiceItem(
+                item.dataset.id,
+                item.dataset.name,
+                parseFloat(item.dataset.price) || 0,
+                item.dataset.formattedPrice,
+                item.dataset.category
+            );
+        });
+
+        document.querySelectorAll('.extra-cat-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.extra-cat-filter-btn').forEach(b => {
+                    b.classList.remove('btn-warning', 'active', 'fw-bold');
+                    b.classList.add('btn-outline-secondary');
+                });
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-warning', 'active', 'fw-bold');
+
+                currentExtraCategory = this.dataset.category || 'all';
+                if (serviceCategoryHidden) {
+                    serviceCategoryHidden.value = (currentExtraCategory !== 'all') ? currentExtraCategory : 'clinical';
+                }
+                renderExtraServicesDropdown(serviceNameInput.value.trim());
+                serviceNameInput.focus();
+            });
+        });
+
+        if (clearExtraBtn) {
+            clearExtraBtn.addEventListener('click', function() {
+                serviceNameInput.value = '';
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (servicePriceInput) servicePriceInput.value = '';
+                clearExtraBtn.classList.add('d-none');
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+                serviceNameInput.focus();
+                renderExtraServicesDropdown('');
+            });
+        }
+
+        if (btnChangeExtra) {
+            btnChangeExtra.addEventListener('click', function(e) {
+                e.preventDefault();
+                serviceNameInput.value = '';
+                if (serviceIdHidden) serviceIdHidden.value = '';
+                if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
+                serviceNameInput.focus();
+                renderExtraServicesDropdown('');
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (extraWrapper && !extraWrapper.contains(e.target) && !e.target.closest('.extra-cat-filter-btn')) {
+                extraDropdown.classList.add('d-none');
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && !extraDropdown.classList.contains('d-none')) {
+                extraDropdown.classList.add('d-none');
+            }
         });
     }
 });

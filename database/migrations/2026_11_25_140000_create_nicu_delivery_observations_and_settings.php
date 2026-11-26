@@ -163,22 +163,27 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('permissions')) {
-            app(PermissionRegistrar::class)->forgetCachedPermissions();
+            try {
+                $connection = Schema::getConnection()->getName();
+                app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-            $perm = Permission::firstOrCreate([
-                'name' => 'manage nicu delivery observations',
-                'guard_name' => 'web',
-            ]);
+                $perm = Permission::on($connection)->firstOrCreate([
+                    'name' => 'manage nicu delivery observations',
+                    'guard_name' => 'web',
+                ]);
 
-            $targetRoles = ['nicu_doctor', 'nicu_nurse', 'nicu_staff', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin'];
-            foreach ($targetRoles as $roleName) {
-                $role = Role::where('name', $roleName)->where('guard_name', 'web')->first();
-                if ($role) {
-                    $role->givePermissionTo($perm);
+                $targetRoles = ['nicu_doctor', 'nicu_nurse', 'nicu_staff', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin'];
+                foreach ($targetRoles as $roleName) {
+                    $role = Role::on($connection)->where('name', $roleName)->where('guard_name', 'web')->first();
+                    if ($role) {
+                        $role->givePermissionTo($perm);
+                    }
                 }
-            }
 
-            app(PermissionRegistrar::class)->forgetCachedPermissions();
+                app(PermissionRegistrar::class)->forgetCachedPermissions();
+            } catch (\Throwable $e) {
+                // Safe guard for remote database migrations
+            }
         }
     }
 
