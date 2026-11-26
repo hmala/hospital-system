@@ -155,13 +155,10 @@
                                 <table class="table table-hover align-middle mb-0">
                                     <thead class="table-light">
                                         <tr>
-                                            <th class="py-3">{{ __('رقم الملف') }}</th>
-                                            <th class="py-3">{{ __('اسم المريض والغرفة') }}</th>
-                                            <th class="py-3">{{ __('العملية') }}</th>
-                                            <th class="py-3">{{ __('الموعد المحدد') }}</th>
-                                            <th class="py-3">{{ __('الممرض/ة المسؤول') }}</th>
-                                            <th class="py-3">{{ __('المرحلة والحالة السريرية') }}</th>
-                                            <th class="py-3 text-center">{{ __('الإجراءات') }}</th>
+                                            <th class="py-3" style="min-width: 280px;">{{ __('اسم المريض') }}</th>
+                                            <th class="py-3" style="width: 220px;">{{ __('المرحلة') }}</th>
+                                            <th class="py-3" style="min-width: 220px;">{{ __('الحالة السريرية') }}</th>
+                                            <th class="py-3 text-center" style="width: 200px;">{{ __('الإجراءات') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody id="activePatientsTableBody">
@@ -178,73 +175,50 @@
                                             $phaseCategory = $isPostOp ? 'post_op' : ($isInTheater ? 'in_theater' : 'pre_op');
                                         @endphp
                                         <tr class="nursing-patient-row" data-phase="{{ $phaseCategory }}">
-                                            <td class="fw-bold text-primary">{{ $surgery->patient?->file_number ?? $surgery->id }}</td>
+                                            {{-- 1. اسم المريض وتفاصيل العملية والغرفة والملف والموعد --}}
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="rounded-circle p-2 d-flex justify-content-center align-items-center me-2 shadow-xs {{ $isPostOp ? 'bg-success bg-opacity-10 text-success' : ($isInTheater ? 'bg-primary bg-opacity-10 text-primary' : 'bg-warning bg-opacity-15 text-warning-emphasis') }}" style="width: 38px; height: 38px;">
+                                                    <div class="rounded-circle p-2 d-flex justify-content-center align-items-center me-2.5 shadow-xs flex-shrink-0 {{ $isPostOp ? 'bg-success bg-opacity-10 text-success' : ($isInTheater ? 'bg-primary bg-opacity-10 text-primary' : 'bg-warning bg-opacity-15 text-warning-emphasis') }}" style="width: 40px; height: 40px;">
                                                         <i class="fas fa-user-injured fs-6"></i>
                                                     </div>
                                                     <div>
-                                                        <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
-                                                        @if($surgery->room)
-                                                            <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
-                                                                <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                                            <span class="fw-bold text-dark">{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'غير معروف' }}</span>
+                                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border" style="font-size: 0.72rem;">
+                                                                {{ __('ملف:') }} {{ $surgery->patient?->file_number ?? $surgery->id }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="mt-1 d-flex flex-wrap gap-1 align-items-center">
+                                                            <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
+                                                                <i class="fas fa-procedures text-primary me-1"></i> {{ $surgery->surgery_name }}
+                                                            </span>
+                                                            @if($surgery->room)
+                                                                <span class="badge bg-light text-dark border rounded-pill px-2 py-0.5" style="font-size: 0.78rem;">
                                                                     <i class="fas fa-bed text-primary me-1"></i> غرفة {{ $surgery->room->room_number }} ({{ $surgery->room->floor }})
                                                                 </span>
-                                                                @if($surgery->room_checkin_at)
-                                                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
-                                                                        <i class="fas fa-check-circle me-1"></i> تم الدخول ({{ $surgery->room_checkin_at->format('h:i A') }})
-                                                                    </span>
-                                                                @else
-                                                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-hourglass-start me-1"></i> بانتظار استلام الغرفة
-                                                                    </span>
+                                                            @endif
+                                                            <span class="text-muted small" style="font-size: 0.73rem;">
+                                                                <i class="far fa-calendar-alt me-1"></i> {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}
+                                                                @if($surgery->scheduled_time)
+                                                                    <i class="far fa-clock ms-1 me-1"></i> {{ \Carbon\Carbon::parse($surgery->scheduled_time)->format('h:i A') }}
                                                                 @endif
-                                                                @if($surgery->discharged_at)
-                                                                    <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                                        <i class="fas fa-sign-out-alt me-1"></i> تم التخريج
-                                                                    </span>
-                                                                @endif
-                                                            </div>
-                                                        @endif
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td>
-                                                <span class="badge bg-light text-primary border border-primary-subtle rounded-pill px-2.5 py-1.5">{{ $surgery->surgery_name }}</span>
-                                            </td>
-                                            <td>
-                                                <div>
-                                                    <span class="text-dark d-block"><i class="far fa-calendar-alt text-muted me-1"></i> {{ $surgery->scheduled_date ? $surgery->scheduled_date->format('Y-m-d') : '-' }}</span>
-                                                    <small class="text-muted"><i class="far fa-clock text-muted me-1"></i> {{ $surgery->scheduled_time ? \Carbon\Carbon::parse($surgery->scheduled_time)->format('h:i A') : '-' }}</small>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                @if($surgery->nursingStation?->nurse?->full_name)
-                                                    <span class="text-secondary"><i class="fas fa-user-nurse text-muted me-1"></i> {{ $surgery->nursingStation->nurse->full_name }}</span>
-                                                @else
-                                                    <span class="text-muted italic"><i class="fas fa-user-nurse text-muted me-1"></i> لم يحدد بعد</span>
-                                                @endif
-                                            </td>
+                                            {{-- 2. المرحلة --}}
                                             <td>
                                                 @if($isPostOp)
-                                                    {{-- بعد الصالة --}}
                                                     <div class="d-flex flex-column gap-1">
                                                         <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" style="width: fit-content;">
                                                             <i class="fas fa-procedures text-success"></i> {{ __('بعد الصالة (عناية الرقود)') }}
                                                         </span>
-                                                        @if($surgery->nursingStation?->status === 'in_progress')
-                                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem; width: fit-content;">
-                                                                <i class="fas fa-heartbeat me-1"></i> {{ __('متابعة ورعاية جارية') }}
-                                                            </span>
-                                                        @else
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem; width: fit-content;">
-                                                                <i class="fas fa-check-circle me-1"></i> {{ __('خرج من صالة العمليات') }}
-                                                            </span>
-                                                        @endif
+                                                        <small class="text-muted" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-check-circle text-success me-1"></i> {{ __('اكتملت الجراحة وجاري التعافي') }}
+                                                        </small>
                                                     </div>
                                                 @elseif($isInTheater)
-                                                    {{-- داخل العمليات --}}
                                                     <div class="d-flex flex-column gap-1">
                                                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" style="width: fit-content;">
                                                             <i class="fas fa-spinner fa-spin text-primary"></i> {{ __('داخل صالة العمليات') }}
@@ -252,26 +226,83 @@
                                                         <small class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-door-closed me-1"></i> {{ $surgery->operationTheater?->name ?? __('الصالة الجراحية') }}</small>
                                                     </div>
                                                 @else
-                                                    {{-- قبل الصالة --}}
                                                     <div class="d-flex flex-column gap-1">
                                                         <span class="badge bg-warning bg-opacity-15 text-warning-emphasis border border-warning-subtle rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" style="width: fit-content;">
                                                             <i class="fas fa-hourglass-start text-warning"></i> {{ __('قبل الصالة (تهيئة)') }}
                                                         </span>
-                                                        @if($surgery->status === 'waiting')
-                                                            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-0.5 fw-bold shadow-xs" style="font-size: 0.73rem; width: fit-content;">
-                                                                <i class="fas fa-clock me-1"></i> {{ __('بانتظار الصالة (مسجل دخول)') }}
+                                                        <small class="text-muted" style="font-size: 0.72rem;">
+                                                            <i class="fas fa-clipboard-check me-1"></i> {{ __('فحوصات وتهيئة ما قبل الجراحة') }}
+                                                        </small>
+                                                    </div>
+                                                @endif
+                                            </td>
+
+                                            {{-- 3. الحالة السريرية --}}
+                                            <td>
+                                                <div class="d-flex flex-column gap-1">
+                                                    {{-- وضع استلام الغرفة والإقامة --}}
+                                                    <div>
+                                                        @if($surgery->discharged_at)
+                                                            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-sign-out-alt me-1"></i> {{ __('تم التخريج') }}
                                                             </span>
-                                                        @elseif($surgery->nursingStation?->status === 'in_progress')
-                                                            <span class="badge bg-info text-dark rounded-pill px-2.5 py-0.5 fw-bold" style="font-size: 0.73rem; width: fit-content;">
-                                                                <i class="fas fa-spinner fa-spin me-1"></i> {{ __('تهيئة جارية') }}
+                                                        @elseif($surgery->room_checkin_at)
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
+                                                                <i class="fas fa-check-circle me-1"></i> {{ __('تم استلام الغرفة') }} ({{ $surgery->room_checkin_at->format('h:i A') }})
+                                                            </span>
+                                                        @elseif($surgery->room_id)
+                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-hourglass-start me-1"></i> {{ __('بانتظار استلام الغرفة') }}
                                                             </span>
                                                         @else
-                                                            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-0.5 fw-medium" style="font-size: 0.73rem; width: fit-content;">
-                                                                <i class="far fa-calendar-check me-1"></i> {{ __('مجدولة') }}
+                                                            <span class="badge bg-light text-muted border rounded-pill px-2.5 py-0.5" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-bed me-1"></i> {{ __('بدون غرفة رقود') }}
                                                             </span>
                                                         @endif
                                                     </div>
-                                                @endif
+
+                                                    {{-- تفاصيل المتابعة --}}
+                                                    <div>
+                                                        @if($isPostOp)
+                                                            @if($surgery->nursingStation?->status === 'in_progress')
+                                                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-heartbeat me-1"></i> {{ __('متابعة ورعاية جارية') }}
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-procedures me-1"></i> {{ __('خرج من صالة العمليات') }}
+                                                                </span>
+                                                            @endif
+                                                        @elseif($isInTheater)
+                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-0.5 fw-semibold" style="font-size: 0.73rem;">
+                                                                <i class="fas fa-cut me-1"></i> {{ __('العملية جارية بالصالة') }}
+                                                            </span>
+                                                        @else
+                                                            @if($surgery->status === 'waiting')
+                                                                <span class="badge bg-warning text-dark rounded-pill px-2.5 py-0.5 fw-bold shadow-xs" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-clock me-1"></i> {{ __('بانتظار الصالة (مسجل دخول)') }}
+                                                                </span>
+                                                            @elseif($surgery->nursingStation?->status === 'in_progress')
+                                                                <span class="badge bg-info text-dark rounded-pill px-2.5 py-0.5 fw-bold" style="font-size: 0.73rem;">
+                                                                    <i class="fas fa-spinner fa-spin me-1"></i> {{ __('تهيئة جارية') }}
+                                                                </span>
+                                                            @else
+                                                                <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2.5 py-0.5 fw-medium" style="font-size: 0.73rem;">
+                                                                    <i class="far fa-calendar-check me-1"></i> {{ __('مجدولة') }}
+                                                                </span>
+                                                            @endif
+                                                        @endif
+                                                    </div>
+
+                                                    {{-- الكادر المسؤول --}}
+                                                    <div class="text-muted" style="font-size: 0.73rem;">
+                                                        @if($surgery->nursingStation?->nurse?->full_name)
+                                                            <span><i class="fas fa-user-nurse text-primary me-1"></i> {{ $surgery->nursingStation->nurse->full_name }}</span>
+                                                        @else
+                                                            <span class="text-muted fst-italic"><i class="fas fa-user-nurse text-muted me-1"></i> {{ __('لم يحدد بعد') }}</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td class="text-center">
                                                 @if($surgery->room_id && !$surgery->room_checkin_at)
@@ -300,14 +331,14 @@
                                         </tr>
                                         @empty
                                         <tr>
-                                            <td colspan="7" class="text-center py-5 text-muted">
+                                            <td colspan="4" class="text-center py-5 text-muted">
                                                 <i class="fas fa-procedures fa-3x mb-3 text-secondary opacity-50"></i>
                                                 <p class="mb-0 fw-semibold">{{ __('لا توجد حالات رقود أو عمليات نشطة حالياً') }}</p>
                                             </td>
                                         </tr>
                                         @endforelse
                                         <tr id="noActiveMatchRow" style="display: none;">
-                                            <td colspan="7" class="text-center py-4 text-muted">
+                                            <td colspan="4" class="text-center py-4 text-muted">
                                                 <i class="fas fa-filter fa-2x mb-2 text-secondary opacity-50"></i>
                                                 <p class="mb-0 fw-semibold">{{ __('لا توجد حالات تطابق فلتر المرحلة المحدد') }}</p>
                                             </td>

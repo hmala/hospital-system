@@ -3197,15 +3197,17 @@
 
                                                 {{-- حقل البحث اللحظي التفاعلي --}}
                                                 <div class="position-relative">
-                                                    <input type="text" id="sup_search_input" class="form-control form-control-sm rounded-2 ps-4" 
-                                                           placeholder="{{ __('ابحث باسم المستلزم أو الكود أو الوجبة...') }}" 
+                                                    <input type="text" id="sup_search_input" class="form-control form-control-sm rounded-2 ps-5" 
+                                                           placeholder="{{ __('ابحث أو اضغط لاختيار مستلزم من القائمة...') }}" 
                                                            autocomplete="off">
-                                                    <span class="position-absolute top-50 translate-middle-y text-muted" style="left: 10px; pointer-events: none;">
-                                                        <i class="fas fa-search"></i>
-                                                    </span>
+                                                    <button type="button" id="sup_toggle_dropdown_btn" 
+                                                            class="btn btn-link position-absolute top-50 translate-middle-y text-secondary p-0 border-0 text-decoration-none" 
+                                                            style="left: 8px; z-index: 5;" title="{{ __('عرض كامل قائمة المستلزمات') }}">
+                                                        <i class="fas fa-chevron-down small" id="sup_dropdown_chevron"></i>
+                                                    </button>
                                                     <button type="button" id="sup_clear_search_btn" 
                                                             class="btn btn-link position-absolute top-50 translate-middle-y text-danger p-0 border-0 text-decoration-none" 
-                                                            style="left: 28px; display: none;" title="{{ __('مسح التحديد') }}">
+                                                            style="left: 28px; display: none; z-index: 5;" title="{{ __('مسح التحديد') }}">
                                                         <i class="fas fa-times-circle"></i>
                                                     </button>
                                                 </div>
@@ -3446,6 +3448,7 @@
                         // عناصر البحث والاختيار السريع
                         const searchInp = document.getElementById('sup_search_input');
                         const dropdown = document.getElementById('sup_suggestions_dropdown');
+                        const toggleBtn = document.getElementById('sup_toggle_dropdown_btn');
                         const clearBtn = document.getElementById('sup_clear_search_btn');
                         const selectedInfo = document.getElementById('sup_selected_info');
                         const selectedText = document.getElementById('sup_selected_text');
@@ -3517,6 +3520,23 @@
                                 filterItems(this.value);
                             });
 
+                            searchInp.addEventListener('click', function (e) {
+                                e.stopPropagation();
+                                filterItems(this.value);
+                            });
+
+                            if (toggleBtn) {
+                                toggleBtn.addEventListener('click', function (e) {
+                                    e.stopPropagation();
+                                    if (dropdown.style.display === 'block') {
+                                        dropdown.style.display = 'none';
+                                    } else {
+                                        filterItems(searchInp.value);
+                                        searchInp.focus();
+                                    }
+                                });
+                            }
+
                             searchInp.addEventListener('input', function () {
                                 if (selectedBatchId && selectedBatchId.value) {
                                     resetCurrentSelection(false);
@@ -3571,12 +3591,13 @@
                             if (clearBtn) {
                                 clearBtn.addEventListener('click', function () {
                                     resetCurrentSelection(true);
+                                    filterItems('');
                                     searchInp.focus();
                                 });
                             }
 
                             document.addEventListener('click', function (e) {
-                                if (!e.target.closest('#supSearchWrapper')) {
+                                if (!e.target.closest('#supSearchWrapper') && !e.target.closest('#sup_add_to_cart_btn')) {
                                     dropdown.style.display = 'none';
                                 }
                             });
@@ -3661,6 +3682,10 @@
                                 if (addNotesInput) addNotesInput.value = '';
 
                                 renderCart();
+
+                                // إعادة فتح القائمة فوراً بكافة المستلزمات لاختيار مادة أخرى
+                                filterItems('');
+                                dropdown.style.display = 'block';
                                 if (searchInp) searchInp.focus();
                             });
                         }

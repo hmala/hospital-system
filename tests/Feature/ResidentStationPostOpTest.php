@@ -102,8 +102,65 @@ class ResidentStationPostOpTest extends TestCase
         // Verify patient is in post-op tab, not pre-op
         $postOpSurgeries = $response->viewData('postOpSurgeries');
         $preOpSurgeries = $response->viewData('preOpSurgeries');
+        $activeSurgeries = $response->viewData('activeSurgeries');
 
         $this->assertTrue($postOpSurgeries->contains('id', $surgery->id));
         $this->assertFalse($preOpSurgeries->contains('id', $surgery->id));
+        $this->assertTrue($activeSurgeries->contains('id', $surgery->id));
+
+        $response->assertSee('مرضى الرقود والعمليات النشطة');
+        $response->assertSee('بعد الصالة (عناية الرقود)');
+    }
+
+    public function test_resident_station_unifies_active_surgeries_with_four_column_table_and_phase_badges(): void
+    {
+        $uPre = User::factory()->create(['name' => 'مريض مقيم قبل الصالة']);
+        $patientPre = Patient::create(['user_id' => $uPre->id, 'age' => 30, 'gender' => 'male']);
+
+        $surgeryPre = Surgery::create([
+            'patient_id' => $patientPre->id,
+            'department_id' => $this->department->id,
+            'doctor_id' => $this->doctor->id,
+            'surgery_type' => 'عملية قبل الصالة للمقيم',
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '08:00:00',
+            'status' => 'waiting',
+        ]);
+
+        $uPost = User::factory()->create(['name' => 'مريض مقيم بعد الصالة']);
+        $patientPost = Patient::create(['user_id' => $uPost->id, 'age' => 40, 'gender' => 'female']);
+
+        $surgeryPost = Surgery::create([
+            'patient_id' => $patientPost->id,
+            'department_id' => $this->department->id,
+            'doctor_id' => $this->doctor->id,
+            'surgery_type' => 'عملية بعد الصالة للمقيم',
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '11:00:00',
+            'status' => 'completed',
+        ]);
+        $surgeryPost->operationTheaterStation()->create([
+            'status' => 'completed',
+            'started_at' => now()->subHours(2),
+            'completed_at' => now()->subHour(),
+        ]);
+
+        $response = $this->actingAs($this->residentUser)->get(route('resident-station.index'));
+        $response->assertStatus(200);
+
+        $activeSurgeries = $response->viewData('activeSurgeries');
+        $this->assertTrue($activeSurgeries->contains('id', $surgeryPre->id));
+        $this->assertTrue($activeSurgeries->contains('id', $surgeryPost->id));
+
+        // 4 Columns and unified tab
+        $response->assertSee('مرضى الرقود والعمليات النشطة');
+        $response->assertSee('اسم المريض');
+        $response->assertSee('المرحلة');
+        $response->assertSee('الحالة السريرية');
+        $response->assertSee('الإجراءات');
+
+        // Phase badges
+        $response->assertSee('قبل الصالة (تهيئة)');
+        $response->assertSee('بعد الصالة (عناية الرقود)');
     }
 }

@@ -126,7 +126,35 @@ class ResidentStationController extends Controller
         $completedSurgeries = $completedQuery->orderBy('updated_at', 'desc')
             ->get();
 
-        return view('surgery-stations.resident.index', compact('preOpSurgeries', 'postOpSurgeries', 'completedSurgeries', 'availableFloors', 'selectedFloor', 'search'));
+        // 4. دمج وترتيب الحالات النشطة في قائمة موحدة واحدة (قبل الصالة، داخل الصالة، بعد الصالة)
+        $activeSurgeries = $preOpSurgeries->merge($postOpSurgeries)->unique('id')->values();
+
+        $phasePriority = function ($surgery) {
+            $isPostOp = ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'completed')
+                || ($surgery->anesthesiaStation && $surgery->anesthesiaStation->status === 'completed')
+                || $surgery->status === 'completed'
+                || ($surgery->residentStations && $surgery->residentStations->where('phase', 'post_op')->count() > 0);
+
+            if ($isPostOp) {
+                return 1; // بعد الصالة
+            }
+            if ($surgery->status === 'in_progress' || ($surgery->operationTheaterStation && $surgery->operationTheaterStation->status === 'in_progress')) {
+                return 2; // داخل الصالة
+            }
+            if ($surgery->status === 'waiting') {
+                return 3; // بانتظار الصالة
+            }
+
+            return 4; // مجدولة
+        };
+
+        $activeSurgeries = $activeSurgeries->sortBy([
+            fn ($a, $b) => $phasePriority($a) <=> $phasePriority($b),
+            ['scheduled_date', 'asc'],
+            ['scheduled_time', 'asc'],
+        ])->values();
+
+        return view('surgery-stations.resident.index', compact('activeSurgeries', 'preOpSurgeries', 'postOpSurgeries', 'completedSurgeries', 'availableFloors', 'selectedFloor', 'search'));
     }
 
     public function show(Surgery $surgery, Request $request)

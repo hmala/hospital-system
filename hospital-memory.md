@@ -79,6 +79,39 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 302 (2026-11-26 — `main`) — توحيد تبويبات محطة الطبيب المقيم في تبويب نشط واحد وإعادة هيكلة الجدول إلى 4 أعمدة رئيسية مع فلاتر الأطوار اللحظية (Resident Doctor Station Unified Active Tab, 4-Column Clinical Table & Instant Phase Filters)**:
+  * **توحيد تبويب محطة المقيم ([ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php), [resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
+    - دمج حالتي التهيئة قبل الصالة والمتابعة بعد الصالة في تبويب موحد أسرع وأنظم تحت مسمى «مرضى الرقود والعمليات النشطة» (`activeSurgeries`).
+    - إضافة شريط أزرار الفلترة اللحظية السريعة فورياً بدون إعادة تحميل الصفحة (كافة الحالات النشطة، قبل الصالة، داخل صالة العمليات، بعد الصالة / الرقود).
+  * **إعادة هيكلة جدول الحالات النشطة إلى 4 أعمدة رئيسية ([resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
+    1. **اسم المريض**: يضم اسم المريض، رقم الملف، العملية الجراحية وتصنيفها، الغرفة والطابق، وتاريخ ووقت الموعد.
+    2. **المرحلة**: شارات الأطوار السريرية الملونة (`قبل الصالة (تهيئة)`، `داخل صالة العمليات`، `بعد الصالة (عناية الرقود)`).
+    3. **الحالة السريرية**: شارة الطبيب المقيم المكلف، وحالة المحطة السريرية (في الانتظار / معلقة / جارية / مكتملة)، وحالة استلام وتسكين الغرفة من ممرض الطابق.
+    4. **الإجراءات**: قفل الزر تنبيهياً إذا لم تُستلم الغرفة بعد، وزر «عرض وتعديل» للدخول المباشر إلى المحطة السريرية للعملية.
+  * **الاختبارات وضمان الجودة ([ResidentStationPostOpTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentStationPostOpTest.php), [ResidentStationRoomCheckinGateTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentStationRoomCheckinGateTest.php), [ResidentFollowUpClinicalSignsTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentFollowUpClinicalSignsTest.php))**:
+    - اجتياز اختبارات محطة المقيم كاملة بـ 9 اختبارات ناجحة (65 assertions).
+    - اجتياز فحص `view:cache` وتنسيق `Pint`.
+
+- **المرحلة 301 (2026-11-26 — `main`) — إعادة هيكلة جدول محطة التمريض إلى 4 أعمدة محددة وسلسة، وحل مشكلة استمرارية البحث المباشر وإعادة فتح قائمة المستلزمات الطبية بعد الإضافة للسلة (Nursing Station 4-Column Table Restructure & Persistent Supplies Dropdown Flow)**:
+  * **إعادة هيكلة جدول محطة التمريض إلى 4 أعمدة رئيسية ([nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+    - إعادة ترتيب وهيكلة أعمدة جدول مرضى الرقود والعمليات النشطة من 7 أعمدة إلى 4 أعمدة واضحة ومباشرة:
+      1. **اسم المريض**: يضم اسم المريض، رقم الملف، العملية الجراحية وتصنيفها، الغرفة والطابق، وتاريخ ووقت الموعد.
+      2. **المرحلة**: شارة الطور السريري الحالية (قبل الصالة / داخل صالة العمليات / بعد الصالة) مع اسم الصالة أو تفاصيل المرحلة.
+      3. **الحالة السريرية**: حالة استلام وتسكين الغرفة (تم استلام الغرفة / بانتظار الاستلام)، وملاحظات الرعاية والتمريض، واسم الممرض المسؤول.
+      4. **الإجراءات**: زر استلام الغرفة، زر عرض وتعديل الملف السريري، وزر التخريج.
+    - تحديث خلايا `@empty` وحالة عدم وجود نتائج لتطابق عدد الأعمدة الجديد (`colspan="4"`).
+  * **حل اختفاء قائمة البحث اللحظي للمستلزمات الطبية ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+    - معالجة مشكلة اختفاء القائمة المنسدلة عند الضغط على «إضافة للقائمة» ومحاولة إضافة مستلزم آخر:
+      1. إضافة زر سهم منسدل (Chevron Toggle Button) مدمج بحقل البحث لفتح وإغلاق القائمة في أي وقت.
+      2. ربط حدث `click` على حقل البحث نفسه مع `e.stopPropagation()` و `filterItems(this.value)` لفتح القائمة عند النقر حتى ولو كان الحقل في وضع التركيز (Focused).
+      3. استثناء زر «إضافة للقائمة» من حدث النقر العام للوثيقة لمنع إغلاق القائمة عند النقر عليه.
+      4. إعادة تفريغ حقل البحث وتعيين `filterItems('')` وإظهار القائمة بـ `display: block` فور إضافة المستلزم إلى السلة، مع تركيز المؤشر ليتمكن المستخدم من اختيار المستلزم التالي فوراً وبسلاسة تامة.
+  * **الاختبارات وضمان الجودة**:
+    - اجتياز اختبارات محطة التمريض `tests/Feature/NursingStationSurgeriesTest.php` كاملة (4 passed, 21 assertions).
+    - اجتياز اختبارات سير عمل تسكين الغرف `tests/Feature/NursingRoomCheckinWorkflowTest.php` كاملة (5 passed, 26 assertions).
+    - اجتياز اختبارات صرف عهدة الطابق والسلة الجماعية `tests/Feature/NursingFloorDispenseTest.php` كاملة (6 passed, 43 assertions).
+    - اجتياز فحص القوالب `view:cache` وتنسيق `Pint`.
+
 - **المرحلة 300 (2026-11-26 — `main`) — توحيد تبويبات محطة التمريض في تبويب تفاعلي واحد، وإبراز شارة الطور في رأس المحطة السريرية، وتفعيل البحث اللحظي وسلة الصرف الجماعي المتعدد للمستلزمات الطبية (Unified Nursing Station Active Tab, Clinical Phase Header Badge & Live Search Multi-Item Supplies Cart)**:
   * **توحيد تبويب محطة التمريض ([NursingStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingStationController.php), [nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
     - دمج حالتي «قبل الصالة» و «بعد الصالة» في تبويب موحد وأسرع تحت مسمى «مرضى الرقود والعمليات النشطة» يمنح الممرضين رؤية شاملة للمرضى.

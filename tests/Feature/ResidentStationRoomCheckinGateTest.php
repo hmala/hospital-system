@@ -137,6 +137,6 @@ class ResidentStationRoomCheckinGateTest extends TestCase
 
         // Direct show route redirects to clinical station
         $showResponse = $this->actingAs($this->residentUser)->get(route('resident-station.show', $surgery));
-        $showResponse->assertRedirect(route('clinical-station.show', ['surgery' => $surgery->id]));
+        $showResponse->assertRedirect(route('clinical-station.show', ['surgery' => $surgery->id, 'from' => 'resident']));
     }
 }
