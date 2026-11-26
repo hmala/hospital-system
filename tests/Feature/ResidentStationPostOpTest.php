@@ -152,11 +152,12 @@ class ResidentStationPostOpTest extends TestCase
         $this->assertTrue($activeSurgeries->contains('id', $surgeryPre->id));
         $this->assertTrue($activeSurgeries->contains('id', $surgeryPost->id));
 
-        // 4 Columns and unified tab
+        // 5 Columns and unified tab
         $response->assertSee('مرضى الرقود والعمليات النشطة');
         $response->assertSee('اسم المريض');
+        $response->assertSee('العملية والغرفة');
+        $response->assertSee('الطبيب الأخصائي');
         $response->assertSee('المرحلة');
-        $response->assertSee('الحالة السريرية');
         $response->assertSee('الإجراءات');
 
         // Phase badges

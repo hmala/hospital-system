@@ -21,6 +21,7 @@ use App\Models\SurgeryRadiologyTest;
 use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
 use App\Models\User;
+use App\Models\UserMedicineGroup;
 use App\Services\UserActivityLogger;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -285,6 +286,22 @@ class ClinicalStationController extends Controller
             $backLabel = 'العودة لجدول العمليات';
         }
 
+        // جلب باقات الأدوية المشتركة والعامة المتاحة لجميع المقيمين وأطباء الجراحة
+        $medicineGroups = UserMedicineGroup::with(['medicines', 'customItems'])
+            ->where(function ($q) {
+                $q->whereNull('department')
+                    ->orWhere('department', '!=', 'nicu');
+            })
+            ->where(function ($q) use ($user) {
+                $q->where('is_public', true)
+                    ->orWhere('department', 'surgery')
+                    ->orWhere('user_id', $user?->id);
+            })
+            ->orderByDesc('is_starred')
+            ->orderByDesc('usage_count')
+            ->orderBy('sort_order')
+            ->get();
+
         return view('surgery-stations.clinical.show', compact(
             'surgery',
             'currentPhase',
@@ -301,6 +318,7 @@ class ClinicalStationController extends Controller
             'treatments',
             'medicationTreatments',
             'supplyTreatments',
+            'medicineGroups',
             'floorLocation',
             'floorStockBatches',
             'floorSupplyBatches',
@@ -931,6 +949,232 @@ class ClinicalStationController extends Controller
             'phase' => $request->input('phase'),
             'tab' => $tabKey,
         ]))->with('success', $isSupply ? 'تم حذف سجل المستلزم الطبي بنجاح.' : 'تم حذف الدواء من الخطة العلاجية بنجاح.');
+    }
+
+    /**
+     * Apply a shared or personal medicine package to surgery treatments.
+     */
+    public function applyMedicinePackage(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $access = SurgeryTabPermission::getAccessForUser($user, 'treatments');
+        $canPrescribe = ($access === SurgeryTabPermission::ACCESS_WRITE)
+            && ($isAdmin || ($user && $user->hasAnyRole(['surgeon', 'resident', 'doctor']) && ! $user->hasRole('nurse')));
+
+        if (! $canPrescribe) {
+            return redirect()->back()->with('error', 'إدخال الأوامر الدوائية وتطبيق الباقات محصور بالأطباء والمقيمين والإدارة فقط.');
+        }
+
+        $validated = $request->validate([
+            'group_id' => 'required|integer|exists:user_medicine_groups,id',
+            'start_at' => 'nullable|date',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'nullable|integer',
+        ]);
+
+        $group = UserMedicineGroup::with(['medicines', 'customItems'])->findOrFail($validated['group_id']);
+        $startAt = ! empty($validated['start_at']) ? Carbon::parse($validated['start_at']) : now();
+        $selectedIds = $request->has('selected_items') ? (array) $request->input('selected_items') : null;
+
+        DB::beginTransaction();
+        try {
+            $insertedCount = 0;
+
+            // 1. الأدوية المرتبطة بدليل الصيدلية
+            foreach ($group->medicines as $med) {
+                if ($selectedIds !== null && ! in_array($med->id, $selectedIds)) {
+                    continue;
+                }
+
+                $pivot = $med->pivot;
+                $dosage = $pivot->dosage ?: $med->strength;
+
+                // استنتاج طريق الإعطاء من الشكل الدوائي أو التعليمات
+                $formLower = strtolower($pivot->dosage_form ?: ($med->dosage_form ?: ''));
+                $route = 'IV';
+                if (str_contains($formLower, 'oral') || str_contains($formLower, 'tab') || str_contains($formLower, 'cap') || str_contains($formLower, 'حب') || str_contains($formLower, 'كبسول') || str_contains($formLower, 'شراب')) {
+                    $route = 'Oral';
+                } elseif (str_contains($formLower, 'im') || str_contains($formLower, 'عضل')) {
+                    $route = 'IM';
+                } elseif (str_contains($formLower, 'infusion') || str_contains($formLower, 'تسريب') || str_contains($formLower, 'مغذي')) {
+                    $route = 'Infusion';
+                } elseif (str_contains($formLower, 'sc') || str_contains($formLower, 'تحت الجلد')) {
+                    $route = 'SC';
+                }
+
+                $freqInput = $pivot->frequency ?: 'q8h';
+                $freqPreset = in_array($freqInput, array_keys(SurgeryTreatment::FREQUENCY_PRESETS), true) ? $freqInput : null;
+                $freq = SurgeryTreatment::resolveFrequencyInput($freqPreset, $freqInput, null);
+
+                $durationValue = is_numeric($pivot->duration) ? (int) $pivot->duration : 3;
+                $durationUnit = 'days';
+
+                $totalDoses = SurgeryTreatment::calculateTotalDoses(
+                    $freq['frequency_mode'],
+                    $freq['interval_hours'],
+                    $durationValue,
+                    $durationUnit
+                );
+
+                $desc = trim(implode(' ', array_filter([
+                    $med->name,
+                    $med->strength,
+                    $med->dosage_form ? "({$med->dosage_form})" : null,
+                ])));
+
+                SurgeryTreatment::create([
+                    'surgery_id' => $surgery->id,
+                    'item_type' => SurgeryTreatment::TYPE_MEDICATION,
+                    'medicine_id' => $med->id,
+                    'prescribed_by' => $user->id,
+                    'description' => $desc,
+                    'dosage' => $dosage,
+                    'route' => $route,
+                    'timing' => $freq['timing'],
+                    'frequency_mode' => $freq['frequency_mode'],
+                    'interval_hours' => $freq['interval_hours'],
+                    'duration_value' => $durationValue,
+                    'duration_unit' => $durationUnit,
+                    'start_at' => $startAt,
+                    'total_doses' => $totalDoses,
+                    'admin_notes' => $pivot->instructions ?: "من باقة: {$group->name}",
+                    'status' => 'planned',
+                ]);
+                $insertedCount++;
+            }
+
+            // 2. الأدوية الحرة المضافة للباقة (Custom Items)
+            if ($group->customItems && $group->customItems->isNotEmpty()) {
+                foreach ($group->customItems as $cItem) {
+                    $freqPreset = in_array($cItem->frequency, array_keys(SurgeryTreatment::FREQUENCY_PRESETS), true) ? $cItem->frequency : null;
+                    $freq = SurgeryTreatment::resolveFrequencyInput($freqPreset, $cItem->frequency, null);
+
+                    $durationValue = is_numeric($cItem->duration) ? (int) $cItem->duration : 3;
+                    $durationUnit = 'days';
+
+                    $totalDoses = SurgeryTreatment::calculateTotalDoses(
+                        $freq['frequency_mode'],
+                        $freq['interval_hours'],
+                        $durationValue,
+                        $durationUnit
+                    );
+
+                    SurgeryTreatment::create([
+                        'surgery_id' => $surgery->id,
+                        'item_type' => SurgeryTreatment::TYPE_MEDICATION,
+                        'medicine_id' => null,
+                        'prescribed_by' => $user->id,
+                        'description' => $cItem->medicine_name ?: ($cItem->name ?: 'دواء مخصص'),
+                        'dosage' => $cItem->dosage,
+                        'route' => $cItem->route ?: 'IV',
+                        'timing' => $freq['timing'],
+                        'frequency_mode' => $freq['frequency_mode'],
+                        'interval_hours' => $freq['interval_hours'],
+                        'duration_value' => $durationValue,
+                        'duration_unit' => $durationUnit,
+                        'start_at' => $startAt,
+                        'total_doses' => $totalDoses,
+                        'admin_notes' => $cItem->instructions ?: "من باقة: {$group->name}",
+                        'status' => 'planned',
+                    ]);
+                    $insertedCount++;
+                }
+            }
+
+            $group->increment('usage_count');
+
+            DB::commit();
+
+            $phase = $validated['phase'] ?? 'post_op';
+
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $phase, 'tab' => 'treatments'])
+                ->with('success', "تم تطبيق باقة [{$group->name}] وإدراج {$insertedCount} أدوية في جدول الإعطاء بنجاح.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء تطبيق الباقة: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Save currently prescribed surgery medications as a shared package for all residents.
+     */
+    public function saveMedicinePackage(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $access = SurgeryTabPermission::getAccessForUser($user, 'treatments');
+        $canPrescribe = ($access === SurgeryTabPermission::ACCESS_WRITE)
+            && ($isAdmin || ($user && $user->hasAnyRole(['surgeon', 'resident', 'doctor']) && ! $user->hasRole('nurse')));
+
+        if (! $canPrescribe) {
+            return redirect()->back()->with('error', 'إنشاء باقات الأدوية محصور بالأطباء والمقيمين والإدارة فقط.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string|max:1000',
+            'phase' => 'nullable|string|in:pre_op,post_op,intra_op',
+        ]);
+
+        $currentTreatments = $surgery->surgeryTreatments()
+            ->where('item_type', SurgeryTreatment::TYPE_MEDICATION)
+            ->whereNull('batch_id')
+            ->get();
+
+        if ($currentTreatments->isEmpty()) {
+            return redirect()->back()->with('error', 'لا توجد أدوية مسجلة في العملية الحالية لحفظها كباقة.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $group = UserMedicineGroup::create([
+                'user_id' => $user->id,
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? 'باقة أدوية جراحية مشتركة للمقيمين من العملية #'.$surgery->id,
+                'department' => 'surgery',
+                'is_public' => true, // دائماً مشتركة وعامة لكافة المقيمين
+                'usage_count' => 1,
+            ]);
+
+            foreach ($currentTreatments as $tr) {
+                if ($tr->medicine_id) {
+                    $exists = $group->medicines()->where('medicines.id', $tr->medicine_id)->exists();
+                    if (! $exists) {
+                        $group->medicines()->attach($tr->medicine_id, [
+                            'dosage_form' => $tr->medicine?->dosage_form ?: $tr->route,
+                            'dosage' => $tr->dosage,
+                            'frequency' => $tr->timing,
+                            'duration' => (string) ($tr->duration_value ?: 3),
+                            'instructions' => $tr->admin_notes,
+                        ]);
+                    }
+                } else {
+                    $group->customItems()->create([
+                        'medicine_name' => $tr->description,
+                        'dosage_form' => $tr->route,
+                        'dosage' => $tr->dosage,
+                        'route' => $tr->route,
+                        'frequency' => $tr->timing,
+                        'duration' => (string) ($tr->duration_value ?: 3),
+                        'duration_days' => (int) ($tr->duration_value ?: 3),
+                        'instructions' => $tr->admin_notes,
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            $phase = $validated['phase'] ?? 'post_op';
+
+            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $phase, 'tab' => 'treatments'])
+                ->with('success', "تم حفظ الباقة [{$group->name}] بنجاح، وأصبحت متاحة لجميع المقيمين للاستفادة منها.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return redirect()->back()->with('error', 'حدث خطأ أثناء حفظ الباقة: '.$e->getMessage());
+        }
     }
 
     /**

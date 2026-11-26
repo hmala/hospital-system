@@ -2473,13 +2473,100 @@
                     @if($canPrescribeTreatments)
                         <div class="card rounded-3 border mb-4 bg-light bg-opacity-50 shadow-xs">
                             <div class="card-header bg-white py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                                <h6 class="mb-0 fw-bold text-dark">
-                                    <i class="fas fa-prescription text-primary me-2"></i> {{ __("إضافة أمر دوائي (اختيار من الصيدلية أو كتابة حرة + تحديد التكرار والمدة)") }}
-                                </h6>
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">
-                                    <i class="fas fa-user-md me-1"></i> {{ __("صلاحية الطبيب / المقيم") }}
-                                </span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <h6 class="mb-0 fw-bold text-dark">
+                                        <i class="fas fa-prescription text-primary me-2"></i> {{ __("الأوامر الدوائية وباقات البروتوكولات السريرية") }}
+                                    </h6>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    @if(isset($medicationTreatments) && $medicationTreatments->isNotEmpty())
+                                        <button type="button" class="btn btn-warning btn-sm text-dark fw-bold rounded-pill px-3 shadow-xs" data-bs-toggle="modal" data-bs-target="#saveCurrentMedsAsPackageModal" title="{{ __('حفظ الأدوية الحالية كباقة مشتركة لجميع المقيمين') }}">
+                                            <i class="fas fa-save me-1"></i> {{ __("حفظ كباقة مشتركة") }}
+                                        </button>
+                                    @endif
+                                    <a href="{{ route('medicine-groups.index') }}" target="_blank" class="btn btn-outline-secondary btn-sm rounded-pill px-3" title="{{ __('إدارة باقات الأدوية') }}">
+                                        <i class="fas fa-cog me-1"></i> {{ __("إدارة الباقات") }}
+                                    </a>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle">
+                                        <i class="fas fa-user-md me-1"></i> {{ __("صلاحية الطبيب / المقيم") }}
+                                    </span>
+                                </div>
                             </div>
+
+                            {{-- شريط باقات الأدوية المشتركة للمقيمين والأطباء (ظاهرة للجميع مع الترتيب والتثبيت) --}}
+                            @if(isset($medicineGroups) && $medicineGroups->isNotEmpty())
+                                <div class="p-2.5 bg-white border-bottom">
+                                    <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-1">
+                                        <span class="small fw-bold text-dark d-flex align-items-center gap-1.5">
+                                            <i class="fas fa-bolt text-warning"></i>
+                                            <span>{{ __("باقات الأدوية المشتركة للمقيمين:") }}</span>
+                                            <span class="text-muted fw-normal" style="font-size: 0.75rem;">{{ __("(نقرة واحدة لمعاينة وتطبيق بروتوكول الأدوية فوراً في جدول الإعطاء | ⭐ لتثبيت بالصدارة)") }}</span>
+                                        </span>
+                                        <span class="badge bg-light text-secondary border rounded-pill small" style="font-size: 0.7rem;">
+                                            {{ $medicineGroups->count() }} {{ __("باقة متاحة") }}
+                                        </span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2 align-items-center" id="clinicalQuickMedPkgsContainer">
+                                        @foreach($medicineGroups as $pkg)
+                                            @php
+                                                $medsList = $pkg->medicines->map(function($m) {
+                                                    return [
+                                                        'id' => $m->id,
+                                                        'name' => $m->name . ($m->strength ? " {$m->strength}" : ''),
+                                                        'form' => $m->pivot->dosage_form ?: $m->dosage_form,
+                                                        'dosage' => $m->pivot->dosage ?: $m->strength,
+                                                        'frequency' => $m->pivot->frequency ?: 'q8h',
+                                                        'duration' => $m->pivot->duration ?: 3,
+                                                        'instructions' => $m->pivot->instructions,
+                                                    ];
+                                                })->values();
+
+                                                $customList = $pkg->customItems->map(function($c) {
+                                                    return [
+                                                        'id' => 'custom_' . $c->id,
+                                                        'name' => $c->medicine_name ?: ($c->name ?: ''),
+                                                        'form' => $c->dosage_form,
+                                                        'dosage' => $c->dosage,
+                                                        'frequency' => $c->frequency ?: 'q8h',
+                                                        'duration' => $c->duration ?: 3,
+                                                        'instructions' => $c->instructions,
+                                                    ];
+                                                })->values();
+
+                                                $allMedsCombined = $medsList->concat($customList);
+                                                $totalCount = $allMedsCombined->count();
+                                            @endphp
+                                            <div class="btn-group btn-group-sm shadow-xs rounded-pill border clinical-pkg-btn-group {{ $pkg->is_starred ? 'border-warning bg-warning bg-opacity-10' : 'border-primary-subtle bg-white' }}"
+                                                 role="group">
+                                                {{-- زر النجمة الذهبية للتثبيت بالصدارة --}}
+                                                <button type="button"
+                                                        class="btn btn-sm btn-link text-decoration-none px-2 py-1 {{ $pkg->is_starred ? 'text-warning' : 'text-muted opacity-50' }}"
+                                                        onclick="toggleClinicalPkgStar(this, {{ $pkg->id }})"
+                                                        title="{{ $pkg->is_starred ? __('إلغاء التثبيت من الصدارة') : __('تثبيت في الصدارة ⭐') }}">
+                                                    <i class="{{ $pkg->is_starred ? 'fas fa-star text-warning' : 'far fa-star' }}"></i>
+                                                </button>
+
+                                                {{-- زر فتح معاينة وتطبيق الباقة --}}
+                                                <button type="button"
+                                                        class="btn btn-sm px-2.5 py-1 text-dark fw-bold d-flex align-items-center gap-1.5"
+                                                        onclick='openApplyClinicalMedPkgModal({{ $pkg->id }}, @json($pkg->name), @json($allMedsCombined))'
+                                                        title="{{ __('معاينة وتطبيق باقة ') }}{{ $pkg->name }}">
+                                                    @if($pkg->is_public)
+                                                        <i class="fas fa-hospital text-primary small" title="{{ __('باقة عامة مشتركة لجميع المقيمين') }}"></i>
+                                                    @else
+                                                        <i class="fas fa-layer-group text-success small"></i>
+                                                    @endif
+                                                    <span>{{ $pkg->name }}</span>
+                                                    <span class="badge {{ $pkg->is_starred ? 'bg-warning text-dark' : 'bg-primary text-white' }} rounded-pill" style="font-size: 0.65rem;">
+                                                        {{ $totalCount }}
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
+
                             <div class="card-body p-3">
                                 <form action="{{ route('clinical-station.treatments.store', $surgery) }}" method="POST" id="prescribeMedicationForm">
                                     @csrf
@@ -5391,6 +5478,142 @@ function applyLabPackageSelection(select) {
     </div>
 </div>
 
+@if($activeTab === 'treatments')
+{{-- مودال معاينة وتطبيق باقة الأدوية المشتركة --}}
+<div class="modal fade" id="applyClinicalMedPkgModal" tabindex="-1" aria-labelledby="applyClinicalMedPkgModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width: 760px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-white border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="applyClinicalMedPkgModalLabel" style="color: #0f172a;">
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                        <i class="fas fa-prescription-bottle-alt"></i>
+                    </span>
+                    <span id="applyMedPkgModalTitle">{{ __("معاينة وتطبيق باقة الأدوية") }}</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form action="{{ route('clinical-station.treatments.apply-package', $surgery) }}" method="POST" id="applyClinicalMedPkgForm">
+                @csrf
+                <input type="hidden" name="phase" value="{{ $currentPhase }}">
+                <input type="hidden" name="group_id" id="applyMedPkgGroupId" value="">
+
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-info-circle text-primary fs-5"></i>
+                            <span class="small text-dark">
+                                {{ __("يمكنك مراجعة أدوية الباقة أو استثناء أي دواء غير مناسب للمريض برفع علامة الصح قبل التطبيق.") }}
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="form-label small fw-bold text-dark mb-0 text-nowrap">{{ __("وقت البدء:") }}</label>
+                            <input type="datetime-local" name="start_at" class="form-control form-control-sm rounded-2" value="{{ now()->format('Y-m-d\TH:i') }}" style="max-width: 190px;">
+                        </div>
+                    </div>
+
+                    <div class="table-responsive border rounded-3">
+                        <table class="table table-sm table-hover align-middle mb-0 text-center">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th style="width: 45px;">
+                                        <input class="form-check-input" type="checkbox" id="selectAllPkgItems" checked onchange="toggleSelectAllPkgItems(this)">
+                                    </th>
+                                    <th class="text-start">{{ __("اسم الدواء / المادة") }}</th>
+                                    <th>{{ __("الجرعة") }}</th>
+                                    <th>{{ __("التكرار") }}</th>
+                                    <th>{{ __("المدة") }}</th>
+                                </tr>
+                            </thead>
+                            <tbody id="applyMedPkgTableBody" class="small">
+                                {{-- Rows dynamically inserted by openApplyClinicalMedPkgModal() --}}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-0 py-2.5 px-4 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold shadow-sm">
+                        <i class="fas fa-bolt me-1"></i> {{ __('⚡ تطبيق الباقة وإدراجها في جدول الإعطاء (MAR)') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- مودال حفظ الأدوية الحالية كباقة مشتركة لجميع المقيمين --}}
+<div class="modal fade" id="saveCurrentMedsAsPackageModal" tabindex="-1" aria-labelledby="saveCurrentMedsAsPackageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-white border-bottom py-3 px-4">
+                <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2 text-dark" id="saveCurrentMedsAsPackageModalLabel">
+                    <span class="rounded-3 bg-warning bg-opacity-10 text-dark d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
+                        <i class="fas fa-save text-warning"></i>
+                    </span>
+                    <span>{{ __("حفظ الأدوية الحالية كباقة مشتركة لجميع المقيمين") }}</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <form action="{{ route('clinical-station.treatments.save-package', $surgery) }}" method="POST">
+                @csrf
+                <input type="hidden" name="phase" value="{{ $currentPhase }}">
+
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark mb-1">
+                            {{ __("اسم الباقة الدوائية:") }} <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="name" class="form-control form-control-sm rounded-2" required placeholder="{{ __('مثال: بروتوكول ما بعد الزائدة - جراحة عامة') }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark mb-1">
+                            {{ __("وصف أو ملاحظات سريرية (اختياري):") }}
+                        </label>
+                        <textarea name="description" class="form-control form-control-sm rounded-2" rows="2" placeholder="{{ __('ملاحظات حول دواعي استخدام هذه الباقة أو إرشادات للمقيمين...') }}"></textarea>
+                    </div>
+
+                    <div class="border rounded-3 p-2.5 bg-light mb-3" style="max-height: 180px; overflow-y: auto;">
+                        <label class="form-label small fw-bold text-secondary mb-1.5 d-flex align-items-center gap-1">
+                            <i class="fas fa-pills text-primary"></i>
+                            <span>{{ __("الأدوية الحالية التي سيتم تضمينها في الباقة:") }}</span>
+                            <span class="badge bg-primary rounded-pill ms-auto">{{ isset($medicationTreatments) ? $medicationTreatments->count() : 0 }}</span>
+                        </label>
+                        @if(isset($medicationTreatments) && $medicationTreatments->isNotEmpty())
+                            <ul class="list-group list-group-flush small bg-white rounded-2 border">
+                                @foreach($medicationTreatments as $tr)
+                                    <li class="list-group-item py-1.5 px-2.5 d-flex align-items-center justify-content-between">
+                                        <span class="fw-semibold text-dark">{{ $tr->description }}</span>
+                                        <span class="badge bg-secondary-subtle text-secondary border">{{ $tr->dosage ?: '-' }} | {{ $tr->timing ?: '-' }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <div class="text-center text-muted small py-2">{{ __('لا توجد أدوية مسجلة حالياً.') }}</div>
+                        @endif
+                    </div>
+
+                    <div class="alert alert-info py-2 px-3 small border-0 rounded-3 mb-0 d-flex align-items-center gap-2">
+                        <i class="fas fa-users text-primary fs-5"></i>
+                        <span>{{ __("هذه الباقة ستكون مشتركة ومتاحة لجميع الأطباء المقيمين وأطباء الجراحة للاستفادة منها بنقرة واحدة في كافة العمليات.") }}</span>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-0 py-2.5 px-4 d-flex justify-content-between align-items-center">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-sm btn-warning rounded-pill px-4 fw-bold text-dark shadow-sm">
+                        <i class="fas fa-save me-1"></i> {{ __('💾 حفظ واعتماد الباقة المشتركة') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 <script>
 window.currentReadingDrains = [];
 
@@ -5719,6 +5942,99 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// باقات الأدوية المشتركة للمقيمين والأطباء
+window.openApplyClinicalMedPkgModal = function(groupId, groupName, items) {
+    const modalEl = document.getElementById('applyClinicalMedPkgModal');
+    if (!modalEl) return;
+
+    const idInput = document.getElementById('applyMedPkgGroupId');
+    if (idInput) idInput.value = groupId;
+
+    const titleEl = document.getElementById('applyMedPkgModalTitle');
+    if (titleEl) titleEl.textContent = '{{ __("معاينة وتطبيق باقة:") }} ' + groupName;
+
+    const tbody = document.getElementById('applyMedPkgTableBody');
+    if (tbody) {
+        tbody.innerHTML = '';
+        if (!items || items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-muted py-3">{{ __("لا توجد أدوية مسجلة في هذه الباقة.") }}</td></tr>';
+        } else {
+            items.forEach((item) => {
+                const tr = document.createElement('tr');
+                const isCustom = String(item.id || '').startsWith('custom_');
+                const itemIdVal = isCustom ? '' : item.id;
+                const inputHtml = isCustom
+                    ? '<i class="fas fa-check text-success small" title="{{ __("دواء مخصص") }}"></i>'
+                    : `<input class="form-check-input modal-pkg-item-check" type="checkbox" name="selected_items[]" value="${itemIdVal}" checked>`;
+
+                tr.innerHTML = `
+                    <td>${inputHtml}</td>
+                    <td class="text-start fw-semibold text-dark">
+                        ${escapeClinicalHtml(item.name || '')}
+                        ${item.instructions ? `<small class="text-muted d-block" style="font-size: 0.72rem;">${escapeClinicalHtml(item.instructions)}</small>` : ''}
+                    </td>
+                    <td><span class="badge bg-light text-dark border">${escapeClinicalHtml(item.dosage || '-')}</span></td>
+                    <td><span class="badge bg-primary-subtle text-primary border">${escapeClinicalHtml(item.frequency || 'q8h')}</span></td>
+                    <td><span class="text-muted">${escapeClinicalHtml(String(item.duration || 3))} {{ __("أيام") }}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    }
+
+    if (typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+    }
+};
+
+window.toggleSelectAllPkgItems = function(masterCheck) {
+    const checkboxes = document.querySelectorAll('.modal-pkg-item-check');
+    checkboxes.forEach(cb => {
+        cb.checked = masterCheck.checked;
+    });
+};
+
+window.toggleClinicalPkgStar = function(btn, groupId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    fetch(`{{ url('medicine-groups') }}/${groupId}/toggle-star`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const icon = btn.querySelector('i');
+            if (icon) {
+                if (data.is_starred) {
+                    icon.className = 'fas fa-star text-warning';
+                    btn.classList.remove('text-muted', 'opacity-50');
+                    btn.classList.add('text-warning');
+                } else {
+                    icon.className = 'far fa-star';
+                    btn.classList.remove('text-warning');
+                    btn.classList.add('text-muted', 'opacity-50');
+                }
+            }
+        }
+    })
+    .catch(err => console.error('Error toggling package star:', err));
+};
+
+function escapeClinicalHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 </script>
 @endpush
 @endsection

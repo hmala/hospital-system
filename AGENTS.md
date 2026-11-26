@@ -56,6 +56,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 305: إعادة هيكلة جدول محطة الطبيب المقيم إلى 5 أعمدة واضحة وفصل اسم المريض في عمود مخصص مع إضافة عمود العملية والغرفة والطبيب الأخصائي Resident Doctor Station: 5-Column Table Restructure — Isolated Patient Name, Surgery & Room, Specialist Doctor, Phase & Actions)
+
+### Done
+- **فصل اسم المريض وإعادة هيكلة الجدول إلى 5 أعمدة واضحة ([resources/views/surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
+  * تخصيص العمود الأول لـ «اسم المريض» فقط ورقم الملف الطبي دون أي تكديس للشارات، لتوفير رؤية بصرية مريحة وسريعة للمقيم.
+  * إضافة عمود مخصص لـ «العملية والغرفة» يضم اسم الجراحة ورقم الغرفة والطابق وحالة استلام ممرض الطابق وتاريخ ووقت الموعد.
+  * إضافة عمود مخصص لـ «الطبيب الأخصائي» يعرض اسم الجراح الأخصائي (`د. [اسم الطبيب]`) بأيقونة سريرية وتخصصه الطبي.
+  * عمود «المرحلة» بشارات الأطوار السريرية الملونة (قبل الصالة، داخل الصالة، بعد الصالة).
+  * عمود «الإجراءات» بزر «عرض وتعديل» وقفل الدخول حتى استلام الغرفة من التمريض.
+  * ضبط توزيع العرض للأعمدة الخمسة بدقة: (اسم المريض 25%، العملية والغرفة 25%، الطبيب الأخصائي 20%، المرحلة 16%، الإجراءات 14%) مع ضبط `colspan="5"`.
+- **تكامل البحث اللحظي الفوري (Instant Real-time Filter)**:
+  * إضافة اسم الطبيب الأخصائي إلى سمة البحث اللحظي `data-search` في أسطر الجدول لتمكين المقيم من البحث والفلترة المباشرة بمجرد كتابة اسم الطبيب الجراح دون الحاجة لإعادة تحميل الصفحة.
+- **تحديث تبويب الأرشيف والعمليات المكتملة**:
+  * إضافة عمود «الطبيب الأخصائي» في جدول العمليات المكتملة لتوحيد الرؤية والتناسق عبر كامل التبويبات مع ضبط `colspan="7"`.
+- **الاختبارات وضمان الجودة ([tests/Feature/ResidentStationPostOpTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentStationPostOpTest.php), [tests/Feature/ResidentStationRoomCheckinGateTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentStationRoomCheckinGateTest.php))**:
+  * اجتياز اختبارات محطة المقيم والأعمدة الخمسة وسير عمل تسكين الغرفة بنجاح تام (4 passed, 28 assertions).
+  * اجتياز اختبارات باقات الأدوية المشتركة [ClinicalStationMedicinePackageTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ClinicalStationMedicinePackageTest.php) (4 passed, 20 assertions).
+  * اجتياز فحص كاش القوالب `view:cache` وتنسيق `Laravel Pint`.
+
 ## Session log (2026-11-26 — المرحلة 304: تثبيت وتأمين تأشير إعطاء الجرعات الدوائية للممرض بنقرة واحدة وحظر التراجع + ربط ومزامنة توصيات ما بعد الجراحة للجراح بالمحطة السريرية MAR One-Way Administration & Surgeon Post-Op Notes Sync)
 
 ### Done

@@ -904,6 +904,8 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/clinical/{surgery}', [\App\Http\Controllers\ClinicalStationController::class, 'update'])->name('clinical-station.update');
         Route::post('/clinical/{surgery}/follow-ups', [\App\Http\Controllers\ClinicalStationController::class, 'storeFollowUp'])->name('clinical-station.follow-ups.store');
         Route::post('/clinical/{surgery}/treatments', [\App\Http\Controllers\ClinicalStationController::class, 'storeTreatment'])->name('clinical-station.treatments.store');
+        Route::post('/clinical/{surgery}/treatments/apply-package', [\App\Http\Controllers\ClinicalStationController::class, 'applyMedicinePackage'])->name('clinical-station.treatments.apply-package');
+        Route::post('/clinical/{surgery}/treatments/save-package', [\App\Http\Controllers\ClinicalStationController::class, 'saveMedicinePackage'])->name('clinical-station.treatments.save-package');
         Route::post('/clinical/treatments/{treatment}/administer', [\App\Http\Controllers\ClinicalStationController::class, 'administerTreatment'])->name('clinical-station.treatments.administer');
         Route::post('/clinical/treatments/{treatment}/toggle-dose', [\App\Http\Controllers\ClinicalStationController::class, 'toggleTreatmentDose'])->name('clinical-station.treatments.toggle-dose');
         Route::delete('/clinical/treatments/{treatment}', [\App\Http\Controllers\ClinicalStationController::class, 'deleteTreatment'])->name('clinical-station.treatments.delete');
