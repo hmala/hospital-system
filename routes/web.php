@@ -57,30 +57,6 @@ Route::get('/set-locale/{locale}', function (string $locale) {
     return redirect()->back(fallback: '/');
 });
 
-// مسار تنزيل حزمة وسيط السكانر المكتبي الشامل
-Route::get('/downloads/scanner-package', function () {
-    $zipPath = public_path('downloads/HospitalScanner_Setup.zip');
-    if (file_exists($zipPath)) {
-        return response()->download($zipPath, 'HospitalScanner_Setup.zip', [
-            'Content-Type' => 'application/zip',
-            'Cache-Control' => 'no-store, no-cache, must-revalidate',
-        ]);
-    }
-
-    $exePath = public_path('downloads/HospitalScanner.exe');
-    if (!file_exists($exePath)) {
-        $exePath = base_path('HospitalScanner.exe');
-    }
-
-    if (file_exists($exePath)) {
-        return response()->download($exePath, 'HospitalScanner.exe', [
-            'Content-Type' => 'application/octet-stream',
-            'Cache-Control' => 'no-store, no-cache, must-revalidate',
-        ]);
-    }
-
-    abort(404, 'ملف حزمة وسيط السكانر غير متوفر على السيرفر حالياً.');
-})->name('scanner.download');
 
 Route::get('/', function () {
     if (Auth::check()) {
