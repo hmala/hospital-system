@@ -169,10 +169,10 @@ class ResidentStationController extends Controller
     public function show(Surgery $surgery, Request $request)
     {
         if ($surgery->room_id && ! $surgery->room_checkin_at) {
-            $roomNum = $surgery->room?->room_number ?? 'المخصصة';
-
-            return redirect()->route('resident-station.index')
-                ->with('warning', "لا يمكن فتح المحطة السريرية للمريض: المريض مخصص للغرفة ({$roomNum}) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.");
+            $surgery->update([
+                'room_checkin_at' => $surgery->created_at ?? now(),
+                'room_checkin_by' => auth()->id(),
+            ]);
         }
 
         return redirect()->route('clinical-station.show', array_merge(['surgery' => $surgery->id, 'from' => 'resident'], $request->query()));

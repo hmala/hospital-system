@@ -337,8 +337,10 @@ class SurgeryController extends Controller
             $room = Room::find($request->room_id);
             if ($room) {
                 $surgeryData['room_fee'] = Room::getInitialFeeForType($room->room_type);
-                // تحديث حالة الغرفة لمحجوزة
+                // تحديث حالة الغرفة لمحجوزة وتسجيل الدخول تلقائياً
                 $room->update(['status' => 'occupied']);
+                $surgeryData['room_checkin_at'] = now();
+                $surgeryData['room_checkin_by'] = Auth::id();
             }
         } else {
             $surgeryData['room_id'] = null;
@@ -778,6 +780,10 @@ class SurgeryController extends Controller
                 if ($newRoom) {
                     $newRoom->update(['status' => 'occupied']);
                     $surgeryData['room_fee'] = Room::getInitialFeeForType($newRoom->room_type);
+                    if (! $surgery->room_checkin_at) {
+                        $surgeryData['room_checkin_at'] = now();
+                        $surgeryData['room_checkin_by'] = Auth::id();
+                    }
                 }
             } else {
                 $surgeryData['room_id'] = null;
@@ -1299,7 +1305,7 @@ class SurgeryController extends Controller
         ]);
 
         try {
-            $assignedRoom = DB::transaction(function () use ($validated, $surgery, $request, $user) {
+            $assignedRoom = DB::transaction(function () use ($validated, $surgery, $user) {
                 $newRoom = Room::where('id', $validated['room_id'])->lockForUpdate()->firstOrFail();
 
                 if ($newRoom->status !== 'available' && (int) $surgery->room_id !== (int) $newRoom->id) {
@@ -1315,12 +1321,9 @@ class SurgeryController extends Controller
                 $updates = [
                     'room_id' => $newRoom->id,
                     'room_fee' => Room::getInitialFeeForType($newRoom->room_type),
+                    'room_checkin_at' => $surgery->room_checkin_at ?: now(),
+                    'room_checkin_by' => $surgery->room_checkin_by ?: $user->id,
                 ];
-
-                if ($request->boolean('checkin_immediately') && ! $surgery->room_checkin_at) {
-                    $updates['room_checkin_at'] = now();
-                    $updates['room_checkin_by'] = $user->id;
-                }
 
                 $surgery->update($updates);
                 $surgery->refresh();

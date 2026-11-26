@@ -130,6 +130,17 @@
   * **الاختبارات وضمان الجودة ([NicuEnhancementsTest.php](file:///C:/get/hospital-system/tests/Feature/NicuEnhancementsTest.php), [DepartmentManagerSearchTest.php](file:///C:/get/hospital-system/tests/Feature/DepartmentManagerSearchTest.php))**:
     - اجتياز `23 passed (211 assertions)` في اختبارات مخزن الخدج والتحويلات، و`4 passed (33 assertions)` في اختبارات الأقسام، مع اجتياز `Pint` و`view:cache`.
 
+- **المرحلة 310 (2026-11-27 — `main`) — إلغاء زر تسجيل دخول الغرفة اليدوي في محطة التمريض واعتماد الدخول التلقائي بمجرد تخصيص الغرفة من الاستعلامات (Automatic Room Check-in on Assignment, Seamless Inpatient Admission & Nursing Station Simplification)**:
+  * **تجريد وتبسيط شاشة التمريض (`resources/views/surgery-stations/nursing/index.blade.php`)**:
+    - إلغاء زر «تسجيل دخول الغرفة» نهائياً من جدول محطة التمريض لرفع العبء التوثيقي عن الكادر التمريضي.
+    - إتاحة زر «عرض وتعديل» وزر «تخريج» مباشرة للمرضى المخصص لهم غرف، والإبقاء على زر «تخصيص غرفة» فقط للمرضى في وضع الانتظار.
+  * **التسجيل التلقائي للدخول الفندقي (`SurgeryController.php`, `ClinicalStationController.php`, `ResidentStationController.php`)**:
+    - عند اختيار أو تعديل الغرفة من الاستعلامات أو حجز العملية يتم تسجيل `room_checkin_at = now()` و `room_checkin_by = Auth::id()` تلقائياً وقفل الغرفة.
+    - إلغاء قفل فتح الملف السريري للمقيم (`resident-station.show`) والتعبئة التلقائية لتوقيت الدخول دون أي تحذيرات أو عوائق.
+    - معالجة الحالات السابقة في قاعدة البيانات وتثبيت تواريخ الدخول.
+  * **الاختبارات وضمان الجودة**:
+    - اجتياز اختبارات `NursingRoomCheckinWorkflowTest` و `ResidentStationRoomCheckinGateTest` (7 passed, 37 assertions)، واختبارات `SurgeryTest` (9 passed, 174 assertions)، واجتياز `Pint` و`view:cache`.
+
 - **المرحلة 309 (2026-11-26 — `main`) — حزمة تثبيت سكانر المستشفى التلقائي بنقرة واحدة وتوزيعها لجميع الأقسام وزر تحميل عام (Universal Hospital Scanner 1-Click Setup Package, Multi-Station Distribution, Windows Startup & Permanent Insecure Content Policy)**:
   * **تجهيز حزمة التثبيت بنقرة واحدة (`public/downloads/HospitalScanner_Setup.zip`)**:
     - حزمة مستقلة مجمعة تضم: `HospitalScanner.exe`، ملف التثبيت التلقائي `تثبيت_السكانر_InstallScanner.bat`، وملف التعليمات.

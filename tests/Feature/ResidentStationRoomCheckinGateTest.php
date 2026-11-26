@@ -86,7 +86,7 @@ class ResidentStationRoomCheckinGateTest extends TestCase
         ]);
     }
 
-    public function test_resident_station_locks_button_and_blocks_access_before_nursing_room_checkin(): void
+    public function test_resident_station_allows_direct_access_and_auto_checks_in_room(): void
     {
         $surgery = Surgery::create([
             'patient_id' => $this->patient->id,
@@ -97,20 +97,22 @@ class ResidentStationRoomCheckinGateTest extends TestCase
             'status' => 'waiting',
             'scheduled_date' => now()->toDateString(),
             'scheduled_time' => '10:00:00',
-            'room_checkin_at' => null, // Nursing hasn't checked in yet!
+            'room_checkin_at' => null,
         ]);
 
         $response = $this->actingAs($this->residentUser)->get(route('resident-station.index'));
         $response->assertStatus(200);
 
-        // Locked button is shown with lock icon and warning tooltip
-        $response->assertSee('بانتظار استلام الغرفة');
-        $response->assertSee('بانتظار استلام ممرض الطابق');
+        // Active link is shown directly
+        $response->assertSee('عرض وتعديل');
+        $response->assertSee('في الغرفة');
 
-        // Direct show route is blocked and redirects with warning
+        // Direct show route auto-checks in and redirects to clinical station
         $showResponse = $this->actingAs($this->residentUser)->get(route('resident-station.show', $surgery));
-        $showResponse->assertRedirect(route('resident-station.index'));
-        $showResponse->assertSessionHas('warning', 'لا يمكن فتح المحطة السريرية للمريض: المريض مخصص للغرفة (204) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.');
+        $showResponse->assertRedirect(route('clinical-station.show', ['surgery' => $surgery->id, 'from' => 'resident']));
+
+        $surgery->refresh();
+        $this->assertNotNull($surgery->room_checkin_at);
     }
 
     public function test_resident_station_unlocks_button_and_allows_access_after_nursing_room_checkin(): void
@@ -133,7 +135,7 @@ class ResidentStationRoomCheckinGateTest extends TestCase
 
         // Active link is shown
         $response->assertSee('عرض وتعديل');
-        $response->assertSee('تم الاستلام');
+        $response->assertSee('في الغرفة');
 
         // Direct show route redirects to clinical station
         $showResponse = $this->actingAs($this->residentUser)->get(route('resident-station.show', $surgery));

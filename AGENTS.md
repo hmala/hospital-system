@@ -56,6 +56,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 310: إلغاء زر تسجيل دخول الغرفة اليدوي في محطة التمريض واعتماد الدخول التلقائي بمجرد تخصيص الغرفة من الاستعلامات Automatic Room Check-in on Assignment & Nursing Station Simplification)
+
+### Done
+- **تجريد وتبسيط شاشة التمريض ([resources/views/surgery-stations/nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php))**:
+  * إلغاء زر «تسجيل دخول الغرفة» نهائياً من جدول محطة التمريض لرفع العبء التوثيقي عن الكادر التمريضي وتجنب نسيان التأشير.
+  * إتاحة زري «عرض وتعديل» و«تخريج» مباشرة للحالات المخصص لها غرف، والإبقاء على زر «تخصيص غرفة» فقط للمرضى في وضع الانتظار.
+- **التسجيل التلقائي للدخول الفندقي والمزامنة السريرية ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php), [resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php))**:
+  * عند اختيار أو تعديل الغرفة من الاستعلامات أو شاشة حجز العملية يتم تثبيت `room_checkin_at = now()` و `room_checkin_by = Auth::id()` تلقائياً وقفل الغرفة.
+  * إلغاء قفل فتح الملف السريري للمقيم (`resident-station.show`) والتعبئة التلقائية لتوقيت الدخول دون أي تحذيرات أو عوائق.
+  * معالجة كافة الحالات السابقة في قاعدة البيانات وتثبيت تواريخ الدخول.
+- **الاختبارات وضمان الجودة ([NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php), [ResidentStationRoomCheckinGateTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/ResidentStationRoomCheckinGateTest.php), [SurgeryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTest.php))**:
+  * اجتياز `7 passed (37 assertions)` في اختبارات التمريض والمقيم، و `9 passed (174 assertions)` في اختبارات العمليات الجراحية، واجتياز `Pint` و`view:cache`.
+
 ## Session log (2026-11-26 — المرحلة 301: إعدادات المنظومة المالية، إدارة العملات وفروق الصرف وأرشفة التغييرات، والمخطط الشجري من الأعلى للأسفل Accounting Settings, FX Differences, Audit Archive & Top-to-Bottom Flowchart)
 
 ### Done

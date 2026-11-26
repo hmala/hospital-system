@@ -249,8 +249,10 @@ class NursingStationController extends Controller
     public function show(Surgery $surgery, Request $request)
     {
         if ($surgery->room_id && ! $surgery->room_checkin_at) {
-            return redirect()->route('nursing-station.index')
-                ->with('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
+            $surgery->update([
+                'room_checkin_at' => $surgery->created_at ?? now(),
+                'room_checkin_by' => auth()->id(),
+            ]);
         }
 
         $params = array_merge(['surgery' => $surgery->id], $request->query());

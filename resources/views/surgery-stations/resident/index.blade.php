@@ -178,13 +178,9 @@
                                                             <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
                                                                 <i class="fas fa-sign-out-alt me-1"></i> {{ __('تم التخريج') }}
                                                             </span>
-                                                        @elseif($surgery->room_checkin_at)
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;" title="تاريخ ووقت الاستلام: {{ $surgery->room_checkin_at->format('Y-m-d h:i A') }}">
-                                                                <i class="fas fa-check-circle me-1"></i> {{ __('تم الاستلام') }} ({{ $surgery->room_checkin_at->format('h:i A') }})
-                                                            </span>
                                                         @elseif($surgery->room_id)
-                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
-                                                                <i class="fas fa-hourglass-start me-1"></i> {{ __('بانتظار استلام ممرض الطابق') }}
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5" style="font-size: 0.72rem;">
+                                                                <i class="fas fa-check-circle me-1"></i> {{ __('في الغرفة') }}
                                                             </span>
                                                         @endif
                                                     </div>
@@ -248,15 +244,9 @@
                                             {{-- 5. الإجراءات --}}
                                             <td class="text-center">
                                                 <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap">
-                                                    @if($surgery->room_id && !$surgery->room_checkin_at)
-                                                        <button type="button" class="btn btn-sm btn-secondary opacity-75 rounded-pill px-3 py-1.5 shadow-sm fw-semibold" onclick="alert('تنبيه: لا يمكن فتح المحطة السريرية للمريض.\n\nالمريض مخصص للغرفة ({{ $surgery->room?->room_number ?? '-' }}) ولم يقم ممرض الطابق بتسجيل دخوله واستلامه بعد.')" title="{{ __('بانتظار استلام ممرض الطابق للغرفة') }}">
-                                                            <i class="fas fa-lock me-1"></i> {{ __('بانتظار استلام الغرفة') }}
-                                                        </button>
-                                                    @else
-                                                        <a href="{{ route('resident-station.show', $surgery) }}{{ $isPostOp ? '?phase=post_op' : '' }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm fw-bold">
-                                                            <i class="fas fa-user-md me-1"></i> {{ __('عرض وتعديل') }}
-                                                        </a>
-                                                    @endif
+                                                    <a href="{{ route('resident-station.show', $surgery) }}{{ $isPostOp ? '?phase=post_op' : '' }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm fw-bold">
+                                                        <i class="fas fa-user-md me-1"></i> {{ __('عرض وتعديل') }}
+                                                    </a>
                                                 </div>
                                             </td>
                                         </tr>

@@ -112,14 +112,13 @@ class NursingRoomCheckinWorkflowTest extends TestCase
         $response = $this->actingAs($this->nurseUser)->get(route('nursing-station.index'));
         $response->assertStatus(200);
 
-        // Check that checkin button is present
-        $response->assertSee('تسجيل دخول الغرفة');
-        $response->assertSee(route('nursing-station.room-checkin', $surgery));
+        // Check that view details button is present directly without manual checkin button
+        $response->assertSee('عرض وتعديل');
+        $response->assertDontSee('تسجيل دخول الغرفة');
 
-        // Attempting to access show directly redirects with warning
+        // Accessing show directly redirects to unified clinical station without warning
         $showResponse = $this->actingAs($this->nurseUser)->get(route('nursing-station.show', $surgery));
-        $showResponse->assertRedirect(route('nursing-station.index'));
-        $showResponse->assertSessionHas('warning', 'يرجى تسجيل دخول المريض للغرفة أولاً قبل الدخول إلى ملف المريض والتعديل السريري.');
+        $showResponse->assertRedirect(route('clinical-station.show', ['surgery' => $surgery->id]));
     }
 
     public function test_nurse_can_checkin_patient_to_room(): void

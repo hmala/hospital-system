@@ -320,38 +320,29 @@
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                @if($surgery->room_id && !$surgery->room_checkin_at)
-                                                    <form action="{{ route('nursing-station.room-checkin', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('هل أنت متأكد من تسجيل استلام المريض للغرفة الآن؟ سيبدأ احتساب الإقامة الفندقية.')">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1.5 shadow-sm fw-bold">
-                                                            <i class="fas fa-bed me-1"></i> {{ __('تسجيل دخول الغرفة') }}
+                                                <div class="d-inline-flex align-items-center gap-1 flex-wrap justify-content-center">
+                                                    @if(!$surgery->room_id && !$surgery->discharged_at && (auth()->user()?->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()?->can('assign surgery room')))
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-warning rounded-pill px-3 py-1.5 shadow-sm fw-bold assign-room-trigger"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#assignSurgeryRoomModal"
+                                                                data-assign-url="{{ route('surgeries.assign-room', $surgery) }}"
+                                                                data-patient-name="{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'المريض' }}">
+                                                            <i class="fas fa-door-open me-1"></i> تخصيص غرفة
                                                         </button>
-                                                    </form>
-                                                @else
-                                                    <div class="d-inline-flex align-items-center gap-1 flex-wrap justify-content-center">
-                                                        @if(!$surgery->room_id && !$surgery->discharged_at && (auth()->user()?->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()?->can('assign surgery room')))
-                                                            <button type="button"
-                                                                    class="btn btn-sm btn-warning rounded-pill px-3 py-1.5 shadow-sm fw-bold assign-room-trigger"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#assignSurgeryRoomModal"
-                                                                    data-assign-url="{{ route('surgeries.assign-room', $surgery) }}"
-                                                                    data-patient-name="{{ $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'المريض' }}">
-                                                                <i class="fas fa-door-open me-1"></i> تخصيص غرفة
+                                                    @endif
+                                                    <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm fw-bold">
+                                                        <i class="fas fa-eye me-1"></i> {{ __('عرض وتعديل') }}
+                                                    </a>
+                                                    @if($surgery->room_id && !$surgery->discharged_at)
+                                                        <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm" title="{{ __('تخريج المريض وإخلاء السرير') }}">
+                                                                <i class="fas fa-sign-out-alt me-1"></i> {{ __('تخريج') }}
                                                             </button>
-                                                        @endif
-                                                        <a href="{{ route('nursing-station.show', $surgery) }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm">
-                                                            <i class="fas fa-eye me-1"></i> {{ __('عرض وتعديل') }}
-                                                        </a>
-                                                        @if($surgery->room_id && $surgery->room_checkin_at && !$surgery->discharged_at)
-                                                            <form action="{{ route('nursing-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إيقاف احتساب الإقامة وتحرير الغرفة.')">
-                                                                @csrf
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm" title="{{ __('تخريج المريض وإخلاء السرير') }}">
-                                                                    <i class="fas fa-sign-out-alt me-1"></i> {{ __('تخريج') }}
-                                                                </button>
-                                                            </form>
-                                                        @endif
-                                                    </div>
-                                                @endif
+                                                        </form>
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
                                         @empty
