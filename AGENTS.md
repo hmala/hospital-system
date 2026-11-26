@@ -56,6 +56,19 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-26 — المرحلة 309: حزمة تثبيت سكانر المستشفى التلقائي بنقرة واحدة وتوزيعها لجميع الأقسام وزر تحميل عام Universal Hospital Scanner 1-Click Setup Package, Multi-Station Distribution, Windows Startup & Permanent Insecure Content Policy)
+
+### Done
+- **تجهيز حزمة التثبيت بنقرة واحدة (`public/downloads/HospitalScanner_Setup.zip`)**:
+  * حزمة مستقلة مجمعة تضم: `HospitalScanner.exe`، ملف التثبيت التلقائي `تثبيت_السكانر_InstallScanner.bat`، وملف التعليمات `تعليمات_التثبيت_README.txt`.
+  * يقوم ملف الباتش بإنشاء مجلد محمي دائم `%LOCALAPPDATA%\HospitalScanner`، وربط البرنامج ببدء تشغيل الويندوز (`Startup`) ليعمل تلقائياً عند تشغيل الحاسبة يومياً.
+  * ضبط صلاحيات وسياسات متصفحي كروم و Edge تلقائياً بالسجل (Registry Policy `InsecureContentAllowedForUrls`) لموقع هوستنجر لمنع حظر الاتصال بالمحتوى المحلي عبر HTTPS للأبد.
+  * تشغيل البرنامج فوراً في الخلفية ليكون جاهزاً للمسح دون الحاجة لإعادة تشغيل الحاسبة.
+- **إتاحة زر التحميل في أكثر الأماكن وضوحاً عبر كامل النظام (Universal Visibility)**:
+  * إضافة زر بارز في القائمة الجانبية (Sidebar) في كل صفحات النظام يراه جميع موظفي المستشفى في كافة الأقسام والمحطات: **`[ 🖨️ تنزيل برنامج السكانر ]`**.
+  * إضافة زر وشارة تحميل خضراء بارزة في شريط المرفقات في شاشتي حجز وتعديل العمليات (`resources/views/surgeries/create.blade.php`, `resources/views/surgeries/edit.blade.php`): **`[ 📥 تنزيل السكانر ]`**.
+  * تفعيل وتشغيل البرنامج محلياً على المنفذ 5000 واختبار استجابته الحية بنجاح تام.
+
 ## Session log (2026-11-26 — المرحلة 308: زر كشف أجهزة السكانر المرتبطة بالحاسبة وتفعيل المسح فورياً وتجريد الواجهة من الكاميرا ودليل السكانر Surgery Booking: USB Scanner Auto-Detection, Hardware Name Badge & Direct One-Click Scanning)
 
 ### Done

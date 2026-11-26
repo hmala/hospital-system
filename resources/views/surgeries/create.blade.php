@@ -530,9 +530,14 @@ body {
                             <div class="col-md-7">
                                 <div class="d-flex align-items-center justify-content-between mb-1">
                                     <label class="form-label text-muted mb-0 small fw-bold">{{ __('ورقة التحويل (سكانر / رفع):') }}</label>
-                                    <span id="scannerStatusIndicator" class="badge bg-light text-muted border py-0 px-2" style="font-size: 0.72rem;" title="{{ __('حالة السكانر') }}">
-                                        <i class="fas fa-circle text-secondary me-1" style="font-size: 7px;"></i>{{ __('غير مفحوص') }}
-                                    </span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a href="{{ asset('downloads/HospitalScanner_Setup.zip') }}" download class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none py-1 px-2" title="{{ __('تحميل حزمة تثبيت السكانر التلقائي لهذه الحاسبة لمرة واحدة للأبد') }}">
+                                            <i class="fas fa-download me-1"></i>{{ __('تنزيل برنامج السكانر للحاسبة') }}
+                                        </a>
+                                        <span id="scannerStatusIndicator" class="badge bg-light text-muted border py-0 px-2" style="font-size: 0.72rem;" title="{{ __('حالة السكانر') }}">
+                                            <i class="fas fa-circle text-secondary me-1" style="font-size: 7px;"></i>{{ __('غير مفحوص') }}
+                                        </span>
+                                    </div>
                                 </div>
                                 <div class="d-flex gap-1 flex-wrap" id="referral_letter_container">
                                     <!-- زر كشف وقراءة السكانر المرتبط بالحاسبة -->
@@ -544,6 +549,11 @@ body {
                                     <button type="button" class="btn btn-sm btn-primary flex-grow-1" id="scan_btn" onclick="scanFromDevice()" style="height:36px; min-width: 95px;">
                                         <i class="fas fa-print me-1"></i> <span id="scan_btn_label">{{ __('مسح من السكانر') }}</span>
                                     </button>
+
+                                    <!-- زر تنزيل حزمة السكانر المباشر -->
+                                    <a href="{{ asset('downloads/HospitalScanner_Setup.zip') }}" download class="btn btn-sm btn-outline-success d-inline-flex align-items-center" style="height:36px;" title="{{ __('تنزيل حزمة تثبيت السكانر التلقائي لهذه الحاسبة لمرة واحدة للأبد') }}">
+                                        <i class="fas fa-download me-1"></i> {{ __('تنزيل السكانر') }}
+                                    </a>
 
                                     <!-- زر رفع ملف -->
                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('referral_letter').click()" style="height:36px;" title="{{ __('رفع ملف أو صورة من جهازك') }}">
