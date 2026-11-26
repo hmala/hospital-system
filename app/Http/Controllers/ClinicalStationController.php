@@ -1086,10 +1086,11 @@ class ClinicalStationController extends Controller
 
             DB::commit();
 
-            $phase = $validated['phase'] ?? 'post_op';
-
-            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $phase, 'tab' => 'treatments'])
-                ->with('success', "تم تطبيق باقة [{$group->name}] وإدراج {$insertedCount} أدوية في جدول الإعطاء بنجاح.");
+            return redirect()->route('clinical-station.show', array_filter([
+                'surgery' => $surgery->id,
+                'tab' => 'treatments',
+                'from' => $request->input('from'),
+            ]))->with('success', "تم تطبيق باقة [{$group->name}] وإدراج {$insertedCount} أدوية في جدول الإعطاء بنجاح.");
         } catch (\Throwable $e) {
             DB::rollBack();
 
@@ -1115,7 +1116,6 @@ class ClinicalStationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'phase' => 'nullable|string|in:pre_op,post_op,intra_op',
         ]);
 
         $currentTreatments = $surgery->surgeryTreatments()
@@ -1166,10 +1166,11 @@ class ClinicalStationController extends Controller
 
             DB::commit();
 
-            $phase = $validated['phase'] ?? 'post_op';
-
-            return redirect()->route('clinical-station.show', ['surgery' => $surgery->id, 'phase' => $phase, 'tab' => 'treatments'])
-                ->with('success', "تم حفظ الباقة [{$group->name}] بنجاح، وأصبحت متاحة لجميع المقيمين للاستفادة منها.");
+            return redirect()->route('clinical-station.show', array_filter([
+                'surgery' => $surgery->id,
+                'tab' => 'treatments',
+                'from' => $request->input('from'),
+            ]))->with('success', "تم حفظ الباقة [{$group->name}] بنجاح، وأصبحت متاحة لجميع المقيمين للاستفادة منها.");
         } catch (\Throwable $e) {
             DB::rollBack();
 

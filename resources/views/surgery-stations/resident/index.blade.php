@@ -116,28 +116,6 @@
                     <div class="tab-content" id="residentTabsContent">
                         <!-- TAB 1: UNIFIED ACTIVE PATIENTS (قبل الصالة، داخل الصالة، بعد الصالة) -->
                         <div class="tab-pane fade show active" id="active-surgeries" role="tabpanel" aria-labelledby="active-surgeries-tab">
-                            {{-- أزرار التصفية السريعة اللحظية لأطوار المرضى --}}
-                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3 p-2 bg-white rounded-4 border shadow-xs">
-                                <div class="d-flex align-items-center gap-1.5 flex-wrap" id="residentPhaseFilterButtons">
-                                    <span class="small fw-bold text-muted ms-1"><i class="fas fa-filter text-primary me-1"></i> {{ __('تصنيف الطور:') }}</span>
-                                    <button type="button" class="btn btn-sm btn-dark rounded-pill px-3 py-1 fw-bold active resident-phase-btn" data-phase="all">
-                                        {{ __('كافة الحالات النشطة') }} ({{ $activeSurgeries->count() }})
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold resident-phase-btn" data-phase="pre_op">
-                                        <i class="fas fa-hourglass-start me-1"></i> {{ __('قبل الصالة') }} ({{ $preOpSurgeries->count() }})
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold resident-phase-btn" data-phase="in_theater">
-                                        <i class="fas fa-spinner fa-spin me-1"></i> {{ __('داخل صالة العمليات') }}
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-bold resident-phase-btn" data-phase="post_op">
-                                        <i class="fas fa-procedures me-1"></i> {{ __('بعد الصالة / الرقود') }} ({{ $postOpSurgeries->count() }})
-                                    </button>
-                                </div>
-                                <div class="small text-muted">
-                                    <i class="fas fa-info-circle text-primary me-1"></i> {{ __('فرز فوري لحالات المقيم السريرية') }}
-                                </div>
-                            </div>
-
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle mb-0" id="residentActiveTable">
                                     <thead class="table-light">
@@ -401,23 +379,18 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const patientSearchInput = document.getElementById('residentPatientSearchInput');
-        const phaseBtns = document.querySelectorAll('.resident-phase-btn');
         const activeRows = document.querySelectorAll('#residentActiveTableBody .resident-active-row');
         const noMatchRow = document.getElementById('noActiveMatchResidentRow');
-        let currentActivePhase = 'all';
 
         function filterResidentActiveTable() {
             const query = (patientSearchInput ? patientSearchInput.value : '').trim().toLowerCase();
             let visibleCount = 0;
 
             activeRows.forEach(row => {
-                const phase = row.getAttribute('data-phase') || '';
                 const searchData = (row.getAttribute('data-search') || row.innerText || '').toLowerCase();
-
-                const matchesPhase = (currentActivePhase === 'all') || (phase === currentActivePhase);
                 const matchesQuery = !query || searchData.includes(query);
 
-                if (matchesPhase && matchesQuery) {
+                if (matchesQuery) {
                     row.style.display = '';
                     visibleCount++;
                 } else {
@@ -446,22 +419,6 @@
                 }
             });
         }
-
-        phaseBtns.forEach(btn => {
-            btn.addEventListener('click', function () {
-                phaseBtns.forEach(b => {
-                    b.classList.remove('active', 'btn-dark');
-                    b.classList.add('btn-outline-secondary');
-                });
-
-                this.classList.add('active');
-                this.classList.remove('btn-outline-secondary');
-                this.classList.add('btn-dark');
-
-                currentActivePhase = this.getAttribute('data-phase');
-                filterResidentActiveTable();
-            });
-        });
     });
 </script>
 @endpush
