@@ -5510,19 +5510,19 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                     </div>
 
-                    {{-- Performing Doctor (Filtered strictly for Sonar vs Echo) --}}
-                    <div class="mb-2.5 d-none" id="modalRadDoctorContainer">
+                    {{-- Performing Doctor / Assigned Account (Filtered strictly for Sonar vs Echo) --}}
+                    <div class="mb-2.5" id="modalRadDoctorContainer">
                         <label for="modalRadiologyDoctorId" class="form-label fw-bold small text-info-emphasis mb-1 d-flex align-items-center justify-content-between">
                             <span>
                                 <i class="fas fa-user-md me-1 text-info" id="modalRadDoctorIcon"></i>
-                                <span id="modalRadDoctorLabel">{{ __('الطبيب الفاحص:') }}</span>
+                                <span id="modalRadDoctorLabel">{{ __('اسم الحساب / الطبيب الفاحص المكلف:') }}</span>
                             </span>
-                            <span class="badge bg-info-subtle text-info border border-info-subtle font-monospace" style="font-size: 0.62rem;">
+                            <span class="badge bg-info-subtle text-info border border-info-subtle font-monospace" id="modalRadDoctorBadge" style="font-size: 0.62rem;">
                                 {{ __('المناوب افتراضياً') }}
                             </span>
                         </label>
                         <select name="doctor_id" id="modalRadiologyDoctorId" class="form-select form-select-sm">
-                            <option value="" id="modalRadDoctorDefaultOption">{{ __('👨‍⚕️ طبيب القسم المناوب (تلقائياً)') }}</option>
+                            <option value="" id="modalRadDoctorDefaultOption">{{ __('👨‍⚕️ طبيب وكادر القسم المناوب (تلقائياً)') }}</option>
                             @if(isset($sonarDoctors) && $sonarDoctors->count() > 0)
                                 @foreach($sonarDoctors as $doc)
                                     <option value="{{ $doc->id }}" data-specialty="sonar" class="rad-doc-option rad-doc-sonar">
@@ -5633,8 +5633,64 @@ function filterModalRadCategory(category, btn) {
         btn.classList.add('active', 'btn-primary');
         btn.classList.remove('btn-outline-secondary');
     }
+
+    const catLower = (category || '').toLowerCase();
+    if (catLower.includes('سونار') || catLower.includes('sonar')) {
+        configureDoctorFieldForSpecialty('sonar');
+    } else if (catLower.includes('إيكو') || catLower.includes('ايكو') || catLower.includes('echo')) {
+        configureDoctorFieldForSpecialty('echo');
+    } else if (category === 'all') {
+        configureDoctorFieldForSpecialty('all');
+    } else {
+        configureDoctorFieldForSpecialty('general');
+    }
+
     openModalRadDropdown();
     applyModalRadFilters();
+}
+
+function configureDoctorFieldForSpecialty(specialtyType = 'all') {
+    const doctorSelect = document.getElementById('modalRadiologyDoctorId');
+    const doctorLabel = document.getElementById('modalRadDoctorLabel');
+    const doctorIcon = document.getElementById('modalRadDoctorIcon');
+    const defaultOption = document.getElementById('modalRadDoctorDefaultOption');
+    const doctorBadge = document.getElementById('modalRadDoctorBadge');
+
+    if (!doctorSelect) return;
+
+    if (specialtyType === 'sonar') {
+        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم الحساب / أخصائي السونار المكلف:") }}';
+        if (doctorIcon) doctorIcon.className = 'fas fa-wave-square me-1 text-info';
+        if (defaultOption) defaultOption.textContent = '{{ __("👨‍⚕️ طبيب السونار المناوب (تلقائياً)") }}';
+        if (doctorBadge) doctorBadge.textContent = '{{ __("أطباء السونار") }}';
+        doctorSelect.value = '';
+        doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
+            const isSonar = (opt.getAttribute('data-specialty') === 'sonar');
+            opt.style.display = isSonar ? '' : 'none';
+            opt.disabled = !isSonar;
+        });
+    } else if (specialtyType === 'echo') {
+        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم الحساب / استشاري إيكو القلب والقلبية:") }}';
+        if (doctorIcon) doctorIcon.className = 'fas fa-heartbeat me-1 text-danger';
+        if (defaultOption) defaultOption.textContent = '{{ __("🫀 طبيب الإيكو المناوب (تلقائياً)") }}';
+        if (doctorBadge) doctorBadge.textContent = '{{ __("استشاريو الإيكو والقلبية") }}';
+        doctorSelect.value = '';
+        doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
+            const isEcho = (opt.getAttribute('data-specialty') === 'echo');
+            opt.style.display = isEcho ? '' : 'none';
+            opt.disabled = !isEcho;
+        });
+    } else {
+        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم الحساب / الطبيب الفاحص المكلف:") }}';
+        if (doctorIcon) doctorIcon.className = 'fas fa-user-md me-1 text-secondary';
+        if (defaultOption) defaultOption.textContent = '{{ __("👨‍⚕️ كادر وقسم الأشعة المناوب (تلقائياً)") }}';
+        if (doctorBadge) doctorBadge.textContent = '{{ __("المناوب افتراضياً") }}';
+        doctorSelect.value = '';
+        doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
+            opt.style.display = '';
+            opt.disabled = false;
+        });
+    }
 }
 
 function filterModalRadServices(query) {
@@ -5688,50 +5744,7 @@ function selectModalRadItem(id, name, priceText, specialtyType = 'none', categor
     closeModalRadDropdown();
 
     // Configure Doctor Specialty Options
-    const doctorContainer = document.getElementById('modalRadDoctorContainer');
-    const doctorSelect = document.getElementById('modalRadiologyDoctorId');
-    const doctorLabel = document.getElementById('modalRadDoctorLabel');
-    const doctorIcon = document.getElementById('modalRadDoctorIcon');
-    const defaultOption = document.getElementById('modalRadDoctorDefaultOption');
-
-    if (doctorContainer) {
-        if (specialtyType === 'sonar') {
-            doctorContainer.classList.remove('d-none');
-            if (doctorLabel) doctorLabel.textContent = '{{ __("الطبيب الفاحص (أخصائي السونار):") }}';
-            if (doctorIcon) doctorIcon.className = 'fas fa-wave-square me-1 text-info';
-            if (defaultOption) defaultOption.textContent = '{{ __("👨‍⚕️ طبيب السونار المناوب (تلقائياً)") }}';
-            if (doctorSelect) {
-                doctorSelect.value = '';
-                doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
-                    const isSonar = (opt.getAttribute('data-specialty') === 'sonar');
-                    opt.style.display = isSonar ? '' : 'none';
-                    opt.disabled = !isSonar;
-                });
-            }
-        } else if (specialtyType === 'echo') {
-            doctorContainer.classList.remove('d-none');
-            if (doctorLabel) doctorLabel.textContent = '{{ __("الطبيب الفاحص (أخصائي إيكو القلب والقلبية):") }}';
-            if (doctorIcon) doctorIcon.className = 'fas fa-heartbeat me-1 text-danger';
-            if (defaultOption) defaultOption.textContent = '{{ __("🫀 طبيب الإيكو المناوب (تلقائياً)") }}';
-            if (doctorSelect) {
-                doctorSelect.value = '';
-                doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
-                    const isEcho = (opt.getAttribute('data-specialty') === 'echo');
-                    opt.style.display = isEcho ? '' : 'none';
-                    opt.disabled = !isEcho;
-                });
-            }
-        } else {
-            doctorContainer.classList.add('d-none');
-            if (doctorSelect) {
-                doctorSelect.value = '';
-                doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
-                    opt.style.display = 'none';
-                    opt.disabled = true;
-                });
-            }
-        }
-    }
+    configureDoctorFieldForSpecialty(specialtyType);
 }
 
 function clearSelectedRadItem() {
@@ -5739,8 +5752,6 @@ function clearSelectedRadItem() {
     const searchInput = document.getElementById('modalRadSearchInput');
     const selectedStrip = document.getElementById('modalRadSelectedStrip');
     const submitBtn = document.getElementById('submitOrderRadBtn');
-    const doctorContainer = document.getElementById('modalRadDoctorContainer');
-    const doctorSelect = document.getElementById('modalRadiologyDoctorId');
 
     if (hiddenInput) hiddenInput.value = '';
     if (searchInput) {
@@ -5749,8 +5760,8 @@ function clearSelectedRadItem() {
     }
     if (selectedStrip) selectedStrip.classList.add('d-none');
     if (submitBtn) submitBtn.disabled = true;
-    if (doctorContainer) doctorContainer.classList.add('d-none');
-    if (doctorSelect) doctorSelect.value = '';
+
+    configureDoctorFieldForSpecialty('all');
     currentRadQuery = '';
     openModalRadDropdown();
     applyModalRadFilters();
