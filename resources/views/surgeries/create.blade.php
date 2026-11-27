@@ -399,7 +399,7 @@ body {
                                             <input class="form-check-input" type="radio" name="apply_insurance" id="surgery_apply_insurance_yes" value="1" {{ old('apply_insurance', '1') == '1' ? 'checked' : '' }}>
                                             <label class="form-check-label fw-bold text-success cursor-pointer" for="surgery_apply_insurance_yes">
                                                 <i class="fas fa-check-circle me-1"></i>
-                                                {{ __('🛡️ حجز تحت مظلة الضمان الصحي / قوى الأمن الداخلي') }}
+                                                <span id="surgery_insurance_option_text">{{ $pInsType === 'moi' ? __('🛡️ حجز تحت مظلة ضمان قوى الأمن الداخلي (MOI)') : __('🛡️ حجز تحت مظلة هيئة الضمان الصحي الوطني') }}</span>
                                             </label>
                                         </div>
                                         <div class="form-check m-0">
@@ -410,66 +410,13 @@ body {
                                             </label>
                                         </div>
                                     </div>
-                                    
-                                    <!-- اختيار جهة الضمان إذا رغب الموظف بتغييرها يدوياً -->
-                                    <div class="row g-2 mt-2 pt-2 border-top align-items-center">
-                                        <div class="col-md-6">
-                                            <label class="form-label text-xs fw-bold text-muted mb-1"><i class="fas fa-shield-alt text-primary me-1"></i>{{ __('جهة التغطية:') }}</label>
-                                            <select name="insurance_type" id="surgery_insurance_type_select" class="form-select form-select-sm">
-                                                <option value="none">{{ __('💵 حساب خاص (كاش كامل)') }}</option>
-                                                <option value="moi" {{ old('insurance_type', $pInsType) === 'moi' ? 'selected' : '' }}>{{ __('🛡️ قوى الأمن الداخلي - وزارة الداخلية (MOI)') }}</option>
-                                                <option value="hi" {{ old('insurance_type', $pInsType) === 'hi' ? 'selected' : '' }}>{{ __('🏛️ هيئة الضمان الصحي الوطني (HI)') }}</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6" id="insuranceCardNoCol">
-                                            <label class="form-label text-xs fw-bold text-muted mb-1"><i class="fas fa-id-card text-primary me-1"></i>{{ __('رقم هوية/دفتر الضمان:') }}</label>
-                                            <input type="text" name="insurance_card_no" id="surgery_insurance_card_no_input" class="form-control form-control-sm" value="{{ old('insurance_card_no', $pCardNo) }}" placeholder="{{ __('رقم الدفتر أو الهوية...') }}">
-                                        </div>
-                                    </div>
-                                    
                                     <small class="text-muted d-block mt-1" style="font-size:0.75rem;"><i class="fas fa-info-circle me-1"></i>{{ __('يعتمد لدى الكاشير عند تسديد الحساب واحتساب المطالبات.') }}</small>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- المريض -->
-                        <div class="mb-3">
-                            <label for="patient_id" class="form-label">
-                                {{ __('المريض') }} <span class="text-danger">*</span>
-                            </label>
-                            <select name="patient_id" id="patient_id" class="form-select @error('patient_id') is-invalid @enderror" required autofocus>
-                                <option value="">{{ __('اختر المريض') }}</option>
-                                @foreach($patients as $patient)
-                                    @php 
-                                        $patientName = optional($patient->user)->name ?? __('غير معروف');
-                                        $patientAge = optional($patient)->age ?? '-';
-                                        $patientGender = optional($patient)->gender ?? '-';
-                                        $patientPhone = optional($patient->user)->phone ?? '-';
-                                        $patientInsuranceType = $patient->insurance_type ?? 'none';
-                                        $patientInsuranceLabel = $patientInsuranceType === 'moi' ? __('ضمان قوى الأمن الداخلي (وزارة الداخلية)') : ($patientInsuranceType === 'hi' ? __('هيئة الضمان الصحي الوطني') : __('بدون ضمان'));
-                                        $patientCardNo = $patient->insurance_card_no ?: $patient->insurance_booklet_number ?: '';
-                                        $patientData = [
-                                            'id' => $patient->id,
-                                            'name' => $patientName,
-                                            'age' => $patientAge,
-                                            'gender' => $patientGender,
-                                            'phone' => $patientPhone,
-                                            'insurance_type' => $patientInsuranceType,
-                                            'insurance_label' => $patientInsuranceLabel,
-                                            'insurance_card_no' => $patientCardNo,
-                                            'history_url' => route('inquiry.patients.history', $patient->id),
-                                            'dossier_url' => route('inquiry.patients.dossier.print', $patient->id)
-                                        ];
-                                    @endphp
-                                    <option value="{{ $patient->id }}" 
-                                            data-patient='@json($patientData)'
-                                            {{ (old('patient_id', request('patient_id')) == $patient->id) ? 'selected' : '' }}>
-                                        {{ $patientName }} ({{ $patientAge }} {{ __('سنة') }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('patient_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                        </div>
+                        <!-- المريض (محدد مسبقاً ومعروض في الشريط العلوي) -->
+                        <input type="hidden" name="patient_id" id="patient_id" value="{{ old('patient_id', $selectedPatient?->id ?? request('patient_id')) }}">
 
                         <!-- الأطباء: الجراح + المرسل -->
                         <div class="row g-2 mb-2">
@@ -1072,63 +1019,7 @@ document.addEventListener('DOMContentLoaded', function() {
             allowClear: true
         });
 
-        // تهيئة قائمة المرضى ببحث AJAX لحظي فائق السرعة دون تحميل 10 آلاف مريض
-        $('#patient_id').select2({
-            theme: 'bootstrap-5',
-            dir: 'rtl',
-            width: '100%',
-            placeholder: 'اختر أو ابحث عن المريض بالاسم أو الهاتف أو رقم الملف...',
-            allowClear: true,
-            language: {
-                noResults: function() { return 'لا توجد نتائج مطابقة'; },
-                searching: function() { return 'جاري البحث في سجل المرضى...'; },
-                inputTooShort: function() { return 'يرجى كتابة حرف واحد على الأقل للبحث'; }
-            },
-            ajax: {
-                url: '{{ route('inquiry.search.patients') }}',
-                dataType: 'json',
-                delay: 250,
-                data: function (params) {
-                    return {
-                        query: params.term
-                    };
-                },
-                processResults: function (data) {
-                    return {
-                        results: (data || []).map(function (p) {
-                            const insLabel = p.insurance_type === 'moi' ? 'ضمان قوى الأمن الداخلي' : (p.insurance_type === 'hi' ? 'هيئة الضمان الصحي الوطني' : 'بدون ضمان');
-                            return {
-                                id: p.id,
-                                text: `${p.name} (${p.age || '-'} سنة) - ملف #${p.id}`,
-                                patientData: {
-                                    id: p.id,
-                                    name: p.name,
-                                    age: p.age,
-                                    gender: p.gender,
-                                    phone: p.phone,
-                                    insurance_type: p.insurance_type,
-                                    insurance_label: insLabel,
-                                    insurance_card_no: p.insurance_card_no || '',
-                                    history_url: p.history_url,
-                                    dossier_url: p.dossier_url
-                                }
-                            };
-                        })
-                    };
-                },
-                cache: true
-            }
-        });
 
-        $('#patient_id').on('select2:select', function(e) {
-            const data = e.params.data;
-            if (data && data.patientData) {
-                const opt = $(this).find('option[value="' + data.id + '"]');
-                opt.data('patient', data.patientData);
-                opt.attr('data-patient', JSON.stringify(data.patientData));
-                $(this).trigger('change');
-            }
-        });
 
         // قائمة الطبيب المرسل
         let pendingDoctorName = '';
@@ -1277,96 +1168,23 @@ document.addEventListener('DOMContentLoaded', function() {
             initOperationSelect2();
         });
 
-        // تفاصيل المريض المختار وتحديث شريط الهوية واللوحة الثابتة
-        $('#patient_id').on('change', function() {
-            const selectedOption = $(this).find(':selected');
-            const patientData = selectedOption.data('patient');
-            
-            if (patientData && patientData.name) {
-                // تحديث شريط هوية المريض التنفيذي العلوي (Executive Banner)
-                $('#bannerPatientName').text(patientData.name);
-                $('#bannerPatientId').text(patientData.id || '-');
-                $('#bannerPatientAge').text((patientData.age || '-') + ' سنة');
-                $('#bannerPatientGender').text(patientData.gender || '-');
-                $('#bannerPatientPhone').text(patientData.phone || '-');
-                
-                if (patientData.history_url) {
-                    $('#bannerHistoryBtn').attr('href', patientData.history_url).show();
-                }
-                if (patientData.dossier_url) {
-                    $('#bannerDossierBtn').attr('href', patientData.dossier_url).show();
-                }
-
-                // تحديث لوحة الملخص المالي الثابتة (Sticky Sidebar)
-                $('#stickyPatientName').text(patientData.name);
-
-                if (patientData.insurance_type && patientData.insurance_type !== 'none') {
-                    $('#bannerInsuranceBadge').removeClass('bg-secondary').addClass('bg-success');
-                    $('#bannerInsuranceLabel').text(patientData.insurance_label);
-                    
-                    if (patientData.insurance_card_no) {
-                        $('#bannerCardNo').text(patientData.insurance_card_no);
-                        $('#bannerCardSpan').show();
-                        $('#patientInsuranceCardNo').text(patientData.insurance_card_no);
-                        $('#patientInsuranceCardSpan').show();
-                    } else {
-                        $('#bannerCardSpan').hide();
-                        $('#patientInsuranceCardSpan').hide();
-                    }
-
-                    $('#patientInsuranceBadgeLabel').text('مشمول بالضمان: ' + patientData.insurance_label);
-                    $('#patientInsuranceSection').slideDown(150);
-                    $('#surgery_apply_insurance_yes').prop('checked', true);
-                    if (patientData.insurance_type === 'moi') {
-                        $('#surgery_insurance_type_select').val('moi');
-                    } else if (patientData.insurance_type === 'hi') {
-                        $('#surgery_insurance_type_select').val('hi');
-                    }
-                } else {
-                    $('#bannerInsuranceBadge').removeClass('bg-success bg-primary').addClass('bg-secondary');
-                    $('#bannerInsuranceLabel').text('حساب خاص (نقدي)');
-                    $('#bannerCardSpan').hide();
-                    $('#patientInsuranceSection').slideUp(100);
-                    $('#surgery_apply_insurance_no').prop('checked', true);
-                    $('#surgery_insurance_type_select').val('none');
-                }
-                checkMoiVisibility();
-            } else {
-                $('#bannerPatientName').text('يرجى اختيار مريض من القائمة أدناه');
-                $('#bannerPatientId').text('-');
-                $('#bannerPatientAge').text('-');
-                $('#bannerPatientGender').text('-');
-                $('#bannerPatientPhone').text('-');
-                $('#bannerCardSpan').hide();
-                $('#bannerHistoryBtn').hide();
-                $('#bannerDossierBtn').hide();
-                $('#stickyPatientName').text('لم يتم الاختيار بعد');
-                $('#patientInsuranceSection').slideUp(100);
-                checkMoiVisibility();
-            }
-            updateStickySummary();
-        });
+        const patientInsuranceType = '{{ $pInsType }}';
 
         function checkMoiVisibility() {
             const isApplyInsurance = $('input[name="apply_insurance"]:checked').val() === '1';
-            const insSelectVal = $('#surgery_insurance_type_select').val();
-            const selectedPatientData = $('#patient_id').find(':selected').data('patient');
-            const pType = selectedPatientData ? selectedPatientData.insurance_type : 'none';
-            
-            const isMoi = isApplyInsurance && (insSelectVal === 'moi' || (insSelectVal !== 'hi' && insSelectVal !== 'none' && pType === 'moi'));
+            const isMoi = isApplyInsurance && (patientInsuranceType === 'moi');
             
             if (isMoi) {
                 $('#moiCopaySection').slideDown(150);
                 $('#bannerInsuranceBadge').removeClass('bg-secondary bg-success').addClass('bg-primary text-white');
                 $('#bannerInsuranceLabel').text('ضمان قوى الأمن الداخلي (MOI)');
-                if ($('#surgery_insurance_type_select').val() !== 'moi') {
-                    $('#surgery_insurance_type_select').val('moi');
-                }
+                $('#surgery_insurance_option_text').text('🛡️ حجز تحت مظلة ضمان قوى الأمن الداخلي (MOI)');
             } else {
                 $('#moiCopaySection').slideUp(100);
-                if (isApplyInsurance && insSelectVal === 'hi') {
+                if (isApplyInsurance && patientInsuranceType === 'hi') {
                     $('#bannerInsuranceBadge').removeClass('bg-secondary bg-primary').addClass('bg-success text-white');
                     $('#bannerInsuranceLabel').text('هيئة الضمان الصحي الوطني');
+                    $('#surgery_insurance_option_text').text('🛡️ حجز تحت مظلة هيئة الضمان الصحي الوطني');
                 } else if (!isApplyInsurance) {
                     $('#bannerInsuranceBadge').removeClass('bg-success bg-primary').addClass('bg-secondary text-white');
                     $('#bannerInsuranceLabel').text('حساب خاص (نقدي)');
@@ -1404,17 +1222,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // مزامنة راديو مسار التغطية واختيار جهة الضمان
         $('input[name="apply_insurance"]').on('change', function() {
-            checkMoiVisibility();
-            updateStickySummary();
-        });
-
-        $('#surgery_insurance_type_select').on('change', function() {
-            const val = $(this).val();
-            if (val === 'none') {
-                $('#surgery_apply_insurance_no').prop('checked', true);
-            } else {
-                $('#surgery_apply_insurance_yes').prop('checked', true);
-            }
             checkMoiVisibility();
             updateStickySummary();
         });
@@ -1543,10 +1350,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if ($('#stickyGrandTotal').length) $('#stickyGrandTotal').text(grandTotal.toLocaleString('en-US') + ' د.ع');
 
         const isInsurance = $('input[name="apply_insurance"]:checked').val() === '1';
-        const insSelectVal = $('#surgery_insurance_type_select').val();
-        const selectedPatientData = $('#patient_id').find(':selected').data('patient');
-        const hasInsurance = (selectedPatientData?.insurance_type && selectedPatientData?.insurance_type !== 'none') || (insSelectVal && insSelectVal !== 'none');
-        const isMoi = isInsurance && (insSelectVal === 'moi' || (insSelectVal !== 'hi' && insSelectVal !== 'none' && selectedPatientData?.insurance_type === 'moi'));
+        const hasInsurance = patientInsuranceType && patientInsuranceType !== 'none';
+        const isMoi = isInsurance && (patientInsuranceType === 'moi');
         
         if (isMoi) {
             $('#stickyCoverageBadge').text('🛡️ قوى الأمن الداخلي (MOI)').removeClass('bg-secondary bg-success text-white').addClass('bg-primary text-white');

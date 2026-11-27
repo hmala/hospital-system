@@ -56,6 +56,27 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 323: إصلاح احتساب مبالغ وضوابط الشامل والمنفصل لضمان الداخلية والكاش وتحويل كاشير العمليات إلى جدول موحد مباشر Master Surgery Flat Cashier Table & Fixing Inclusion Calculation)
+
+### Done
+- **إصلاح خطأ الجافاسكربت القاتل في واجهة دفع كاشير العمليات ([payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * إزالة خطأ الصياغة `SyntaxError` الناتج عن قوس إغلاق زائد وكود مكرر عند السطر 2450 الذي كان يوقف عمل الجافاسكربت بالكامل عند تحميل الصفحة.
+  * إزالة الازدواجية في جمع المطالبة المعتمدة لمريض قوى الأمن الداخلي (MOI) عند شمول البنود.
+  * توحيد وتصحيح منطق حساب الشامل والمنفصل:
+    - **مشمول (ضمن الباقة)**: كاش (المريض 0 د.ع ويستقطع من الجراح)، ضمان داخلية MOI وضمان صحي HI (المريض 0 د.ع وتتحول لمطالبة رسمية ولا يستقطع من الجراح).
+    - **منفصل عن العملية**: كاش أو داخلية (المريض 100% نقداً ولا استقطاع ولا مطالبة)، ضمان صحي (المريض نسبة التحمل والباقي مطالبة).
+- **تحويل واجهة كاشير العمليات الجراحية بالكامل إلى جدول مباشر عالي الإنتاجية وحل تعارض المتغير العام ([cashier/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/index.blade.php), [CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * استبدال الأكورديون والبطاقات المطوية بـ **جدول موحد مباشر (Master Flat Table)** يعرض كافة العمليات في صفوف سريعة مدمجة.
+  * صف لكل عملية جراحية يضم: رقم العملية، بيانات المريض، التغطية (داخليّة/ضمان/كاش)، العملية والقسم والغرفة، الجراح، التكلفة، المسدد، المتبقي/الاسترجاع.
+  * زر إجراء مالي مباشر بنقرة واحدة في نفس الصف: `[ 💵 قبض وتسديد ]` أو `[ 🔄 إرجاع المبلغ ]` أو `[ ⚖️ تسعير العملية ]`.
+  * شريط علوي تنفيذي فاخر (Executive Header) وبطاقات مؤشرات الأداء الحية (KPI Cards).
+  * محرك بحث وتصفية فوري ذكي (Live Instant Filter) يبحث في الصفوف مباشرة ويصنفها (`الكل`، `بانتظار القبض`، `مستحق استرجاع`، `بانتظار التسعير`).
+  * **حل سبب الجدول الفارغ**: كشف تعارض المتغير العام `$pendingSurgeries` الموزع بواسطة `AppServiceProvider` كعدد صحيح للشريط الجانبي (0) الذي كان يستبدل مجموعة العمليات، وتم حله بتمرير `$cashierSurgeries` واعتماد `$flatSurgeries = $cashierSurgeries ?? $surgeriesByPatient->flatten()` لدمج كافة العمليات مباشرة في الجدول.
+  * الحفاظ التام 100% على كافة المعادلات البرمجية والتحققات والصلاحيات دون أي تغيير في قواعد البيانات أو أثر على العمليات السابقة.
+- **التأكيد وضمان الجودة**:
+  * تأكيد ظهور كافة العمليات المعلقة الـ 22 في الجدول الموحد المسطح.
+  * نجاح مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد.
+
 ## Session log (2026-11-27 — المرحلة 322: منع الازدواج في إشغال وحجز الغرف سريرياً وتمييز حالة الإشغال والتخريج واستبعاد المخرّجين من العمليات النشطة Strict Single-Occupancy Room Validation, Occupancy Badges & Excluding Discharged Cases from Active Surgeries)
 
 ### Done

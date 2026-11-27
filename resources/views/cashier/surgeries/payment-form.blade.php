@@ -159,7 +159,9 @@
     $isInsurance = ($defaultInsurance !== 'none');
     $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
     $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
-    if ($defaultInsurance === 'hi' && $patient) {
+    if ($surgery->copay_percentage !== null) {
+        $defaultCopay = (float)$surgery->copay_percentage;
+    } elseif ($defaultInsurance === 'hi' && $patient) {
         $defaultCopay = $patient->getCopayPercentageFor('surgery');
     } else {
         $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
@@ -2042,7 +2044,7 @@ document.addEventListener('DOMContentLoaded', function() {
         radiology: @json($patient ? (float)$patient->getCopayPercentageFor('radiology') : 15.0),
         ecg: @json($patient ? (float)$patient->getCopayPercentageFor('ecg') : 10.0),
     };
-    const moiCopay = @json((float)($patient->copay_percentage ?? 15.0));
+    const moiCopay = @json($surgery->copay_percentage !== null ? (float)$surgery->copay_percentage : (float)($patient->copay_percentage ?? 15.0));
     const hiBadge = document.getElementById('patient_hi_category_badge');
 
     function numberFormat(num) {
@@ -2283,8 +2285,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.item-row').forEach(function(row) {
             const itemCheckbox = row.querySelector('.payment-item');
             const pkgSwitch = row.querySelector('.package-inclusion-switch');
-            const statusBadge = row.querySelector('.package-status-badge');
-            const priceCell = row.querySelector('.item-price-display');
+            const patShareCell = row.querySelector('.row-patient-share');
+            const insShareCell = row.querySelector('.row-insurance-share');
+            const approvedCell = row.querySelector('.row-approved-price');
 
             if (!itemCheckbox) return;
 
@@ -2330,122 +2333,99 @@ document.addEventListener('DOMContentLoaded', function() {
             let itemInsuranceShare = 0;
 
             if (isPkgIncluded) {
-                // Included in surgery package -> 0 IQD impact to patient & insurance
-                itemApproved = 0;
-                itemPatientShare = 0;
-                itemInsuranceShare = 0;
-
-                if (priceCell) {
-                    priceCell.innerHTML = '<span class="text-success fw-bold">0 ' + '{{ __('د.ع') }}</span> <small class="text-muted">(' + '{{ __('مشمول') }}' + ')</small>';
-                }
                 if (priceInput) {
                     priceInput.classList.add('bg-light', 'text-muted');
+                }
+                if (currentInsType === 'moi') {
+                    itemApproved = basePrice;
+                    itemPatientShare = 0;
+                    itemInsuranceShare = basePrice;
+                } else if (currentInsType === 'hi') {
+                    itemApproved = hiPrice > 0 ? hiPrice : basePrice;
+                    itemPatientShare = 0;
+                    itemInsuranceShare = itemApproved;
+                } else {
+                    // كاش (نقدي خاص)
+                    itemApproved = basePrice;
+                    itemPatientShare = 0;
+                    itemInsuranceShare = 0;
                 }
             } else {
                 if (priceInput) {
                     priceInput.classList.remove('bg-light', 'text-muted');
                 }
-                // Unbundled item:
+                // Unbundled item (منفصل):
                 if (itemType === 'lab') {
                     if (currentInsType === 'hi') {
                         itemApproved = hiPrice > 0 ? hiPrice : basePrice;
                         itemPatientShare = Math.round(itemApproved * (labCopayPct / 100));
                         itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
-                    } else if (currentInsType === 'moi') {
-                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
-                        itemPatientShare = Math.round(itemApproved * (labCopayPct / 100));
-                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
                     } else {
+                        // moi or cash
                         itemApproved = basePrice;
                         itemPatientShare = basePrice;
                         itemInsuranceShare = 0;
-                    }
-
-                    if (priceCell) {
-                        if (isIns) {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' ' + '{{ __('د.ع') }}</strong><br><small class="text-muted">(' + '{{ __('مطالبة:') }}' + ' ' + numberFormat(itemInsuranceShare) + ')</small>';
-                        } else {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + '{{ __(' د.ع</strong>') }}';
-                        }
                     }
                 } else if (itemType === 'radiology') {
                     if (currentInsType === 'hi') {
                         itemApproved = hiPrice > 0 ? hiPrice : basePrice;
                         itemPatientShare = Math.round(itemApproved * (radCopayPct / 100));
                         itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
-                    } else if (currentInsType === 'moi') {
-                        itemApproved = moiPrice > 0 ? moiPrice : basePrice;
-                        itemPatientShare = Math.round(itemApproved * (radCopayPct / 100));
-                        itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
                     } else {
+                        // moi or cash
                         itemApproved = basePrice;
                         itemPatientShare = basePrice;
                         itemInsuranceShare = 0;
                     }
-
-                    if (priceCell) {
-                        if (isIns) {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' ' + '{{ __('د.ع') }}</strong><br><small class="text-muted">(' + '{{ __('مطالبة:') }}' + ' ' + numberFormat(itemInsuranceShare) + ')</small>';
-                        } else {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + '{{ __(' د.ع</strong>') }}';
-                        }
-                    }
                 } else if (itemType === 'extra') {
-                    if (isIns && isMedical) {
+                    if (currentInsType === 'hi' && isMedical) {
                         itemApproved = basePrice;
                         itemPatientShare = Math.round(itemApproved * (ecgCopayPct / 100));
                         itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
                     } else {
+                        // moi or cash
                         itemApproved = basePrice;
                         itemPatientShare = basePrice;
                         itemInsuranceShare = 0;
                     }
-
-                    if (priceCell) {
-                        if (isIns && isMedical) {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' ' + '{{ __('د.ع') }}</strong><br><small class="text-muted">(' + '{{ __('تحمل') }}' + ' ' + ecgCopayPct + '%)</small>';
-                        } else {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + '{{ __(' د.ع</strong>') }}';
-                        }
-                    }
                 } else if (itemType === 'consultation') {
-                    if (isIns) {
+                    if (currentInsType === 'hi') {
                         itemApproved = basePrice;
                         itemPatientShare = Math.round(itemApproved * (consultCopayPct / 100));
                         itemInsuranceShare = Math.max(0, itemApproved - itemPatientShare);
                     } else {
+                        // moi or cash
                         itemApproved = basePrice;
                         itemPatientShare = basePrice;
                         itemInsuranceShare = 0;
                     }
-
-                    if (priceCell) {
-                        if (isIns) {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' ' + '{{ __('د.ع') }}</strong><br><small class="text-muted">(' + '{{ __('تحمل') }}' + ' ' + consultCopayPct + '%)</small>';
-                        } else {
-                            priceCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + '{{ __(' د.ع</strong>') }}';
-                        }
-                    }
                 }
             }
 
-            const patShareCell = row.querySelector('.row-patient-share');
-            const insShareCell = row.querySelector('.row-insurance-share');
-            const approvedCell = row.querySelector('.row-approved-price');
-
-            if (approvedCell && itemApproved > 0) {
-                approvedCell.textContent = numberFormat(itemApproved) + '{{ __(' د.ع') }}';
+            // Update row cells
+            if (approvedCell) {
+                approvedCell.textContent = numberFormat(itemApproved) + ' {{ __('د.ع') }}';
             }
 
             if (patShareCell) {
                 if (isPkgIncluded) {
-                    patShareCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success">0 ' + '{{ __('د.ع') }}' + ' (' + '{{ __('مشمول') }}' + ')</span>';
+                    patShareCell.innerHTML = '<span class="badge bg-success-subtle text-success border border-success">0 {{ __('د.ع') }} ({{ __('مشمول') }})</span>';
                 } else {
-                    patShareCell.textContent = numberFormat(itemPatientShare) + '{{ __(' د.ع') }}';
+                    if (currentInsType === 'hi' && (itemType === 'lab' || itemType === 'radiology' || (itemType === 'extra' && isMedical) || itemType === 'consultation')) {
+                        let pct = (itemType === 'lab') ? labCopayPct : ((itemType === 'radiology') ? radCopayPct : ((itemType === 'extra') ? ecgCopayPct : consultCopayPct));
+                        patShareCell.innerHTML = '<strong>' + numberFormat(itemPatientShare) + ' {{ __('د.ع') }}</strong><br><small class="text-muted">({{ __('تحمل') }} ' + pct + '%)</small>';
+                    } else {
+                        patShareCell.innerHTML = '<strong class="text-dark">' + numberFormat(itemPatientShare) + ' {{ __('د.ع') }}</strong>';
+                    }
                 }
             }
+
             if (insShareCell) {
-                insShareCell.textContent = numberFormat(itemInsuranceShare) + '{{ __(' د.ع') }}';
+                if (itemInsuranceShare > 0) {
+                    insShareCell.innerHTML = '<strong class="text-primary">' + numberFormat(itemInsuranceShare) + ' {{ __('د.ع') }}</strong>' + (isPkgIncluded ? '<br><small class="text-info">({{ __('مطالبة بالباقة') }})</small>' : '');
+                } else {
+                    insShareCell.textContent = '0 {{ __('د.ع') }}';
+                }
             }
 
             if (isCheckedForPay) {

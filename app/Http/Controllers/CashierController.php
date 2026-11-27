@@ -3398,6 +3398,7 @@ class CashierController extends Controller
 
         // تجميع العمليات حسب المريض
         $surgeriesByPatient = $pendingSurgeries->groupBy('patient_id');
+        $cashierSurgeries = $pendingSurgeries;
 
         // إحصائيات العمليات
         $today = Carbon::today();
@@ -3412,7 +3413,7 @@ class CashierController extends Controller
                 ->sum('amount'),
         ];
 
-        return view('cashier.surgeries.index', compact('pendingSurgeries', 'surgeriesByPatient', 'surgeryStats'));
+        return view('cashier.surgeries.index', compact('pendingSurgeries', 'cashierSurgeries', 'surgeriesByPatient', 'surgeryStats'));
     }
 
     /**
@@ -4465,6 +4466,10 @@ class CashierController extends Controller
                             $rBearer = $isInsurance ? 'insurance' : 'doctor';
                             if (! $isInsurance && $rPrice > 0) {
                                 $doctorDeductionsAmount += $rPrice;
+                            } elseif ($isInsurance && $rPrice > 0) {
+                                $radApproved += $rPrice;
+                                $radInsuranceShare += $rPrice;
+                                $radPatientShare += 0.0;
                             }
                             $includedPackageItems[] = [
                                 'type' => 'radiology',
@@ -4473,20 +4478,19 @@ class CashierController extends Controller
                                 'price' => $rPrice,
                                 'bearer' => $rBearer,
                             ];
-                            $paidItems[] = 'أشعة: '.($rModel->name ?? 'غير محدد').' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $rPrice > 0 ? ' [استقطاع جراح: '.number_format($rPrice, 0).' د.ع]' : '');
+                            $paidItems[] = 'أشعة: '.($rModel->name ?? 'غير محدد').' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $rPrice > 0 ? ' [استقطاع جراح: '.number_format($rPrice, 0).' د.ع]' : ($isInsurance ? ' [مطالبة تأمين/داخلية]' : ''));
                         } else {
                             $rBase = (float) ($rModel ? $rModel->getRegularPrice() : 0);
                             $rHi = (float) (($rModel && $rModel->hi_price > 0) ? $rModel->hi_price : $rBase);
-                            $rMoi = (float) (($rModel && $rModel->moi_price > 0) ? $rModel->moi_price : $rBase);
 
                             if ($insuranceType === 'hi') {
                                 $appr = $rHi;
                                 $pShare = round($appr * ($radCopay / 100.0), 2);
                                 $iShare = max(0.0, $appr - $pShare);
                             } elseif ($insuranceType === 'moi') {
-                                $appr = $rMoi;
-                                $pShare = round($appr * ($radCopay / 100.0), 2);
-                                $iShare = max(0.0, $appr - $pShare);
+                                $appr = $rBase;
+                                $pShare = $rBase;
+                                $iShare = 0.0;
                             } else {
                                 $appr = $rBase;
                                 $pShare = $rBase;
@@ -4530,6 +4534,10 @@ class CashierController extends Controller
                             $eBearer = $isInsurance ? 'insurance' : 'doctor';
                             if (! $isInsurance && $eTotal > 0) {
                                 $doctorDeductionsAmount += $eTotal;
+                            } elseif ($isInsurance && $eTotal > 0) {
+                                $extraApproved += $eTotal;
+                                $extraInsuranceShare += $eTotal;
+                                $extraPatientShare += 0.0;
                             }
                             $includedPackageItems[] = [
                                 'type' => 'extra',
@@ -4538,13 +4546,13 @@ class CashierController extends Controller
                                 'price' => $eTotal,
                                 'bearer' => $eBearer,
                             ];
-                            $paidItems[] = 'خدمة إضافية: '.$extraService->name.' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $eTotal > 0 ? ' [استقطاع جراح: '.number_format($eTotal, 0).' د.ع]' : '');
+                            $paidItems[] = 'خدمة إضافية: '.$extraService->name.' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $eTotal > 0 ? ' [استقطاع جراح: '.number_format($eTotal, 0).' د.ع]' : ($isInsurance ? ' [مطالبة تأمين/داخلية]' : ''));
                         } else {
                             $isMedical = ($extraService->service?->category === 'medical')
                                 || str_contains($extraService->name, 'تخطيط')
                                 || str_contains(strtolower($extraService->name), 'ecg');
 
-                            if ($isInsurance && $isMedical) {
+                            if ($insuranceType === 'hi' && $isMedical) {
                                 $appr = $eTotal;
                                 $pShare = round($appr * ($ecgCopay / 100.0), 2);
                                 $iShare = max(0.0, $appr - $pShare);
@@ -4588,6 +4596,10 @@ class CashierController extends Controller
                             $cBearer = $isInsurance ? 'insurance' : 'doctor';
                             if (! $isInsurance && $cFee > 0) {
                                 $doctorDeductionsAmount += $cFee;
+                            } elseif ($isInsurance && $cFee > 0) {
+                                $consultationApproved += $cFee;
+                                $consultationInsuranceShare += $cFee;
+                                $consultationPatientShare += 0.0;
                             }
                             $includedPackageItems[] = [
                                 'type' => 'consultation',
@@ -4596,17 +4608,17 @@ class CashierController extends Controller
                                 'price' => $cFee,
                                 'bearer' => $cBearer,
                             ];
-                            $paidItems[] = 'استشارة سريرية: د. '.$doctorName.' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $cFee > 0 ? ' [استقطاع جراح: '.number_format($cFee, 0).' د.ع]' : '');
+                            $paidItems[] = 'استشارة سريرية: د. '.$doctorName.' (مشمولة ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $cFee > 0 ? ' [استقطاع جراح: '.number_format($cFee, 0).' د.ع]' : ($isInsurance ? ' [مطالبة تأمين/داخلية]' : ''));
 
                             $processedConsultations[] = [
                                 'model' => $consultation,
                                 'fee' => $cFee,
                                 'is_included' => true,
                                 'patient_share' => 0.0,
-                                'insurance_share' => 0.0,
+                                'insurance_share' => $isInsurance ? $cFee : 0.0,
                             ];
                         } else {
-                            if ($isInsurance) {
+                            if ($insuranceType === 'hi') {
                                 $appr = $cFee;
                                 $consultCopay = $patient ? (float) ($patient->copay_percentage ?? 15.0) : 15.0;
                                 $pShare = round($appr * ($consultCopay / 100.0), 2);
