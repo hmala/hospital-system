@@ -56,6 +56,18 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 316: توحيد هيكل تقرير العملية الجراحية المعتمد لكافة الحالات النشطة والمكتملة في صفحة A4 واحدة Standardizing Surgery Print Report for All Cases)
+
+### Done
+- **توحيد هيكل تقرير العملية الجراحية المعتمد بالكامل ([resources/views/surgeries/print.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/print.blade.php))**:
+  * إلغاء اختفاء الأقسام (Post-Op Notes، خطة العلاج والأدوية، المستلزمات والمواد الجراحية المستهلكة) عند طباعة العمليات من تبويب العمليات النشطة أو التي لم تكتمل مدخلاتها بعد.
+  * وضع نصوص وبنود سريرية بديلة واضحة ومعتمدة (Placeholders) عند عدم توفر البيانات بعد (مثل: `قيد الإجراء — لم يتم توثيق ملاحظات ما بعد العملية بعد.`، `بانتظار توثيق الخطة العلاجية الدوائية من الطبيب المشرف.`، و`قيد التجهيز والاستهلاك بصالة العمليات — بانتظار الاعتماد النهائي لحساب العهدة.`) ليظهر التقرير موحداً بنفس الأناقة والشمولية لكل الحالات بلا استثناء.
+  * ضمان عدم تجاوز الصفحة الواحدة A4 الصارمة (`max-height: 287mm` وضغط الهوامش والحشو) وعدم حدوث أي انقسام للصفحة إطلاقاً.
+- **الاختبارات والتأكيد**:
+  * اجتياز اختبارات تقرير الطباعة [SurgeryStatusPostOpAndPrintReportTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryStatusPostOpAndPrintReportTest.php) (4 passed, 48 assertions).
+  * اجتياز اختبارات الترجمة والطباعة [SurgeriesLocalizationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeriesLocalizationTest.php) (7 passed, 76 assertions).
+  * نجاح مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد عبر `Pint`.
+
 ## Session log (2026-11-27 — المرحلة 315: إعادة هندسة وتنسيق تقرير العملية الجراحية المعتمد وحذف التكرار والمراقبة السريرية Surgical Report Restructuring & Elegant Medical Formatting)
 
 ### Done

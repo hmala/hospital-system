@@ -22,8 +22,14 @@
             ?? $surgeon?->user?->name
             ?? __('غير محدد');
 
-        $surgicalAssistantName = $surgery->surgical_assistant_name;
-        $anesthesiaAssistantName = $surgery->anesthesia_assistant_name;
+        $surgicalAssistantName = $surgery->surgical_assistant_name
+            ?? $surgery->anesthesiaStation?->surgical_assistant_name
+            ?? null;
+
+        $anesthesiaAssistantName = $surgery->anesthesia_assistant_name
+            ?? $surgery->anesthesiaStation?->anesthesia_assistant_name
+            ?? $surgery->anesthesiaStation?->assistant_name
+            ?? null;
 
         $primaryAnesthName = $surgery->anesthesiaStation?->anesthesiologist?->user?->full_name
             ?? $surgery->anesthesiaStation?->anesthesiologist?->user?->name
@@ -785,15 +791,15 @@
                     </div>
                 </div>
 
-                <!-- 4. Surgical, Anesthesia & Nursing Team -->
+                <!-- 4. Surgical & Anesthesia Team -->
                 <div class="sec-card">
                     <div class="sec-head">
-                        <div><i class="fas fa-users-cog"></i>{{ __('الفريق الطبي والجراحي والتمريضي المشرف (Surgical & Clinical Team)') }}</div>
+                        <div><i class="fas fa-user-md"></i>{{ __('الفريق الطبي والجراحي المشرف (Surgical & Anesthesia Team)') }}</div>
                     </div>
                     <div class="sec-body" style="padding: 0;">
                         <div class="team-row">
                             <div class="team-col">
-                                <span class="team-role">{{ __('الجراح الرئيسي:') }}</span>
+                                <span class="team-role">{{ __('الطبيب الجراح الرئيسي:') }}</span>
                                 <span class="team-name" style="color: #005a9c;">{{ __('د.') }} {{ $surgeonName }}</span>
                             </div>
                             <div class="team-col">
@@ -814,16 +820,6 @@
                                 <span class="team-role">{{ __('مساعد / تقني التخدير:') }}</span>
                                 <span class="team-name">{{ $anesthesiaAssistantName ?: '—' }}</span>
                             </div>
-                            <div class="team-col">
-                                <span class="team-role">{{ __('كادر تمريض الصالة:') }}</span>
-                                <span class="team-name">{{ $orNurseName ?: '—' }}</span>
-                            </div>
-                            @if($residentName)
-                                <div class="team-col">
-                                    <span class="team-role">{{ __('الطبيب المقيم المكلف:') }}</span>
-                                    <span class="team-name">{{ __('د.') }} {{ $residentName }}</span>
-                                </div>
-                            @endif
                         </div>
                     </div>
                 </div>
@@ -891,14 +887,14 @@
                             </div>
 
                             <!-- Post-Op Notes -->
-                            @if($postOpNotes)
-                                <div class="clinical-entry entry-postop">
-                                    <div class="clinical-entry-title">
-                                        <i class="fas fa-clipboard-check"></i> {{ __('ملاحظات ما بعد العملية (Post-Operative Notes):') }}
-                                    </div>
-                                    <div class="clinical-entry-text" style="font-weight: 600;">{!! nl2br(e($postOpNotes)) !!}</div>
+                            <div class="clinical-entry entry-postop">
+                                <div class="clinical-entry-title">
+                                    <i class="fas fa-clipboard-check"></i> {{ __('ملاحظات ما بعد العملية (Post-Operative Notes):') }}
                                 </div>
-                            @endif
+                                <div class="clinical-entry-text" style="font-weight: 600;">
+                                    {!! $postOpNotes ? nl2br(e($postOpNotes)) : __('قيد الإجراء — لم يتم توثيق ملاحظات ما بعد العملية بعد.') !!}
+                                </div>
+                            </div>
 
                             <!-- Procedure Notes / Description (if distinct) -->
                             @if(($procedureNotes || $surgery->description) && ($procedureNotes ?: $surgery->description) !== $postOpNotes)
@@ -958,112 +954,114 @@
                 </div>
 
                 <!-- 7. Treatment Plan & Medications Administered -->
-                @if($treatmentPlan || $medications->count() > 0)
-                    <div class="sec-card">
-                        <div class="sec-head">
-                            <div>
-                                <i class="fas fa-pills text-danger"></i>
-                                {{ __('خطة العلاج والأدوية (Treatment Plan & Medications)') }}
-                            </div>
-                            @if($medications->count() > 0)
-                                <span style="font-size: 8px; color: #0284c7;">{{ $medications->count() }} دواء مسجل بالرقود</span>
-                            @endif
+                <div class="sec-card">
+                    <div class="sec-head">
+                        <div>
+                            <i class="fas fa-pills text-danger"></i>
+                            {{ __('خطة العلاج والأدوية (Treatment Plan & Medications)') }}
                         </div>
-                        <div class="sec-body">
-                            <!-- Prescribed Treatment Plan -->
-                            @if($treatmentPlan)
-                                <div class="clinical-entry entry-plan" style="margin-bottom: 5px;">
-                                    <div class="clinical-entry-title" style="font-size: 8.5px; color: #065f46;">
-                                        <i class="fas fa-prescription me-1"></i> {{ __('الأدوية والتوجيهات الموصوفة بعد العملية:') }}
-                                    </div>
-                                    <div class="clinical-entry-text" style="font-weight: 700; color: #064e3b; font-size: 9.5px; line-height: 1.5;">
-                                        {!! nl2br(e($treatmentPlan)) !!}
-                                    </div>
-                                </div>
-                            @endif
-
-                            <!-- Inpatient Medications Table -->
-                            @if($medications->count() > 0)
-                                <table class="clean-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 32%;">{{ __('الدواء / المحلول العلاجي') }}</th>
-                                            <th style="width: 15%;">{{ __('الجرعة') }}</th>
-                                            <th style="width: 15%;">{{ __('طريقة الإعطاء') }}</th>
-                                            <th style="width: 22%;">{{ __('التكرار والتعليمات') }}</th>
-                                            <th style="width: 16%;">{{ __('حالة الإعطاء والتوقيت') }}</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($medications as $tr)
-                                            @php
-                                                $medName = $tr->description ?: ($tr->medicine?->name ?? $tr->name ?? 'علاج طبي');
-                                                $medDosage = $tr->dosage ?: ($tr->quantity ? $tr->quantity . ' وحدة' : 'حسب الوصفة');
-                                                $medRoute = $tr->route ?: 'I.V';
-                                                $medTiming = $tr->timing ?: ($tr->instructions ?: ($tr->frequency_mode ? ($tr->frequency_preset_label ?? $tr->frequency_mode) : '—'));
-                                                $isGiven = ($tr->status === 'administered');
-                                                $givenTime = $tr->administered_at ? \Carbon\Carbon::parse($tr->administered_at)->format('Y-m-d H:i') : null;
-                                            @endphp
-                                            <tr>
-                                                <td style="font-weight: 700; color: #005a9c;">{{ $medName }}</td>
-                                                <td>{{ $medDosage }}</td>
-                                                <td>{{ $medRoute }}</td>
-                                                <td>{{ $medTiming }}</td>
-                                                <td>
-                                                    <span style="font-size: 7.5px; padding: 1px 4px; border-radius: 2px; font-weight: 700; background: {{ $isGiven ? '#dcfce7; color: #166534;' : '#fef3c7; color: #92400e;' }}">
-                                                        {{ $isGiven ? __('تم الصرف والإعطاء') : __('مخطط له') }}
-                                                    </span>
-                                                    @if($givenTime) <small style="display: block; font-size: 7px; color: #64748b;">{{ $givenTime }}</small> @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            @endif
-                        </div>
+                        @if($medications->count() > 0)
+                            <span style="font-size: 8px; color: #0284c7;">{{ $medications->count() }} دواء مسجل بالرقود</span>
+                        @endif
                     </div>
-                @endif
-
-                <!-- 8. Surgical Supplies & Consumables -->
-                @if($supplies->count() > 0)
-                    <div class="sec-card">
-                        <div class="sec-head">
-                            <div>
-                                <i class="fas fa-band-aid text-warning"></i>
-                                {{ __('المستلزمات والمواد الجراحية المستهلكة (Surgical Supplies & Consumables)') }}
+                    <div class="sec-body">
+                        <!-- Prescribed Treatment Plan -->
+                        <div class="clinical-entry entry-plan" style="margin-bottom: 4px;">
+                            <div class="clinical-entry-title" style="font-size: 8.5px; color: #065f46;">
+                                <i class="fas fa-prescription me-1"></i> {{ __('الأدوية والتوجيهات الموصوفة بعد العملية:') }}
                             </div>
-                            <span style="font-size: 8px; color: #b45309;">{{ $supplies->count() }} مادة مستهلكة</span>
+                            <div class="clinical-entry-text" style="font-weight: 700; color: #064e3b; font-size: 9.5px; line-height: 1.45;">
+                                {!! $treatmentPlan ? nl2br(e($treatmentPlan)) : __('بانتظار توثيق الخطة العلاجية الدوائية من الطبيب المشرف.') !!}
+                            </div>
                         </div>
-                        <div class="sec-body" style="padding: 3px 8px;">
+
+                        <!-- Inpatient Medications Table -->
+                        @if($medications->count() > 0)
                             <table class="clean-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 42%;">{{ __('المستلزم الطبي / المادة المستهلكة') }}</th>
-                                        <th style="width: 14%; text-align: center;">{{ __('الكمية') }}</th>
-                                        <th style="width: 18%;">{{ __('الوحدة / القياس') }}</th>
-                                        <th>{{ __('الملاحظات ومصدر الصرف') }}</th>
+                                        <th style="width: 32%;">{{ __('الدواء / المحلول العلاجي') }}</th>
+                                        <th style="width: 15%;">{{ __('الجرعة') }}</th>
+                                        <th style="width: 15%;">{{ __('طريقة الإعطاء') }}</th>
+                                        <th style="width: 22%;">{{ __('التكرار والتعليمات') }}</th>
+                                        <th style="width: 16%;">{{ __('حالة الإعطاء والتوقيت') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($supplies as $sup)
+                                    @foreach($medications as $tr)
                                         @php
-                                            $supName = $sup->description ?: ($sup->product?->name ?? $sup->name ?? 'مستلزم جراحي');
-                                            $supQty = $sup->quantity ?? 1;
-                                            $supDosage = $sup->dosage ?: 'قطعة';
-                                            $supTiming = $sup->timing ?: 'صرف من عهدة العمليات';
+                                            $medName = $tr->description ?: ($tr->medicine?->name ?? $tr->name ?? 'علاج طبي');
+                                            $medDosage = $tr->dosage ?: ($tr->quantity ? $tr->quantity . ' وحدة' : 'حسب الوصفة');
+                                            $medRoute = $tr->route ?: 'I.V';
+                                            $medTiming = $tr->timing ?: ($tr->instructions ?: ($tr->frequency_mode ? ($tr->frequency_preset_label ?? $tr->frequency_mode) : '—'));
+                                            $isGiven = ($tr->status === 'administered');
+                                            $givenTime = $tr->administered_at ? \Carbon\Carbon::parse($tr->administered_at)->format('Y-m-d H:i') : null;
                                         @endphp
                                         <tr>
-                                            <td style="font-weight: 700;">{{ $supName }}</td>
-                                            <td style="text-align: center; font-weight: 800; color: #0284c7;">{{ $supQty }}</td>
-                                            <td>{{ $supDosage }}</td>
-                                            <td>{{ $supTiming }}</td>
+                                            <td style="font-weight: 700; color: #005a9c;">{{ $medName }}</td>
+                                            <td>{{ $medDosage }}</td>
+                                            <td>{{ $medRoute }}</td>
+                                            <td>{{ $medTiming }}</td>
+                                            <td>
+                                                <span style="font-size: 7.5px; padding: 1px 4px; border-radius: 2px; font-weight: 700; background: {{ $isGiven ? '#dcfce7; color: #166534;' : '#fef3c7; color: #92400e;' }}">
+                                                    {{ $isGiven ? __('تم الصرف والإعطاء') : __('مخطط له') }}
+                                                </span>
+                                                @if($givenTime) <small style="display: block; font-size: 7px; color: #64748b;">{{ $givenTime }}</small> @endif
+                                            </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
-                        </div>
+                        @endif
                     </div>
-                @endif
+                </div>
+
+                <!-- 8. Surgical Supplies & Consumables -->
+                <div class="sec-card">
+                    <div class="sec-head">
+                        <div>
+                            <i class="fas fa-band-aid text-warning"></i>
+                            {{ __('المستلزمات والمواد الجراحية المستهلكة (Surgical Supplies & Consumables)') }}
+                        </div>
+                        @if($supplies->count() > 0)
+                            <span style="font-size: 8px; color: #b45309;">{{ $supplies->count() }} مادة مستهلكة</span>
+                        @endif
+                    </div>
+                    <div class="sec-body" style="padding: 3px 8px;">
+                        <table class="clean-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 42%;">{{ __('المستلزم الطبي / المادة المستهلكة') }}</th>
+                                    <th style="width: 14%; text-align: center;">{{ __('الكمية') }}</th>
+                                    <th style="width: 18%;">{{ __('الوحدة / القياس') }}</th>
+                                    <th>{{ __('الملاحظات ومصدر الصرف') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($supplies as $sup)
+                                    @php
+                                        $supName = $sup->description ?: ($sup->product?->name ?? $sup->name ?? 'مستلزم جراحي');
+                                        $supQty = $sup->quantity ?? 1;
+                                        $supDosage = $sup->dosage ?: 'قطعة';
+                                        $supTiming = $sup->timing ?: 'صرف من عهدة العمليات';
+                                    @endphp
+                                    <tr>
+                                        <td style="font-weight: 700;">{{ $supName }}</td>
+                                        <td style="text-align: center; font-weight: 800; color: #0284c7;">{{ $supQty }}</td>
+                                        <td>{{ $supDosage }}</td>
+                                        <td>{{ $supTiming }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" style="text-align: center; color: #64748b; padding: 4px; font-weight: 600; font-size: 8px;">
+                                            <i class="fas fa-box-open me-1"></i> {{ __('قيد التجهيز والاستهلاك بصالة العمليات — بانتظار الاعتماد النهائي لحساب العهدة.') }}
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
 
                 <!-- 9. Lab & Radiology Investigations (if any) -->
                 @if($labTests->count() > 0 || $radiologyTests->count() > 0)
@@ -1179,13 +1177,6 @@
                                     <div style="font-size: 7.5px; color: #64748b;">• د. {{ $secondaryAnesthName }}</div>
                                 @endif
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="auth-box">
-                        <div class="auth-sig-line">
-                            <div class="auth-sig-role">{{ __('توقيع مسؤولة / كادر الصالة') }}</div>
-                            <div class="auth-sig-name">{{ $orNurseName ?: __('كادر تمريض الصالة') }}</div>
                         </div>
                     </div>
 
