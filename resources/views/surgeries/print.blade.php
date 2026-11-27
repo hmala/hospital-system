@@ -43,20 +43,9 @@
             ?? $surgery->anesthesiologist2?->user?->name
             ?? '';
 
-        $orNurseName = $surgery->operationTheaterStation?->orNurse?->full_name
-            ?? $surgery->operationTheaterStation?->orNurse?->name
-            ?? $surgery->nurse_name
-            ?? '';
-
-        $residentName = $surgery->surgeonStation?->residentAssigned?->user?->full_name
-            ?? $surgery->surgeonStation?->residentAssigned?->user?->name
-            ?? ($surgery->residentStations?->first()?->resident?->user?->full_name
-                ?? ($surgery->residentStations?->first()?->resident?->user?->name
-                    ?? ($surgery->residentStationFollowUps?->first()?->resident_name ?? '')));
-
-        $inpatientNurseName = $surgery->nursingStation?->nurse?->full_name
-            ?? $surgery->nursingStation?->nurse?->name
-            ?? ($surgery->surgeryTreatments?->whereNotNull('administered_by')->first()?->administeredBy?->name ?? '');
+        $orNurseName = $surgery->operationTheaterStation?->orNurse?->name ?? $surgery->nurse_name ?? '';
+        $residentName = $surgery->surgeonStation?->residentAssigned?->user?->name
+            ?? ($surgery->residentStations?->first()?->resident?->user?->name ?? '');
 
         $currentAnesthesiaType = $surgery->anesthesiaStation?->anesthesia_type ?? $surgery->anesthesia_type ?? '';
         $currentAnesthesiaNotes = $surgery->anesthesiaStation?->notes ?: ($surgery->anesthesia_notes ?? '');
@@ -400,38 +389,30 @@
             background: #f8fafc;
             border-radius: 3px;
             border: 1px solid #e2e8f0;
-            overflow: hidden;
             width: 100%;
         }
         .team-col {
-            flex: 1 1 12.5%;
-            width: 12.5%;
-            padding: 3px 4px;
+            flex: 1 1 20%;
+            width: 20%;
+            padding: 4px 6px;
             border-inline-end: 1px solid #e2e8f0;
             display: flex;
             flex-direction: column;
             gap: 1px;
             box-sizing: border-box;
-            overflow: hidden;
         }
         .team-col:last-child {
             border-inline-end: none;
         }
         .team-role {
-            font-size: 7.5px;
+            font-size: 8px;
             font-weight: 700;
             color: #64748b;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
         .team-name {
-            font-size: 8.5px;
+            font-size: 9.5px;
             font-weight: 800;
             color: #0f172a;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         /* Clinical Notes & Details Box */
@@ -812,15 +793,15 @@
                     </div>
                 </div>
 
-                <!-- 4. Surgical, Anesthesia & Clinical Team -->
+                <!-- 4. Surgical & Anesthesia Team -->
                 <div class="sec-card">
                     <div class="sec-head">
-                        <div><i class="fas fa-users-cog"></i>{{ __('الفريق الطبي والجراحي والتمريضي المشرف (Surgical, Anesthesia & Clinical Team)') }}</div>
+                        <div><i class="fas fa-user-md"></i>{{ __('الفريق الطبي والجراحي المشرف (Surgical & Anesthesia Team)') }}</div>
                     </div>
                     <div class="sec-body" style="padding: 0;">
                         <div class="team-row">
                             <div class="team-col">
-                                <span class="team-role">{{ __('الجراح الرئيسي:') }}</span>
+                                <span class="team-role">{{ __('الطبيب الجراح الرئيسي:') }}</span>
                                 <span class="team-name" style="color: #005a9c;">{{ __('د.') }} {{ $surgeonName }}</span>
                             </div>
                             <div class="team-col">
@@ -838,18 +819,6 @@
                             <div class="team-col">
                                 <span class="team-role">{{ __('مساعد / تقني التخدير:') }}</span>
                                 <span class="team-name">{{ $anesthesiaAssistantName ?: '—' }}</span>
-                            </div>
-                            <div class="team-col">
-                                <span class="team-role">{{ __('كادر تمريض الصالة:') }}</span>
-                                <span class="team-name">{{ $orNurseName ?: '—' }}</span>
-                            </div>
-                            <div class="team-col">
-                                <span class="team-role">{{ __('الطبيب المقيم المكلف:') }}</span>
-                                <span class="team-name">{{ $residentName ? (__('د.') . ' ' . $residentName) : '—' }}</span>
-                            </div>
-                            <div class="team-col">
-                                <span class="team-role">{{ __('تمريض الردهة / الرقود:') }}</span>
-                                <span class="team-name">{{ $inpatientNurseName ?: '—' }}</span>
                             </div>
                         </div>
                     </div>
@@ -1208,13 +1177,6 @@
                                     <div style="font-size: 7.5px; color: #64748b;">• د. {{ $secondaryAnesthName }}</div>
                                 @endif
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="auth-box">
-                        <div class="auth-sig-line">
-                            <div class="auth-sig-role">{{ __('توقيع كادر التمريض والعمليات') }} / Nursing Staff</div>
-                            <div class="auth-sig-name">{{ $orNurseName ?: ($inpatientNurseName ?: __('كادر تمريض الصالة')) }}</div>
                         </div>
                     </div>
 

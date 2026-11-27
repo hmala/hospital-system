@@ -695,7 +695,6 @@ class SurgeryController extends Controller
             'surgeonStation.residentAssigned.user',
             'residentStations.resident.user',
             'operationTheaterStation.orNurse',
-            'nursingStation.nurse',
             'additionalOperations.surgicalOperation',
             'surgeryTreatments.medicine',
             'medicalDevices',
