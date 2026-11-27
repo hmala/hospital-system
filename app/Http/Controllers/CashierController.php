@@ -733,6 +733,13 @@ class CashierController extends Controller
                 'paid_at' => Carbon::now(),
             ]);
 
+            // توليد قيد المقبوضات المحاسبي اليومي في المنظومة المالية الموحدة
+            try {
+                app(\App\Services\Accounting\FinancialRoutingService::class)->recordPaymentReceipt($payment, $user->id);
+            } catch (\Throwable $e) {
+                \Log::warning('Financial routing error for appointment payment #'.$payment->id.': '.$e->getMessage());
+            }
+
             // تحديث حالة الدفع للموعد
             $appointment->update([
                 'payment_status' => 'paid',
@@ -2295,6 +2302,13 @@ class CashierController extends Controller
                 'lab_request_ids' => json_encode($actuallyPaidRequests->where('type', 'lab')->pluck('id')->values()->toArray()),
                 'radiology_request_ids' => json_encode($actuallyPaidRequests->where('type', 'radiology')->pluck('id')->values()->toArray()),
             ]);
+
+            // توليد قيد المقبوضات المحاسبي اليومي في المنظومة المالية الموحدة
+            try {
+                app(\App\Services\Accounting\FinancialRoutingService::class)->recordPaymentReceipt($payment, $user->id);
+            } catch (\Throwable $e) {
+                \Log::warning('Financial routing error for request payment #'.$payment->id.': '.$e->getMessage());
+            }
 
             \Log::info('Payment created successfully: #'.$payment->id);
 
@@ -4740,6 +4754,13 @@ class CashierController extends Controller
                 'is_inclusive' => $isInclusive,
                 'paid_at' => Carbon::now(),
             ]);
+
+            // توليد قيد المقبوضات المحاسبي اليومي في المنظومة المالية الموحدة
+            try {
+                app(\App\Services\Accounting\FinancialRoutingService::class)->recordPaymentReceipt($payment, $user->id);
+            } catch (\Throwable $e) {
+                \Log::warning('Financial routing error for surgery payment #'.$payment->id.': '.$e->getMessage());
+            }
 
             // تحديث مبالغ وحالة رسوم العملية
             if ($paySurgery) {

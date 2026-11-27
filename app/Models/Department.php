@@ -14,6 +14,8 @@ class Department extends Model
     protected $fillable = [
         'hospital_id',
         'manager_id',
+        'cost_center_id',
+        'revenue_account_id',
         'name',
         'type',
         'room_number',
@@ -47,6 +49,16 @@ class Department extends Model
     public function manager()
     {
         return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    public function costCenter()
+    {
+        return $this->belongsTo(\App\Models\Accounting\CostCenter::class, 'cost_center_id');
+    }
+
+    public function revenueAccount()
+    {
+        return $this->belongsTo(\App\Models\Accounting\Account::class, 'revenue_account_id');
     }
 
     public function doctors()

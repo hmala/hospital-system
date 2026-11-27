@@ -156,6 +156,41 @@
                             <div class="form-text small">ابحث بالاسم أو البريد الإلكتروني لتحديد مدير القسم. مدير القسم يملك صلاحية اعتماد إجازات موظفي هذا القسم وإدارة واعتماد جدول دوامهم.</div>
                         </div>
 
+                        <!-- قسم الربط المالي والمحاسبي (اختياري) -->
+                        <div class="card mb-3 border-success border-opacity-25 bg-light bg-opacity-50 rounded-3">
+                            <div class="card-header bg-success bg-opacity-10 py-2">
+                                <h6 class="mb-0 text-success fw-bold small">
+                                    <i class="fas fa-sitemap me-1"></i> ربط القسم بمركز الكلفة وحساب الإيراد
+                                </h6>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="cost_center_id" class="form-label small fw-bold">مركز الكلفة التابع له القسم</label>
+                                        <select name="cost_center_id" id="cost_center_id" class="form-select form-select-sm">
+                                            <option value="">— اختر مركز الكلفة (اختياري) —</option>
+                                            @foreach($costCenters ?? [] as $cc)
+                                                <option value="{{ $cc->id }}" {{ old('cost_center_id', $department->cost_center_id) == $cc->id ? 'selected' : '' }}>
+                                                    [{{ $cc->code }}] {{ $cc->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="revenue_account_id" class="form-label small fw-bold">حساب الإيراد المالي الافتراضي</label>
+                                        <select name="revenue_account_id" id="revenue_account_id" class="form-select form-select-sm">
+                                            <option value="">— اختر حساب الإيراد (اختياري) —</option>
+                                            @foreach($revenueAccounts ?? [] as $acc)
+                                                <option value="{{ $acc->id }}" {{ old('revenue_account_id', $department->revenue_account_id) == $acc->id ? 'selected' : '' }} {{ !$acc->is_postable ? 'disabled class=text-muted' : '' }}>
+                                                    [{{ $acc->code }}] {{ $acc->name }} {{ !$acc->is_postable ? ' (حساب رئيسي تجميعي)' : '' }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mb-4">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active"

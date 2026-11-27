@@ -56,6 +56,33 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 324: بناء الهيكل المالي والمحاسبي المتكامل وفق النظام المحاسبي الموحد العراقي وربط الكاشير والأقسام والمخازن بمراكز الكلفة Hospital Financial & Accounting Architecture, Unified Chart of Accounts, Analytical Cash Drawers, Cost Centers & Automated Cashier Journal Routing)
+
+### Done
+- **شجرة الحسابات المحدثة والصناديق النقدية التحليلية بالدينار العراقي ([seed_hospital_chart_of_accounts_branches.php](file:///c:/get/hospital-system/database/migrations/2026_11_27_234000_seed_hospital_chart_of_accounts_branches.php))**:
+  * تفريع وتفعيل الصناديق النقدية التحليلية تحت `13411` (نقدية لدى صندوق المركز):
+    - `134111`: صندوق المقبوضات النقدية العامة (كاش المريض العام).
+    - `134112`: صندوق مقبوضات الضمان الصحي (استقطاعات ونسب تحمل المرضى 10% أو 15% أو 25%).
+    - `134113`: صندوق مقبوضات قوى الأمن الداخلي (استقطاعات منتسبي وزارة الداخلية).
+  * تفريع ذمم ومطالبات الجهات الضامنة الحكومية تحت `13211` (مدينون قطاع عام):
+    - `132111`: ذمم ومطالبات هيأة الضمان الصحي الوطنية.
+    - `132112`: ذمم ومطالبات وزارة الداخلية (قوى الأمن الداخلي).
+  * إنشاء حساب وسيط المقبوضات `2326111` (حسابات مقبوضة من المرضى - وسيط أمانات ومقبوضات الخدمات والعمليات).
+  * تفريع شجرة إيرادات الخدمات الطبية والعلاجية تحت `43121` حسب النشاط التخصصي:
+    - صالات العمليات (`4312111`, `4312112`), المختبر الطبي (`4312121` - `4312124`), الأشعة والتصوير الطبي (أشعة عادية `4312131`, سونار `4312132`, رنين `4312133`, مفراس `4312134`, إيكو وتخطيط قلب `4312135`), الرقود والإقامة الفندقية (`4312141` - `4312143`), قسم الخدج والحاضنات (`4312151` - `4312152`), الطوارئ (`431216`), العيادات الاستشارية (`431217`), والعلاج الطبيعي (`431218`).
+  * تفعيل حساب مصروفات المواد الطبية المستهلكة `3263`، وحساب مخزون الأدوية `131`، وحساب الموردين `23214 - دائنون قطاع خاص`.
+- **ربط الأقسام والمخازن بمراكز الكلفة وحسابات الإيراد دون كسر التوافقية ([DepartmentController.php](file:///c:/get/hospital-system/app/Http/Controllers/DepartmentController.php), [Department.php](file:///c:/get/hospital-system/app/Models/Department.php), [Location.php](file:///c:/get/hospital-system/app/Models/Location.php), [add_accounting_links_to_departments_and_locations.php](file:///c:/get/hospital-system/database/migrations/2026_11_27_234100_add_accounting_links_to_departments_and_locations.php))**:
+  * إضافة عمودي `cost_center_id` و `revenue_account_id` بشكل آمن (Nullable) لجدول `departments` وعمود `cost_center_id` لجدول `locations`.
+  * إدراج وربط الأقسام الطبية الرئيسية رسمياً: قسم الخدج وحاضنات الأطفال (NICU)، قسم الأشعة والتصوير الطبي (Radiology)، قسم صالات العمليات الجراحية (OR)، وقسم الرقود والإقامة الفندقية.
+  * ربط المخازن الفرعية (صالة العمليات، ردهات الطوابق 2، 4، 5، المختبر، الخدج، الطوارئ) بمراكز الكلفة التشغيلية.
+  * تطوير واجهات الإدارة (`departments/index`, `create`, `edit`) بعمود وشارات «الربط المالي والمحاسبي» الملونة وقوائم منسدلة ذكية توضح الحسابات القابلة للقيد والحسابات التجميعية.
+- **محرك التوجيه المحاسبي والربط الآلي بالكاشير ([FinancialRoutingService.php](file:///c:/get/hospital-system/app/Services/Accounting/FinancialRoutingService.php), [CashierController.php](file:///c:/get/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * بناء خدمة التوجيه المحاسبي `FinancialRoutingService` لتوليد القيود اليومية المتوازنة والمرحلة آلياً.
+  * ربط الكاشير في عمليات الجراحة (`processSurgeryPayment`)، المواعيد الاستشارية (`processPayment`)، والطلبات الطبية (`processRequestPayment`) لتوليد قيد المقبوضات النقدي الثلاثي/المزدوج فوراً عند سداد الوصل.
+- **الاختبارات وضمان الجودة ([HospitalFinancialArchitectureTest.php](file:///c:/get/hospital-system/tests/Feature/HospitalFinancialArchitectureTest.php))**:
+  * اجتياز 7 اختبارات تفصيلية شاملة (71 assertions) تغطي الشجرة، الصناديق، الأقسام، الكاشير، استهلاك المواد، وفواتير الموردين.
+  * اجتياز فحص التنسيق الكودي عبر `Laravel Pint` لجميع الملفات المعدلة بنجاح تام.
+
 ## Session log (2026-11-27 — المرحلة 323: إصلاح احتساب مبالغ وضوابط الشامل والمنفصل لضمان الداخلية والكاش وتحويل كاشير العمليات إلى جدول موحد مباشر Master Surgery Flat Cashier Table & Fixing Inclusion Calculation)
 
 ### Done

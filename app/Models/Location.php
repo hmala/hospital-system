@@ -20,7 +20,13 @@ class Location extends Model
         'type',
         'code',
         'custodian_id',
+        'cost_center_id',
     ];
+
+    public function costCenter()
+    {
+        return $this->belongsTo(\App\Models\Accounting\CostCenter::class, 'cost_center_id');
+    }
 
     public function custodian()
     {

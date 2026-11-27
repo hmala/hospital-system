@@ -4,6 +4,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Accounting\Account;
+use App\Models\Accounting\CostCenter;
 use App\Models\Department;
 use App\Models\Hospital;
 use Illuminate\Http\Request;
@@ -31,7 +33,7 @@ class DepartmentController extends Controller
             abort(403, 'غير مصرح لك بعرض قائمة العيادات والأقسام');
         }
 
-        $departments = Department::with(['hospital', 'doctors', 'manager'])
+        $departments = Department::with(['hospital', 'doctors', 'manager', 'costCenter', 'revenueAccount'])
             ->withCount(['appointments as today_appointments_count' => function ($query) {
                 $query->whereDate('appointment_date', today());
             }])
@@ -51,8 +53,10 @@ class DepartmentController extends Controller
 
         $hospitals = Hospital::all();
         $managers = $this->getStaffManagers();
+        $costCenters = CostCenter::orderBy('code')->get();
+        $revenueAccounts = Account::where('code', 'LIKE', '43121%')->orderBy('code')->get();
 
-        return view('departments.create', compact('hospitals', 'managers'));
+        return view('departments.create', compact('hospitals', 'managers', 'costCenters', 'revenueAccounts'));
     }
 
     public function store(Request $request)
@@ -76,12 +80,16 @@ class DepartmentController extends Controller
             'working_hours_end' => 'nullable|date_format:H:i'.($request->filled('working_hours_start') ? '|after:working_hours_start' : ''),
             'max_patients_per_day' => 'nullable|integer|min:1',
             'manager_id' => 'nullable|exists:users,id',
+            'cost_center_id' => 'nullable|exists:acc_cost_centers,id',
+            'revenue_account_id' => 'nullable|exists:acc_accounts,id',
         ]);
 
         $hospital = Hospital::first();
         Department::create([
             'hospital_id' => $hospital ? $hospital->id : 1,
             'manager_id' => $request->manager_id ?: null,
+            'cost_center_id' => $request->cost_center_id ?: null,
+            'revenue_account_id' => $request->revenue_account_id ?: null,
             'name' => $request->name,
             'type' => $request->type,
             'room_number' => $request->room_number,
@@ -123,11 +131,13 @@ class DepartmentController extends Controller
             abort(403, 'غير مصرح لك بتعديل بيانات العيادة');
         }
 
-        $department->loadMissing('manager');
+        $department->loadMissing(['manager', 'costCenter', 'revenueAccount']);
         $hospitals = Hospital::all();
         $managers = $this->getStaffManagers();
+        $costCenters = CostCenter::orderBy('code')->get();
+        $revenueAccounts = Account::where('code', 'LIKE', '43121%')->orderBy('code')->get();
 
-        return view('departments.edit', compact('department', 'hospitals', 'managers'));
+        return view('departments.edit', compact('department', 'hospitals', 'managers', 'costCenters', 'revenueAccounts'));
     }
 
     public function update(Request $request, Department $department)
@@ -151,10 +161,14 @@ class DepartmentController extends Controller
             'working_hours_end' => 'nullable|date_format:H:i'.($request->filled('working_hours_start') ? '|after:working_hours_start' : ''),
             'max_patients_per_day' => 'nullable|integer|min:1',
             'manager_id' => 'nullable|exists:users,id',
+            'cost_center_id' => 'nullable|exists:acc_cost_centers,id',
+            'revenue_account_id' => 'nullable|exists:acc_accounts,id',
         ]);
 
         $data = $request->all();
         $data['manager_id'] = $request->manager_id ?: null;
+        $data['cost_center_id'] = $request->cost_center_id ?: null;
+        $data['revenue_account_id'] = $request->revenue_account_id ?: null;
         $data['working_hours_start'] = $request->filled('working_hours_start') ? $request->working_hours_start : null;
         $data['working_hours_end'] = $request->filled('working_hours_end') ? $request->working_hours_end : null;
         $data['max_patients_per_day'] = $request->filled('max_patients_per_day') ? (int) $request->max_patients_per_day : null;

@@ -163,6 +163,44 @@
                             </div>
                         </div>
 
+                        <!-- قسم الربط المالي والمحاسبي (اختياري) -->
+                        <div class="row mb-3">
+                            <label class="col-md-4 col-form-label text-md-end fw-bold text-success">الربط المالي والمحاسبي</label>
+                            <div class="col-md-6">
+                                <div class="card border-success border-opacity-25 bg-light bg-opacity-50 rounded-3">
+                                    <div class="card-header bg-success bg-opacity-10 py-2">
+                                        <h6 class="mb-0 text-success fw-bold small">
+                                            <i class="fas fa-sitemap me-1"></i> ربط القسم بمركز الكلفة وحساب الإيراد
+                                        </h6>
+                                    </div>
+                                    <div class="card-body p-3">
+                                        <div class="mb-3">
+                                            <label for="cost_center_id" class="form-label small fw-bold">مركز الكلفة التابع له القسم</label>
+                                            <select name="cost_center_id" id="cost_center_id" class="form-select form-select-sm">
+                                                <option value="">— اختر مركز الكلفة (اختياري) —</option>
+                                                @foreach($costCenters ?? [] as $cc)
+                                                    <option value="{{ $cc->id }}" {{ old('cost_center_id') == $cc->id ? 'selected' : '' }}>
+                                                        [{{ $cc->code }}] {{ $cc->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="revenue_account_id" class="form-label small fw-bold">حساب الإيراد المالي الافتراضي</label>
+                                            <select name="revenue_account_id" id="revenue_account_id" class="form-select form-select-sm">
+                                                <option value="">— اختر حساب الإيراد (اختياري) —</option>
+                                                @foreach($revenueAccounts ?? [] as $acc)
+                                                    <option value="{{ $acc->id }}" {{ old('revenue_account_id') == $acc->id ? 'selected' : '' }} {{ !$acc->is_postable ? 'disabled class=text-muted' : '' }}>
+                                                        [{{ $acc->code }}] {{ $acc->name }} {{ !$acc->is_postable ? ' (حساب رئيسي تجميعي)' : '' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="row mb-3">
                             <div class="col-md-6 offset-md-4">
                                 <div class="form-check">
@@ -179,7 +217,7 @@
                                 <button type="submit" class="btn btn-primary">
                                     إضافة العيادة
                                 </button>
-                                <a href="{{ route('departments.index') }}" class="btn btn-secondary">
+                                <a href="{{ route('departments.admin') }}" class="btn btn-secondary">
                                     إلغاء
                                 </a>
                             </div>

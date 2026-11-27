@@ -39,6 +39,7 @@
                                     <th>أجر الكشف</th>
                                     <th>أوقات العمل</th>
                                     <th>مواعيد اليوم</th>
+                                    <th>الربط المالي والمحاسبي</th>
                                     <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
@@ -62,6 +63,23 @@
                                     <td><span class="text-success">{{ number_format($department->consultation_fee) }} د.ع</span></td>
                                     <td><small>{{ $department->working_hours_start ? $department->working_hours_start->format('h:i A') : 'غير محدد' }} - {{ $department->working_hours_end ? $department->working_hours_end->format('h:i A') : 'غير محدد' }}</small></td>
                                     <td><span class="badge bg-primary">{{ $department->today_appointments_count }}</span></td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            @if($department->costCenter)
+                                                <span class="badge bg-secondary bg-opacity-10 text-dark border border-secondary border-opacity-25 text-start" title="مركز الكلفة">
+                                                    <i class="fas fa-sitemap text-primary me-1"></i>[{{ $department->costCenter->code }}] {{ $department->costCenter->name }}
+                                                </span>
+                                            @else
+                                                <span class="text-muted small">— مركز كلفة غير محدد —</span>
+                                            @endif
+
+                                            @if($department->revenueAccount)
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 text-start" title="حساب الإيراد">
+                                                    <i class="fas fa-file-invoice-dollar me-1"></i>[{{ $department->revenueAccount->code }}] {{ $department->revenueAccount->name }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </td>
                                     <td>@if($department->is_active)<span class="badge bg-success">نشط</span>@else<span class="badge bg-danger">غير نشط</span>@endif</td>
                                     <td>
                                         <div class="btn-group btn-group-sm">
@@ -82,7 +100,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="10" class="text-center text-muted py-4">
+                                    <td colspan="11" class="text-center text-muted py-4">
                                         <i class="fas fa-clinic-medical fa-3x mb-3"></i><br>لا توجد عيادات مضافة حتى الآن
                                     </td>
                                 </tr>
