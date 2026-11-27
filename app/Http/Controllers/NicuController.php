@@ -78,7 +78,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
             abort(403, 'غير مصرح لك بالوصول لقسم الخدج والحاضنات');
         }
 
@@ -138,7 +138,7 @@ class NicuController extends Controller
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
             abort(403, 'غير مصرح لك بالوصول لسجل وإضبارات الخدج');
         }
 
@@ -190,7 +190,7 @@ class NicuController extends Controller
         }
 
         if ($currentView === 'archived' && ! $isAdmin) {
-            if (! $user->can('view nicu archive') && ! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'receptionist', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])) {
+            if (! $user->can('view nicu archive') && ! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])) {
                 abort(403, 'غير مصرح لك بالوصول لأرشيف وسجلات الخدج المخرجين');
             }
         }
@@ -257,6 +257,13 @@ class NicuController extends Controller
      */
     public function show(IncubatorReservation $reservation)
     {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+
+        if (! $isAdmin && (! $user || (! $user->can('view incubator reservations') && ! $user->hasRole(['doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))) {
+            abort(403, 'غير مصرح لك بالوصول لملف الطفل وقسم الخدج والحاضنات');
+        }
+
         $reservation->load([
             'patient.user',
             'incubator.room',
@@ -1592,7 +1599,7 @@ class NicuController extends Controller
      */
     public function generateBabyCamToken(IncubatorReservation $reservation)
     {
-        $this->authorizeNicuAction(['manage nicu baby cam', 'manage incubator reservations'], ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+        $this->authorizeNicuAction(['manage nicu baby cam', 'manage incubator reservations'], ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
 
         $token = Str::random(32);
         $reservation->update([
@@ -1650,7 +1657,7 @@ class NicuController extends Controller
      */
     public function wristbandPrint(IncubatorReservation $reservation)
     {
-        $this->authorizeNicuAction(['print nicu cards', 'view incubator reservations'], ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+        $this->authorizeNicuAction(['print nicu cards', 'view incubator reservations'], ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
 
         $reservation->load(['patient.user', 'incubator', 'doctor.user']);
 
@@ -1662,7 +1669,7 @@ class NicuController extends Controller
      */
     public function cribCardPrint(IncubatorReservation $reservation)
     {
-        $this->authorizeNicuAction(['print nicu cards', 'view incubator reservations'], ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
+        $this->authorizeNicuAction(['print nicu cards', 'view incubator reservations'], ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse']);
 
         $reservation->load(['patient.user', 'incubator.room', 'nicuService', 'doctor.user']);
 
@@ -1676,7 +1683,7 @@ class NicuController extends Controller
     {
         $this->authorizeNicuAction(
             ['print nicu cards', 'view incubator reservations', 'create incubator reservations'],
-            ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff']
+            ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff']
         );
 
         $reservation->load(['patient.user', 'incubator.room', 'doctor.user']);
@@ -1704,7 +1711,7 @@ class NicuController extends Controller
 
         $this->authorizeNicuAction(
             ['manage nicu attachments', 'create incubator reservations', 'manage nicu nursing'],
-            ['receptionist', 'nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff']
+            ['nicu_doctor', 'nicu_nurse', 'doctor', 'nurse', 'nicu_staff']
         );
 
         $validated = $request->validate([

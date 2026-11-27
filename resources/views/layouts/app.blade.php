@@ -1919,6 +1919,7 @@
                             <i class="fas fa-chevron-down toggle-icon"></i>
                         </div>
                         <div class="collapse collapse-section {{ $isNicuActive ? 'show' : '' }}" id="nicuSection">
+                            @if(auth()->user()->can('view incubator reservations') || auth()->user()->hasAnyRole(['doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu.index') ? 'active' : '' }}" href="{{ route('nicu.index') }}">
                                     <i class="fas fa-th-large text-primary"></i><span> {{ __('لوحة الحاضنات اللحظية') }}</span>
@@ -1927,11 +1928,14 @@
                                     @endif
                                 </a>
                             </li>
+                            @endif
+                            @if(auth()->user()->can('view nicu delivery radar') || auth()->user()->hasAnyRole(['nicu_doctor', 'nicu_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu.delivery-radar.*') ? 'active' : '' }}" href="{{ route('nicu.delivery-radar.index') }}">
                                     <i class="fas fa-satellite-dish text-danger"></i><span> {{ __('رادار صالات العمليات والولادة') }}</span>
                                 </a>
                             </li>
+                            @endif
                             @if(auth()->user()->can('manage nicu delivery observations') || auth()->user()->can('view nicu delivery radar') || auth()->user()->hasAnyRole(['nicu_nurse', 'nicu_doctor', 'nicu_staff', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu.observations.*') ? 'active' : '' }}" href="{{ route('nicu.observations.index') }}">
@@ -1942,21 +1946,27 @@
                                 </a>
                             </li>
                             @endif
+                            @if(auth()->user()->can('create incubator reservations') || auth()->user()->can('manage incubator reservations') || auth()->user()->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('incubator-reservations.create') ? 'active' : '' }}" href="{{ route('incubator-reservations.create') }}">
                                     <i class="fas fa-plus-circle text-success"></i><span> {{ __('حجز ودخول خديج جديد') }}</span>
                                 </a>
                             </li>
+                            @endif
+                            @if(auth()->user()->can('view incubator reservations') || auth()->user()->can('manage incubator reservations') || auth()->user()->hasAnyRole(['doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ (request()->routeIs('nicu.reservations.*') || request()->routeIs('incubator-reservations.index')) && request('view') !== 'archived' ? 'active' : '' }}" href="{{ route('nicu.reservations.index') }}">
                                     <i class="fas fa-clipboard-list text-info"></i><span> {{ __('سجل وإضبارات الخدج') }}</span>
                                 </a>
                             </li>
+                            @endif
+                            @if(auth()->user()->can('view nicu archive') || auth()->user()->can('view incubator reservations') || auth()->user()->hasAnyRole(['doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse', 'admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu.reservations.*') && request('view') === 'archived' ? 'active' : '' }}" href="{{ route('nicu.reservations.index', ['view' => 'archived', 'status' => 'discharged']) }}">
                                     <i class="fas fa-archive text-secondary"></i><span> {{ __('السجلات وأرشفة المرضى') }}</span>
                                 </a>
                             </li>
+                            @endif
                             @if(auth()->user()->can('manage nicu store') || auth()->user()->can('manage inventory') || auth()->user()->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']))
                             <li class="nav-item">
                                 <a class="nav-link {{ request()->routeIs('nicu-store.*') ? 'active' : '' }}" href="{{ route('nicu-store.index') }}">

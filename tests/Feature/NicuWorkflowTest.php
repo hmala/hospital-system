@@ -413,7 +413,7 @@ class NicuWorkflowTest extends TestCase
     {
         $response = $this->actingAs($this->admin)->get(route('nicu.services.index'));
         $response->assertStatus(200);
-        $response->assertSee('إعدادات وتسعير باقات وخدمات الخدج');
+        $response->assertSee('تسعير باقات وخدمات الخدج (NICU)');
         $response->assertSee('حاضنة + جهاز تنفس اصطناعي (Ventilator)');
         $response->assertSee('360,000');
     }

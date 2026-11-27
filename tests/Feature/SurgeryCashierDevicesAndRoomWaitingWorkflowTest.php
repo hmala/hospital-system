@@ -499,7 +499,7 @@ class SurgeryCashierDevicesAndRoomWaitingWorkflowTest extends TestCase
             'referring_doctor_name' => 'د. عيادة خارجية',
             'custom_surgery_fee' => '3000000',
         ]);
-        $storeResponse->assertRedirect();
+        $storeResponse->assertRedirect(route('inquiry.create'));
         $storeResponse->assertSessionHasNoErrors();
 
         $surgery = Surgery::latest('id')->first();

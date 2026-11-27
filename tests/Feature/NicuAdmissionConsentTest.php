@@ -128,9 +128,7 @@ class NicuAdmissionConsentTest extends TestCase
 
         $reservation = IncubatorReservation::firstOrFail();
 
-        $response->assertRedirect(route('nicu.show', $reservation));
-        $response->assertSessionHas('show_consent_prompt', true);
-        $response->assertSessionHas('auto_open_consent_print', true);
+        $response->assertRedirect(route('nicu.print.admission-consent', ['reservation' => $reservation, 'autoprint' => 1]));
 
         $this->assertSame('علي حسن محمد', $reservation->guardian_name);
         $this->assertNull($reservation->admissionConsentAttachment);

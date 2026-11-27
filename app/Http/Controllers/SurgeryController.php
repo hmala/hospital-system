@@ -461,6 +461,10 @@ class SurgeryController extends Controller
 
         broadcast(new SurgeryUpdated($surgery));
 
+        if ($request->boolean('room_waiting_mode')) {
+            return redirect()->route('inquiry.create')->with('success', 'تم حجز العملية بنجاح');
+        }
+
         return redirect()->route('surgeries.index')->with('success', 'تم حجز العملية بنجاح');
     }
 

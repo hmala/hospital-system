@@ -360,10 +360,22 @@ class IncubatorReservationController extends Controller
         // حساب تفاصيل الإقامة والحصص التأمينية
         app(\App\Services\NicuBillingService::class)->calculateStayDetails($reservation);
 
+        $printConsentAfterSave = $request->boolean('print_consent_after_save');
+        $canViewNicu = $user && ($user->can('view incubator reservations') || $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse']));
+
+        if ($printConsentAfterSave) {
+            return redirect()->route('nicu.print.admission-consent', ['reservation' => $reservation, 'autoprint' => 1])
+                ->with('success', 'تم حجز واستقبال الخديج بنجاح في قسم الخدج والحاضنات.');
+        }
+
+        if (! $canViewNicu) {
+            return redirect()->route('incubator-reservations.create')
+                ->with('success', 'تم حجز واستقبال الخديج بنجاح في قسم الخدج والحاضنات.');
+        }
+
         return redirect()->route('nicu.show', $reservation)
             ->with('success', 'تم حجز واستقبال الخديج بنجاح في قسم الخدج والحاضنات.')
-            ->with('show_consent_prompt', true)
-            ->with('auto_open_consent_print', $printConsentAfterSave);
+            ->with('show_consent_prompt', true);
     }
 
     /**
@@ -547,7 +559,7 @@ class IncubatorReservationController extends Controller
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
 
-        if (! $isAdmin && (! $user || (! $user->can('create incubator reservations') && ! $user->hasAnyRole(['doctor', 'receptionist', 'nicu_staff'])))) {
+        if (! $isAdmin && (! $user || (! $user->can('create incubator reservations') && ! $user->hasAnyRole(['doctor', 'nicu_staff'])))) {
             abort(403, 'غير مصرح لك بالبحث لحجز حاضنات الخدج');
         }
 

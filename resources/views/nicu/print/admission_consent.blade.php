@@ -281,13 +281,23 @@
 
 <div class="print-toolbar no-print">
     <div class="toolbar-group">
-        <a href="{{ route('nicu.show', $reservation) }}" class="btn-tool secondary">
-            العودة لملف الطفل
+        <a href="{{ route('incubator-reservations.create') }}" class="btn-tool secondary">
+            ⬅️ حجز خديج جديد
         </a>
+        @if(auth()->user() && (auth()->user()->can('view incubator reservations') || auth()->user()->hasAnyRole(['admin', 'admin-hsop', 'hospital_admin', 'doctor', 'nurse', 'nicu_staff', 'nicu_doctor', 'nicu_nurse'])))
+            <a href="{{ route('nicu.show', $reservation) }}" class="btn-tool secondary">
+                العودة لملف الطفل
+            </a>
+        @endif
         <label for="liveGuardianInput" style="font-size: 12.5px; font-weight: 700; color: #334155;">تعديل اسم ولي الأمر قبل الطباعة:</label>
         <input type="text" id="liveGuardianInput" class="toolbar-input" value="{{ $guardianName }}" placeholder="اكتب اسم ولي الأمر (الأب / الأم)...">
     </div>
     <div class="toolbar-group">
+        @if(session('success'))
+            <span style="font-size: 12px; color: #166534; font-weight: bold; background: #dcfce7; padding: 5px 12px; border-radius: 6px; border: 1px solid #86efac;">
+                ✅ {{ session('success') }}
+            </span>
+        @endif
         <button type="button" class="btn-tool" onclick="window.print()">
             🖨️ طباعة استمارة التعهد (A4)
         </button>
@@ -384,6 +394,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (bottomEl) bottomEl.textContent = val;
         });
     }
+
+    @if(request()->boolean('autoprint') || request()->has('autoprint'))
+        setTimeout(function () {
+            window.print();
+        }, 350);
+    @endif
 });
 </script>
 </body>

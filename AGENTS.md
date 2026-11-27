@@ -56,6 +56,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 317: ضبط صلاحيات الخدج، التحويل المباشر لطباعة التعهد الخطي ومنع الدخول غير المصرح لملف الطفل السريري NICU Receptionist Permissions & Direct Consent Print Workflow)
+
+### Done
+- **تقييد تبويبات قسم الخدج في القائمة الجانبية بالصلاحيات ([app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+  * ربط كل تبويب بصلاحيته المستقلة: لوحة الحاضنات (`view incubator reservations`)، رادار الولادات (`view nicu delivery radar`)، حجز خديج جديد (`create incubator reservations`)، سجل وإضبارات الخدج والأرشيف.
+  * عند منح صلاحية «تسجيل وقبول وتسكين طفل جديد بالحاضنة» فقط لموظف الاستعلامات، يظهر له حصراً تبويب **«حجز ودخول خديج جديد»**.
+- **التحويل المباشر لطباعة التعهد ومنع كشف ملف الطفل ([IncubatorReservationController.php](file:///c:/get/hospital-system/app/Http/Controllers/IncubatorReservationController.php), [NicuController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuController.php), [admission_consent.blade.php](file:///c:/get/hospital-system/resources/views/nicu/print/admission_consent.blade.php))**:
+  * عند الضغط على «حفظ وطباعة التعهد»، يتم التحويل مباشرة إلى صفحة طباعة التعهد A4 (`nicu.print.admission-consent`) مع فتح نافذة الطباعة تلقائياً (`autoprint=1`) دون توجيه المستخدم أو تركه في ملف الطفل السريري (`nicu.show`).
+  * في شريط أدوات التعهد: توفير زر «⬅️ حجز خديج جديد» للعودة لشاشة الاستعلامات/الحجز، وإخفاء زر «العودة لملف الطفل» عمّن لا يملك صلاحية عرض ملفات الخدج السريرية.
+  * حماية دالة `show` بملف الطفل في [NicuController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuController.php) لمنع أي وصول غير مصرح للملف السريري بدون صلاحية `view incubator reservations`.
+- **الاختبارات والتأكيد**:
+  * بناء واجتياز اختبارات تدفق الاستعلامات وطباعة التعهد [NicuSidebarAndReceptionistPermissionTest.php](file:///c:/get/hospital-system/tests/Feature/NicuSidebarAndReceptionistPermissionTest.php) واختبارات التعهد [NicuAdmissionConsentTest.php](file:///c:/get/hospital-system/tests/Feature/NicuAdmissionConsentTest.php).
+  * اجتياز اختبارات التنسيق عبر `Pint` ونجاح مسح وتخزين كاش القوالب `view:cache`.
+
 ## Session log (2026-11-27 — المرحلة 316: توحيد هيكل تقرير العملية الجراحية المعتمد لكافة الحالات النشطة والمكتملة في صفحة A4 واحدة Standardizing Surgery Print Report for All Cases)
 
 ### Done

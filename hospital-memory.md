@@ -79,6 +79,17 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 317 (2026-11-27 — `main`) — ضبط صلاحيات الخدج، التحويل المباشر لطباعة التعهد الخطي ومنع الدخول غير المصرح لملف الطفل السريري (NICU Receptionist Permissions & Direct Consent Print Workflow)**:
+  * **تقييد تبويبات الخدج في القائمة الجانبية بالصلاحيات الصريحة ([app.blade.php](file:///c:/get/hospital-system/resources/views/layouts/app.blade.php))**:
+    - ربط تبويبات لوحة الحاضنات، رادار العمليات، سجل الخدج، والأرشيف بصلاحياتها الصريحة دون تركها مفتوحة.
+    - عندما يُمنح موظف الاستعلامات صلاحية «تسجيل وقبول وتسكين طفل جديد بالحاضنة» (`create incubator reservations`) فقط، يظهر له حصراً تبويب **«حجز ودخول خديج جديد»**.
+  * **التحويل المباشر لطباعة التعهد ومنع كشف ملف الطفل ([IncubatorReservationController.php](file:///c:/get/hospital-system/app/Http/Controllers/IncubatorReservationController.php), [NicuController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuController.php), [admission_consent.blade.php](file:///c:/get/hospital-system/resources/views/nicu/print/admission_consent.blade.php))**:
+    - عند الضغط على «حفظ وطباعة التعهد»، يتم التحويل مباشرة إلى استمارة التعهد A4 (`nicu.print.admission-consent`) وفتح أمر الطباعة فورياً (`autoprint=1`) دون توجيه المستخدم لملف الطفل السريري (`nicu.show`).
+    - توفير زر «⬅️ حجز خديج جديد» بشريط الأدوات للعودة مباشرة لشاشة الحجز، وإخفاء زر «العودة لملف الطفل» عمّن لا يملك صلاحية عرض ملفات الخدج السريرية.
+    - حماية دالة `show` بملف الطفل السريري في [NicuController.php](file:///c:/get/hospital-system/app/Http/Controllers/NicuController.php) لمنع أي وصول غير مصرح بدون `view incubator reservations`.
+  * **الاختبارات وضمان الجودة ([NicuSidebarAndReceptionistPermissionTest.php](file:///c:/get/hospital-system/tests/Feature/NicuSidebarAndReceptionistPermissionTest.php), [NicuAdmissionConsentTest.php](file:///c:/get/hospital-system/tests/Feature/NicuAdmissionConsentTest.php))**:
+    - اجتياز اختبارات تدفق الحجز وطباعة التعهد وعزل الملف السريري بنجاح، واجتياز `Pint` و`view:cache`.
+
 - **المرحلة 301 (2026-11-26 — `main`) — إعدادات المنظومة المالية (`MedFinance IFRS`): إدارة العملة الأساسية وأسعار الصرف، تسوية فروق الصرف، وأرشفة التغييرات، مع تطوير المخطط الشجري للعرض العمودي (من الأعلى للأسفل) ودعم الآيباد والتاتش باد (Accounting Settings, Dynamic Currency & FX Revaluation IAS 21, Audit Archive & Top-to-Bottom iPad/Trackpad Flowchart)**:
   * **قاعدة البيانات والحسابات ([2026_11_26_100000_add_fx_difference_leaf_accounts.php](file:///C:/get/hospital-system/database/migrations/2026_11_26_100000_add_fx_difference_leaf_accounts.php), [AccChartOfAccountsSeeder.php](file:///C:/get/hospital-system/database/seeders/AccChartOfAccountsSeeder.php))**:
     - إضافة الحسابين التحليليين بمستوى 5: `33551` (**خسائر فروقات أسعار الصرف الأجنبي**) و`43551` (**أرباح فروقات أسعار الصرف الأجنبي**).
