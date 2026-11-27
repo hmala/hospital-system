@@ -5623,8 +5623,22 @@ document.addEventListener('click', function(e) {
     }
 });
 
+function normalizeArabic(text) {
+    if (!text) return '';
+    return text.toString().trim().toLowerCase()
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/ى/g, 'ي')
+        .replace(/[\u064B-\u065F]/g, '');
+}
+
 function filterModalRadCategory(category, btn) {
-    currentRadCategory = category;
+    if (btn && btn.getAttribute('data-cat')) {
+        currentRadCategory = btn.getAttribute('data-cat');
+    } else {
+        currentRadCategory = category;
+    }
+
     document.querySelectorAll('.rad-cat-btn').forEach(b => {
         b.classList.remove('active', 'btn-primary');
         b.classList.add('btn-outline-secondary');
@@ -5634,12 +5648,12 @@ function filterModalRadCategory(category, btn) {
         btn.classList.remove('btn-outline-secondary');
     }
 
-    const catLower = (category || '').toLowerCase();
-    if (catLower.includes('سونار') || catLower.includes('sonar')) {
+    const catNorm = normalizeArabic(currentRadCategory);
+    if (catNorm.includes('سونار') || catNorm.includes('sonar')) {
         configureDoctorFieldForSpecialty('sonar');
-    } else if (catLower.includes('إيكو') || catLower.includes('ايكو') || catLower.includes('echo')) {
+    } else if (catNorm.includes('ايكو') || catNorm.includes('echo')) {
         configureDoctorFieldForSpecialty('echo');
-    } else if (category === 'all') {
+    } else if (currentRadCategory === 'all') {
         configureDoctorFieldForSpecialty('all');
     } else {
         configureDoctorFieldForSpecialty('general');
@@ -5694,7 +5708,7 @@ function configureDoctorFieldForSpecialty(specialtyType = 'all') {
 }
 
 function filterModalRadServices(query) {
-    currentRadQuery = (query || '').trim().toLowerCase();
+    currentRadQuery = (query || '').trim();
     openModalRadDropdown();
     applyModalRadFilters();
 }
@@ -5702,19 +5716,25 @@ function filterModalRadServices(query) {
 function applyModalRadFilters() {
     const items = document.querySelectorAll('#modalRadDropdownList .modal-rad-item');
     let visibleCount = 0;
+    const rawSelCat = (currentRadCategory || 'all').trim();
+    const selCatNorm = normalizeArabic(rawSelCat);
+    const qNorm = normalizeArabic(currentRadQuery);
 
     items.forEach(el => {
-        const cat = (el.getAttribute('data-category') || '').trim();
-        const search = (el.getAttribute('data-search') || '').trim().toLowerCase();
+        const itemCatRaw = (el.getAttribute('data-category') || '').trim();
+        const itemCatNorm = normalizeArabic(itemCatRaw);
+        const searchNorm = normalizeArabic(el.getAttribute('data-search'));
 
-        const matchCat = (currentRadCategory === 'all') || (cat === currentRadCategory);
-        const matchQuery = (!currentRadQuery) || (search.includes(currentRadQuery));
+        const matchCat = (rawSelCat === 'all') || (itemCatRaw === rawSelCat) || (itemCatNorm === selCatNorm);
+        const matchQuery = (!qNorm) || searchNorm.includes(qNorm);
 
         if (matchCat && matchQuery) {
-            el.style.display = '';
+            el.classList.remove('d-none');
+            el.style.setProperty('display', 'flex', 'important');
             visibleCount++;
         } else {
-            el.style.display = 'none';
+            el.classList.add('d-none');
+            el.style.setProperty('display', 'none', 'important');
         }
     });
 
