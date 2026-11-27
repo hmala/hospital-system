@@ -43,6 +43,7 @@ echo.
 echo [1/2] Staging and pushing local changes to GitHub main...
 git add .
 git diff-index --quiet HEAD || git commit -m "chore(deploy): auto-commit before hostinger code-only deploy"
+git pull --rebase origin main
 git push origin main
 echo.
 echo [2/2] Connecting to Hostinger via SSH (Code Only - NO DB TOUCH)...
@@ -56,6 +57,7 @@ echo.
 echo [1/2] Staging and pushing local changes to GitHub main...
 git add .
 git diff-index --quiet HEAD || git commit -m "chore(deploy): auto-commit before hostinger deploy"
+git pull --rebase origin main
 git push origin main
 echo.
 echo [2/2] Connecting to Hostinger via SSH (Normal Deploy)...
@@ -69,6 +71,7 @@ echo.
 echo [1/2] Staging and pushing local changes to GitHub main...
 git add .
 git diff-index --quiet HEAD || git commit -m "chore(deploy): auto-commit before hostinger deploy with clean"
+git pull --rebase origin main
 git push origin main
 echo.
 echo [2/2] Connecting to Hostinger via SSH (Deploy + Clean Operational Tables)...
