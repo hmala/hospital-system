@@ -79,6 +79,23 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 322 (2026-11-27 — `main`) — منع الازدواج في إشغال وحجز الغرف سريرياً، تمييز حالة الإشغال والتخريج، واستبعاد المخرّجين من العمليات النشطة (Strict Single-Occupancy Room Validation, Occupancy Badges & Excluding Discharged Cases from Active Surgeries)**:
+  * **منع الازدواج وحظر إسناد الغرف المشغولة ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - قصر قائمة الغرف في شاشة الحجز (`create`) على الغرف الشاغرة المتاحة فقط (`status = 'available'`).
+    - في شاشة التعديل (`edit`): حصر القائمة بالغرف المتاحة بالإضافة إلى الغرفة الحالية لنفس المريض.
+    - إضافة تحقق برمجي صارم (Backend Validation Guard) في دالتي `store` و `update`:
+      * فحص حالة الغرفة والتأكد من عدم وجود أي مريض نشط غير مخرّج (`whereNull('discharged_at')->whereNotIn('status', ['cancelled'])`) يشغل الغرفة.
+      * رفض الحجز أو التعديل فورياً برسالة خطأ نظامية إذا كانت الغرفة مشغولة بمريض آخر: `"الغرفة ({رقم}) مشغولة حالياً بمريض آخر ولا يمكن حجزها/إسنادها."`.
+  * **تصحيح فلترة العمليات النشطة والمكتملة ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - استبعاد أي مريض تم تخريجه بالفعل من المستشفى (`discharged_at IS NOT NULL`) من قائمة العمليات النشطة (`$activeSurgeriesQuery`) ونقله تلقائياً لقائمة العمليات المكتملة والأرشيف (`$completedSurgeriesQuery`).
+    - ضبط عدادات لوحة المؤشرات (`stats`) لتعكس العمليات النشطة الحقيقية والمكتملة بدقة.
+  * **إضافة شارة حالة الإشغال الذكية في جدول العمليات ([surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+    - إضافة وسام أخضر واضح `[ 🟢 إشغال حالي ]` للغرف الشاغلة حالياً بمريض رقود.
+    - إضافة وسام رمادي `[ 🚪 تم التخريج ]` مع إظهار تاريخ وساعة الخروج الفعلي عند تخريج المريض وإخلاء السرير.
+    - إظهار شارة سعة الغرفة `[ X أسرّة ]` للغرف المشتركة متعددة الأسرّة لتوضيح السعة السريرية فوراً.
+  * **التأكيد وضمان الجودة**:
+    - نجاح مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد.
+
 - **المرحلة 321 (2026-11-27 — `main`) — اعتماد حسابات الإيكو والسونار بناءً على الصلاحيات والأدوار الصريحة وحسابات الفاحصين بدلاً من الأطباء (Role & Permission-Based Echo & Sonar Accounts Selection)**:
   * **الاعتماد على الصلاحيات والأدوار الصريحة لحسابات الإيكو والسونار ([ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
     - استبدال الفلترة النصية السابقة من جدول الأطباء (`doctors`) بالاعتماد المباشر على الأدوار والصلاحيات في النظام:

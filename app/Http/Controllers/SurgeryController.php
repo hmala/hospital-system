@@ -36,9 +36,10 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته)
+        // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته أو تم تخريجه رسمياً من المستشفى)
         $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereNull('discharged_at')
             ->whereDoesntHave('operationTheaterStation', function ($q) {
                 $q->where('status', 'completed');
             });
@@ -86,10 +87,11 @@ class SurgeryController extends Controller
             ->paginate(20)
             ->appends(request()->query());
 
-        // العمليات المكتملة والملغاة (بما فيها التي اكتملت صالة عملياتها وخرجت)
+        // العمليات المكتملة والملغاة (بما فيها التي اكتملت صالة عملياتها أو تم تخريج مرضاها)
         $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
             ->where(function ($q) {
                 $q->whereIn('status', ['completed', 'cancelled'])
+                    ->orWhereNotNull('discharged_at')
                     ->orWhereHas('operationTheaterStation', function ($oq) {
                         $oq->where('status', 'completed');
                     });
@@ -149,11 +151,11 @@ class SurgeryController extends Controller
         $stats = (clone $statsQuery)
             ->selectRaw("
                 COUNT(*) as total,
-                SUM(CASE WHEN status IN ('scheduled', 'waiting', 'in_progress') AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as active,
-                SUM(CASE WHEN status = 'scheduled' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as scheduled,
-                SUM(CASE WHEN status = 'waiting' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as waiting,
-                SUM(CASE WHEN status = 'in_progress' AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as in_progress,
-                SUM(CASE WHEN (status = 'completed' OR EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed')) AND status != 'cancelled' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status IN ('scheduled', 'waiting', 'in_progress') AND discharged_at IS NULL AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'scheduled' AND discharged_at IS NULL AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as scheduled,
+                SUM(CASE WHEN status = 'waiting' AND discharged_at IS NULL AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as waiting,
+                SUM(CASE WHEN status = 'in_progress' AND discharged_at IS NULL AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as in_progress,
+                SUM(CASE WHEN (status = 'completed' OR discharged_at IS NOT NULL OR EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed')) AND status != 'cancelled' THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
             ")
             ->first();
@@ -242,7 +244,7 @@ class SurgeryController extends Controller
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->orderBy('room_type')->orderBy('room_number')->get();
+        $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->where('status', 'available')->orderBy('room_type')->orderBy('room_number')->get();
         $locations = \App\Models\Location::orderBy('name')->get();
 
         return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations', 'selectedPatient'));
@@ -350,6 +352,16 @@ class SurgeryController extends Controller
         if ($request->filled('room_id')) {
             $room = Room::find($request->room_id);
             if ($room) {
+                // التحقق الصارم: منع حجز غرفة مشغولة بمريض آخر
+                $isOccupiedByActiveSurgery = Surgery::where('room_id', $room->id)
+                    ->whereNull('discharged_at')
+                    ->whereNotIn('status', ['cancelled'])
+                    ->exists();
+
+                if ($room->status !== 'available' || $isOccupiedByActiveSurgery) {
+                    return back()->withInput()->with('error', "الغرفة ({$room->room_number}) مشغولة حالياً بمريض آخر ولا يمكن حجزها إلا بعد تخريجه وإخلاء السرير.");
+                }
+
                 $surgeryData['room_fee'] = Room::getInitialFeeForType($room->room_type);
                 // تحديث حالة الغرفة لمحجوزة وتسجيل الدخول تلقائياً
                 $room->update(['status' => 'occupied']);
@@ -668,10 +680,11 @@ class SurgeryController extends Controller
                 return optional($d->user)->name ?? '';
             });
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        // إحضار الغرف مع الغرفة المحجوزة حالياً
+        // إحضار الغرف المتاحة فقط مع الغرفة المحجوزة حالياً لنفس العملية
         $rooms = Room::where('room_purpose', 'beds')
+            ->where('is_active', true)
             ->where(function ($query) use ($surgery) {
-                $query->where('is_active', true);
+                $query->where('status', 'available');
                 if ($surgery->room_id) {
                     $query->orWhere('id', $surgery->room_id);
                 }
@@ -807,12 +820,24 @@ class SurgeryController extends Controller
 
         // معالجة تغيير الغرفة وإعادة احتساب الأجرة الفندقية
         if ($surgery->room_id != $request->room_id) {
-            if ($surgery->room_id) {
-                Room::where('id', $surgery->room_id)->update(['status' => 'available']);
-            }
             if ($request->filled('room_id')) {
                 $newRoom = Room::find($request->room_id);
                 if ($newRoom) {
+                    // التحقق الصارم: منع إسناد غرفة مشغولة بمريض آخر
+                    $isOccupiedByAnother = Surgery::where('room_id', $newRoom->id)
+                        ->where('id', '!=', $surgery->id)
+                        ->whereNull('discharged_at')
+                        ->whereNotIn('status', ['cancelled'])
+                        ->exists();
+
+                    if ($newRoom->status !== 'available' || $isOccupiedByAnother) {
+                        return back()->withInput()->with('error', "الغرفة ({$newRoom->room_number}) مشغولة حالياً بمريض آخر ولا يمكن إسنادها.");
+                    }
+
+                    if ($surgery->room_id) {
+                        Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+                    }
+
                     $newRoom->update(['status' => 'occupied']);
                     $surgeryData['room_fee'] = Room::getInitialFeeForType($newRoom->room_type);
                     if (! $surgery->room_checkin_at) {
@@ -821,6 +846,9 @@ class SurgeryController extends Controller
                     }
                 }
             } else {
+                if ($surgery->room_id) {
+                    Room::where('id', $surgery->room_id)->update(['status' => 'available']);
+                }
                 $surgeryData['room_id'] = null;
                 $surgeryData['room_fee'] = 0;
             }

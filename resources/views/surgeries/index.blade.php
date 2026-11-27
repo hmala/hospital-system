@@ -698,15 +698,33 @@
                                 </td>
                                 <td>
                                     @if($room)
-                                        <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
-                                            @if($rtype === 'vvip')
-                                                <i class="fas fa-gem text-warning"></i> VVIP {{ $room->room_number }}
-                                            @elseif($rtype === 'vip')
-                                                <i class="fas fa-crown text-warning"></i> VIP {{ $room->room_number }}
+                                        <div class="d-flex flex-column gap-1 align-items-start">
+                                            <div class="d-inline-flex align-items-center gap-1">
+                                                <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
+                                                    @if($rtype === 'vvip')
+                                                        <i class="fas fa-gem text-warning"></i> VVIP {{ $room->room_number }}
+                                                    @elseif($rtype === 'vip')
+                                                        <i class="fas fa-crown text-warning"></i> VIP {{ $room->room_number }}
+                                                    @else
+                                                        <i class="fas fa-bed text-primary"></i> {{ $room->room_number }}
+                                                    @endif
+                                                </span>
+                                                @if($room->beds_count > 1)
+                                                    <span class="badge bg-light text-secondary border px-1 py-0" style="font-size: 0.65rem;" title="{{ __('غرفة مشتركة سعة') }} {{ $room->beds_count }} {{ __('أسرّة') }}">
+                                                        <i class="fas fa-users text-muted me-1"></i>{{ $room->beds_count }} {{ __('أسرّة') }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            @if($surgery->discharged_at)
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-1.5 py-0" style="font-size: 0.68rem; font-weight: 600;" title="{{ __('تم التخريج في:') }} {{ $surgery->discharged_at->format('Y-m-d H:i') }}">
+                                                    <i class="fas fa-door-open me-1 text-secondary"></i>{{ __('تم التخريج') }}
+                                                </span>
                                             @else
-                                                <i class="fas fa-bed text-primary"></i> {{ $room->room_number }}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0" style="font-size: 0.68rem; font-weight: 600;">
+                                                    <i class="fas fa-user-check me-1 text-success"></i>{{ __('إشغال حالي') }}
+                                                </span>
                                             @endif
-                                        </span>
+                                        </div>
                                     @else
                                         <span class="badge bg-warning-subtle text-dark border border-warning"><i class="fas fa-hourglass-half me-1 text-warning"></i>{{ __('وضع انتظار الغرفة') }}</span>
                                         @if($surgery->status !== 'cancelled' && !$surgery->discharged_at && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('assign surgery room')))
@@ -867,15 +885,33 @@
                                 </td>
                                 <td>
                                     @if($room)
-                                        <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
-                                            @if($rtype === 'vvip')
-                                                <i class="fas fa-gem text-warning"></i> VVIP {{ $room->room_number }}
-                                            @elseif($rtype === 'vip')
-                                                <i class="fas fa-crown text-warning"></i> VIP {{ $room->room_number }}
+                                        <div class="d-flex flex-column gap-1 align-items-start">
+                                            <div class="d-inline-flex align-items-center gap-1">
+                                                <span class="room-badge-pill {{ $rtype === 'vvip' ? 'room-badge-vvip' : ($rtype === 'vip' ? 'room-badge-vip' : 'room-badge-regular') }}">
+                                                    @if($rtype === 'vvip')
+                                                        <i class="fas fa-gem text-warning"></i> VVIP {{ $room->room_number }}
+                                                    @elseif($rtype === 'vip')
+                                                        <i class="fas fa-crown text-warning"></i> VIP {{ $room->room_number }}
+                                                    @else
+                                                        <i class="fas fa-bed text-primary"></i> {{ $room->room_number }}
+                                                    @endif
+                                                </span>
+                                                @if($room->beds_count > 1)
+                                                    <span class="badge bg-light text-secondary border px-1 py-0" style="font-size: 0.65rem;" title="{{ __('غرفة مشتركة سعة') }} {{ $room->beds_count }} {{ __('أسرّة') }}">
+                                                        <i class="fas fa-users text-muted me-1"></i>{{ $room->beds_count }} {{ __('أسرّة') }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            @if($surgery->discharged_at)
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-1.5 py-0" style="font-size: 0.68rem; font-weight: 600;" title="{{ __('تم التخريج في:') }} {{ $surgery->discharged_at->format('Y-m-d H:i') }}">
+                                                    <i class="fas fa-door-open me-1 text-secondary"></i>{{ __('تم التخريج') }}
+                                                </span>
                                             @else
-                                                <i class="fas fa-bed text-primary"></i> {{ $room->room_number }}
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0" style="font-size: 0.68rem; font-weight: 600;">
+                                                    <i class="fas fa-user-check me-1 text-success"></i>{{ __('إشغال حالي') }}
+                                                </span>
                                             @endif
-                                        </span>
+                                        </div>
                                     @else
                                         <span class="badge bg-warning-subtle text-dark border border-warning"><i class="fas fa-hourglass-half me-1 text-warning"></i>{{ __('وضع انتظار الغرفة') }}</span>
                                         @if($surgery->status !== 'cancelled' && !$surgery->discharged_at && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('assign surgery room')))
