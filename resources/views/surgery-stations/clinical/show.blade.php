@@ -1799,7 +1799,19 @@
                                                             <i class="fas fa-x-ray text-primary"></i>
                                                         </div>
                                                         <div>
-                                                            <div class="fw-bold text-dark">{{ $rt->radiologyType?->name ?? $rt->radiologyService?->name ?? __('فحص إشعاعي') }}</div>
+                                                            <div class="fw-bold text-dark d-flex align-items-center gap-1.5 flex-wrap">
+                                                                <span>{{ $rt->radiologyType?->name ?? $rt->radiologyService?->name ?? __('فحص إشعاعي') }}</span>
+                                                                @if($rt->radiologyType?->main_category)
+                                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill py-0.5 px-2 font-monospace" style="font-size: 0.65rem;">
+                                                                        {{ $rt->radiologyType->main_category }}
+                                                                    </span>
+                                                                @endif
+                                                                @if($rt->radiologyType?->code)
+                                                                    <span class="badge bg-light text-muted border font-monospace px-1 py-0.5" style="font-size: 0.65rem;">
+                                                                        {{ $rt->radiologyType->code }}
+                                                                    </span>
+                                                                @endif
+                                                            </div>
                                                             <div class="text-muted small">
                                                                 {{ __('النتيجة:') }} <strong>{{ $rt->result ?: ($rt->findings ?? __('قيد التصوير والتقرير')) }}</strong>
                                                                 @if(!empty($rt->notes))
@@ -5309,23 +5321,23 @@ document.addEventListener("DOMContentLoaded", function () {
 
 {{-- 2. Order Radiology Test Modal --}}
 <div class="modal fade" id="orderRadiologyModal" tabindex="-1" aria-labelledby="orderRadiologyModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 560px;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 840px;">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-header bg-white border-bottom py-3 px-4">
                 <h5 class="modal-title fw-bold mb-0 d-flex align-items-center gap-2" id="orderRadiologyModalLabel" style="color: #0f172a;">
-                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center" style="width: 34px; height: 34px;">
-                        <i class="fas fa-x-ray"></i>
+                    <span class="rounded-3 bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                        <i class="fas fa-x-ray fs-5"></i>
                     </span>
-                    <span>{{ __('طلب فحص أشعة / تصوير للعملية #') }}{{ $surgery->id }}</span>
+                    <span>{{ __('طلب فحص أشعة وتصوير طبي للعملية #') }}{{ $surgery->id }}</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <form action="{{ route('clinical-station.radiology-tests.store', $surgery) }}" method="POST">
+            <form action="{{ route('clinical-station.radiology-tests.store', $surgery) }}" method="POST" id="orderRadiologyForm">
                 @csrf
                 <div class="modal-body p-4">
                     {{-- Financial Banner --}}
-                    <div class="p-2.5 rounded-3 mb-3 border d-flex align-items-center justify-content-between gap-2" style="background: #f8fafc;">
+                    <div class="p-2.5 rounded-3 mb-3 border d-flex align-items-center justify-content-between gap-2 flex-wrap" style="background: #f8fafc;">
                         <div class="small">
                             <span class="text-secondary fw-semibold">{{ __("المريض:") }}</span> <strong>{{ $surgery->patient?->user?->name ?? __('غير محدد') }}</strong>
                             <span class="mx-1.5 text-muted">•</span>
@@ -5334,21 +5346,61 @@ document.addEventListener("DOMContentLoaded", function () {
                         </div>
                         <div class="text-muted small" style="font-size: 0.75rem;">
                             @if($modalIsInsurance)
-                                <i class="fas fa-shield-alt text-success me-1"></i> {{ __('نسبة التحمل:') }} {{ $modalRadCopay }}% {{ __('بالكاشير') }}
+                                <i class="fas fa-shield-alt text-success me-1"></i> {{ __('نسبة التحمل:') }} <strong>{{ $modalRadCopay }}%</strong> {{ __('بالكاشير والباقي ذمة للضمان') }}
                             @else
-                                <i class="fas fa-money-bill-wave text-primary me-1"></i> {{ __("تسديد كامل بالكاشير") }}
+                                <i class="fas fa-money-bill-wave text-primary me-1"></i> {{ __("تسديد نقدي كامل بالكاشير") }}
                             @endif
                         </div>
                     </div>
 
-                    {{-- Radiology Type Selection --}}
-                    <div class="mb-3">
-                        <label for="modalRadiologyTypeSelect" class="form-label fw-bold small text-secondary mb-1">
-                            <i class="fas fa-camera text-primary me-1"></i> {{ __('نوع الفحص الإشعاعي المطلوب:') }} <span class="text-danger">*</span>
-                        </label>
-                        <select name="radiology_type_id" id="modalRadiologyTypeSelect" class="form-select" required>
-                            <option value="">{{ __('-- اختر نوع الأشعة / التصوير --') }}</option>
-                            @if(isset($availableRadiologyTypes))
+                    {{-- Search Input Bar --}}
+                    <div class="input-group mb-2.5 shadow-2xs rounded-3 overflow-hidden border">
+                        <span class="input-group-text bg-white border-0 text-muted ps-3 pe-2">
+                            <i class="fas fa-search text-primary"></i>
+                        </span>
+                        <input type="text" id="modalRadSearchInput" class="form-control border-0 py-2" placeholder="{{ __('ابحث عن فحص الأشعة بالاسم، الكود، الفئة...') }}" oninput="filterModalRadServices(this.value)">
+                        <button class="btn btn-light border-0 text-muted px-3" type="button" onclick="clearModalRadSearch()" title="{{ __('مسح البحث') }}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    {{-- Category Tabs --}}
+                    @php
+                        $radCategories = isset($availableRadiologyTypes) ? $availableRadiologyTypes->groupBy(function($item) {
+                            return trim($item->main_category ?: 'أخرى');
+                        }) : collect();
+                    @endphp
+
+                    <div class="d-flex align-items-center gap-1.5 mb-2.5 pb-1.5 border-bottom flex-wrap" id="radCategoryTabsContainer">
+                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 py-1 rad-cat-btn active" data-cat="all" onclick="filterModalRadCategory('all', this)">
+                            <i class="fas fa-layer-group me-1"></i>
+                            <span>{{ __('الكل') }}</span>
+                            <span class="badge bg-white text-primary rounded-pill px-1.5 ms-1 font-monospace" style="font-size: 0.70rem;">{{ $availableRadiologyTypes?->count() ?? 0 }}</span>
+                        </button>
+                        @foreach($radCategories as $catName => $catItems)
+                            @php
+                                $catLower = mb_strtolower($catName);
+                                $catIcon = match(true) {
+                                    str_contains($catLower, 'أشعة') || str_contains($catLower, 'x-ray') => 'fas fa-x-ray text-primary',
+                                    str_contains($catLower, 'سونار') || str_contains($catLower, 'sonar') || str_contains($catLower, 'ultra') => 'fas fa-wave-square text-info',
+                                    str_contains($catLower, 'مفراس') || str_contains($catLower, 'ct') => 'fas fa-circle-notch text-warning',
+                                    str_contains($catLower, 'رنين') || str_contains($catLower, 'mri') => 'fas fa-magnet text-danger',
+                                    str_contains($catLower, 'إيكو') || str_contains($catLower, 'ايكو') || str_contains($catLower, 'echo') => 'fas fa-heartbeat text-success',
+                                    default => 'fas fa-radiation text-secondary'
+                                };
+                            @endphp
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-1 rad-cat-btn" data-cat="{{ $catName }}" onclick="filterModalRadCategory('{{ addslashes($catName) }}', this)">
+                                <i class="{{ $catIcon }} me-1"></i>
+                                <span>{{ $catName }}</span>
+                                <span class="badge bg-light text-dark border rounded-pill px-1.5 ms-1 font-monospace" style="font-size: 0.70rem;">{{ $catItems->count() }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+
+                    {{-- Scrollable Radiology Services Grid --}}
+                    <div class="border rounded-3 p-2.5 mb-3" style="max-height: 290px; overflow-y: auto; background: #fafafa;" id="modalRadCardsScrollContainer">
+                        @if(isset($availableRadiologyTypes) && $availableRadiologyTypes->count() > 0)
+                            <div class="row g-2" id="modalRadServicesGrid">
                                 @foreach($availableRadiologyTypes as $rad)
                                     @php
                                         $rPrice = (float)($rad->base_price ?? 0);
@@ -5360,47 +5412,99 @@ document.addEventListener("DOMContentLoaded", function () {
                                             default => $rPrice
                                         };
                                         $displayRadCopay = $modalIsInsurance ? round($rEff * ($modalRadCopay / 100)) : $rEff;
+                                        $catName = trim($rad->main_category ?: 'أخرى');
+                                        $subCatName = trim($rad->subcategory ?: '');
                                     @endphp
-                                    <option value="{{ $rad->id }}">
-                                        {{ $rad->name }} — 
-                                        @if($modalIsInsurance)
-                                            [{{ __('ضمان معتمد:') }} {{ number_format($rEff, 0) }} {{ __('د.ع') }} | {{ __('استقطاع') }} {{ $modalRadCopay }}%: {{ number_format($displayRadCopay, 0) }} {{ __('د.ع') }}]
-                                        @else
-                                            [{{ __('كاش:') }} {{ number_format($rEff, 0) }} {{ __('د.ع') }}]
-                                        @endif
-                                    </option>
+                                    <div class="col-md-6 modal-rad-card-wrapper"
+                                         data-category="{{ $catName }}"
+                                         data-search="{{ mb_strtolower($rad->name . ' ' . $rad->code . ' ' . $catName . ' ' . $subCatName) }}">
+                                        <label class="modal-rad-card border rounded-3 p-2.5 d-flex align-items-center justify-content-between gap-2 h-100 bg-white shadow-2xs cursor-pointer transition-all w-100 mb-0 position-relative"
+                                               for="radTypeOption{{ $rad->id }}"
+                                               id="radCardLabel{{ $rad->id }}"
+                                               style="cursor: pointer; border-width: 1.5px !important;">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <input class="form-check-input mt-1 modal-rad-radio ms-0"
+                                                       type="radio"
+                                                       name="radiology_type_id"
+                                                       value="{{ $rad->id }}"
+                                                       id="radTypeOption{{ $rad->id }}"
+                                                       required
+                                                       onchange="selectRadCard({{ $rad->id }}, '{{ addslashes($rad->name) }}', '{{ number_format($rEff, 0) }} د.ع')">
+                                                <div>
+                                                    <strong class="text-dark small d-block mb-0.5 text-wrap" style="line-height: 1.35;">{{ $rad->name }}</strong>
+                                                    <div class="d-flex align-items-center gap-1 flex-wrap">
+                                                        <span class="badge bg-secondary-subtle text-secondary py-0.5 px-1.5 rounded-pill" style="font-size: 0.65rem;">
+                                                            {{ $catName }}
+                                                        </span>
+                                                        @if($rad->code)
+                                                            <span class="badge bg-light text-muted border font-monospace px-1 py-0.5" style="font-size: 0.65rem;">
+                                                                {{ $rad->code }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end text-nowrap lh-1 ms-2">
+                                                @if($modalIsInsurance)
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle px-1.5 py-0.5 rounded-pill" style="font-size: 0.68rem;" title="{{ __('استقطاع المريض') }} ({{ $modalRadCopay }}%)">
+                                                        {{ __('تحمل') }} {{ $modalRadCopay }}%: {{ number_format($displayRadCopay, 0) }} {{ __('د.ع') }}
+                                                    </span>
+                                                    <small class="text-muted d-block mt-1" style="font-size: 0.60rem;">{{ __('معتمد:') }} {{ number_format($rEff, 0) }}</small>
+                                                @else
+                                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-1.5 py-0.5 rounded-pill" style="font-size: 0.70rem;">
+                                                        {{ number_format($rEff, 0) }} {{ __('د.ع') }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </label>
+                                    </div>
                                 @endforeach
-                            @endif
-                        </select>
+                            </div>
+                            <div class="text-center text-muted py-4 small d-none" id="modalRadNoResultsMessage">
+                                <i class="fas fa-search mb-1 fs-5 d-block text-secondary"></i>
+                                <span>{{ __('لا توجد خدمات أشعة مطابقة لبحثك أو التصنيف المحدد.') }}</span>
+                            </div>
+                        @else
+                            <div class="text-center text-muted py-4 small">{{ __('لا توجد خدمات أشعة وتصوير طبي مفعلة حالياً.') }}</div>
+                        @endif
                     </div>
 
-                    {{-- Priority --}}
-                    <div class="mb-3">
-                        <label class="form-label fw-bold small text-secondary mb-1">{{ __('درجة الأهمية:') }}</label>
-                        <div class="d-flex gap-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="priority" id="radPrioRoutine" value="routine" checked>
-                                <label class="form-check-label small" for="radPrioRoutine">{{ __('عادي') }} Routine</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="priority" id="radPrioUrgent" value="urgent">
-                                <label class="form-check-label small text-danger fw-bold" for="radPrioUrgent">{{ __('عاجل STAT (قبل العملية)') }}</label>
+                    {{-- Selected Service Live Bar --}}
+                    <div class="p-2 px-3 rounded-3 bg-light border d-flex align-items-center justify-content-between mb-3 shadow-2xs">
+                        <div class="small text-truncate me-2">
+                            <span class="text-secondary fw-semibold">{{ __('الفحص المختار:') }}</span>
+                            <strong id="selectedRadNameBanner" class="text-primary ms-1">— {{ __('انقر على أي فحص لتحديده') }} —</strong>
+                        </div>
+                        <span id="selectedRadPriceBanner" class="badge bg-white text-dark border px-2 py-1 font-monospace" style="font-size: 0.72rem;">0 د.ع</span>
+                    </div>
+
+                    {{-- Priority & Notes --}}
+                    <div class="row g-2 mb-1">
+                        <div class="col-sm-4">
+                            <label class="form-label fw-bold small text-secondary mb-1">{{ __('درجة الأهمية:') }}</label>
+                            <div class="d-flex gap-3 pt-1">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priority" id="radPrioRoutine" value="routine" checked>
+                                    <label class="form-check-label small" for="radPrioRoutine">{{ __('عادي') }} Routine</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="priority" id="radPrioUrgent" value="urgent">
+                                    <label class="form-check-label small text-danger fw-bold" for="radPrioUrgent">{{ __('عاجل STAT') }}</label>
+                                </div>
                             </div>
                         </div>
-                    </div>
-
-                    {{-- Clinical indication / notes --}}
-                    <div class="mb-2">
-                        <label for="modalRadiologyNotes" class="form-label fw-bold small text-secondary mb-1">
-                            {{ __('العضو المستهدف والتشخيص السريري (Clinical Indication):') }}
-                        </label>
-                        <textarea name="notes" id="modalRadiologyNotes" rows="2" class="form-control form-control-sm" placeholder="{{ __('مثال: صورة صدر لمريض قبل التخدير العام / سونار بطن وحوض...') }}"></textarea>
+                        <div class="col-sm-8">
+                            <label for="modalRadiologyNotes" class="form-label fw-bold small text-secondary mb-1">
+                                {{ __('العضو المستهدف والتشخيص السريري (Clinical Indication):') }}
+                            </label>
+                            <input type="text" name="notes" id="modalRadiologyNotes" class="form-control form-control-sm" placeholder="{{ __('مثال: صورة صدر لمريض قبل التخدير / سونار بطن وحوض...') }}">
+                        </div>
                     </div>
                 </div>
 
                 <div class="modal-footer bg-light border-0 px-4 py-3">
                     <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold" id="submitOrderRadBtn" disabled>
                         <i class="fas fa-paper-plane me-1"></i> {{ __('إرسال الطلب للأشعة والكاشير') }}
                     </button>
                 </div>
@@ -5408,6 +5512,79 @@ document.addEventListener("DOMContentLoaded", function () {
         </div>
     </div>
 </div>
+
+<script>
+let currentRadCategory = 'all';
+let currentRadQuery = '';
+
+function filterModalRadCategory(category, btn) {
+    currentRadCategory = category;
+    document.querySelectorAll('.rad-cat-btn').forEach(b => {
+        b.classList.remove('active', 'btn-primary');
+        b.classList.add('btn-outline-secondary');
+    });
+    if (btn) {
+        btn.classList.add('active', 'btn-primary');
+        btn.classList.remove('btn-outline-secondary');
+    }
+    applyModalRadFilters();
+}
+
+function filterModalRadServices(query) {
+    currentRadQuery = (query || '').trim().toLowerCase();
+    applyModalRadFilters();
+}
+
+function clearModalRadSearch() {
+    const input = document.getElementById('modalRadSearchInput');
+    if (input) input.value = '';
+    currentRadQuery = '';
+    applyModalRadFilters();
+}
+
+function applyModalRadFilters() {
+    const items = document.querySelectorAll('#modalRadServicesGrid .modal-rad-card-wrapper');
+    let visibleCount = 0;
+
+    items.forEach(el => {
+        const cat = (el.getAttribute('data-category') || '').trim();
+        const search = (el.getAttribute('data-search') || '').trim().toLowerCase();
+
+        const matchCat = (currentRadCategory === 'all') || (cat === currentRadCategory);
+        const matchQuery = (!currentRadQuery) || (search.includes(currentRadQuery));
+
+        if (matchCat && matchQuery) {
+            el.style.display = '';
+            visibleCount++;
+        } else {
+            el.style.display = 'none';
+        }
+    });
+
+    const noMsg = document.getElementById('modalRadNoResultsMessage');
+    if (noMsg) {
+        noMsg.classList.toggle('d-none', visibleCount > 0);
+    }
+}
+
+function selectRadCard(id, name, priceText) {
+    document.querySelectorAll('.modal-rad-card').forEach(c => {
+        c.classList.remove('border-primary', 'bg-primary-subtle', 'bg-opacity-10', 'shadow-sm');
+        c.style.borderColor = '';
+    });
+    const label = document.getElementById('radCardLabel' + id);
+    if (label) {
+        label.classList.add('border-primary', 'bg-primary-subtle', 'bg-opacity-10', 'shadow-sm');
+        label.style.borderColor = 'var(--bs-primary)';
+    }
+    const nameBanner = document.getElementById('selectedRadNameBanner');
+    const priceBanner = document.getElementById('selectedRadPriceBanner');
+    const submitBtn = document.getElementById('submitOrderRadBtn');
+    if (nameBanner) nameBanner.textContent = name;
+    if (priceBanner) priceBanner.textContent = priceText;
+    if (submitBtn) submitBtn.disabled = false;
+}
+</script>
 
 <script>
 function filterModalLabTests(query) {

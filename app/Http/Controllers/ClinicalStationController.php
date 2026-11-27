@@ -218,7 +218,7 @@ class ClinicalStationController extends Controller
             && ($isAdmin || ($user && $user->hasAnyRole(['surgeon', 'resident', 'doctor', 'anesthesia'])));
 
         $availableLabTests = LabTest::where('is_active', true)->orderBy('name')->get();
-        $availableRadiologyTypes = RadiologyType::where('is_active', true)->orderBy('name')->get();
+        $availableRadiologyTypes = RadiologyType::where('is_active', true)->orderBy('main_category')->orderBy('name')->get();
         $labPackages = Package::has('labTests')->with('labTests')->get();
         $daysMap = [
             'Saturday' => 'السبت',

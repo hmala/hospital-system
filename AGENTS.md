@@ -56,6 +56,24 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 318: تقسيم خدمات الأشعة والتصوير الطبي إلى تبويبات حسب النوع مع شريط بحث لحظي وبطاقات تفاعلية في الشاشة السريرية للعمليات Radiology Services Categorized Tabs, Instant Search & Interactive Selection Grid)
+
+### Done
+- **إعادة هندسة نافذة طلب فحص الأشعة بالكامل ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * تحويل نافذة طلب فحص الأشعة (`#orderRadiologyModal`) من قائمة منسدلة عملاقة تضم 366 خياراً إلى نافذة حديثة وواسعة (`max-width: 840px`).
+  * **شريط بحث فوري لحظي**: يبحث بالاسم أو الكود أو الفئة مع زر مسح سريع.
+  * **تبويبات ديناميكية تقسم الخدمات حسب نوعها**:
+    - `[ الكل ]` (عرض شامل مع العداد الإجمالي).
+    - `[ 🩻 أشعة X-Ray ]`، `[ 🔊 سونار Ultrasound ]`، `[ 🌀 مفراس CT ]`، `[ 🧲 رنين MRI ]`، `[ 🫀 إيكو Echo ]`، مع العداد الرقمي لكل فئة.
+  * **شبكة بطاقات تفاعلية من عمودين**: اختيار الفحص بنقرة واحدة على البطاقة مع تمييز لوني أزرق، وعرض كود الفحص، والتصنيف، والسعر المعتمد ونسبة التحمل للمريض (ضمان / كاش).
+  * **شريط سفلي للمعاينة**: يُظهر اسم الفحص الإشعاعي المختار وسعره بوضوح قبل الإرسال ويقفل زر الإرسال لحين الاختيار.
+- **إضافة شارات التصنيف والكود في قائمة فحوصات المريض**:
+  * إظهار شارة الفئة (أشعة / سونار / رنين / مفراس) وكود الفحص بجانب اسم الخدمة في جدول فحوصات العملية في `tab=tests`.
+- **التحسين بالكنترولر ([ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+  * ترتيب جلب الخدمات تلقائياً حسب الفئة الرئيسية أولاً ثم الاسم: `orderBy('main_category')->orderBy('name')`.
+- **التأكيد والاختبار**:
+  * اجتياز `php artisan view:clear` و `php artisan view:cache` و `Pint` بنجاح.
+
 ## Session log (2026-11-27 — المرحلة 317: ضبط صلاحيات الخدج، التحويل المباشر لطباعة التعهد الخطي ومنع الدخول غير المصرح لملف الطفل السريري NICU Receptionist Permissions & Direct Consent Print Workflow)
 
 ### Done
