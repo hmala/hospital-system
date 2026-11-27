@@ -56,6 +56,25 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 319: إعادة تصميم نافذة طلب فحص الأشعة: عرض مدمج 520px، صف واحد مع بحث فوري، وفلترة أطباء السونار والإيكو حسب الاختصاص Compact Radiology Modal, Single-Row Instant Search & Specialty Filtering)
+
+### Done
+- **إعادة تصميم نافذة طلب فحص الأشعة بالكامل ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * **عرض مدمج أنيق (`max-width: 520px`)**: تخفيض عرض النافذة لتصبح متناسقة ومريحة للمستخدم بدلاً من العرض الكبير السابق.
+  * **صف واحد مع خاصية بحث فوري**: استبدال شبكة البطاقات الطويلة بصف اختيار مدمج يعتمد على قائمة عائمة منسدلة فورية (`Floating Live Dropdown`) تبحث لحظياً بالاسم والكود والفئة مع إمكانية التصفية بنقرة واحدة عبر شريط تبويبات الفئات الأفقي.
+  * **شريط تأكيد وتحديد مدمج**: يظهر الفحص الإشعاعي المختار مع فئته وسعره وزر إلغاء مباشر (`clearSelectedRadItem`).
+  * **فلترة أطباء السونار والإيكو حصرياً حسب الاختصاص**:
+    - عند اختيار فحص سونار، يظهر حقل الطبيب الفاحص حصراً بأطباء السونار مع خيار «طبيب السونار المناوب (تلقائياً)».
+    - عند اختيار فحص إيكو القلب، يظهر حقل الطبيب الفاحص حصراً بأطباء واستشاريي القلبية والإيكو مع خيار «طبيب الإيكو المناوب (تلقائياً)».
+    - عند اختيار فحص أشعة عادية، رنين، أو مفراس، يختفي حقل الطبيب الفاحص تلقائياً ليُدار من قبل كادر القسم.
+  * **تنظيم صفوف النموذج**: دمج الأهمية (عادي / عاجل) مع التشخيص السريري في صف واحد متوازن.
+- **التكامل السريري وقاعدة البيانات ([SurgeryRadiologyTest.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgeryRadiologyTest.php), [ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php), [StaffRequestController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/StaffRequestController.php), [CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php))**:
+  * تخزين وحفظ الطبيب الفاحص في جدول `surgery_radiology_tests` وعرضه في كارت الفحوصات، استلام القسم، الطباعة، ووصل الكاشير.
+- **الاختبارات وضمان الجودة ([SurgeryRadiologyDoctorSpecialtyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryRadiologyDoctorSpecialtyTest.php))**:
+  * بناء واجتياز اختبار التحقق من تخزين الطبيب الفاحص وعزل أطباء السونار عن أطباء الإيكو بنجاح (`2 passed, 12 assertions`).
+  * اجتياز اختبارات تقرير العمليات (`SurgeryStatusPostOpAndPrintReportTest`) بنجاح (`4 passed, 48 assertions`).
+  * مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد عبر `Laravel Pint`.
+
 ## Session log (2026-11-27 — المرحلة 318: تقسيم خدمات الأشعة والتصوير الطبي إلى تبويبات حسب النوع مع شريط بحث لحظي وبطاقات تفاعلية في الشاشة السريرية للعمليات Radiology Services Categorized Tabs, Instant Search & Interactive Selection Grid)
 
 ### Done

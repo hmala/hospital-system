@@ -152,6 +152,7 @@ class ClinicalStationController extends Controller
             'surgeryTreatments.stockMovement',
             'labTests.labTest',
             'radiologyTests.radiologyType',
+            'radiologyTests.doctor.user',
             'consultations.doctor.user',
             'consultations.doctor.department',
             'consultations.requestedBy',
@@ -257,6 +258,34 @@ class ClinicalStationController extends Controller
                 ->get();
         }
 
+        $activeDoctors = Doctor::with(['user', 'department'])
+            ->where('is_active', true)
+            ->get();
+
+        // أطباء السونار والأشعة التشخيصية
+        $sonarDoctors = $activeDoctors->filter(function ($doc) {
+            $text = mb_strtolower(($doc->specialization ?? '').' '.($doc->type ?? '').' '.($doc->department?->name ?? ''));
+
+            return str_contains($text, 'سونار') || str_contains($text, 'اشعة') || str_contains($text, 'أشعة') || str_contains($text, 'sonar') || str_contains($text, 'radiolog');
+        })->values();
+
+        // أطباء إيكو القلب وأمراض القلبية
+        $echoDoctors = $activeDoctors->filter(function ($doc) {
+            $text = mb_strtolower(($doc->specialization ?? '').' '.($doc->type ?? '').' '.($doc->department?->name ?? ''));
+
+            return str_contains($text, 'ايكو') || str_contains($text, 'إيكو') || str_contains($text, 'قلب') || str_contains($text, 'cardio') || str_contains($text, 'echo');
+        })->values();
+
+        if ($echoDoctors->isEmpty()) {
+            $echoDoctors = $activeDoctors->filter(function ($doc) {
+                $text = mb_strtolower($doc->specialization ?? '');
+
+                return str_contains($text, 'باطن') || str_contains($text, 'قلب');
+            })->values();
+        }
+
+        $radiologyDoctors = $sonarDoctors->merge($echoDoctors)->unique('id')->values();
+
         // تحديد مسار العودة الذكي واسم الزر بناءً على المصدر أو الدور
         $from = $request->query('from');
         $referer = (string) url()->previous();
@@ -338,6 +367,9 @@ class ClinicalStationController extends Controller
             'canEditTests',
             'availableLabTests',
             'availableRadiologyTypes',
+            'radiologyDoctors',
+            'sonarDoctors',
+            'echoDoctors',
             'labPackages',
             'availableConsultantDoctors',
             'isAdmin',
@@ -1781,6 +1813,7 @@ class ClinicalStationController extends Controller
 
         $validated = $request->validate([
             'radiology_type_id' => 'required|integer|exists:radiology_types,id',
+            'doctor_id' => 'nullable|integer|exists:doctors,id',
             'notes' => 'nullable|string|max:500',
             'priority' => 'nullable|string|in:routine,urgent',
         ]);
@@ -1792,6 +1825,7 @@ class ClinicalStationController extends Controller
 
         $surgery->radiologyTests()->create([
             'radiology_type_id' => $validated['radiology_type_id'],
+            'doctor_id' => $validated['doctor_id'] ?? null,
             'status' => 'pending',
             'payment_status' => 'pending',
             'notes' => $notes,

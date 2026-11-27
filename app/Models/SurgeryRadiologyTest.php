@@ -12,6 +12,7 @@ class SurgeryRadiologyTest extends Model
     protected $fillable = [
         'surgery_id',
         'radiology_type_id',
+        'doctor_id',
         'status',
         'payment_status',
         'result',
@@ -43,6 +44,11 @@ class SurgeryRadiologyTest extends Model
     public function radiologyService()
     {
         return $this->belongsTo(RadiologyType::class, 'radiology_type_id');
+    }
+
+    public function doctor()
+    {
+        return $this->belongsTo(Doctor::class, 'doctor_id');
     }
 
     public function getStatusTextAttribute()

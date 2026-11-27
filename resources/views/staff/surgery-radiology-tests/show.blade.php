@@ -176,7 +176,8 @@ function getRadiologyCategory($radiologyName) {
                     <div class="row">
                         <div class="col-md-4">
                             <p><strong>{{ __("المريض:") }}</strong> {{ optional($test->surgery->patient?->user)->name ?? __("غير معروف") }}</p>
-                            <p><strong>{{ __("الطبيب:") }}</strong> {{ (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . (optional($test->surgery->doctor?->user)->name ?? __("غير محدد")) }}</p>
+                            <p><strong>{{ __("الجراح المشرف:") }}</strong> {{ (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . (optional($test->surgery->doctor?->user)->name ?? __("غير محدد")) }}</p>
+                            <p><strong>{{ __("الطبيب الفاحص:") }}</strong> <span class="badge bg-info-subtle text-info border border-info-subtle">{{ $test->doctor ? ('د. ' . optional($test->doctor->user)->name) : __('طبيب القسم المناوب (تلقائياً)') }}</span></p>
                         </div>
                         <div class="col-md-4">
                             <p><strong>{{ __("نوع العملية:") }}</strong> {{ $test->surgery->surgery_type }}</p>
@@ -399,6 +400,7 @@ function getRadiologyCategory($radiologyName) {
                                         <tr>
                                             <th class="text-center" style="width: 50px;">#</th>
                                             <th>{{ __("نوع التصوير") }}</th>
+                                            <th style="width: 250px;">{{ __("الطبيب الفاحص (أخصائي السونار/الأشعة)") }}</th>
                                             <th style="width: 150px;" class="text-center">{{ __("الحالة") }}</th>
                                         </tr>
                                     </thead>
@@ -421,6 +423,68 @@ function getRadiologyCategory($radiologyName) {
                                                         </small>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td>
+                                                @php
+                                                    $radCatLower = mb_strtolower($test->radiologyType?->main_category ?? '');
+                                                    $radNameLower = mb_strtolower($test->radiologyType?->name ?? '');
+                                                    $isEchoTest = str_contains($radCatLower, 'إيكو') || str_contains($radCatLower, 'ايكو') || str_contains($radNameLower, 'إيكو') || str_contains($radNameLower, 'ايكو') || str_contains($radNameLower, 'echo');
+                                                    $isSonarTest = str_contains($radCatLower, 'سونار') || str_contains($radNameLower, 'سونار') || str_contains($radNameLower, 'ultrasound') || str_contains($radNameLower, 'sonar');
+                                                @endphp
+                                                <select name="doctor_id" id="doctor_id" class="form-select form-select-sm">
+                                                    <option value="">{{ __("طبيب القسم المناوب (تلقائياً)") }}</option>
+                                                    @if(isset($doctors) && $doctors->count() > 0)
+                                                        @php
+                                                            $sonarStaffDocs = $doctors->filter(fn($d) => str_contains(mb_strtolower($d->specialization ?? ''), 'سونار') || str_contains(mb_strtolower($d->specialization ?? ''), 'اشعة') || str_contains(mb_strtolower($d->specialization ?? ''), 'أشعة'));
+                                                            $echoStaffDocs = $doctors->filter(fn($d) => str_contains(mb_strtolower($d->specialization ?? ''), 'ايكو') || str_contains(mb_strtolower($d->specialization ?? ''), 'إيكو') || str_contains(mb_strtolower($d->specialization ?? ''), 'قلب'));
+                                                            $otherStaffDocs = $doctors->diff($sonarStaffDocs)->diff($echoStaffDocs);
+                                                        @endphp
+                                                        @if($isEchoTest && $echoStaffDocs->count() > 0)
+                                                            <optgroup label="{{ __('أخصائيو إيكو القلب والقلبية') }}">
+                                                                @foreach($echoStaffDocs as $d)
+                                                                    <option value="{{ $d->id }}" {{ old('doctor_id', $test->doctor_id) == $d->id ? 'selected' : '' }}>
+                                                                        د. {{ optional($d->user)->name }} — {{ $d->specialization }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                        @elseif($isSonarTest && $sonarStaffDocs->count() > 0)
+                                                            <optgroup label="{{ __('أخصائيو السونار والتصوير الطبي') }}">
+                                                                @foreach($sonarStaffDocs as $d)
+                                                                    <option value="{{ $d->id }}" {{ old('doctor_id', $test->doctor_id) == $d->id ? 'selected' : '' }}>
+                                                                        د. {{ optional($d->user)->name }} — {{ $d->specialization }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </optgroup>
+                                                        @else
+                                                            @if($sonarStaffDocs->count() > 0)
+                                                                <optgroup label="{{ __('أطباء السونار والأشعة') }}">
+                                                                    @foreach($sonarStaffDocs as $d)
+                                                                        <option value="{{ $d->id }}" {{ old('doctor_id', $test->doctor_id) == $d->id ? 'selected' : '' }}>
+                                                                            د. {{ optional($d->user)->name }} — {{ $d->specialization }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </optgroup>
+                                                            @endif
+                                                            @if($echoStaffDocs->count() > 0)
+                                                                <optgroup label="{{ __('أطباء القلبية والإيكو') }}">
+                                                                    @foreach($echoStaffDocs as $d)
+                                                                        <option value="{{ $d->id }}" {{ old('doctor_id', $test->doctor_id) == $d->id ? 'selected' : '' }}>
+                                                                            د. {{ optional($d->user)->name }} — {{ $d->specialization }}
+                                                                        </option>
+                                                                    @endforeach
+                                                                </optgroup>
+                                                            @endif
+                                                        @endif
+                                                        <optgroup label="{{ __('أطباء المستشفى الآخرين') }}">
+                                                            @foreach($otherStaffDocs as $d)
+                                                                <option value="{{ $d->id }}" {{ old('doctor_id', $test->doctor_id) == $d->id ? 'selected' : '' }}>
+                                                                    د. {{ optional($d->user)->name }} @if($d->specialization)— {{ $d->specialization }}@endif
+                                                                </option>
+                                                            @endforeach
+                                                        </optgroup>
+                                                    @endif
+                                                </select>
+                                                <small class="text-muted" style="font-size: 0.70rem;">{{ __('لتثبيت اسم الطبيب الفاحص في التقرير والكاشير') }}</small>
                                             </td>
                                             <td class="text-center">
                                                 <select name="status" id="status" class="form-select form-select-sm @error('status') is-invalid @enderror" required>

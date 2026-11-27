@@ -3381,6 +3381,7 @@ class CashierController extends Controller
             'room',
             'labTests.labTest',
             'radiologyTests.radiologyType',
+            'radiologyTests.doctor.user',
             'visit',
             'additionalOperations',
             'extraServices',
@@ -3876,6 +3877,7 @@ class CashierController extends Controller
             'room',
             'labTests.labTest',
             'radiologyTests.radiologyType',
+            'radiologyTests.doctor.user',
             'visit',
             'additionalOperations.surgicalOperation',
             'medicalDevices',
@@ -4302,7 +4304,13 @@ class CashierController extends Controller
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
             $patient = $surgery->patient;
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
-            $surgeryCopay = (float) ($surgery->insurance_copay_percentage ?? $request->input('copay_percentage', $patient->copay_percentage ?? 15.0));
+            if ($request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== '') {
+                $surgeryCopay = (float) $request->copay_percentage;
+            } elseif ($surgery->copay_percentage !== null) {
+                $surgeryCopay = (float) $surgery->copay_percentage;
+            } else {
+                $surgeryCopay = (float) ($surgery->insurance_copay_percentage ?? $patient->copay_percentage ?? 15.0);
+            }
             $labCopay = $patient ? (float) $patient->getCopayPercentageFor('lab') : $surgeryCopay;
             $radCopay = $patient ? (float) $patient->getCopayPercentageFor('radiology') : $surgeryCopay;
             $ecgCopay = $patient ? (float) $patient->getCopayPercentageFor('ecg') : $surgeryCopay;
@@ -4399,6 +4407,10 @@ class CashierController extends Controller
                             $lBearer = $isInsurance ? 'insurance' : 'doctor';
                             if (! $isInsurance && $lPrice > 0) {
                                 $doctorDeductionsAmount += $lPrice;
+                            } elseif ($isInsurance && $lPrice > 0) {
+                                $labApproved += $lPrice;
+                                $labInsuranceShare += $lPrice;
+                                $labPatientShare += 0.0;
                             }
                             $includedPackageItems[] = [
                                 'type' => 'lab',
@@ -4407,20 +4419,19 @@ class CashierController extends Controller
                                 'price' => $lPrice,
                                 'bearer' => $lBearer,
                             ];
-                            $paidItems[] = 'تحليل: '.($lModel->name ?? 'غير محدد').' (مشمول ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $lPrice > 0 ? ' [استقطاع جراح: '.number_format($lPrice, 0).' د.ع]' : '');
+                            $paidItems[] = 'تحليل: '.($lModel->name ?? 'غير محدد').' (مشمول ضمن باقة العملية - 0 د.ع)'.(! $isInsurance && $lPrice > 0 ? ' [استقطاع جراح: '.number_format($lPrice, 0).' د.ع]' : ($isInsurance ? ' [مطالبة تأمين/داخلية]' : ''));
                         } else {
                             $lBase = (float) ($lModel->price ?? 0);
                             $lHi = (float) (($lModel && $lModel->hi_price > 0) ? $lModel->hi_price : $lBase);
-                            $lMoi = (float) (($lModel && $lModel->moi_price > 0) ? $lModel->moi_price : $lBase);
 
                             if ($insuranceType === 'hi') {
                                 $appr = $lHi;
                                 $pShare = round($appr * ($labCopay / 100.0), 2);
                                 $iShare = max(0.0, $appr - $pShare);
                             } elseif ($insuranceType === 'moi') {
-                                $appr = $lMoi;
-                                $pShare = round($appr * ($labCopay / 100.0), 2);
-                                $iShare = max(0.0, $appr - $pShare);
+                                $appr = $lBase;
+                                $pShare = $lBase;
+                                $iShare = 0.0;
                             } else {
                                 $appr = $lBase;
                                 $pShare = $lBase;

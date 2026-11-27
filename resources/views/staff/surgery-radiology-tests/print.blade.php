@@ -91,7 +91,7 @@
                 <div class="detail-item"><span class="detail-label">{{ __("العمر:") }}</span><span class="detail-value">{{ $test->surgery->patient?->age ? $test->surgery->patient->age . ' ' . __('سنة') : '-' }}</span></div>
                 <div class="detail-item"><span class="detail-label">{{ __("الجنس:") }}</span><span class="detail-value">{{ $test->surgery->patient?->gender === 'male' ? __('ذكر') : ($test->surgery->patient?->gender === 'female' ? __('أنثى') : '-') }}</span></div>
                 <div class="detail-item"><span class="detail-label">{{ __("الهاتف:") }}</span><span class="detail-value">{{ optional($test->surgery->patient?->user)->phone ?? '-' }}</span></div>
-                <div class="detail-item"><span class="detail-label">{{ __("الطبيب:") }}</span><span class="detail-value">{{ optional($test->surgery->doctor?->user)->name ? (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . $test->surgery->doctor->user->name : ($test->surgery->surgeon_name ?? '-') }}</span></div>
+                <div class="detail-item"><span class="detail-label">{{ __("الجراح المشرف:") }}</span><span class="detail-value">{{ optional($test->surgery->doctor?->user)->name ? (app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . $test->surgery->doctor->user->name : ($test->surgery->surgeon_name ?? '-') }}</span></div>
                 <div class="detail-item"><span class="detail-label">{{ __("تاريخ العملية:") }}</span><span class="detail-value">{{ $test->surgery->scheduled_date ? $test->surgery->scheduled_date->format('Y-m-d') : '-' }}</span></div>
             </div>
             @else
@@ -104,6 +104,7 @@
             <table class="results-table">
                 <tr><td>{{ __("نوع الأشعة") }}</td><td>{{ optional($test->radiologyType)->name ?? __('أشعة عامة') }}</td></tr>
                 <tr><td>{{ __("الكود") }}</td><td>{{ optional($test->radiologyType)->code ?? '-' }}</td></tr>
+                <tr><td>{{ __("الطبيب الفاحص") }}</td><td><strong>{{ $test->doctor ? ((app()->getLocale() === 'en' ? 'Dr. ' : 'د. ') . optional($test->doctor->user)->name . ($test->doctor->specialization ? ' — ' . $test->doctor->specialization : '')) : __('طبيب قسم الأشعة / السونار المناوب') }}</strong></td></tr>
                 <tr><td>{{ __("الحالة") }}</td><td>{{ $test->status_text ?? ucfirst($test->status) }}</td></tr>
                 <tr><td>{{ __("تاريخ الإكمال") }}</td><td>{{ optional($test->completed_at)->format('Y-m-d H:i') ?? '-' }}</td></tr>
                 <tr><td>{{ __("النتيجة") }}</td><td>{{ $test->result ?? '-' }}</td></tr>

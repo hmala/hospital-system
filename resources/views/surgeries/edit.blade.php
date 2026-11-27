@@ -399,7 +399,7 @@ body {
                                                        {{ old('apply_insurance', $currentSurgeryIsInsurance ? '1' : '0') == '1' ? 'checked' : '' }}>
                                                 <label class="form-check-label fw-bold text-success cursor-pointer" for="surgery_apply_insurance_yes">
                                                     <i class="fas fa-check-circle me-1"></i>
-                                                    {{ __('🛡️ حجز تحت مظلة الضمان الصحي') }}
+                                                    {{ __('🛡️ حجز تحت مظلة الضمان الصحي / قوى الأمن الداخلي') }}
                                                 </label>
                                             </div>
                                             <div class="form-check m-0">
@@ -409,6 +409,22 @@ body {
                                                     <i class="fas fa-money-bill-wave me-1"></i>
                                                     {{ __('💵 حجز نقدي خاص (كاش كامل خارج الضمان)') }}
                                                 </label>
+                                            </div>
+                                        </div>
+
+                                        <!-- اختيار جهة الضمان إذا رغب الموظف بتغييرها يدوياً -->
+                                        <div class="row g-2 mt-2 pt-2 border-top align-items-center">
+                                            <div class="col-md-6">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1"><i class="fas fa-shield-alt text-primary me-1"></i>{{ __('جهة التغطية:') }}</label>
+                                                <select name="insurance_type" id="surgery_insurance_type_select" class="form-select form-select-sm">
+                                                    <option value="none">{{ __('💵 حساب خاص (كاش كامل)') }}</option>
+                                                    <option value="moi" {{ old('insurance_type', $surgery->insurance_type ?: $pInsType) === 'moi' ? 'selected' : '' }}>{{ __('🛡️ قوى الأمن الداخلي - وزارة الداخلية (MOI)') }}</option>
+                                                    <option value="hi" {{ old('insurance_type', $surgery->insurance_type ?: $pInsType) === 'hi' ? 'selected' : '' }}>{{ __('🏛️ هيئة الضمان الصحي الوطني (HI)') }}</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6" id="insuranceCardNoCol">
+                                                <label class="form-label text-xs fw-bold text-muted mb-1"><i class="fas fa-id-card text-primary me-1"></i>{{ __('رقم هوية/دفتر الضمان:') }}</label>
+                                                <input type="text" name="insurance_card_no" id="surgery_insurance_card_no_input" class="form-control form-control-sm" value="{{ old('insurance_card_no', $surgery->insurance_card_no ?: $pCardNo) }}" placeholder="{{ __('رقم الدفتر أو الهوية...') }}">
                                             </div>
                                         </div>
                                     </div>
@@ -697,6 +713,80 @@ body {
                                     <div class="d-flex align-items-center">
                                         <span class="text-dark small me-2 fw-bold">{{ __('إجمالي سعر العمليات:') }}</span>
                                         <span id="summaryTotalFeeBottom" class="badge bg-success fs-7 px-3 py-1">0 {{ __('د.ع') }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- بطاقة تحديد نسبة تحمل مريض قوى الأمن الداخلي (MOI) وحساب المطالبة اللحظي -->
+                            @php
+                                $currentSurgeryCopay = old('copay_percentage', $surgery->copay_percentage !== null ? (int)$surgery->copay_percentage : 15);
+                                $isSurgeryMoi = old('insurance_type', $surgery->insurance_type ?: $pInsType) === 'moi';
+                            @endphp
+                            <div id="moiCopaySection" class="p-3 m-3 border rounded-3 bg-primary-subtle border-primary-subtle shadow-2xs" style="{{ $isSurgeryMoi ? '' : 'display: none;' }}">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom border-primary border-opacity-25">
+                                    <span class="badge bg-primary text-white px-2 py-1">
+                                        <i class="fas fa-user-shield me-1"></i>
+                                        {{ __('🛡️ تغطية قوى الأمن الداخلي (وزارة الداخلية)') }}
+                                    </span>
+                                    <span class="text-muted small">
+                                        <i class="fas fa-info-circle me-1 text-primary"></i> {{ __('تحديد نسبة ما يدفعه المريض نقداً وما يُرحل كمطالبة ذمة على وزارة الداخلية') }}
+                                    </span>
+                                </div>
+
+                                <label class="form-label small fw-bold text-dark d-block mb-1">
+                                    <i class="fas fa-percentage text-primary me-1"></i>
+                                    {{ __('نسبة تحمل المريض في أجور العملية الجراحية:') }}
+                                </label>
+
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4">
+                                        <label class="p-2 rounded-2 border d-flex align-items-center justify-content-between cursor-pointer bg-white h-100" id="tile_copay_15" style="border-width: 2px !important;">
+                                            <div class="form-check m-0">
+                                                <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_15" value="15" {{ $currentSurgeryCopay == 15 ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-primary cursor-pointer ms-1" for="copay_15">
+                                                    {{ __('15% (النسبة القياسية)') }}
+                                                </label>
+                                            </div>
+                                            <span class="badge bg-primary-subtle text-primary small">مطالبة 85%</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="p-2 rounded-2 border d-flex align-items-center justify-content-between cursor-pointer bg-white h-100" id="tile_copay_0" style="border-width: 2px !important;">
+                                            <div class="form-check m-0">
+                                                <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_0" value="0" {{ $currentSurgeryCopay === 0 ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-success cursor-pointer ms-1" for="copay_0">
+                                                    {{ __('0% (إعفاء كامل - جرحى/شهداء)') }}
+                                                </label>
+                                            </div>
+                                            <span class="badge bg-success-subtle text-success small">مطالبة 100%</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="p-2 rounded-2 border d-flex align-items-center justify-content-between cursor-pointer bg-white h-100" id="tile_copay_100" style="border-width: 2px !important;">
+                                            <div class="form-check m-0">
+                                                <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_100" value="100" {{ $currentSurgeryCopay == 100 ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-secondary cursor-pointer ms-1" for="copay_100">
+                                                    {{ __('100% (تحمل كامل - خارج التغطية)') }}
+                                                </label>
+                                            </div>
+                                            <span class="badge bg-secondary-subtle text-secondary small">مطالبة 0%</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- بطاقة الحساب الفوري لأثر النسبة على العملية -->
+                                <div class="p-2 bg-white rounded border d-flex justify-content-around align-items-center flex-wrap gap-2 text-center" id="moiBreakdownBox">
+                                    <div>
+                                        <span class="text-muted text-xs d-block">{{ __('إجمالي سعر العملية') }}</span>
+                                        <strong class="text-dark fs-7" id="moiGrossFeeDisp">0 د.ع</strong>
+                                    </div>
+                                    <div class="border-start ps-3">
+                                        <span class="text-muted text-xs d-block">{{ __('المطلوب كاش من المريض') }}</span>
+                                        <strong class="text-success fs-7" id="moiPatientShareDisp">0 د.ع</strong>
+                                    </div>
+                                    <div class="border-start ps-3">
+                                        <span class="text-muted text-xs d-block">{{ __('مطالبة ذمة على وزارة الداخلية') }}</span>
+                                        <strong class="text-primary fs-7" id="moiClaimShareDisp">0 د.ع</strong>
                                     </div>
                                 </div>
                             </div>
@@ -1223,12 +1313,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         $('#patientInsuranceCardSpan').hide();
                     }
                     $('#patientInsuranceSection').slideDown(150);
+                    $('#surgery_apply_insurance_yes').prop('checked', true);
+                    if (patientData.insurance_type === 'moi') {
+                        $('#surgery_insurance_type_select').val('moi');
+                    } else if (patientData.insurance_type === 'hi') {
+                        $('#surgery_insurance_type_select').val('hi');
+                    }
                 } else {
-                    $('#bannerInsuranceBadge').removeClass('bg-success').addClass('bg-secondary');
+                    $('#bannerInsuranceBadge').removeClass('bg-success bg-primary').addClass('bg-secondary');
                     $('#bannerInsuranceLabel').text('حساب خاص (نقدي)');
                     $('#bannerCardSpan').hide();
                     $('#patientInsuranceSection').slideUp(100);
+                    $('#surgery_apply_insurance_no').prop('checked', true);
+                    $('#surgery_insurance_type_select').val('none');
                 }
+                checkMoiVisibility();
             } else {
                 $('#bannerPatientName').text('يرجى اختيار مريض');
                 $('#bannerPatientId').text('-');
@@ -1239,8 +1338,77 @@ document.addEventListener('DOMContentLoaded', function() {
                 $('#bannerHistoryBtn').hide();
                 $('#bannerDossierBtn').hide();
                 $('#patientInsuranceSection').slideUp(100);
+                checkMoiVisibility();
             }
         });
+
+        function checkMoiVisibility() {
+            const isApplyInsurance = $('input[name="apply_insurance"]:checked').val() === '1';
+            const insSelectVal = $('#surgery_insurance_type_select').val();
+            const selectedPatientData = $('#patient_id').find(':selected').data('patient');
+            const pType = selectedPatientData ? selectedPatientData.insurance_type : '{{ $pInsType }}';
+            
+            const isMoi = isApplyInsurance && (insSelectVal === 'moi' || (insSelectVal !== 'hi' && insSelectVal !== 'none' && pType === 'moi'));
+            
+            if (isMoi) {
+                $('#moiCopaySection').slideDown(150);
+                $('#bannerInsuranceBadge').removeClass('bg-secondary bg-success').addClass('bg-primary text-white');
+                $('#bannerInsuranceLabel').text('ضمان قوى الأمن الداخلي (MOI)');
+                if ($('#surgery_insurance_type_select').val() !== 'moi') {
+                    $('#surgery_insurance_type_select').val('moi');
+                }
+            } else {
+                $('#moiCopaySection').slideUp(100);
+                if (isApplyInsurance && insSelectVal === 'hi') {
+                    $('#bannerInsuranceBadge').removeClass('bg-secondary bg-primary').addClass('bg-success text-white');
+                    $('#bannerInsuranceLabel').text('هيئة الضمان الصحي الوطني');
+                } else if (!isApplyInsurance) {
+                    $('#bannerInsuranceBadge').removeClass('bg-success bg-primary').addClass('bg-secondary text-white');
+                    $('#bannerInsuranceLabel').text('حساب خاص (نقدي)');
+                }
+            }
+            updateMoiCalculations();
+        }
+
+        function updateMoiCalculations() {
+            const primaryVal = $('#custom_surgery_fee').val() || '0';
+            const primaryFee = parseInt(primaryVal.replace(/[^0-9]/g, ''), 10) || 0;
+            
+            let copayPct = 15;
+            const checkedRadio = $('input[name="copay_percentage"]:checked');
+            if (checkedRadio.length) {
+                copayPct = parseFloat(checkedRadio.val());
+            }
+            
+            const patientShare = Math.round(primaryFee * (copayPct / 100));
+            const claimShare = Math.max(0, primaryFee - patientShare);
+            
+            $('#moiGrossFeeDisp').text(primaryFee.toLocaleString('en-US') + ' د.ع');
+            $('#moiPatientShareDisp').text(patientShare.toLocaleString('en-US') + ' د.ع' + (copayPct === 0 ? ' (إعفاء كامل)' : ` (${copayPct}%)`));
+            $('#moiClaimShareDisp').text(claimShare.toLocaleString('en-US') + ' د.ع');
+            
+            $('#tile_copay_15, #tile_copay_0, #tile_copay_100').removeClass('border-primary border-success border-secondary shadow-sm');
+            if (copayPct === 15) {
+                $('#tile_copay_15').addClass('border-primary shadow-sm');
+            } else if (copayPct === 0) {
+                $('#tile_copay_0').addClass('border-success shadow-sm');
+            } else if (copayPct === 100) {
+                $('#tile_copay_100').addClass('border-secondary shadow-sm');
+            }
+        }
+
+        $('input[name="apply_insurance"]').on('change', checkMoiVisibility);
+        $('#surgery_insurance_type_select').on('change', function() {
+            const val = $(this).val();
+            if (val === 'none') {
+                $('#surgery_apply_insurance_no').prop('checked', true);
+            } else {
+                $('#surgery_apply_insurance_yes').prop('checked', true);
+            }
+            checkMoiVisibility();
+        });
+        $('input[name="copay_percentage"]').on('change', updateMoiCalculations);
+        checkMoiVisibility();
 
         // تفاصيل العملية والسعر المقترح
         $('#surgical_operation_id').on('change', function() {
@@ -1314,6 +1482,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const formattedTotal = (primaryFee + additionalTotal).toLocaleString('en-US') + ' د.ع';
         $('#summaryTotalFee').text(formattedTotal);
         $('#summaryTotalFeeBottom').text(formattedTotal);
+        if (typeof updateMoiCalculations === 'function') {
+            updateMoiCalculations();
+        }
     }
 
     function addAdditionalOpRow(selectedOpId = null, initialFee = null, initialNotes = '', selectedCategory = null) {

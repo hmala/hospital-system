@@ -31,6 +31,9 @@ class Surgery extends Model
         'billing_status',
         'devices_billing_status',
         'insurance_type',
+        'insurance_card_no',
+        'copay_percentage',
+        'original_surgery_fee',
         'surgery_fee_paid',
         'payment_id',
         'surgery_fee',
@@ -84,6 +87,8 @@ class Surgery extends Model
         'discharged_at' => 'datetime',
         'is_room_package_included' => 'boolean',
         'status' => 'string',
+        'copay_percentage' => 'decimal:2',
+        'original_surgery_fee' => 'decimal:2',
     ];
 
     protected static function booted(): void

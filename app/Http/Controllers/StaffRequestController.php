@@ -1634,7 +1634,7 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بالوصول إلى أشعة العمليات الجراحية');
         }
 
-        $query = \App\Models\SurgeryRadiologyTest::with(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType'])
+        $query = \App\Models\SurgeryRadiologyTest::with(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType', 'doctor.user'])
             ->whereHas('surgery'); // التأكد من وجود عملية صالحة
 
         // البحث
@@ -1690,9 +1690,11 @@ class StaffRequestController extends Controller
             abort(403, 'الأطباء الاستشاريين غير مصرح لهم بعرض أشعة العمليات الجراحية');
         }
 
-        $test->load(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType']);
+        $test->load(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType', 'doctor.user']);
 
-        return view('staff.surgery-radiology-tests.show', compact('test'));
+        $doctors = \App\Models\Doctor::with('user')->where('is_active', true)->get();
+
+        return view('staff.surgery-radiology-tests.show', compact('test', 'doctors'));
     }
 
     /**
@@ -1716,7 +1718,7 @@ class StaffRequestController extends Controller
             abort(403, 'لا يمكن طباعة طلب غير مكتمل');
         }
 
-        $test->load(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType']);
+        $test->load(['surgery.patient.user', 'surgery.doctor.user', 'radiologyType', 'doctor.user']);
 
         return view('staff.surgery-radiology-tests.print', compact('test'));
     }
@@ -1742,6 +1744,7 @@ class StaffRequestController extends Controller
         $validated = $request->validate([
             'status' => 'required|in:pending,completed,cancelled',
             'radiology_type_id' => 'nullable|exists:radiology_types,id',
+            'doctor_id' => 'nullable|exists:doctors,id',
             'result' => 'nullable|string',
             'result_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png,dcm,dicom|max:10240',
         ]);

@@ -184,6 +184,11 @@
                                             <strong class="text-warning">{{ __("طلب أشعة عام") }}</strong>
                                             <br><small class="text-muted">{{ __("لم يتم تحديد نوع الأشعة بعد") }}</small>
                                         @endif
+                                        @if($test->doctor_id && $test->doctor?->user)
+                                            <br><span class="badge bg-info-subtle text-info border border-info-subtle mt-1" style="font-size: 0.70rem;">
+                                                <i class="fas fa-user-md me-1"></i>{{ __('الفاحص:') }} د. {{ $test->doctor->user->name }}
+                                            </span>
+                                        @endif
                                     </div>
                                 </div>
                             </td>

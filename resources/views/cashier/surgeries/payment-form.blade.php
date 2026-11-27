@@ -1439,6 +1439,11 @@
                                                                     <span class="package-status-badge badge bg-secondary-subtle text-secondary border rounded-pill px-2 py-0-5">
                                                                         <i class="fas fa-coins me-1"></i>{{ __('منفصل عن العملية') }}
                                                                     </span>
+                                                                    @if($radiologyTest->doctor_id && $radiologyTest->doctor?->user)
+                                                                        <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-2 py-0-5 font-monospace ms-1" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-user-md me-1"></i>{{ __('الفاحص:') }} د. {{ $radiologyTest->doctor->user->name }}
+                                                                        </span>
+                                                                    @endif
                                                                 </div>
                                                             </div>
                                                         </div>

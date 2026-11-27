@@ -315,18 +315,32 @@ class SurgeryController extends Controller
         }
         $surgeryData['insurance_type'] = $bookingInsuranceType;
 
+        if ($request->filled('insurance_card_no')) {
+            $surgeryData['insurance_card_no'] = $request->insurance_card_no;
+        } elseif ($patient && ($patient->insurance_card_no || $patient->insurance_booklet_number)) {
+            $surgeryData['insurance_card_no'] = $patient->insurance_card_no ?: $patient->insurance_booklet_number;
+        }
+
         // استخراج اسم العملية من الجدول
         $operation = SurgicalOperation::find($request->surgical_operation_id);
         if ($operation) {
             $surgeryData['surgery_type'] = $operation->name;
 
             // استخدام السعر المخصص دائماً (يدوياً في كلتا الحالتين)
-            if ($request->filled('custom_surgery_fee')) {
-                $surgeryData['surgery_fee'] = $request->custom_surgery_fee;
-            } else {
-                // احتياطي: نسخ السعر من الجدول في حالة عدم وجود سعر مخصص
-                $surgeryData['surgery_fee'] = $operation->fee;
-            }
+            $enteredFee = $request->filled('custom_surgery_fee')
+                ? (float) $request->custom_surgery_fee
+                : (float) ($operation->fee ?? 0);
+
+            $surgeryData['surgery_fee'] = $enteredFee;
+            $surgeryData['original_surgery_fee'] = $enteredFee;
+        }
+
+        if ($bookingInsuranceType === 'moi') {
+            $surgeryData['copay_percentage'] = $request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== ''
+                ? (float) $request->copay_percentage
+                : (float) ($patient->copay_percentage ?? 15.0);
+        } else {
+            $surgeryData['copay_percentage'] = $request->filled('copay_percentage') ? (float) $request->copay_percentage : null;
         }
 
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
@@ -760,11 +774,11 @@ class SurgeryController extends Controller
         $operation = SurgicalOperation::find($request->surgical_operation_id);
         if ($operation) {
             $surgeryData['surgery_type'] = $operation->name;
-            if ($request->filled('custom_surgery_fee')) {
-                $surgeryData['surgery_fee'] = $request->custom_surgery_fee;
-            } else {
-                $surgeryData['surgery_fee'] = $operation->fee;
-            }
+            $enteredFee = $request->filled('custom_surgery_fee')
+                ? (float) $request->custom_surgery_fee
+                : (float) ($operation->fee ?? 0);
+            $surgeryData['surgery_fee'] = $enteredFee;
+            $surgeryData['original_surgery_fee'] = $enteredFee;
         }
 
         // تحديث نوع تغطية العملية (ضمان أم كاش)
@@ -775,6 +789,20 @@ class SurgeryController extends Controller
             $surgeryData['insurance_type'] = $bookingInsuranceType;
         } elseif ($request->filled('insurance_type')) {
             $surgeryData['insurance_type'] = $request->insurance_type;
+        }
+
+        if ($request->filled('insurance_card_no')) {
+            $surgeryData['insurance_card_no'] = $request->insurance_card_no;
+        }
+        $resolvedInsType = $surgeryData['insurance_type'] ?? $surgery->insurance_type;
+        if ($resolvedInsType === 'moi') {
+            if ($request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== '') {
+                $surgeryData['copay_percentage'] = (float) $request->copay_percentage;
+            } elseif ($patient) {
+                $surgeryData['copay_percentage'] = (float) ($patient->copay_percentage ?? 15.0);
+            }
+        } elseif ($request->filled('copay_percentage')) {
+            $surgeryData['copay_percentage'] = (float) $request->copay_percentage;
         }
 
         // معالجة تغيير الغرفة وإعادة احتساب الأجرة الفندقية
