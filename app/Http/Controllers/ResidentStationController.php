@@ -446,4 +446,47 @@ class ResidentStationController extends Controller
 
         return redirect()->back()->with('success', "تم {$actionText} العلاج بنجاح.");
     }
+
+    /**
+     * تخريج المريض من الغرفة في الطابق وتحرير السرير بواسطة الطبيب المقيم
+     */
+    public function roomCheckout(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $isResident = $user && ($user->can('view resident station') || $user->hasRole(['resident', 'doctor', 'surgeon']));
+        if (! $isAdmin && ! $isResident) {
+            abort(403, 'غير مصرح لك بتخريج المريض من الغرفة. هذا الإجراء الطبي من صلاحية الطبيب المقيم المشرف.');
+        }
+
+        // بوابة براءة الذمة المالية: منع التخريج إذا كانت هناك مستحقات غير مسددة في الكاشير
+        $clearance = $surgery->getFinancialClearanceSummary(now());
+        if (! $clearance['cleared']) {
+            return redirect()->back()->with(
+                'error',
+                'لا يمكن تخريج المريض قبل تسوية كافة المستحقات المالية في الكاشير: '.implode(' | ', $clearance['reasons'])
+            );
+        }
+
+        $surgery->update([
+            'discharged_at' => now(),
+            'discharge_notes' => $request->input('discharge_notes') ?: $surgery->discharge_notes,
+        ]);
+
+        if ($surgery->room) {
+            $surgery->room->update(['status' => 'available']);
+        }
+
+        \App\Services\UserActivityLogger::log(
+            action: 'surgery_room_checkout',
+            category: 'resident',
+            description: "تخريج المريض {$surgery->patient?->name} من الغرفة رقم {$surgery->room?->room_number} وتحرير السرير بواسطة الطبيب المقيم",
+            subject: $surgery,
+            isSensitive: false
+        );
+
+        $roomNum = $surgery->room?->room_number ?? 'غير محددة';
+
+        return redirect()->back()->with('success', "تم تخريج المريض وتحرير الغرفة ({$roomNum}) بنجاح وتثبيت حساب الإقامة النهائي.");
+    }
 }

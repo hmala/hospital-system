@@ -396,8 +396,13 @@ class SurgeryCashierDevicesAndRoomWaitingWorkflowTest extends TestCase
         ])->assertRedirect();
         $this->assertEquals('completed', $surgeryLab->fresh()->status);
 
-        // بوابة التخريج: منع التمريض والاستقبال من تخريج المريض قبل تسديد الـ 110,000 د.ع بالكاشير
-        $blockedCheckout = $this->actingAs($this->nurseUser)->post(route('nursing-station.room-checkout', $surgery));
+        // محاولة الممرضة التخريج تُرفض لعدم امتلاكها صلاحية الطبيب المقيم
+        $nurseAttempt = $this->actingAs($this->nurseUser)->post(route('nursing-station.room-checkout', $surgery));
+        $nurseAttempt->assertStatus(403);
+        $this->assertNull($surgery->fresh()->discharged_at);
+
+        // بوابة التخريج: منع الطبيب المقيم والاستقبال من تخريج المريض قبل تسديد الـ 110,000 د.ع بالكاشير
+        $blockedCheckout = $this->actingAs($this->residentUser)->post(route('resident-station.room-checkout', $surgery));
         $blockedCheckout->assertRedirect();
         $blockedCheckout->assertSessionHas('error');
         $this->assertNull($surgery->fresh()->discharged_at);
@@ -427,8 +432,8 @@ class SurgeryCashierDevicesAndRoomWaitingWorkflowTest extends TestCase
         $this->assertSame([], $surgery->fresh()->getFinancialClearanceSummary()['reasons']);
         $this->assertEquals('paid', $surgery->fresh()->payment_status);
 
-        // بعد السداد الكامل ينجح التخريج وتتحرر الغرفة
-        $okCheckout = $this->actingAs($this->nurseUser)->post(route('nursing-station.room-checkout', $surgery));
+        // بعد السداد الكامل ينجح التخريج بواسطة الطبيب المقيم وتتحرر الغرفة
+        $okCheckout = $this->actingAs($this->residentUser)->post(route('resident-station.room-checkout', $surgery));
         $okCheckout->assertRedirect();
         $okCheckout->assertSessionHas('success');
 

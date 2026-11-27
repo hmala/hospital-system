@@ -56,6 +56,26 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-27 — المرحلة 320: تحويل صلاحية وزر تخريج المريض وإخلاء السرير من الممرض إلى الطبيب المقيم Transferring Patient Discharge Authority & Button from Nurse to Resident Doctor)
+
+### Done
+- **حذف زر تخريج المريض وإخلاء السرير نهائياً من واجهات التمريض ([nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [nursing/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/show.blade.php))**:
+  * حذف نموذج وزر «تخريج» من جدول الحالات في محطة التمريض (`nursing.index`) ليقتصر دور التمريض على المراقبة والتوثيق ورعاية الرقود (`عرض وتعديل`).
+  * حذف زر «تخريج المريض من الغرفة» من شريط أدوات الرأس في شاشة تفاصيل المريض بالتمريض (`nursing.show`).
+- **إضافة زر وصلاحية التخريج حصرياً للطبيب المقيم ([resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php), [clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة زر «تخريج» في عمود الإجراءات بجدول الحالات النشطة لمحطة المقيم (`resident.index`) عند وجود غرفة مخصصة للمريض ولم يُخرّج بعد.
+  * إضافة زر رسمي «تخريج المريض من الغرفة» في الرأس السريري الموحد (`clinical.show`) يظهر للأطباء المقيمين والأطباء المشرفين والإدارة مع وسام حالة التخريج ووقت الخروج الفعلي للمرضى المخرجين.
+- **تحديث وضبط الصلاحيات والتحكم البرمجي ([ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php), [NursingStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingStationController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * إضافة دالة `roomCheckout` في `ResidentStationController` مع مسار `resident-station.room-checkout` التابع لصلاحية `view resident station`.
+  * تقييد تنفيذ التخريج في `NursingStationController::roomCheckout` ورفض أي محاولة تخريج من الممرض برمز 403 وحصرها بالأطباء المقيمين (`resident`, `doctor`, `surgeon`, `view resident station`) والإدارة.
+  * الحفاظ على بوابة براءة الذمة المالية (`getFinancialClearanceSummary`) لمنع تخريج أي مريض لديه مستحقات غير مسددة في الكاشير.
+- **الاختبارات والتأكيد ([NursingRoomCheckinWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/NursingRoomCheckinWorkflowTest.php), [SurgeryCashierDevicesAndRoomWaitingWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryCashierDevicesAndRoomWaitingWorkflowTest.php))**:
+  * اجتياز كافة الاختبارات الآلية (9 passed, 124 assertions):
+    - التحقق من عدم ظهور زر التخريج للممرض في جدول التمريض وظهوره للطبيب المقيم في محطة المقيم.
+    - التحقق من رفض محاولة التخريج من الممرض برمز 403 Forbidden ونجاح التخريج من قبل الطبيب المقيم وتحرير الغرفة.
+    - التحقق من صمود بوابة الكاشير وبراءة الذمة المالية.
+  * مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد عبر `Laravel Pint`.
+
 ## Session log (2026-11-27 — المرحلة 319: إعادة تصميم نافذة طلب فحص الأشعة: عرض مدمج 520px، صف واحد مع بحث فوري، وفلترة أطباء السونار والإيكو حسب الاختصاص Compact Radiology Modal, Single-Row Instant Search & Specialty Filtering)
 
 ### Done

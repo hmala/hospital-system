@@ -599,14 +599,15 @@ class NursingStationController extends Controller
     }
 
     /**
-     * تخريج المريض من الغرفة في الطابق وتحرير السرير
+     * تخريج المريض من الغرفة في الطابق وتحرير السرير (صلاحية الطبيب المقيم / المشرف)
      */
     public function roomCheckout(Request $request, Surgery $surgery)
     {
         $user = Auth::user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('view nursing station'))) {
-            abort(403, 'غير مصرح لك بتخريج المريض من الغرفة.');
+        $isResident = $user && ($user->can('view resident station') || $user->hasRole(['resident', 'doctor', 'surgeon']));
+        if (! $isAdmin && ! $isResident) {
+            abort(403, 'غير مصرح لك بتخريج المريض من الغرفة. هذا الإجراء الطبي من صلاحية الطبيب المقيم المشرف.');
         }
 
         // بوابة براءة الذمة المالية: منع التخريج إذا كانت هناك مستحقات غير مسددة في الكاشير
@@ -629,8 +630,8 @@ class NursingStationController extends Controller
 
         \App\Services\UserActivityLogger::log(
             action: 'surgery_room_checkout',
-            category: 'nursing',
-            description: "تخريج المريض {$surgery->patient?->name} من الغرفة رقم {$surgery->room?->room_number} وتحرير السرير",
+            category: 'resident',
+            description: "تخريج المريض {$surgery->patient?->name} من الغرفة رقم {$surgery->room?->room_number} وتحرير السرير بواسطة الطبيب المقيم",
             subject: $surgery,
             isSensitive: false
         );

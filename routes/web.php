@@ -876,6 +876,7 @@ Route::middleware(['auth'])->group(function () {
             Route::patch('/resident/{surgery}', [\App\Http\Controllers\ResidentStationController::class, 'update'])->name('resident-station.update');
             Route::post('/resident/{surgery}/complete', [\App\Http\Controllers\ResidentStationController::class, 'complete'])->name('resident-station.complete');
             Route::post('/resident/{surgery}/follow-ups', [\App\Http\Controllers\ResidentStationController::class, 'storeFollowUp'])->name('resident-station.follow-ups.store');
+            Route::post('/resident/{surgery}/room-checkout', [\App\Http\Controllers\ResidentStationController::class, 'roomCheckout'])->name('resident-station.room-checkout');
         });
 
         // محطة صالة العمليات
@@ -894,8 +895,10 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/nursing/{surgery}/complete', [\App\Http\Controllers\NursingStationController::class, 'complete'])->name('nursing-station.complete');
             Route::post('/nursing/{surgery}/follow-ups', [\App\Http\Controllers\NursingStationController::class, 'storeFollowUp'])->name('nursing-station.follow-ups.store');
             Route::post('/nursing/{surgery}/room-checkin', [\App\Http\Controllers\NursingStationController::class, 'roomCheckin'])->name('nursing-station.room-checkin');
-            Route::post('/nursing/{surgery}/room-checkout', [\App\Http\Controllers\NursingStationController::class, 'roomCheckout'])->name('nursing-station.room-checkout');
         });
+        Route::post('/nursing/{surgery}/room-checkout', [\App\Http\Controllers\NursingStationController::class, 'roomCheckout'])
+            ->middleware('role_or_permission:view nursing station|view resident station|admin|admin-hsop|hospital_admin|super_admin|resident|doctor')
+            ->name('nursing-station.room-checkout');
 
         // إعدادات مصفوفة صلاحيات التبويبات السريرية (Tab Permissions Matrix)
         Route::middleware('can:manage surgery tab permissions')->group(function () {

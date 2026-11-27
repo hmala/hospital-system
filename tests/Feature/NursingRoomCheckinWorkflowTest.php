@@ -22,6 +22,8 @@ class NursingRoomCheckinWorkflowTest extends TestCase
 
     protected User $nurseUser;
 
+    protected User $residentUser;
+
     protected Department $department;
 
     protected Room $room;
@@ -47,6 +49,13 @@ class NursingRoomCheckinWorkflowTest extends TestCase
 
         $this->nurseUser = User::factory()->create();
         $this->nurseUser->assignRole($nurseRole);
+
+        Permission::firstOrCreate(['name' => 'view resident station', 'guard_name' => 'web']);
+        $residentRole = Role::firstOrCreate(['name' => 'resident', 'guard_name' => 'web']);
+        $residentRole->givePermissionTo(['view resident station']);
+
+        $this->residentUser = User::factory()->create();
+        $this->residentUser->assignRole($residentRole);
 
         $hospital = Hospital::create([
             'name' => 'مستشفى التمريض التخصصي',
@@ -168,17 +177,22 @@ class NursingRoomCheckinWorkflowTest extends TestCase
         $response = $this->actingAs($this->nurseUser)->get(route('nursing-station.index'));
         $response->assertStatus(200);
 
-        // Check that view and discharge buttons are now visible
+        // Check that view button is visible to nurse, while discharge button is transferred to resident doctor
         $response->assertSee('عرض وتعديل');
-        $response->assertSee('تخريج');
-        $response->assertSee(route('nursing-station.room-checkout', $surgery));
+        $response->assertDontSee('تخريج');
+
+        // Check that resident doctor sees discharge button on resident station
+        $residentResponse = $this->actingAs($this->residentUser)->get(route('resident-station.index'));
+        $residentResponse->assertStatus(200);
+        $residentResponse->assertSee('تخريج');
+        $residentResponse->assertSee(route('resident-station.room-checkout', $surgery));
 
         // show method redirects to clinical station without warning
         $showResponse = $this->actingAs($this->nurseUser)->get(route('nursing-station.show', $surgery));
         $showResponse->assertRedirect(route('clinical-station.show', ['surgery' => $surgery->id]));
     }
 
-    public function test_nurse_can_discharge_patient_and_release_room(): void
+    public function test_resident_can_discharge_patient_and_release_room_while_nurse_is_forbidden(): void
     {
         $this->room->update(['status' => 'occupied']);
 
@@ -196,8 +210,15 @@ class NursingRoomCheckinWorkflowTest extends TestCase
             'is_health_insurance' => true,
         ]);
 
-        $response = $this->actingAs($this->nurseUser)
+        // Nurse attempt to checkout without resident authority receives 403 Forbidden
+        $nurseResponse = $this->actingAs($this->nurseUser)
             ->post(route('nursing-station.room-checkout', $surgery));
+        $nurseResponse->assertStatus(403);
+        $this->assertNull($surgery->fresh()->discharged_at);
+
+        // Resident doctor can discharge patient and release room
+        $response = $this->actingAs($this->residentUser)
+            ->post(route('resident-station.room-checkout', $surgery));
 
         $response->assertRedirect();
         $response->assertSessionHas('success');
