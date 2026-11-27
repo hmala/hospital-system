@@ -79,6 +79,21 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 321 (2026-11-27 — `main`) — اعتماد حسابات الإيكو والسونار بناءً على الصلاحيات والأدوار الصريحة وحسابات الفاحصين بدلاً من الأطباء (Role & Permission-Based Echo & Sonar Accounts Selection)**:
+  * **الاعتماد على الصلاحيات والأدوار الصريحة لحسابات الإيكو والسونار ([ClinicalStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ClinicalStationController.php))**:
+    - استبدال الفلترة النصية السابقة من جدول الأطباء (`doctors`) بالاعتماد المباشر على الأدوار والصلاحيات في النظام:
+      * حسابات الإيكو (`$echoDoctors`): جلب المستخدمين الذين يحملون الدور الصريح **`radiology_echo`** أو صلاحية `inquiry.create.radiology.echo` (مثل: منير سمير يوسف، مريم غانم كريم).
+      * حسابات السونار (`$sonarDoctors`): جلب المستخدمين الذين يحملون الدور الصريح **`radiology_ultrasound`** أو صلاحية `inquiry.create.radiology.ultrasound`.
+    - ضمان إنشاء وربط سجل `Doctor` تلقائياً لكل حساب فاحص لتلبية القيود السليمة لقاعدة البيانات والربط بالكاشير دون أية تعارضات.
+    - استيراد فئة `use App\Models\Department;` لإصلاح خطأ `Class Department not found`.
+  * **تحديث واجهة نافذة فحص الأشعة ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+    - عرض أسماء حسابات الفاحصين كما هي في النظام (`اسم الحساب الفاحص المكلف:`) دون بادئة «د.» التلقائية.
+    - تخصيص التسميات عند اختيار الإيكو: عنوان `اسم حساب الإيكو المكلف:`، خيار افتراضي `حساب الإيكو المناوب (تلقائياً)`، ووسام `حسابات الإيكو`.
+    - تخصيص التسميات عند اختيار السونار: عنوان `اسم حساب السونار المكلف:`، خيار افتراضي `حساب السونار المناوب (تلقائياً)`، ووسام `حسابات السونار`.
+  * **الاختبارات وضمان الجودة ([SurgeryRadiologyDoctorSpecialtyTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryRadiologyDoctorSpecialtyTest.php))**:
+    - تحديث واجتياز الاختبارات الآلية بنجاح (`2 passed, 12 assertions`).
+    - نجاح مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد عبر `Laravel Pint`.
+
 - **المرحلة 320 (2026-11-27 — `main`) — تحويل صلاحية وزر تخريج المريض وإخلاء السرير من الممرض إلى الطبيب المقيم وحذفه نهائياً من واجهات التمريض (Transferring Patient Discharge Authority & Button from Nurse to Resident Doctor & Complete Removal from Nursing Views)**:
   * **حذف زر تخريج المريض وإخلاء السرير نهائياً من واجهات التمريض ([nursing/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/index.blade.php), [nursing/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/nursing/show.blade.php))**:
     - حذف نموذج وزر «تخريج» من جدول الحالات في محطة التمريض (`nursing.index`) ليقتصر دور التمريض على المراقبة والتوثيق ورعاية الرقود (`عرض وتعديل`).

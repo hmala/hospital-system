@@ -133,11 +133,13 @@ class SurgeryRadiologyDoctorSpecialtyTest extends TestCase
         $dept = $this->createDepartment('الأشعة', $hospital->id);
         $deptHeart = $this->createDepartment('القلبية', $hospital->id, 'cardiology');
 
-        $sonarUser = User::factory()->create(['name' => 'د. سارة سونار']);
+        $sonarUser = User::factory()->create(['name' => 'سارة سونار']);
+        $sonarUser->assignRole('radiology_ultrasound');
         $sonarDoc = $this->createDoctor($sonarUser, $dept->id, 'سونار');
 
-        $echoUser = User::factory()->create(['name' => 'د. علاء إيكو']);
-        $echoDoc = $this->createDoctor($echoUser, $deptHeart->id, 'الجراحة القلبية');
+        $echoUser = User::factory()->create(['name' => 'علاء إيكو']);
+        $echoUser->assignRole('radiology_echo');
+        $echoDoc = $this->createDoctor($echoUser, $deptHeart->id, 'إيكو القلب');
 
         $patientUser = User::factory()->create();
         $patient = Patient::create([

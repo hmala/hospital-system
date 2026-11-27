@@ -5527,32 +5527,26 @@ document.addEventListener("DOMContentLoaded", function () {
                     <div class="mb-2.5" id="modalRadDoctorContainer">
                         <label for="modalRadiologyDoctorId" class="form-label fw-bold small text-info-emphasis mb-1 d-flex align-items-center justify-content-between">
                             <span>
-                                <i class="fas fa-user-md me-1 text-info" id="modalRadDoctorIcon"></i>
-                                <span id="modalRadDoctorLabel">{{ __('اسم الحساب / الطبيب الفاحص المكلف:') }}</span>
+                                <i class="fas fa-id-badge me-1 text-info" id="modalRadDoctorIcon"></i>
+                                <span id="modalRadDoctorLabel">{{ __('اسم الحساب الفاحص المكلف:') }}</span>
                             </span>
                             <span class="badge bg-info-subtle text-info border border-info-subtle font-monospace" id="modalRadDoctorBadge" style="font-size: 0.62rem;">
                                 {{ __('المناوب افتراضياً') }}
                             </span>
                         </label>
                         <select name="doctor_id" id="modalRadiologyDoctorId" class="form-select form-select-sm">
-                            <option value="" id="modalRadDoctorDefaultOption">{{ __('👨‍⚕️ طبيب وكادر القسم المناوب (تلقائياً)') }}</option>
+                            <option value="" id="modalRadDoctorDefaultOption">{{ __('حساب وكادر القسم المناوب (تلقائياً)') }}</option>
                             @if(isset($sonarDoctors) && $sonarDoctors->count() > 0)
                                 @foreach($sonarDoctors as $doc)
                                     <option value="{{ $doc->id }}" data-specialty="sonar" class="rad-doc-option rad-doc-sonar">
-                                        {{ __('د.') }} {{ $doc->user?->name ?? __('غير محدد') }}
-                                        @if(!empty($doc->specialization))
-                                            — {{ $doc->specialization }}
-                                        @endif
+                                        {{ $doc->user?->name ?? $doc->name ?? __('غير محدد') }}
                                     </option>
                                 @endforeach
                             @endif
                             @if(isset($echoDoctors) && $echoDoctors->count() > 0)
                                 @foreach($echoDoctors as $doc)
                                     <option value="{{ $doc->id }}" data-specialty="echo" class="rad-doc-option rad-doc-echo">
-                                        {{ __('د.') }} {{ $doc->user?->name ?? __('غير محدد') }}
-                                        @if(!empty($doc->specialization))
-                                            — {{ $doc->specialization }}
-                                        @endif
+                                        {{ $doc->user?->name ?? $doc->name ?? __('غير محدد') }}
                                     </option>
                                 @endforeach
                             @endif
@@ -5686,10 +5680,10 @@ function configureDoctorFieldForSpecialty(specialtyType = 'all') {
     if (!doctorSelect) return;
 
     if (specialtyType === 'sonar') {
-        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم الحساب / أخصائي السونار المكلف:") }}';
+        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم حساب السونار المكلف:") }}';
         if (doctorIcon) doctorIcon.className = 'fas fa-wave-square me-1 text-info';
-        if (defaultOption) defaultOption.textContent = '{{ __("👨‍⚕️ طبيب السونار المناوب (تلقائياً)") }}';
-        if (doctorBadge) doctorBadge.textContent = '{{ __("أطباء السونار") }}';
+        if (defaultOption) defaultOption.textContent = '{{ __("حساب السونار المناوب (تلقائياً)") }}';
+        if (doctorBadge) doctorBadge.textContent = '{{ __("حسابات السونار") }}';
         doctorSelect.value = '';
         doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
             const isSonar = (opt.getAttribute('data-specialty') === 'sonar');
@@ -5697,10 +5691,10 @@ function configureDoctorFieldForSpecialty(specialtyType = 'all') {
             opt.disabled = !isSonar;
         });
     } else if (specialtyType === 'echo') {
-        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم الحساب / استشاري إيكو القلب والقلبية:") }}';
+        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم حساب الإيكو المكلف:") }}';
         if (doctorIcon) doctorIcon.className = 'fas fa-heartbeat me-1 text-danger';
-        if (defaultOption) defaultOption.textContent = '{{ __("🫀 طبيب الإيكو المناوب (تلقائياً)") }}';
-        if (doctorBadge) doctorBadge.textContent = '{{ __("استشاريو الإيكو والقلبية") }}';
+        if (defaultOption) defaultOption.textContent = '{{ __("حساب الإيكو المناوب (تلقائياً)") }}';
+        if (doctorBadge) doctorBadge.textContent = '{{ __("حسابات الإيكو") }}';
         doctorSelect.value = '';
         doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {
             const isEcho = (opt.getAttribute('data-specialty') === 'echo');
@@ -5708,9 +5702,9 @@ function configureDoctorFieldForSpecialty(specialtyType = 'all') {
             opt.disabled = !isEcho;
         });
     } else {
-        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم الحساب / الطبيب الفاحص المكلف:") }}';
-        if (doctorIcon) doctorIcon.className = 'fas fa-user-md me-1 text-secondary';
-        if (defaultOption) defaultOption.textContent = '{{ __("👨‍⚕️ كادر وقسم الأشعة المناوب (تلقائياً)") }}';
+        if (doctorLabel) doctorLabel.textContent = '{{ __("اسم الحساب الفاحص المكلف:") }}';
+        if (doctorIcon) doctorIcon.className = 'fas fa-id-badge me-1 text-secondary';
+        if (defaultOption) defaultOption.textContent = '{{ __("حساب وقسم الأشعة المناوب (تلقائياً)") }}';
         if (doctorBadge) doctorBadge.textContent = '{{ __("المناوب افتراضياً") }}';
         doctorSelect.value = '';
         doctorSelect.querySelectorAll('.rad-doc-option').forEach(opt => {

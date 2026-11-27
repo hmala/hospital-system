@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\HospitalExtraService;
 use App\Models\LabTest;
@@ -258,30 +259,76 @@ class ClinicalStationController extends Controller
                 ->get();
         }
 
-        $activeDoctors = Doctor::with(['user', 'department'])
-            ->where('is_active', true)
-            ->get();
+        // 1. حسابات الإيكو المعتمدة بناءً على الدور الصريح (radiology_echo) والصلاحيات
+        $echoDeptId = Department::where('type', 'radiology')->value('id') ?? 1;
 
-        // أطباء السونار والأشعة التشخيصية
-        $sonarDoctors = $activeDoctors->filter(function ($doc) {
-            $text = mb_strtolower(($doc->specialization ?? '').' '.($doc->type ?? '').' '.($doc->department?->name ?? ''));
+        $echoUsers = User::where(function ($q) {
+            $q->whereHas('roles', fn ($rq) => $rq->where('name', 'radiology_echo'))
+                ->orWhereHas('permissions', fn ($pq) => $pq->where('name', 'like', '%radiology.echo%'));
+        })->get();
 
-            return str_contains($text, 'سونار') || str_contains($text, 'اشعة') || str_contains($text, 'أشعة') || str_contains($text, 'sonar') || str_contains($text, 'radiolog');
-        })->values();
+        $echoDoctors = $echoUsers->map(function ($u) use ($echoDeptId) {
+            $doc = $u->doctor ?: Doctor::firstOrCreate(
+                ['user_id' => $u->id],
+                [
+                    'phone' => $u->phone ?? '07700000000',
+                    'department_id' => $echoDeptId,
+                    'type' => 'consultant',
+                    'specialization' => 'إيكو القلب',
+                    'consultation_fee' => 0,
+                    'is_active' => true,
+                    'is_available_today' => true,
+                ]
+            );
+            $doc->setRelation('user', $u);
 
-        // أطباء إيكو القلب وأمراض القلبية
-        $echoDoctors = $activeDoctors->filter(function ($doc) {
-            $text = mb_strtolower(($doc->specialization ?? '').' '.($doc->type ?? '').' '.($doc->department?->name ?? ''));
-
-            return str_contains($text, 'ايكو') || str_contains($text, 'إيكو') || str_contains($text, 'قلب') || str_contains($text, 'cardio') || str_contains($text, 'echo');
+            return $doc;
         })->values();
 
         if ($echoDoctors->isEmpty()) {
-            $echoDoctors = $activeDoctors->filter(function ($doc) {
-                $text = mb_strtolower($doc->specialization ?? '');
+            $echoDoctors = Doctor::with(['user', 'department'])
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('specialization', 'LIKE', '%ايكو%')
+                        ->orWhere('specialization', 'LIKE', '%إيكو%')
+                        ->orWhere('specialization', 'LIKE', '%echo%')
+                        ->orWhere('type', 'echo');
+                })->get();
+        }
 
-                return str_contains($text, 'باطن') || str_contains($text, 'قلب');
-            })->values();
+        // 2. حسابات السونار المعتمدة بناءً على الدور الصريح (radiology_ultrasound) والصلاحيات
+        $sonarUsers = User::where(function ($q) {
+            $q->whereHas('roles', fn ($rq) => $rq->where('name', 'radiology_ultrasound'))
+                ->orWhereHas('permissions', fn ($pq) => $pq->where('name', 'like', '%radiology.ultrasound%'));
+        })->get();
+
+        $sonarDoctors = $sonarUsers->map(function ($u) use ($echoDeptId) {
+            $doc = $u->doctor ?: Doctor::firstOrCreate(
+                ['user_id' => $u->id],
+                [
+                    'phone' => $u->phone ?? '07700000000',
+                    'department_id' => $echoDeptId,
+                    'type' => 'consultant',
+                    'specialization' => 'سونار',
+                    'consultation_fee' => 0,
+                    'is_active' => true,
+                    'is_available_today' => true,
+                ]
+            );
+            $doc->setRelation('user', $u);
+
+            return $doc;
+        })->values();
+
+        if ($sonarDoctors->isEmpty()) {
+            $sonarDoctors = Doctor::with(['user', 'department'])
+                ->where('is_active', true)
+                ->where(function ($q) {
+                    $q->where('specialization', 'LIKE', '%سونار%')
+                        ->orWhere('specialization', 'LIKE', '%اشعة%')
+                        ->orWhere('specialization', 'LIKE', '%أشعة%')
+                        ->orWhere('type', 'sonar');
+                })->get();
         }
 
         $radiologyDoctors = $sonarDoctors->merge($echoDoctors)->unique('id')->values();
