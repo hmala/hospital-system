@@ -36,6 +36,45 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
+        // ضمان عدم وجود أي ازدواجية في حجز الغرف للحالات النشطة وفك أي تعارض قديم تلقائياً
+        $conflictingRoomIds = Surgery::whereNotNull('room_id')
+            ->whereNull('discharged_at')
+            ->whereNotIn('status', ['cancelled'])
+            ->select('room_id')
+            ->groupBy('room_id')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('room_id');
+
+        if ($conflictingRoomIds->isNotEmpty()) {
+            foreach ($conflictingRoomIds as $cRoomId) {
+                $surgeriesInConflict = Surgery::where('room_id', $cRoomId)
+                    ->whereNull('discharged_at')
+                    ->whereNotIn('status', ['cancelled'])
+                    ->orderBy('id', 'asc')
+                    ->get();
+
+                if ($surgeriesInConflict->count() > 1) {
+                    $primarySurgery = $surgeriesInConflict->first();
+                    $conflictingSurgeries = $surgeriesInConflict->slice(1);
+                    foreach ($conflictingSurgeries as $conflictingSurgery) {
+                        $conflictingSurgery->update([
+                            'room_id' => null,
+                            'room_fee' => 0,
+                            'room_checkin_at' => null,
+                        ]);
+
+                        \App\Services\UserActivityLogger::log(
+                            action: 'surgery_room_conflict_resolved',
+                            category: 'surgery',
+                            description: "فك ازدواجية حجز الغرفة: تحويل العملية #{$conflictingSurgery->id} للمريض {$conflictingSurgery->patient?->name} إلى وضع انتظار الغرفة لوجود مريض آخر مسبقاً بالغرفة (#{$primarySurgery->id})",
+                            subject: $conflictingSurgery,
+                            isSensitive: false
+                        );
+                    }
+                }
+            }
+        }
+
         // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته أو تم تخريجه رسمياً من المستشفى)
         $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
