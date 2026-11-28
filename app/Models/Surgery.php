@@ -69,7 +69,11 @@ class Surgery extends Model
         'surgical_notes',
         'treatment_plan',
         'follow_up_date',
+        'medical_discharged_at',
+        'medical_discharge_by',
+        'medical_discharge_notes',
         'discharged_at',
+        'discharged_by',
         'discharge_notes',
         'cancellation_reason',
         'referral_letter_path',
@@ -85,6 +89,7 @@ class Surgery extends Model
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'follow_up_date' => 'date',
+        'medical_discharged_at' => 'datetime',
         'discharged_at' => 'datetime',
         'is_room_package_included' => 'boolean',
         'status' => 'string',
@@ -158,6 +163,16 @@ class Surgery extends Model
     public function roomCheckinBy()
     {
         return $this->belongsTo(User::class, 'room_checkin_by');
+    }
+
+    public function medicalDischargedBy()
+    {
+        return $this->belongsTo(User::class, 'medical_discharge_by');
+    }
+
+    public function dischargedBy()
+    {
+        return $this->belongsTo(User::class, 'discharged_by');
     }
 
     public function inpatientSurvey()

@@ -499,6 +499,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/surgeries/doctor-accounts/{doctor}/settle-surgery/{surgery}', [\App\Http\Controllers\CashierController::class, 'settleSingleSurgeryDoctorDue'])->name('surgeries.settle-single-surgery');
         Route::get('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgeries.payment.form');
         Route::post('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgeries.payment.process');
+        Route::post('/surgeries/{surgery}/final-discharge', [\App\Http\Controllers\CashierController::class, 'finalDischarge'])->name('surgeries.final-discharge');
         Route::post('/surgeries/{surgery}/refund', [\App\Http\Controllers\CashierController::class, 'processSurgeryRefund'])->name('surgeries.payment.refund');
         Route::post('/surgeries/{surgery}/extra-services', [\App\Http\Controllers\CashierController::class, 'addSurgeryExtraService'])->name('surgeries.extra-services.add');
         Route::patch('/surgeries/{surgery}/extra-services/{extraService}', [\App\Http\Controllers\CashierController::class, 'updateSurgeryExtraService'])->name('surgeries.extra-services.update');
@@ -839,6 +840,8 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/surgeries/{surgery}/supplies/dispense/{treatment}', [SurgeryController::class, 'reverseOperationItem'])->name('surgeries.supplies.reverse');
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
+    Route::post('/surgeries/{surgery}/medical-discharge', [SurgeryController::class, 'medicalDischarge'])->name('surgeries.medical-discharge');
+    Route::post('/surgeries/{surgery}/undo-medical-discharge', [SurgeryController::class, 'undoMedicalDischarge'])->name('surgeries.undo-medical-discharge');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
     Route::post('/surgeries/{surgery}/undo-discharge', [SurgeryController::class, 'undoDischarge'])->name('surgeries.undo-discharge');
     Route::post('/surgeries/{surgery}/assign-room', [SurgeryController::class, 'assignRoom'])->name('surgeries.assign-room');

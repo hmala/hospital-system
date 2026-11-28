@@ -56,6 +56,27 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 333: المسار الثنائي للتخريج الطبي وتفريغ السرير، تبويب نزلاء الردهة المسددين في كاشير العمليات، وحصر براءة الذمة النهائية بالكاشير Two-Step Medical & Financial Discharge, Instant Room Evacuation & Cashier Inpatients Navigation Hub)
+
+### Done
+- **حوكمة المسار الثنائي للتخريج الطبي وتفريغ الغرفة ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * فصل دور الطبيب المقيم عن الكاشير: تحويل إجراء المقيم إلى `[ 🩺 إذن خروج طبي وتفريغ السرير ]` عبر مسار `surgeries.medical-discharge`.
+  * تحرير الغرفة والسرير فوراً لتصبح `status = 'available'` لاستقبال عمليات جديدة بمجرد استقرار المريض سريرياً، مع إبقاء المريض نزيل متابعة بانتظار تصفية الحساب (`medical_discharged_at = now()`, `discharged_at = null`).
+  * دعم التراجع عن الإذن الطبي `surgeries.undo-medical-discharge` وإعادة حجز الغرفة إن كانت شاغرة.
+- **إعادة هيكلة كاشير العمليات وتبويب نزلاء الردهة المسددين ([CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [cashier/surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/index.blade.php))**:
+  * تقسيم جدول كاشير العمليات إلى تبويبين رئيسيين:
+    1. `[ ⏳ قيد المحاسبة (المعلقة) ]`: للعمليات ذات المبالغ غير المسددة أو الخدمات المعلقة.
+    2. `[ 🟢 نزلاء الردهة المسددون (قيد الإقامة) ]`: لكافة المرضى المسددين الذين لم يُخرّجوا نهائياً (`discharged_at IS NULL`)؛ لتمكين الكاشير من إضافة أي خدمة متفرقة بنقرة واحدة `[ ➕ إضافة خدمة ]` وقبضها بوصل جديد فوري دون الحاجة لإلغاء أو إعادة فتح الوصل الأصلي.
+    3. تزويد جدول النزلاء بشارة `[ 🩺 إذن خروج طبي صادر ]` وتنبيه الكاشير بالمرضى الجاهزين للتخريج النهائي.
+- **التخريج النهائي وبراءة الذمة الحصرية في الكاشير**:
+  * إضافة مسار ودالة `cashier.surgeries.final-discharge` لا تسمح بالتخريج النهائي إلا إذا كان المتبقي المالي = 0 د.ع.
+  * تسجيل `discharged_at = now()` و `discharged_by = auth()->id()`، تحرير الغرفة إن كانت مشغولة، وأرشفة العملية وطباعة ورقة براءة الذمة.
+- **قاعدة البيانات والمايجريشن**:
+  * ترحيل `2026_11_28_191000_add_medical_discharge_to_surgeries_table.php` على قاعدة البيانات المحلية وهوستنجر (`medical_discharged_at`, `medical_discharge_by`, `medical_discharge_notes`, `discharged_by`).
+- **الاختبارات وضمان الجودة ([SurgeryTwoStepDischargeAndCashierWorkflowTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryTwoStepDischargeAndCashierWorkflowTest.php))**:
+  * بناء اختبارات ميزة شاملة تغطي: تحرير الغرفة بالإذن الطبي، التراجع عن الإذن، ظهور النزلاء في الكاشير، وحظر التخريج النهائي عند وجود مبالغ معلقة (4 tests).
+  * فحص وتنسيق الأكواد بأداة `Laravel Pint` (PASS).
+
 ## Session log (2026-11-28 — المرحلة 332: الحسم المعماري لنسب استقطاع الضمان الصحي، ومنع تسريب نسب الداخلية، واعتماد الفئة الرسمية كمصدر وحيد للحقيقة Health Insurance Category Copay Enforcement & MOI Copay Isolation)
 
 ### Done

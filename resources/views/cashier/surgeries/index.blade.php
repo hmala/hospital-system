@@ -124,22 +124,28 @@
             </div>
         </div>
 
-        <!-- 2. المرضى المعلقين -->
+        <!-- 2. نزلاء الردهة المسددين -->
         <div class="col-xl-3 col-md-6">
             <div class="card border-0 shadow-xs rounded-4 h-100 position-relative overflow-hidden" 
                  style="background: #ffffff; border: 1px solid #f1f5f9 !important;">
-                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #f59e0b, #fbbf24);"></div>
+                <div class="position-absolute top-0 start-0 w-100" style="height: 4px; background: linear-gradient(90deg, #10b981, #34d399);"></div>
                 <div class="card-body p-3.5 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">{{ __('عدد المرضى') }}</span>
-                        <h3 class="fw-extrabold mb-0 text-slate-800">{{ $surgeryStats['patients_count'] ?? 0 }}</h3>
-                        <small class="text-warning fw-semibold d-inline-flex align-items-center gap-1 mt-1">
-                            <i class="fas fa-users"></i> {{ __('إضبارات مرضى نشطة') }}
+                        <span class="text-muted small fw-semibold text-uppercase d-block mb-1">{{ __('نزلاء الردهة (المسددون)') }}</span>
+                        <h3 class="fw-extrabold mb-0 text-success">{{ $surgeryStats['inpatient_count'] ?? 0 }}</h3>
+                        <small class="text-muted fw-semibold d-inline-flex align-items-center gap-1 mt-1">
+                            @if(($surgeryStats['medically_cleared_count'] ?? 0) > 0)
+                                <span class="badge bg-warning-subtle text-dark border border-warning px-1.5 py-0.5">
+                                    <i class="fas fa-stethoscope me-1 text-warning"></i>{{ $surgeryStats['medically_cleared_count'] }} {{ __('جاهز للتخريج') }}
+                                </span>
+                            @else
+                                <i class="fas fa-bed text-success"></i> {{ __('قيد الإقامة للمتابعة') }}
+                            @endif
                         </small>
                     </div>
                     <div class="rounded-3 p-3 d-flex align-items-center justify-content-center" 
-                         style="background: #fffbeb; color: #f59e0b; width: 50px; height: 50px;">
-                        <i class="fas fa-users-medical fa-lg"></i>
+                         style="background: #ecfdf5; color: #10b981; width: 50px; height: 50px;">
+                        <i class="fas fa-bed fa-lg"></i>
                     </div>
                 </div>
             </div>
@@ -237,27 +243,38 @@
 
     <!-- جدول العمليات الموحد المباشر (Master Cashier Surgery Table) -->
     <div class="card border-0 shadow-xs rounded-4 overflow-hidden mb-4" style="background: #ffffff; border: 1px solid #e2e8f0 !important;">
-        <div class="card-header bg-white py-3 px-4 border-bottom d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle bg-danger bg-opacity-10 p-2 text-danger d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
-                    <i class="fas fa-procedures small"></i>
-                </div>
-                <h5 class="mb-0 fw-bold text-slate-800" style="font-size: 1.15rem;">
-                    {{ __('قائمة العمليات الجراحية المباشرة للمحاسبة') }}
-                </h5>
-                @if($flatSurgeries && $flatSurgeries->count() > 0)
-                    <span class="badge bg-danger rounded-pill px-2.5 py-1" id="visibleSurgeriesCount">
-                        {{ $flatSurgeries->count() }} {{ __('عملية') }}
-                    </span>
-                @endif
-            </div>
+        <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <ul class="nav nav-pills p-1.5 bg-light rounded-pill border" id="cashierSurgeryTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active rounded-pill fw-bold px-3.5 py-1.5 d-flex align-items-center gap-2" id="tab-pending-btn" data-bs-toggle="pill" data-bs-target="#tab-pending-pane" type="button" role="tab">
+                        <i class="fas fa-clock text-danger"></i>
+                        <span>{{ __('قيد المحاسبة (المعلقة)') }}</span>
+                        <span class="badge bg-danger rounded-pill px-2 py-0.5" id="visibleSurgeriesCount">{{ $flatSurgeries->count() }}</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link rounded-pill fw-bold px-3.5 py-1.5 d-flex align-items-center gap-2" id="tab-inpatient-btn" data-bs-toggle="pill" data-bs-target="#tab-inpatient-pane" type="button" role="tab">
+                        <i class="fas fa-bed text-success"></i>
+                        <span>{{ __('نزلاء الردهة المسددون (قيد الإقامة)') }}</span>
+                        <span class="badge bg-success rounded-pill px-2 py-0.5">{{ isset($inpatientSurgeries) ? $inpatientSurgeries->count() : 0 }}</span>
+                        @if(($surgeryStats['medically_cleared_count'] ?? 0) > 0)
+                            <span class="badge bg-warning text-dark rounded-pill px-2 py-0.5 fw-bold" title="{{ __('مرضى منحهم المقيم إذن خروج طبي وتفريغ سرير، بانتظار براءة ذمة الكاشير') }}">
+                                <i class="fas fa-stethoscope me-1"></i>{{ $surgeryStats['medically_cleared_count'] }} {{ __('جاهز للتخريج') }}
+                            </span>
+                        @endif
+                    </button>
+                </li>
+            </ul>
 
             <div class="text-muted small">
-                <i class="fas fa-bolt text-warning me-1"></i>{{ __('تسديد مباشر بنقرة واحدة') }}
+                <i class="fas fa-shield-alt text-primary me-1"></i>{{ __('براءة الذمة والتخريج النهائي حصراً عبر الكاشير') }}
             </div>
         </div>
 
         <div class="card-body p-0">
+            <div class="tab-content" id="cashierSurgeryTabContent">
+                {{-- التبويب الأول: قيد المحاسبة (المعلقة) --}}
+                <div class="tab-pane fade show active" id="tab-pending-pane" role="tabpanel">
             @if($flatSurgeries && $flatSurgeries->count() > 0)
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 text-right" id="surgeriesMasterTable" style="direction: rtl;">
@@ -597,6 +614,149 @@
                     <p class="text-muted small mb-0">{{ __('جميع العمليات الجراحية المجدولة مسددة ومصفاة بالكامل.') }}</p>
                 </div>
             @endif
+        </div>
+        {{-- نهاية التبويب الأول (المعلقة) --}}
+
+        {{-- التبويب الثاني: نزلاء الردهة المسددون (قيد الإقامة) --}}
+        <div class="tab-pane fade" id="tab-inpatient-pane" role="tabpanel">
+            @if(isset($inpatientSurgeries) && $inpatientSurgeries->count() > 0)
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 text-right" style="direction: rtl;">
+                        <thead class="table-light text-slate-700 border-bottom" style="background: #f8fafc; font-size: 0.85rem;">
+                            <tr class="text-uppercase">
+                                <th style="width: 75px;" class="text-center">{{ __('رقم العملية') }}</th>
+                                <th style="min-width: 220px;">{{ __('المريض والتغطية') }}</th>
+                                <th style="min-width: 200px;">{{ __('العملية والقسم والغرفة') }}</th>
+                                <th style="min-width: 160px;">{{ __('الطبيب الجراح') }}</th>
+                                <th style="min-width: 170px;">{{ __('حالة الإقامة والإذن الطبي') }}</th>
+                                <th class="text-end" style="width: 130px;">{{ __('المسدد') }}</th>
+                                <th class="text-center" style="width: 230px;">{{ __('إجراء الكاشير') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($inpatientSurgeries as $inpatient)
+                                @php
+                                    $inpPatient = $inpatient->patient;
+                                    $inpPatientName = $inpPatient?->user?->name ?? __('غير محدد');
+                                    $inpRoom = $inpatient->room;
+                                    $inpStay = $inpatient->calculateStayDetails();
+                                    $inpPaidTotal = (float)($inpatient->surgery_fee_paid_amount ?? 0) + (float)($inpatient->room_fee_paid_amount ?? 0) + (float)$inpatient->extraServices->where('payment_status', 'paid')->sum('total_amount');
+                                @endphp
+                                <tr class="inpatient-table-row">
+                                    <td class="text-center font-monospace fw-bold text-muted">
+                                        #{{ $inpatient->id }}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="rounded-circle bg-success-subtle text-success p-2 d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                                <i class="fas fa-user-check"></i>
+                                            </div>
+                                            <div>
+                                                <a href="{{ route('patients.show', $inpPatient->id ?? 0) }}" class="fw-bold text-dark text-decoration-none">
+                                                    {{ $inpPatientName }}
+                                                </a>
+                                                <div class="small text-muted">
+                                                    @if($inpPatient?->phone)
+                                                        <span class="font-monospace">{{ $inpPatient->phone }}</span>
+                                                    @endif
+                                                    @if($inpatient->insurance_type === 'hi')
+                                                        <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">ضمان صحي</span>
+                                                    @elseif($inpatient->insurance_type === 'moi')
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">داخلية</span>
+                                                    @else
+                                                        <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle ms-1">نقدي</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold text-slate-800">
+                                            {{ $inpatient->surgicalOperation?->name ?? $inpatient->surgery_type ?? __('عملية جراحية') }}
+                                        </div>
+                                        <div class="small text-muted mt-0.5">
+                                            <span>{{ $inpatient->department?->name ?? '-' }}</span>
+                                            @if($inpRoom)
+                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1">
+                                                    <i class="fas fa-bed me-1"></i>غرفة {{ $inpRoom->room_number }}
+                                                </span>
+                                            @else
+                                                <span class="badge bg-warning-subtle text-dark border border-warning ms-1">
+                                                    <i class="fas fa-hourglass-half me-1"></i>وضع الانتظار
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1.5 text-slate-800">
+                                            <i class="fas fa-user-md text-primary"></i>
+                                            <span class="fw-medium">{{ $inpatient->doctor?->user?->name ?? __('غير محدد') }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        @if($inpatient->medical_discharged_at)
+                                            <span class="badge bg-success py-1 px-2.5 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center">
+                                                <i class="fas fa-stethoscope me-1"></i>{{ __('إذن طبي صادر') }} ({{ $inpatient->medical_discharged_at->format('H:i') }})
+                                            </span>
+                                            <div class="small text-muted mt-1">
+                                                <i class="fas fa-check-double text-success me-1"></i>{{ __('السرير مفرغ ومتاح') }}
+                                            </div>
+                                        @else
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2 rounded-pill fw-semibold">
+                                                <i class="fas fa-procedures me-1"></i>{{ __('نزيل بالردهة (مسدد)') }}
+                                            </span>
+                                            <div class="small text-muted mt-1">
+                                                <i class="fas fa-clock me-1"></i>{{ __('إقامة:') }} {{ $inpStay['days_count'] ?? 1 }} {{ __('أيام') }}
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td class="text-end fw-bold text-success font-monospace">
+                                        {{ number_format($inpPaidTotal, 0) }}
+                                        <small class="text-muted fw-normal">IQD</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex align-items-center justify-content-center gap-1.5 flex-wrap">
+                                            {{-- زر إضافة خدمة متفرقة --}}
+                                            <a href="{{ route('cashier.surgeries.payment.form', $inpatient->id) }}" 
+                                               class="btn btn-sm btn-outline-primary rounded-pill px-2.5 py-1 fw-semibold d-inline-flex align-items-center gap-1 shadow-2xs"
+                                               title="{{ __('إضافة خدمات ومستلزمات متفرقة وقبض وصل جديد فوراً دون إعادة فتح الوصل القديم') }}">
+                                                <i class="fas fa-plus-circle"></i>
+                                                <span>{{ __('إضافة خدمة') }}</span>
+                                            </a>
+
+                                            {{-- زر التخريج النهائي وبراءة الذمة من الكاشير --}}
+                                            <form action="{{ route('cashier.surgeries.final-discharge', $inpatient->id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد إتمام براءة الذمة والتخريج النهائي للمريض (:name) وإغلاق ملف العملية مالياً؟', ['name' => $inpPatientName]) }}');">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-success rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs"
+                                                        title="{{ __('إتمام براءة الذمة وتخريج المريض نهائياً من المستشفى وأرشفة العملية') }}">
+                                                    <i class="fas fa-sign-out-alt"></i>
+                                                    <span>{{ __('تخريج وبراءة ذمة') }}</span>
+                                                </button>
+                                            </form>
+
+                                            <a href="{{ route('surgeries.show', $inpatient->id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 shadow-2xs" title="{{ __('عرض تفاصيل العملية') }}" target="_blank">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-center py-5 px-3">
+                    <div class="rounded-circle bg-light text-muted d-inline-flex align-items-center justify-content-center p-4 mb-3" style="width: 70px; height: 70px;">
+                        <i class="fas fa-bed fa-2x"></i>
+                    </div>
+                    <h5 class="fw-bold text-slate-800 mb-1">{{ __('لا يوجد نزلاء ردهة مسددون حالياً') }}</h5>
+                    <p class="text-muted small mb-0">{{ __('المرضى المسددون بالكامل والراقدون في الردهة سيظهرون هنا لإضافة أي خدمات أو إتمام براءة الذمة.') }}</p>
+                </div>
+            @endif
+        </div>
+        {{-- نهاية التبويب الثاني --}}
+    </div>
         </div>
     </div>
 </div>

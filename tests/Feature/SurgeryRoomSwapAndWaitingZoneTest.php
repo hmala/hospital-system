@@ -423,4 +423,62 @@ class SurgeryRoomSwapAndWaitingZoneTest extends TestCase
         $indexResponse->assertViewHas('availableRoomsForTransfer');
         $indexResponse->assertSee('إدارة ونقل غرفة المريض');
     }
+
+    public function test_available_rooms_for_transfer_excludes_rooms_with_active_occupants_and_fixes_status(): void
+    {
+        // Room 104 is occupied by an active surgery but has stale status = available in DB
+        $staleRoom = Room::create([
+            'hospital_id' => $this->hospital->id,
+            'department_id' => $this->department->id,
+            'room_number' => '104',
+            'floor' => 'الطابق الأول',
+            'room_type' => 'regular',
+            'status' => 'available', // Intentionally stale
+            'daily_fee' => 50000,
+            'is_active' => true,
+            'room_purpose' => 'beds',
+        ]);
+
+        $patient = Patient::factory()->create(['hospital_id' => $this->hospital->id]);
+
+        Surgery::create([
+            'hospital_id' => $this->hospital->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgical_operation_id' => $this->operation->id,
+            'room_id' => $staleRoom->id,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'waiting',
+            'room_fee' => 0,
+        ]);
+
+        // Genuinely vacant room
+        $trulyVacantRoom = Room::create([
+            'hospital_id' => $this->hospital->id,
+            'department_id' => $this->department->id,
+            'room_number' => '105',
+            'floor' => 'الطابق الأول',
+            'room_type' => 'regular',
+            'status' => 'available',
+            'daily_fee' => 50000,
+            'is_active' => true,
+            'room_purpose' => 'beds',
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('surgeries.index'));
+        $response->assertOk();
+
+        // Self-healing should have marked the stale room as occupied
+        $staleRoom->refresh();
+        $this->assertEquals('occupied', $staleRoom->status);
+
+        $availableRooms = $response->viewData('availableRoomsForTransfer');
+        $this->assertFalse($availableRooms->contains('id', $staleRoom->id));
+        $this->assertTrue($availableRooms->contains('id', $trulyVacantRoom->id));
+
+        // Ensure dynamic URL is used in the rendered script
+        $response->assertSee(url('/surgeries') . '/\' + activeSwapSurgeryId + \'/assign-room', false);
+    }
 }

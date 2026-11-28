@@ -3430,7 +3430,7 @@ class CashierController extends Controller
                 });
         };
 
-        $pendingSurgeries = Surgery::with([
+        $allActiveSurgeries = Surgery::with([
             'patient.user',
             'patient.healthInsuranceCategory',
             'doctor.user',
@@ -3447,14 +3447,19 @@ class CashierController extends Controller
             'consultations.doctor.department',
         ])
             ->where($pendingSurgeryCondition)
-            ->orderBy('scheduled_date')
-            ->get()
-            ->filter(function (Surgery $surgery) {
-                return $surgery->calculatePendingItemsBreakdown()['has_any_pending_reason'];
-            })
-            ->values();
+            ->whereNull('discharged_at')
+            ->orderBy('scheduled_date', 'desc')
+            ->get();
 
-        // تجميع العمليات حسب المريض
+        $pendingSurgeries = $allActiveSurgeries->filter(function (Surgery $surgery) {
+            return $surgery->calculatePendingItemsBreakdown()['has_any_pending_reason'];
+        })->values();
+
+        $inpatientSurgeries = $allActiveSurgeries->filter(function (Surgery $surgery) {
+            return ! $surgery->calculatePendingItemsBreakdown()['has_any_pending_reason'] && $surgery->status !== 'cancelled';
+        })->values();
+
+        // تجميع العمليات المعلقة حسب المريض
         $surgeriesByPatient = $pendingSurgeries->groupBy('patient_id');
         $cashierSurgeries = $pendingSurgeries;
 
@@ -3463,6 +3468,8 @@ class CashierController extends Controller
         $surgeryStats = [
             'pending_count' => $pendingSurgeries->count(),
             'patients_count' => $surgeriesByPatient->count(),
+            'inpatient_count' => $inpatientSurgeries->count(),
+            'medically_cleared_count' => $inpatientSurgeries->whereNotNull('medical_discharged_at')->count(),
             'today_paid' => Payment::whereDate('paid_at', $today)
                 ->where('payment_type', 'surgery')
                 ->count(),
@@ -3471,7 +3478,70 @@ class CashierController extends Controller
                 ->sum('amount'),
         ];
 
-        return view('cashier.surgeries.index', compact('pendingSurgeries', 'cashierSurgeries', 'surgeriesByPatient', 'surgeryStats'));
+        return view('cashier.surgeries.index', compact('pendingSurgeries', 'cashierSurgeries', 'surgeriesByPatient', 'inpatientSurgeries', 'surgeryStats'));
+    }
+
+    /**
+     * التخريج النهائي وبراءة الذمة من الكاشير بعد استيفاء كافة المستحقات المالية
+     */
+    public function finalDischarge(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canDischarge = $isAdmin || ($user && (
+            $user->can('process cashier payments') ||
+            $user->can('control surgeries') ||
+            $user->hasRole(['cashier', 'accountant', 'chief_accountant'])
+        ));
+
+        if (! $canDischarge) {
+            abort(403, 'غير مصرح لك بإجراء براءة الذمة وتخريج المريض');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('warning', 'المريض مخرّج نهائياً بالفعل من المستشفى');
+        }
+
+        $clearance = $surgery->getFinancialClearanceSummary(now());
+        if (! $clearance['cleared']) {
+            return redirect()->back()->with(
+                'error',
+                'لا يمكن إتمام براءة الذمة والتخريج لوجود مستحقات مالية معلقة: '.implode(' | ', $clearance['reasons'])
+            );
+        }
+
+        $surgery->discharged_at = now();
+        $surgery->discharged_by = auth()->id();
+        if ($request->filled('discharge_notes')) {
+            $surgery->discharge_notes = $request->input('discharge_notes');
+        }
+        $surgery->save();
+
+        // تحرير الغرفة والسرير إذا كانت لا تزال مشغولة
+        if ($surgery->room_id) {
+            $room = $surgery->room;
+            if ($room && $room->status === 'occupied') {
+                $room->status = 'available';
+                $room->save();
+            }
+        }
+
+        UserActivityLogger::log(
+            user: $user,
+            action: 'surgery_final_cashier_discharge',
+            module: 'cashier',
+            description: "تمت براءة الذمة والتخريج النهائي للعملية #{$surgery->id} للمريض ({$surgery->patient?->user?->name}) وإغلاق الملف مالياً.",
+            oldValues: ['discharged_at' => null],
+            newValues: [
+                'discharged_at' => $surgery->discharged_at,
+                'discharged_by' => $surgery->discharged_by,
+            ],
+            targetModel: $surgery
+        );
+
+        broadcast(new \App\Events\SurgeryUpdated($surgery));
+
+        return redirect()->back()->with('success', 'تمت براءة الذمة والتخريج النهائي للمريض بنجاح، وأُغلقت إضبارة العملية مالياً.');
     }
 
     /**

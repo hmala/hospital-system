@@ -1377,12 +1377,125 @@ class SurgeryController extends Controller
         return redirect()->back()->with('success', 'تم إنهاء العملية بنجاح واكتمال مرحلة صالة العمليات وخروج المريض');
     }
 
+    /**
+     * إذن خروج طبي وتفريغ الغرفة والسرير (بواسطة المقيم / الطبيب / مشرف العمليات)
+     * يحرر السرير فوراً ويجعل المريض بانتظار براءة الذمة وتصفية الحساب في الكاشير
+     */
+    public function medicalDischarge(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('control surgeries') && ! $user->can('edit surgeries') && ! $user->can('assign surgery room')))) {
+            abort(403, 'غير مصرح لك بإصدار إذن الخروج الطبي للمريض');
+        }
+
+        if ($surgery->status !== 'completed') {
+            return redirect()->back()->with('error', 'لا يمكن منح إذن الخروج الطبي إلا بعد إكمال العملية وخروج المريض للردهة');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('warning', 'المريض مخرّج نهائياً بالفعل من المستشفى');
+        }
+
+        if ($surgery->medical_discharged_at) {
+            return redirect()->back()->with('warning', 'تم منح إذن الخروج الطبي لهذا المريض مسبقاً');
+        }
+
+        $surgery->medical_discharged_at = now();
+        $surgery->medical_discharge_by = auth()->id();
+        $surgery->medical_discharge_notes = $request->input('medical_discharge_notes', $request->input('discharge_notes'));
+        $surgery->save();
+
+        // تحرير الغرفة والسرير فوراً لتصبح شاغرة ومتاحة لحجز عمليات جديدة
+        if ($surgery->room_id) {
+            $room = $surgery->room;
+            if ($room && $room->status === 'occupied') {
+                $room->status = 'available';
+                $room->save();
+            }
+        }
+
+        UserActivityLogger::log(
+            user: $user,
+            action: 'surgery_medical_discharge',
+            module: 'surgeries',
+            description: "تم منح إذن الخروج الطبي وتفريغ السرير للمريض ({$surgery->patient?->user?->name}) في العملية #{$surgery->id} وهو الآن بانتظار تصفية الحساب في الكاشير.",
+            oldValues: ['medical_discharged_at' => null],
+            newValues: [
+                'medical_discharged_at' => $surgery->medical_discharged_at,
+                'medical_discharge_by' => $surgery->medical_discharge_by,
+            ],
+            targetModel: $surgery
+        );
+
+        broadcast(new SurgeryUpdated($surgery));
+
+        return redirect()->back()->with('success', 'تم منح إذن الخروج الطبي وتفريغ الغرفة بنجاح. المريض الآن بانتظار براءة الذمة وتصفية الحساب لدى الكاشير.');
+    }
+
+    /**
+     * إلغاء إذن الخروج الطبي وإعادة المريض لحالة الإقامة النشطة بالردهة
+     */
+    public function undoMedicalDischarge(Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('control surgeries') && ! $user->can('edit surgeries') && ! $user->can('assign surgery room')))) {
+            abort(403, 'غير مصرح لك بإلغاء إذن الخروج الطبي');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('error', 'لا يمكن التراجع عن الإذن الطبي لأن المريض تم تخريجه نهائياً من الكاشير');
+        }
+
+        if (! $surgery->medical_discharged_at) {
+            return redirect()->back()->with('warning', 'المريض لم يُمنح إذن خروج طبي بعد');
+        }
+
+        $surgery->medical_discharged_at = null;
+        $surgery->medical_discharge_by = null;
+        $surgery->medical_discharge_notes = null;
+        $surgery->save();
+
+        // فحص حالة الغرفة السابقة وإعادة حجزها إذا كانت شاغرة
+        $roomNotice = '';
+        if ($surgery->room_id) {
+            $room = $surgery->room;
+            if ($room && $room->status === 'available') {
+                $room->status = 'occupied';
+                $room->save();
+                $roomNotice = ' وتمت إعادة حجز غرفته السابقة بنجاح.';
+            } else {
+                $roomNotice = ' (ملاحظة: الغرفة السابقة مشغولة حالياً أو غير متاحة، تم إبقاء المريض في وضع انتظار الغرفة).';
+            }
+        }
+
+        UserActivityLogger::log(
+            user: $user,
+            action: 'surgery_undo_medical_discharge',
+            module: 'surgeries',
+            description: "تم إلغاء إذن الخروج الطبي للمريض ({$surgery->patient?->user?->name}) وإعادته للإقامة بالردهة الجراحية.",
+            oldValues: ['medical_discharged_at' => now()],
+            newValues: ['medical_discharged_at' => null],
+            targetModel: $surgery
+        );
+
+        broadcast(new SurgeryUpdated($surgery));
+
+        return redirect()->back()->with('success', 'تم التراجع عن إذن الخروج الطبي وإعادة المريض لمتابعة الردهة'.$roomNotice);
+    }
+
     public function discharge(Surgery $surgery)
     {
         $user = auth()->user();
-        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('control surgeries'))) {
-            abort(403, 'غير مصرح لك بإخراج المريض');
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        $canDischarge = $isAdmin || ($user && (
+            $user->can('control surgeries') ||
+            $user->can('process cashier payments') ||
+            $user->hasRole(['cashier', 'accountant', 'chief_accountant'])
+        ));
+        if (! $canDischarge) {
+            abort(403, 'غير مصرح لك بإجراء براءة الذمة وتخريج المريض');
         }
 
         if ($surgery->status !== 'completed') {
@@ -1402,6 +1515,7 @@ class SurgeryController extends Controller
         }
 
         $surgery->discharged_at = now();
+        $surgery->discharged_by = auth()->id();
         $surgery->discharge_notes = request('discharge_notes');
         $surgery->save();
 
