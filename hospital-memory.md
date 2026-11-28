@@ -2696,6 +2696,19 @@
   * **حزمة الاختبارات الآلية (`tests/Feature/DoctorReferralToAnotherDoctorTest.php`)**:
     - بناء واجتياز اختبارين يغطيان ظهور الزر دائماً وتحديث حالة الموعد والدور عند التحويل بنجاح تام (`2 passed, 9 assertions`).
 
+- **المرحلة 330 (تشغيل ترحيل جداول مستندات العمليات وحماية المسارات والواجهات من الخطأ القاعدي 1146 Surgery Documents Migration Execution, Defensive Schema Checks & Controller Multi-Document Restoration):**
+  * **ترحيل قاعدة البيانات وإنشاء جدول مستندات العمليات (`create_surgery_documents_and_types_tables.php`)**:
+    - تشغيل الترحيل المعلق `2026_11_28_132549_create_surgery_documents_and_types_tables` على قاعدة البيانات المحلية وتوليد جدولي `surgery_documents` و `surgery_document_types` بنجاح لمعالجة استثناء `Base table or view not found: 1146 Table 'hospital_pho.surgery_documents' doesn't exist`.
+  * **إضافة حماية دفاعية استباقية في واجهة المستندات (`documents-section.blade.php`)**:
+    - تضمين فحص `Schema::hasTable('surgery_documents')` و `Schema::hasTable('surgery_document_types')` قبل استدعاء العلاقات أو النماذج لضمان عدم انهيار الواجهة بأي استثناء 500 في حال عدم وجود الجداول مستقبلاً أو أثناء النقل.
+  * **استعادة معالجة المستندات ومساراتها في الكنترولر ومسارات الويب (`SurgeryController.php`, `routes/web.php`)**:
+    - استعادة دوال `processSurgeryDocuments` و `deleteDocument` و `viewDocument`، ومزامنة المستندات في `store` و `update` و `edit`.
+    - استعادة مسارات مستندات العمليات وأنواعها `surgery-document-types.*` و `surgeries.documents.*`.
+  * **ضمان الجودة والاختبارات الآلية**:
+    - اجتياز اختبارات المستندات المتعددة `SurgeryMultiDocumentTest` بنجاح تام (4 tests, 29 assertions passed).
+    - اجتياز اختبارات تبديل الغرف والاستعادة `SurgeryRoomSwapAndWaitingZoneTest` (6 tests, 27 assertions passed).
+    - فحص وتنسيق الأكواد بأداة `Laravel Pint` (PASS 2 files).
+
 - **المرحلة 325 (بناء نظام المستندات والمرفقات المتعددة للعمليات الجراحية ودعم السكانر المباشر ورفع الملفات مع إدارة ديناميكية للقائمة المنسدلة للأنواع وتوثيقها التلقائي بأرشيف المريض Surgery Multi-Document Attachment System, Dynamic Dropdown Types Management & USB Scanner Integration):**
   * **هيكلية قاعدة البيانات وموديلات المستندات والأنواع (`surgery_documents` و `surgery_document_types`)**:
     - إنشاء جدول `surgery_document_types` وقائمته الافتراضية، وجدول `surgery_documents` وتحديث علاقات `Surgery` و `Patient`.

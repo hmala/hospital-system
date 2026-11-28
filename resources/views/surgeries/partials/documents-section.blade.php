@@ -1,8 +1,10 @@
 {{-- قسم المستندات والمرفقات المتعددة للعمليات الجراحية (سكانر USB + رفع ملفات + تحكم بالقائمة المنسدلة) --}}
 @php
     $isEditMode = isset($surgery) && $surgery->id;
-    $existingDocs = $isEditMode ? $surgery->documents : collect();
-    $docTypesList = $documentTypes ?? \App\Models\SurgeryDocumentType::active()->get();
+    $hasDocsTable = \Illuminate\Support\Facades\Schema::hasTable('surgery_documents');
+    $existingDocs = ($isEditMode && $hasDocsTable) ? ($surgery->documents ?? collect()) : collect();
+    $hasTypesTable = \Illuminate\Support\Facades\Schema::hasTable('surgery_document_types');
+    $docTypesList = $documentTypes ?? ($hasTypesTable ? \App\Models\SurgeryDocumentType::active()->get() : collect());
 @endphp
 
 <div class="card border-0 shadow-2xs rounded-3 mb-3" style="background: #f8fafc; border: 1px solid #e2e8f0 !important;">

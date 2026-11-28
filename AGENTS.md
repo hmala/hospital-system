@@ -56,6 +56,21 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 330: ترحيل جداول مستندات العمليات وحماية المسارات والواجهات من الخطأ القاعدي 1146 Surgery Documents Migration Execution, Defensive Schema Checks & Controller Multi-Document Restoration)
+
+### Done
+- **ترحيل قاعدة البيانات وإنشاء جدول مستندات العمليات ([create_surgery_documents_and_types_tables.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_28_132549_create_surgery_documents_and_types_tables.php))**:
+  * تشغيل الترحيل المعلق `2026_11_28_132549_create_surgery_documents_and_types_tables` على قاعدة البيانات المحلية وتوليد جدولي `surgery_documents` و `surgery_document_types` بنجاح لمعالجة استثناء `Base table or view not found: 1146 Table 'hospital_pho.surgery_documents' doesn't exist`.
+- **إضافة حماية دفاعية استباقية في واجهة المستندات ([documents-section.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/partials/documents-section.blade.php))**:
+  * تضمين فحص `Schema::hasTable('surgery_documents')` و `Schema::hasTable('surgery_document_types')` قبل استدعاء العلاقات أو النماذج لضمان عدم انهيار الواجهة بأي استثناء 500 في حال عدم وجود الجداول مستقبلاً أو أثناء النقل.
+- **استعادة معالجة المستندات ومساراتها في الكنترولر ومسارات الويب ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [routes/web.php](file:///c:/wamp64/www/hospital-system/routes/web.php))**:
+  * استعادة دوال `processSurgeryDocuments` و `deleteDocument` و `viewDocument`، ومزامنة المستندات في `store` و `update` و `edit`.
+  * استعادة مسارات مستندات العمليات وأنواعها `surgery-document-types.*` و `surgeries.documents.*`.
+- **ضمان الجودة والاختبارات الآلية**:
+  * اجتياز اختبارات المستندات المتعددة `SurgeryMultiDocumentTest` بنجاح تام (4 tests, 29 assertions passed).
+  * اجتياز اختبارات تبديل الغرف والاستعادة `SurgeryRoomSwapAndWaitingZoneTest` (6 tests, 27 assertions passed).
+  * فحص وتنسيق الأكواد بأداة `Laravel Pint` (PASS 2 files).
+
 ## Session log (2026-11-28 — المرحلة 329: إصلاح استعلامات بحث الكاشير وتفعيل البحث الفوري التلقائي الذكي Cashier Search Exception Fix & Real-time Live Debounced Search)
 
 ### Done
