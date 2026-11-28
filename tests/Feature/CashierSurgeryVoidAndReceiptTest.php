@@ -12,7 +12,6 @@ use App\Models\Surgery;
 use App\Models\SurgeryExtraService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class CashierSurgeryVoidAndReceiptTest extends TestCase
@@ -20,7 +19,9 @@ class CashierSurgeryVoidAndReceiptTest extends TestCase
     use RefreshDatabase;
 
     protected User $admin;
+
     protected Patient $patient;
+
     protected Surgery $surgery;
 
     protected function setUp(): void
@@ -177,5 +178,58 @@ class CashierSurgeryVoidAndReceiptTest extends TestCase
         $receiptResponse->assertSee('30,000');
         // It should NOT show the unbilled 400,000 surgery fee in the table
         $receiptResponse->assertDontSee('400,000');
+    }
+
+    public function test_cashier_self_healing_reconciles_past_voided_surgeries(): void
+    {
+        // Simulate a surgery where payment was voided in the past but DB still has stale 'paid' status
+        $extra = SurgeryExtraService::create([
+            'surgery_id' => $this->surgery->id,
+            'name' => 'خدمة قديمة',
+            'price' => 50000,
+            'quantity' => 1,
+            'total_amount' => 50000,
+            'payment_status' => 'paid',
+        ]);
+
+        $voidedPayment = Payment::create([
+            'patient_id' => $this->patient->id,
+            'cashier_id' => $this->admin->id,
+            'surgery_id' => $this->surgery->id,
+            'receipt_number' => 'REC-VOIDED-003',
+            'amount' => 450000,
+            'total_amount' => 450000,
+            'patient_share' => 450000,
+            'insurance_share' => 0,
+            'payment_method' => 'cash',
+            'payment_type' => 'surgery',
+            'description' => "دفع رسوم العملية الجراحية: ناظور تشخيصي (ID: #{$this->surgery->id})\nالعناصر المدفوعة:\n- رسوم العملية الجراحية (مشمولة بالكامل) - مدفوع: 400,000 د.ع\n- خدمة إضافية: خدمة قديمة - مدفوع: 50,000 د.ع",
+            'paid_at' => now()->subDay(),
+            'voided_at' => now()->subHours(2),
+            'void_reason' => 'إعادة الفتح للتصحيح على هوستنجر',
+            'void_type' => 'rebill',
+        ]);
+
+        $extra->update(['payment_id' => $voidedPayment->id]);
+
+        // At this point, the surgery still has stale status
+        $this->surgery->update([
+            'payment_status' => 'paid',
+            'surgery_fee_paid' => 'paid',
+            'surgery_fee_paid_amount' => 400000,
+        ]);
+
+        // Now cashier visits cashier.surgeries.index
+        $response = $this->actingAs($this->admin)->get(route('cashier.surgeries.index'));
+        $response->assertOk();
+
+        // Verify that self-healing automatically fixed the surgery
+        $this->surgery->refresh();
+        $this->assertEquals('pending', $this->surgery->payment_status);
+        $this->assertEquals(0, (float) $this->surgery->surgery_fee_paid_amount);
+        $this->assertEquals('pending', $extra->fresh()->payment_status);
+
+        // Verify patient is now visible in the list
+        $response->assertSee($this->patient->user->name);
     }
 }

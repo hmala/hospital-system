@@ -220,6 +220,10 @@ class SurgeryController extends Controller
             ->where('status', '!=', 'cancelled')
             ->get();
 
+        $availableRoomsForTransfer = Room::available()
+            ->orderBy('room_number')
+            ->get();
+
         return view('surgeries.index', compact(
             'activeSurgeries',
             'completedSurgeries',
@@ -233,7 +237,8 @@ class SurgeryController extends Controller
             'orStockBatches',
             'orRecentMovements',
             'activeIndexTab',
-            'occupiedSurgeriesForSwap'
+            'occupiedSurgeriesForSwap',
+            'availableRoomsForTransfer'
         ));
     }
 
@@ -1493,7 +1498,7 @@ class SurgeryController extends Controller
     {
         $user = auth()->user();
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
-        if (! $isAdmin && (! $user || ! $user->can('assign surgery room'))) {
+        if (! $isAdmin && (! $user || (! $user->can('assign surgery room') && ! $user->can('edit surgeries')))) {
             abort(403, 'غير مصرح لك بتخصيص الغرف لمرضى العمليات.');
         }
 

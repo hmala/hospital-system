@@ -783,8 +783,8 @@
                                                         class="btn btn-xs btn-outline-info rounded-pill px-2 py-0 fw-semibold" 
                                                         style="font-size: 0.68rem;" 
                                                         onclick="openSwapRoomModal({{ $surgery->id }}, '{{ addslashes($patientName) }}', '{{ $room->room_number }}')" 
-                                                        title="{{ __('تبديل الغرفة مع مريض آخر') }}">
-                                                    <i class="fas fa-exchange-alt"></i> {{ __('تبديل') }}
+                                                        title="{{ __('تبديل أو نقل الغرفة (مع مريض آخر أو لغرفة شاغرة)') }}">
+                                                    <i class="fas fa-exchange-alt"></i> {{ __('تبديل / نقل') }}
                                                 </button>
                                                 <form action="{{ route('surgeries.move-to-waiting-zone', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('هل أنت متأكد من إخلاء الغرفة (:room) ونقل المريض (:name) إلى وضع انتظار الغرفة؟', ['room' => $room->room_number, 'name' => $patientName]) }}');">
                                                     @csrf
@@ -953,8 +953,8 @@
                                                         class="btn btn-xs btn-outline-info rounded-pill px-2 py-0 fw-semibold" 
                                                         style="font-size: 0.68rem;" 
                                                         onclick="openSwapRoomModal({{ $surgery->id }}, '{{ addslashes($patientName) }}', '{{ $room->room_number }}')" 
-                                                        title="{{ __('تبديل الغرفة مع مريض آخر') }}">
-                                                    <i class="fas fa-exchange-alt"></i> {{ __('تبديل') }}
+                                                        title="{{ __('تبديل أو نقل الغرفة (مع مريض آخر أو لغرفة شاغرة)') }}">
+                                                    <i class="fas fa-exchange-alt"></i> {{ __('تبديل / نقل') }}
                                                 </button>
                                                 <form action="{{ route('surgeries.move-to-waiting-zone', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('هل أنت متأكد من إخلاء الغرفة (:room) ونقل المريض (:name) إلى وضع انتظار الغرفة؟', ['room' => $room->room_number, 'name' => $patientName]) }}');">
                                                     @csrf
@@ -1523,7 +1523,7 @@
     <input type="hidden" name="cancellation_reason" id="cancel_reason_input" value="">
 </form>
 
-{{-- نافذة تبديل الغرفة الذكي بين مريضين --}}
+{{-- نافذة تبديل أو نقل الغرفة الذكي للمريض --}}
 <div class="modal fade" id="swapRoomModal" tabindex="-1" aria-labelledby="swapRoomModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
@@ -1532,11 +1532,12 @@
                 <div class="modal-header bg-light border-0 py-3">
                     <h5 class="modal-title fs-6 fw-bold text-dark d-flex align-items-center gap-2" id="swapRoomModalLabel">
                         <i class="fas fa-exchange-alt text-primary"></i>
-                        <span>{{ __('تبديل الغرفة مع مريض آخر') }}</span>
+                        <span>{{ __('إدارة ونقل غرفة المريض') }}</span>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
+                    {{-- بطاقة المريض الحالية --}}
                     <div class="p-3 bg-light rounded-3 mb-3 border">
                         <div class="small text-muted mb-1">{{ __('المريض الحالي:') }}</div>
                         <div class="fw-bold text-dark fs-6" id="swapCurrentPatientName">-</div>
@@ -1546,7 +1547,26 @@
                         </div>
                     </div>
 
+                    {{-- أزرار اختيار نوع الإجراء --}}
                     <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small mb-2 d-block">
+                            <i class="fas fa-sliders-h text-primary me-1"></i>{{ __('نوع إجراء الغرفة:') }}
+                        </label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="room_action_mode" id="modeSwapPatient" value="swap" checked autocomplete="off" onchange="toggleRoomActionMode('swap')">
+                            <label class="btn btn-outline-primary btn-sm py-2 fw-semibold" for="modeSwapPatient">
+                                <i class="fas fa-exchange-alt me-1"></i> {{ __('تبديل مع مريض آخر') }}
+                            </label>
+
+                            <input type="radio" class="btn-check" name="room_action_mode" id="modeTransferVacant" value="transfer" autocomplete="off" onchange="toggleRoomActionMode('transfer')">
+                            <label class="btn btn-outline-success btn-sm py-2 fw-semibold" for="modeTransferVacant">
+                                <i class="fas fa-door-open me-1"></i> {{ __('نقل لغرفة شاغرة') }}
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- قسم 1: تبديل مع مريض آخر --}}
+                    <div id="swapPatientSection" class="mb-3">
                         <label for="swapTargetSurgerySelect" class="form-label fw-bold text-dark small">
                             <i class="fas fa-bed text-primary me-1"></i>{{ __('اختر المريض / الغرفة المراد التبديل معها:') }}
                         </label>
@@ -1558,13 +1578,27 @@
                             {{ __('سيتم نقل المريض الحالي إلى الغرفة المختارة، ونقل المريض الآخر إلى هذه الغرفة آلياً وبشكل فوري.') }}
                         </div>
                     </div>
+
+                    {{-- قسم 2: نقل لغرفة شاغرة --}}
+                    <div id="transferVacantSection" class="mb-3 d-none">
+                        <label for="transferTargetRoomSelect" class="form-label fw-bold text-dark small">
+                            <i class="fas fa-door-open text-success me-1"></i>{{ __('اختر الغرفة الشاغرة المتاحة:') }}
+                        </label>
+                        <select name="room_id" id="transferTargetRoomSelect" class="form-select form-select-sm" disabled>
+                            <option value="">{{ __('-- اختر الغرفة الشاغرة --') }}</option>
+                        </select>
+                        <div class="form-text text-muted small mt-1">
+                            <i class="fas fa-check-circle me-1 text-success"></i>
+                            {{ __('سيتم تحرير الغرفة الحالية فورياً وتصبح متاحة، ونقل المريض إلى الغرفة الشاغرة المختارة.') }}
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer bg-light border-0 py-2.5">
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">
                         {{ __('إلغاء') }}
                     </button>
-                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
-                        <i class="fas fa-exchange-alt me-1"></i> {{ __('تأكيد التبديل المباشر') }}
+                    <button type="submit" id="swapRoomSubmitBtn" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
+                        <i class="fas fa-exchange-alt me-1"></i> <span>{{ __('تأكيد التبديل المباشر') }}</span>
                     </button>
                 </div>
             </form>
@@ -1859,34 +1893,111 @@
         ];
     })->values(), JSON_UNESCAPED_UNICODE) !!};
 
+    window.availableRoomsForTransfer = {!! json_encode(collect($availableRoomsForTransfer ?? [])->map(function($r) {
+        return [
+            'id' => $r->id,
+            'room_number' => $r->room_number,
+            'room_type' => strtoupper($r->room_type ?? 'عادية'),
+            'daily_fee' => (float) ($r->daily_fee ?? 0),
+        ];
+    })->values(), JSON_UNESCAPED_UNICODE) !!};
+
+    let activeSwapSurgeryId = null;
+
+    function toggleRoomActionMode(mode) {
+        const form = document.getElementById('swapRoomForm');
+        const swapSection = document.getElementById('swapPatientSection');
+        const transferSection = document.getElementById('transferVacantSection');
+        const swapSelect = document.getElementById('swapTargetSurgerySelect');
+        const transferSelect = document.getElementById('transferTargetRoomSelect');
+        const submitBtn = document.getElementById('swapRoomSubmitBtn');
+
+        if (!form || !activeSwapSurgeryId) return;
+
+        if (mode === 'transfer') {
+            form.action = '/surgeries/' + activeSwapSurgeryId + '/assign-room';
+            if (swapSection) swapSection.classList.add('d-none');
+            if (transferSection) transferSection.classList.remove('d-none');
+            if (swapSelect) {
+                swapSelect.removeAttribute('required');
+                swapSelect.setAttribute('disabled', 'disabled');
+            }
+            if (transferSelect) {
+                transferSelect.removeAttribute('disabled');
+                transferSelect.setAttribute('required', 'required');
+            }
+            if (submitBtn) {
+                submitBtn.className = 'btn btn-sm btn-success rounded-pill px-4 fw-bold';
+                submitBtn.innerHTML = '<i class="fas fa-door-open me-1"></i> <span>' + '{{ __("تأكيد النقل للغرفة الشاغرة") }}' + '</span>';
+            }
+        } else {
+            form.action = '/surgeries/' + activeSwapSurgeryId + '/swap-room';
+            if (swapSection) swapSection.classList.remove('d-none');
+            if (transferSection) transferSection.classList.add('d-none');
+            if (transferSelect) {
+                transferSelect.removeAttribute('required');
+                transferSelect.setAttribute('disabled', 'disabled');
+            }
+            if (swapSelect) {
+                swapSelect.removeAttribute('disabled');
+                swapSelect.setAttribute('required', 'required');
+            }
+            if (submitBtn) {
+                submitBtn.className = 'btn btn-sm btn-primary rounded-pill px-4 fw-bold';
+                submitBtn.innerHTML = '<i class="fas fa-exchange-alt me-1"></i> <span>' + '{{ __("تأكيد التبديل المباشر") }}' + '</span>';
+            }
+        }
+    }
+    window.toggleRoomActionMode = toggleRoomActionMode;
+
     function openSwapRoomModal(currentSurgeryId, currentPatientName, currentRoomNumber) {
+        activeSwapSurgeryId = currentSurgeryId;
         const form = document.getElementById('swapRoomForm');
         const pNameEl = document.getElementById('swapCurrentPatientName');
         const rNumEl = document.getElementById('swapCurrentRoomNumber');
-        const selectEl = document.getElementById('swapTargetSurgerySelect');
+        const swapSelect = document.getElementById('swapTargetSurgerySelect');
+        const transferSelect = document.getElementById('transferTargetRoomSelect');
+        const modeSwapRadio = document.getElementById('modeSwapPatient');
 
-        if (!form || !selectEl) return;
+        if (!form || !swapSelect || !transferSelect) return;
 
-        form.action = '/surgeries/' + currentSurgeryId + '/swap-room';
         if (pNameEl) pNameEl.textContent = currentPatientName;
         if (rNumEl) rNumEl.textContent = currentRoomNumber;
 
-        selectEl.innerHTML = '<option value="">-- ' + '{{ __("اختر المريض أو الغرفة للتبديل") }}' + ' --</option>';
+        // Reset mode to swap by default
+        if (modeSwapRadio) modeSwapRadio.checked = true;
+        toggleRoomActionMode('swap');
 
+        // 1. Populate occupied surgeries for swap
+        swapSelect.innerHTML = '<option value="">-- ' + '{{ __("اختر المريض أو الغرفة للتبديل") }}' + ' --</option>';
         const list = window.occupiedSurgeriesForSwap || [];
-        let count = 0;
+        let countOccupied = 0;
         list.forEach(item => {
             if (Number(item.id) !== Number(currentSurgeryId)) {
-                count++;
+                countOccupied++;
                 const opt = document.createElement('option');
                 opt.value = item.id;
                 opt.textContent = 'غرفة ' + item.room_number + ' (' + item.room_type + ') — ' + item.patient_name + (item.surgery_type ? ' [' + item.surgery_type + ']' : '');
-                selectEl.appendChild(opt);
+                swapSelect.appendChild(opt);
             }
         });
+        if (countOccupied === 0) {
+            swapSelect.innerHTML = '<option value="">' + '{{ __("لا يوجد مرضى آخرون في غرف حالياً للتبديل معهم") }}' + '</option>';
+        }
 
-        if (count === 0) {
-            selectEl.innerHTML = '<option value="">' + '{{ __("لا يوجد مرضى آخرون في غرف حالياً للتبديل معهم") }}' + '</option>';
+        // 2. Populate vacant available rooms for transfer
+        transferSelect.innerHTML = '<option value="">-- ' + '{{ __("اختر الغرفة الشاغرة للنقل إليها") }}' + ' --</option>';
+        const vacantList = window.availableRoomsForTransfer || [];
+        let countVacant = 0;
+        vacantList.forEach(room => {
+            countVacant++;
+            const opt = document.createElement('option');
+            opt.value = room.id;
+            opt.textContent = 'غرفة ' + room.room_number + ' (' + room.room_type + ')' + (room.daily_fee > 0 ? ' — ' + Number(room.daily_fee).toLocaleString() + ' د.ع' : ' — مجانية');
+            transferSelect.appendChild(opt);
+        });
+        if (countVacant === 0) {
+            transferSelect.innerHTML = '<option value="">' + '{{ __("لا توجد غرف شاغرة ومتاحة حالياً") }}' + '</option>';
         }
 
         const modal = new bootstrap.Modal(document.getElementById('swapRoomModal'));

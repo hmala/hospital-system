@@ -557,6 +557,7 @@ class CashierController extends Controller
         $pendingSurgeriesList = collect();
         $pendingSurgeriesCount = 0;
         if ($canSurgeries) {
+            $this->reconcileVoidedSurgeryPayments();
             $pendingSurgeriesCount = Surgery::where(function ($q) {
                 $q->whereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed'])
                     ->where(function ($subQ) {
@@ -3349,6 +3350,8 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى كاشير العمليات');
         }
 
+        $this->reconcileVoidedSurgeryPayments();
+
         // شرط العمليات المعلقة: لا نُخفي أبداً العمليات ذات billing_status = pending_review (تغيير عملية/إضافة عملية)،
         // ونشمل طلبات المقيم (تحاليل/أشعة/استشارات نشطة/خدمات)، والليالي الفندقية الإضافية، والمرتجعات
         $pendingSurgeryCondition = function ($query) {
@@ -3427,6 +3430,101 @@ class CashierController extends Controller
         ];
 
         return view('cashier.surgeries.index', compact('pendingSurgeries', 'cashierSurgeries', 'surgeriesByPatient', 'surgeryStats'));
+    }
+
+    /**
+     * المعالجة الاستباقية الذاتية (Self-Healing) للعمليات الجراحية ذات الوصولات الملغاة
+     * لضمان عودتها الفورية لقائمة كاشير العمليات حتى لو تم الإلغاء قبل تحديثات النظام
+     */
+    public function reconcileVoidedSurgeryPayments(?Surgery $targetSurgery = null): void
+    {
+        try {
+            $query = Surgery::query();
+            if ($targetSurgery) {
+                $query->where('id', $targetSurgery->id);
+            } else {
+                $query->where(function ($q) {
+                    $q->whereIn('payment_status', ['paid', 'partially_paid'])
+                        ->orWhere('surgery_fee_paid_amount', '>', 0)
+                        ->orWhere('room_fee_paid_amount', '>', 0)
+                        ->orWhereHas('extraServices', fn ($eq) => $eq->where('payment_status', 'paid'));
+                });
+            }
+
+            $staleSurgeries = $query->whereHas('payments', fn ($pq) => $pq->whereNotNull('voided_at'))->get();
+
+            foreach ($staleSurgeries as $surgery) {
+                $validPayments = Payment::where('surgery_id', $surgery->id)
+                    ->whereNull('voided_at')
+                    ->where('payment_type', 'surgery')
+                    ->get();
+
+                $voidedPaymentIds = Payment::where('surgery_id', $surgery->id)
+                    ->whereNotNull('voided_at')
+                    ->pluck('id')
+                    ->toArray();
+
+                if (! empty($voidedPaymentIds)) {
+                    if ($validPayments->isEmpty()) {
+                        \App\Models\SurgeryExtraService::where('surgery_id', $surgery->id)
+                            ->where('payment_status', 'paid')
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                        \App\Models\SurgeryLabTest::where('surgery_id', $surgery->id)
+                            ->where('payment_status', 'paid')
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                        \App\Models\SurgeryRadiologyTest::where('surgery_id', $surgery->id)
+                            ->where('payment_status', 'paid')
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                        \App\Models\SurgeryConsultation::where('surgery_id', $surgery->id)
+                            ->where('payment_status', 'paid')
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+                    } else {
+                        \App\Models\SurgeryExtraService::where('surgery_id', $surgery->id)
+                            ->whereIn('payment_id', $voidedPaymentIds)
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                        \App\Models\SurgeryLabTest::where('surgery_id', $surgery->id)
+                            ->whereIn('payment_id', $voidedPaymentIds)
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                        \App\Models\SurgeryRadiologyTest::where('surgery_id', $surgery->id)
+                            ->whereIn('payment_id', $voidedPaymentIds)
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                        \App\Models\SurgeryConsultation::where('surgery_id', $surgery->id)
+                            ->whereIn('payment_id', $voidedPaymentIds)
+                            ->update(['payment_status' => 'pending', 'payment_id' => null]);
+                    }
+                }
+
+                $recalcSurgeryPaid = 0.0;
+                $recalcRoomPaid = 0.0;
+
+                foreach ($validPayments as $vp) {
+                    if (preg_match('/رسوم العملية الجراحية.+?- مدفوع:\s*([\d,]+)\s*د\.ع/', $vp->description, $spm)) {
+                        $recalcSurgeryPaid += (float) str_replace(',', '', $spm[1]);
+                    }
+                    if (preg_match('/أجور (?:الإقامة و)?الغرفة.+?- مدفوع:\s*([\d,]+)\s*د\.ع/', $vp->description, $rpm)) {
+                        $recalcRoomPaid += (float) str_replace(',', '', $rpm[1]);
+                    }
+                }
+
+                $totalSurgFee = $surgery->getTotalSurgeryPatientFee();
+
+                $surgery->update([
+                    'surgery_fee_paid_amount' => $recalcSurgeryPaid,
+                    'surgery_fee_paid' => $recalcSurgeryPaid >= $totalSurgFee && $totalSurgFee > 0 ? 'paid' : ($recalcSurgeryPaid > 0 ? 'partial' : 'pending'),
+                    'room_fee_paid_amount' => $recalcRoomPaid,
+                ]);
+
+                $surgery->refresh()->syncPaymentStatus();
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('reconcileVoidedSurgeryPayments error: '.$e->getMessage());
+        }
     }
 
     /**
@@ -3847,6 +3945,8 @@ class CashierController extends Controller
             abort(403, 'غير مصرح لك بقبض وتثبيت دفعات العمليات الجراحية');
         }
 
+        $this->reconcileVoidedSurgeryPayments($surgery);
+
         $isCancelled = $surgery->status === 'cancelled';
         $hasPaidMoneyToRefund = (($surgery->surgery_fee_paid_amount ?? 0) > 0) || (($surgery->room_fee_paid_amount ?? 0) > 0);
 
@@ -4214,6 +4314,8 @@ class CashierController extends Controller
         if (! $isAdmin && (! $user || ! $user->can('process surgery payments'))) {
             abort(403, 'غير مصرح لك بقبض وتثبيت دفعات العمليات الجراحية');
         }
+
+        $this->reconcileVoidedSurgeryPayments($surgery);
 
         if ($surgery->status === 'cancelled') {
             return redirect()->route('cashier.surgeries.index')

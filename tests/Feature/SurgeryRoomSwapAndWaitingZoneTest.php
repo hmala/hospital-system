@@ -364,4 +364,63 @@ class SurgeryRoomSwapAndWaitingZoneTest extends TestCase
         $this->assertNull($surgery1->discharged_at);
         $this->assertNull($surgery1->room_id); // نقل لوضع الانتظار بأمان
     }
+
+    public function test_can_transfer_patient_from_occupied_room_to_available_vacant_room(): void
+    {
+        $patientUser = User::factory()->create(['name' => 'مريض نقل غرفة شاغرة']);
+        $patient = Patient::create(['user_id' => $patientUser->id]);
+
+        $surgery = Surgery::create([
+            'patient_id' => $patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'room_id' => $this->room101->id,
+            'surgical_operation_id' => $this->operation->id,
+            'surgery_type' => $this->operation->name,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'completed',
+            'room_fee' => 0,
+        ]);
+
+        $roomVacant = Room::create([
+            'hospital_id' => $this->hospital->id,
+            'department_id' => $this->department->id,
+            'room_number' => '103',
+            'floor' => 'الطابق الأول',
+            'room_type' => 'vip',
+            'status' => 'available',
+            'daily_fee' => 120000,
+            'is_active' => true,
+            'room_purpose' => 'beds',
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->post(route('surgeries.assign-room', $surgery), [
+                'room_id' => $roomVacant->id,
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $surgery->refresh();
+        $this->room101->refresh();
+        $roomVacant->refresh();
+
+        // Old room is now available
+        $this->assertEquals('available', $this->room101->status);
+
+        // New room is occupied
+        $this->assertEquals('occupied', $roomVacant->status);
+
+        // Surgery has new room assigned
+        $this->assertEquals($roomVacant->id, $surgery->room_id);
+        $this->assertEquals(100000, $surgery->room_fee); // VIP fee
+
+        // Check index page returns view with availableRoomsForTransfer
+        $indexResponse = $this->actingAs($this->admin)->get(route('surgeries.index', ['tab' => 'completed']));
+        $indexResponse->assertOk();
+        $indexResponse->assertViewHas('availableRoomsForTransfer');
+        $indexResponse->assertSee('إدارة ونقل غرفة المريض');
+    }
 }
