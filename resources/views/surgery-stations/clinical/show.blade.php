@@ -5372,9 +5372,37 @@ document.addEventListener("DOMContentLoaded", function () {
 
                     {{-- Category Tabs --}}
                     @php
-                        $radCategories = isset($availableRadiologyTypes) ? $availableRadiologyTypes->groupBy(function($item) {
-                            return trim($item->main_category ?: 'أخرى');
-                        }) : collect();
+                        $normalizeCat = function($item) {
+                            $c = trim($item->main_category ?? '');
+                            $sub = trim($item->subcategory ?? '');
+                            $name = trim($item->name ?? '');
+                            $text = mb_strtolower($c . ' ' . $sub . ' ' . $name);
+
+                            if (str_contains($text, 'مفراس') || str_contains($text, 'مقطعية') || str_contains($text, ' ct') || str_starts_with($text, 'ct') || str_contains($text, 'ct-')) {
+                                return 'مفراس';
+                            }
+                            if (str_contains($text, 'إيكو') || str_contains($text, 'ايكو') || str_contains($text, 'echo')) {
+                                return 'إيكو';
+                            }
+                            if (str_contains($text, 'رنين') || str_contains($text, 'mri')) {
+                                return 'الرنين';
+                            }
+                            if (str_contains($text, 'سونار') || str_contains($text, 'sonar') || str_contains($text, 'ultra')) {
+                                return 'سونار';
+                            }
+                            if (str_contains($text, 'أشعة') || str_contains($text, 'x-ray') || str_contains($text, 'xray')) {
+                                return 'أشعة';
+                            }
+                            return $c ?: 'أخرى';
+                        };
+
+                        $radCategories = isset($availableRadiologyTypes) ? $availableRadiologyTypes->groupBy($normalizeCat) : collect();
+
+                        // ترتيب تبويبات الفئات بشكل قياسي أنيق: أشعة، سونار، الرنين، مفراس، إيكو
+                        $order = ['أشعة' => 1, 'سونار' => 2, 'الرنين' => 3, 'مفراس' => 4, 'إيكو' => 5];
+                        $radCategories = $radCategories->sortBy(function($items, $key) use ($order) {
+                            return $order[$key] ?? 99;
+                        });
                     @endphp
 
                     <div class="d-flex align-items-center gap-1 mb-2 overflow-auto pb-1 text-nowrap" id="radCategoryTabsContainer" style="scrollbar-width: thin;">
@@ -5449,7 +5477,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                                 default => $rPrice
                                             };
                                             $displayRadCopay = $modalIsInsurance ? round($rEff * ($modalRadCopay / 100)) : $rEff;
-                                            $catName = trim($rad->main_category ?: 'أخرى');
+                                            $catName = isset($normalizeCat) ? $normalizeCat($rad) : trim($rad->main_category ?: 'أخرى');
                                             $subCatName = trim($rad->subcategory ?: '');
                                             $catLower = mb_strtolower($catName);
                                             $nameLower = mb_strtolower($rad->name);

@@ -608,6 +608,39 @@
         </div>
     </div>
 
+    {{-- تنبيه العملية الملغاة وزر التراجع عن الإلغاء --}}
+    @if($surgery->status === 'cancelled')
+        <div class="alert alert-danger border-danger shadow-xs d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4 rounded-4 p-3.5" style="background: linear-gradient(135deg, #fef2f2 0%, #fff 100%); border-right: 5px solid #dc2626 !important;" role="alert">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-danger text-white d-inline-flex align-items-center justify-content-center shadow-xs" style="width: 44px; height: 44px; flex-shrink: 0;">
+                    <i class="fas fa-ban fa-lg"></i>
+                </div>
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <strong class="fs-6 text-danger">{{ __('تم إلغاء هذه العملية الجراحية') }}</strong>
+                        <span class="badge bg-danger text-white rounded-pill px-2 py-0.5 small">{{ __('ملغاة') }}</span>
+                    </div>
+                    <div class="small text-muted">
+                        <span class="fw-semibold text-slate-700">{{ __('سبب الإلغاء:') }}</span>
+                        <span class="text-danger fw-bold">{{ $surgery->cancellation_reason ?: __('لم يُحدد سبب عند الإلغاء') }}</span>
+                    </div>
+                </div>
+            </div>
+            @php
+                $canControlSurgeryBanner = $user && ($user->hasRole(['admin', 'surgery_staff', 'receptionist', 'doctor', 'resident', 'surgery_coordinator', 'admin-hsop', 'hospital_admin']) || $user->can('control surgeries'));
+            @endphp
+            @if($canControlSurgeryBanner)
+                <button type="button" 
+                        class="btn btn-success btn-sm rounded-pill px-3.5 py-2 fw-bold shadow-xs d-inline-flex align-items-center gap-2"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#reactivateSurgeryModal">
+                    <i class="fas fa-undo"></i>
+                    <span>{{ __('التراجع عن الإلغاء وإعادة تفعيل العملية') }}</span>
+                </button>
+            @endif
+        </div>
+    @endif
+
     {{-- Station Flow Notification Banners --}}
     @if($surgery->status === 'in_progress' && $user)
         @if(!$surgery->operationTheaterStation || $surgery->operationTheaterStation->status !== 'completed')
@@ -844,6 +877,16 @@
                                             <span class="badge py-2 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; font-size: 0.92rem;">
                                                 <i class="fas fa-ban me-1 text-danger"></i>{{ __('Cancelled (ملغاة)') }}
                                             </span>
+                                            @if($canControlSurgery)
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-success rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5 ms-2"
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#reactivateSurgeryModal"
+                                                        title="{{ __('التراجع عن إلغاء العملية وإعادتها لقائمة العمليات النشطة') }}">
+                                                    <i class="fas fa-undo"></i>
+                                                    <span>{{ __('التراجع عن الإلغاء') }}</span>
+                                                </button>
+                                            @endif
                                         @elseif($isOtInProgress)
                                             <span class="badge py-2 px-3 rounded-pill shadow-xs fw-bold d-inline-flex align-items-center" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 0.92rem;">
                                                 <span class="sg-pulse-dot me-1"></span>{{ __('Intra-Op (داخل الصالة)') }}
@@ -2577,6 +2620,50 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
                     <button type="submit" class="btn btn-danger">{{ __('تأكيد إلغاء العملية') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reactivation / Restore -->
+<div class="modal fade" id="reactivateSurgeryModal" tabindex="-1" aria-labelledby="reactivateSurgeryModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-success text-white py-3 px-4">
+                <h5 class="modal-title fw-bold" id="reactivateSurgeryModalLabel">
+                    <i class="fas fa-undo me-2"></i>{{ __('التراجع عن الإلغاء وإعادة تفعيل العملية') }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ __('إغلاق') }}"></button>
+            </div>
+            <form action="{{ route('surgeries.reactivate', $surgery) }}" method="POST" class="surgery-live-action-form" onsubmit="broadcastSurgeryLiveUpdate()">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="text-center mb-3">
+                        <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center p-3 mb-2" style="width: 60px; height: 60px;">
+                            <i class="fas fa-heartbeat fa-2x"></i>
+                        </div>
+                        <h6 class="fw-bold text-dark mb-1">{{ __('هل أنت متأكد من إعادة تفعيل هذه العملية؟') }}</h6>
+                        <p class="text-muted small mb-0">{{ __('سيتم إرجاع العملية إلى قائمة العمليات النشطة بوضع الانتظار ومزامنة حالتها المالية.') }}</p>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 border mb-3 text-start" style="direction: rtl;">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-primary fw-bold small">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>{{ __('الضوابط السريرية لمنع التضارب:') }}</span>
+                        </div>
+                        <ul class="small text-muted mb-0 ps-3" style="line-height: 1.6;">
+                            <li>{{ __('فحص الغرفة: إذا كانت الغرفة السابقة شاغرة فستُعاد للمريض تلقائياً.') }}</li>
+                            <li><strong class="text-danger">{{ __('إذا أُعطيت الغرفة لمريض آخر:') }}</strong> {{ __('سيتم تفريغ الغرفة ونقل المريض لوضع انتظار تخصيص الغرف لمنع أي تضارب سريري.') }}</li>
+                            <li>{{ __('إعادة تفعيل الفحوصات الطبية والمخبرية غير المنفذة.') }}</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3 border-top">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3.5" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 fw-bold shadow-xs">
+                        <i class="fas fa-check-circle me-1"></i>{{ __('تأكيد إعادة التفعيل') }}
+                    </button>
                 </div>
             </form>
         </div>

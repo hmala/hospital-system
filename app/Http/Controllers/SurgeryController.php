@@ -1514,6 +1514,104 @@ class SurgeryController extends Controller
         return redirect()->back()->with('success', $successMsg);
     }
 
+    public function reactivate(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('control surgeries') && ! $user->can('edit surgeries')))) {
+            abort(403, 'غير مصرح لك بالتراجع عن إلغاء العملية');
+        }
+
+        if ($surgery->status !== 'cancelled') {
+            return redirect()->back()->with('error', 'العملية ليست في حالة ملغاة لتتم استعادتها.');
+        }
+
+        $roomReassigned = false;
+        $roomConflicted = false;
+        $conflictingPatientName = null;
+        $oldRoomNumber = null;
+
+        DB::transaction(function () use ($surgery, $user, &$roomReassigned, &$roomConflicted, &$conflictingPatientName, &$oldRoomNumber) {
+            // فحص حالة الغرفة السابقة
+            if ($surgery->room_id) {
+                $oldRoom = Room::find($surgery->room_id);
+                $oldRoomNumber = $oldRoom?->room_number ?? $surgery->room_id;
+
+                // هل الغرفة مشغولة بمريض رقود آخر حالياً؟
+                $conflictSurgery = Surgery::where('room_id', $surgery->room_id)
+                    ->where('id', '!=', $surgery->id)
+                    ->whereNull('discharged_at')
+                    ->whereNotIn('status', ['cancelled'])
+                    ->with('patient.user')
+                    ->first();
+
+                if ($conflictSurgery || ($oldRoom && $oldRoom->status === 'occupied')) {
+                    // الغرفة مشغولة بمريض آخر: تصفير الغرفة لتجنب التضارب
+                    $roomConflicted = true;
+                    $conflictingPatientName = $conflictSurgery?->patient?->user?->name ?? 'مريض آخر';
+                    $surgery->room_id = null;
+                    $surgery->room_fee = 0;
+                    $surgery->room_fee_paid_amount = 0;
+                    $surgery->room_checkin_at = null;
+                    $surgery->room_checkin_by = null;
+                } else {
+                    // الغرفة لا تزال شاغرة: إعادة حجزها للمريض
+                    $roomReassigned = true;
+                    if ($oldRoom) {
+                        $oldRoom->update(['status' => 'occupied']);
+                    }
+                    $surgery->room_checkin_at = $surgery->room_checkin_at ?: now();
+                    $surgery->room_checkin_by = $surgery->room_checkin_by ?: $user->id;
+                }
+            }
+
+            // إعادة الحالة إلى الانتظار وتفريغ سبب الإلغاء
+            $surgery->status = 'waiting';
+            $surgery->cancellation_reason = null;
+            $surgery->save();
+
+            // إعادة تفعيل الفحوصات الطبية المرتبطة بالعملية
+            $surgery->labTests()->where('status', 'cancelled')->update([
+                'status' => 'pending',
+                'payment_status' => DB::raw("CASE WHEN payment_status = 'cancelled' THEN 'pending' ELSE payment_status END"),
+            ]);
+
+            $surgery->radiologyTests()->where('status', 'cancelled')->update([
+                'status' => 'pending',
+                'payment_status' => DB::raw("CASE WHEN payment_status = 'cancelled' THEN 'pending' ELSE payment_status END"),
+            ]);
+
+            // مزامنة حالة الدفع والكاشير
+            $surgery->syncPaymentStatus();
+            $surgery->save();
+        });
+
+        $surgery->refresh();
+        broadcast(new SurgeryUpdated($surgery));
+
+        \App\Services\UserActivityLogger::log(
+            action: 'surgery_reactivate',
+            category: 'surgery',
+            description: "التراجع عن إلغاء العملية #{$surgery->id} وإعادة تفعيلها".($roomConflicted ? " (مع تفريغ الغرفة السابقة {$oldRoomNumber} لانشغالها بمريض آخر)" : ($roomReassigned ? " (مع إعادة تثبيت الغرفة {$oldRoomNumber})" : '')),
+            subject: $surgery,
+            isSensitive: false
+        );
+
+        if ($roomConflicted) {
+            return redirect()->back()->with(
+                'warning',
+                "تم التراجع عن إلغاء العملية وتفعيلها بنجاح. تنبيه: الغرفة السابقة ({$oldRoomNumber}) مشغولة حالياً بمريض رقود آخر ({$conflictingPatientName})، لذلك تم وضع العملية بانتظار تخصيص غرفة شاغرة جديدة."
+            );
+        }
+
+        $msg = 'تم التراجع عن إلغاء العملية وإعادتها لقائمة العمليات النشطة بنجاح.';
+        if ($roomReassigned) {
+            $msg .= " وتمت إعادة حجز الغرفة السابقة ({$oldRoomNumber}) للمريض لكونها شاغرة.";
+        }
+
+        return redirect()->back()->with('success', $msg);
+    }
+
     public function returnToWaiting(Surgery $surgery)
     {
         $user = auth()->user();

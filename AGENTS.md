@@ -56,6 +56,22 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 325: توحيد وتبويب وتفعيل فحوصات المفراس والإيكو في نافذة طلب الأشعة السريرية وإعادة تفعيل العمليات الملغاة CT & Echo Category Normalization in Clinical Radiology Modal & Cancelled Surgery Reactivation Flow)
+
+### Done
+- **توحيد وتجميع تبويبات المفراس والإيكو في واجهة طلب الفحوصات ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * إضافة دالة التوحيد الذكي للتصنيفات `$normalizeCat` لقالب العرض السريري، لتقوم تلقائياً بدمج وتصنيف كافة فحوصات المفراس (CT scans) مهما كانت تسميتها في قاعدة البيانات (`الأشعة المقطعية`، `CT`، `مفراس`) تحت التبويب الموحد `[ 🟡 مفراس ]`.
+  * دمج وتصنيف كافة فحوصات الإيكو (Echo) مهما كانت تسميتها (`إيكو القلب`، `تخطيط القلب`، `Echo`) تحت التبويب الموحد `[ 🟢 إيكو ]`.
+  * ترتيب التبويبات العلوية ترتيباً قياسياً أنيقاً: `[ الكل ]` ⬅️ `[ 🔵 أشعة ]` ⬅️ `[ 🔷 سونار ]` ⬅️ `[ 🔴 الرنين ]` ⬅️ `[ 🟡 مفراس ]` ⬅️ `[ 🟢 إيكو ]` مع شارات الأعداد والأيقونات الملونة لكل فئة.
+  * ربط عناصر القائمة المنسدلة بالخاصية `data-category="{{ $catName }}"` المتطابقة لضمان التصفية الفورية بنقرة زر واحدة عند الضغط على أي تبويب، مع تفعيل حسابات الإيكو التلقائية عند اختيار الإيكو وحسابات السونار عند اختيار السونار.
+- **ترحيل توحيد تصنيفات الأشعة في قاعدة البيانات ([normalize_radiology_categories_ct_and_echo.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_28_130000_normalize_radiology_categories_ct_and_echo.php), [RadiologyTypesSeeder.php](file:///c:/wamp64/www/hospital-system/database/seeders/RadiologyTypesSeeder.php))**:
+  * بناء ميجريشن آمنة لتحديث الحقول `main_category` و `subcategory` لجميع فحوصات المفراس والإيكو والرنين والسونار والأشعة العادية في قاعدة البيانات وتفعيلها بنجاح (`is_active = true`).
+  * تضمين منطق التوحيد في باذر الأشعة `RadiologyTypesSeeder` لضمان استقرار التصنيفات حتى بعد أي إعادة بذر مستقبلية في هوستنجر.
+- **استعادة وإعادة تفعيل العمليات الملغاة وحماية إشغال الغرف ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php), [surgeries/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [SurgeryReactivationTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryReactivationTest.php))**:
+  * إضافة مسار وإجراء `reactivate` لإعادة تفعيل العمليات الملغاة ونقلها إلى حالة الانتظار `waiting` مع إعادة تفعيل الفحوصات الطبية المرتبطة.
+  * فحص حالة الغرفة السابقة تلقائياً: في حال أصبحت الغرفة مشغولة بمريض آخر يتم تفريغ الغرفة لمنع الازدواج السريري، وفي حال كانت شاغرة تتم استعادتها وحجزها للمريض.
+  * اجتياز اختبارات الاستعادة `SurgeryReactivationTest` بنجاح (3 passed, 14 assertions).
+
 ## Session log (2026-11-28 — المرحلة 324: بناء الهيكل المالي والمحاسبي المتكامل وفق النظام المحاسبي الموحد العراقي وربط الكاشير والأقسام والمخازن بمراكز الكلفة Hospital Financial & Accounting Architecture, Unified Chart of Accounts, Analytical Cash Drawers, Cost Centers & Automated Cashier Journal Routing)
 
 ### Done

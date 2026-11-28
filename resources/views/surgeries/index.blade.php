@@ -729,6 +729,15 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-1 align-items-center">
+                                        @if($surgery->status === 'cancelled' && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('control surgeries')))
+                                            <form action="{{ route('surgeries.reactivate', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد التراجع عن إلغاء هذه العملية وإعادة تفعيلها؟') }}');">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-success px-2 py-1 rounded-2 shadow-xs" title="{{ __('التراجع عن الإلغاء وإعادة التفعيل') }}">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+
                                         @can('edit surgeries')
                                             <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2 py-1 rounded-2 shadow-xs" title="{{ __('تعديل الحجز') }}">
                                                 <i class="fas fa-edit text-warning"></i>
@@ -909,6 +918,15 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-inline-flex gap-1 align-items-center">
+                                        @if($surgery->status === 'cancelled' && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('control surgeries')))
+                                            <form action="{{ route('surgeries.reactivate', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد التراجع عن إلغاء هذه العملية وإعادة تفعيلها؟') }}');">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-success px-2 py-1 rounded-2 shadow-xs" title="{{ __('التراجع عن الإلغاء وإعادة التفعيل') }}">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+
                                         @can('edit surgeries')
                                             <a href="{{ route('surgeries.edit', $surgery) }}" class="btn btn-sm btn-outline-warning text-dark px-2 py-1 rounded-2 shadow-xs" title="{{ __('تعديل الحجز') }}">
                                                 <i class="fas fa-edit text-warning"></i>

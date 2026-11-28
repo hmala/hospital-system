@@ -842,6 +842,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
     Route::post('/surgeries/{surgery}/assign-room', [SurgeryController::class, 'assignRoom'])->name('surgeries.assign-room');
     Route::post('/surgeries/{surgery}/cancel', [SurgeryController::class, 'cancel'])->name('surgeries.cancel');
+    Route::post('/surgeries/{surgery}/reactivate', [SurgeryController::class, 'reactivate'])->name('surgeries.reactivate');
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
     Route::post('/surgeries/theaters/quick-store', [SurgeryController::class, 'quickStoreTheater'])->name('surgeries.theaters.quick-store');
     Route::post('/surgeries/{surgery}/quick-update-schedule', [SurgeryController::class, 'quickUpdateSchedule'])->name('surgeries.quick-update-schedule');
