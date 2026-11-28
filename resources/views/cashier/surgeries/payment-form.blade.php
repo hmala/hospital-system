@@ -2940,8 +2940,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // إضافة مستمعي الأحداث
-    document.getElementById('selectAllBtn').addEventListener('click', selectAll);
-    document.getElementById('deselectAllBtn').addEventListener('click', deselectAll);
+    const selectAllBtnEl = document.getElementById('selectAllBtn');
+    if (selectAllBtnEl) {
+        selectAllBtnEl.addEventListener('click', selectAll);
+    }
+    const deselectAllBtnEl = document.getElementById('deselectAllBtn');
+    if (deselectAllBtnEl) {
+        deselectAllBtnEl.addEventListener('click', deselectAll);
+    }
 
     // مستمعي أحداث checkboxes المجموعات
     const selectAllLab = document.getElementById('selectAllLab');
