@@ -16,6 +16,7 @@ class AnesthesiaStation extends Model
         'anesthesia_type',
         'surgical_assistant_name',
         'anesthesia_assistant_name',
+        'theater_attendant_name',
         'notes',
         'start_time',
         'end_time',

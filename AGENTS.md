@@ -56,6 +56,24 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 326: إضافة خيار ودليل معين الصالة وقائمة الاختيار الذكية بصالة العمليات Operating Theater Attendant / Orderly in Surgical Assistants Directory & Operation Theater Show View)
+
+### Done
+- **إضافة خيار وتصنيف «معين الصالة» في دليل المساعدين الجراحيين ([surgical-assistants/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgical-assistants/index.blade.php), [SurgicalAssistantController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgicalAssistantController.php), [SurgicalAssistant.php](file:///c:/wamp64/www/hospital-system/app/Models/SurgicalAssistant.php))**:
+  * إضافة الثابت `TYPE_THEATER_ATTENDANT = 'theater_attendant'` والنطاق `scopeTheaterAttendant()` لنموذج المساعدين الجراحيين.
+  * تحديث قواعد التحقق في `SurgicalAssistantController` لدعم نوع `theater_attendant` مع التسمية العربية `[ معين الصالة ]`.
+  * إضافة خيار التصفية في الواجهة، والشارة البرتقالية المميزة `[ 🦺 معين الصالة ]` (`bg-warning-subtle text-warning-emphasis`) في جدول المساعدين.
+  * إضافة خيار الراديو `معين صالة` في نافذتي الإضافة والتعديل (`modal`) مع دعم التفعيل التلقائي في الجافاسكربت.
+  * إضافة درع أمان لفحص وجود العمود `Schema::hasColumn('surgeries', 'theater_attendant_name')` لمنع أي أخطاء SQL محلياً أو سحابياً عند احتساب عدد العمليات.
+- **تضمين معين الصالة في فريق العمليات الجراحية الموحد ([show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/show.blade.php), [SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [Surgery.php](file:///c:/wamp64/www/hospital-system/app/Models/Surgery.php), [AnesthesiaStation.php](file:///c:/wamp64/www/hospital-system/app/Models/AnesthesiaStation.php))**:
+  * إضافة حقل `theater_attendant_name` لقائمة الأعمدة القابلة للتعبئة `$fillable` في نموذجي `Surgery` و `AnesthesiaStation`.
+  * ترحيل ميجريشن `2026_11_28_133000_add_theater_attendant_name_to_surgeries_and_stations.php` لإضافة العمود كـ `nullable` بعد `anesthesia_assistant_name`.
+  * تمرير قائمة معيني الصالة النشطين `$theaterAttendants` من `SurgeryController::show` لصفحة عرض العملية.
+  * إضافة العمود السادس في صف الفريق الطبي بصالة العمليات `[ 🦺 معين الصالة ]` بجانب مساعد التخدير مع رابط مباشر لدليل المعينين `[ دليل المعينين ]`.
+  * تزويد الحقل بقائمة منسدلة ذكية منبثقة (Smart Autocomplete Dropdown) تدعم البحث الفوري أو الكتابة اليدوية، والمسح، والإغلاق عند النقر بالخارج.
+  * حفظ وتحديث معين الصالة تلقائياً ومزامنته مع محطة التخدير عبر `SurgeryController::updateDetails`.
+  * **الالتزام بشرط المستخدم الصارم**: الإبقاء على تقرير العملية المطبوع (`print.blade.php`) دون تعديل ودون إظهار معين الصالة بالتقرير المطبوع.
+
 ## Session log (2026-11-28 — المرحلة 325: توحيد وتبويب وتفعيل فحوصات المفراس والإيكو في نافذة طلب الأشعة السريرية وإعادة تفعيل العمليات الملغاة CT & Echo Category Normalization in Clinical Radiology Modal & Cancelled Surgery Reactivation Flow)
 
 ### Done

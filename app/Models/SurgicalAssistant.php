@@ -14,6 +14,8 @@ class SurgicalAssistant extends Model
 
     public const TYPE_ANESTHESIA = 'anesthesia';
 
+    public const TYPE_THEATER_ATTENDANT = 'theater_attendant';
+
     protected $fillable = [
         'name',
         'type',
@@ -59,12 +61,26 @@ class SurgicalAssistant extends Model
     }
 
     /**
+     * Scope a query to only include theater attendants.
+     */
+    public function scopeTheaterAttendant(Builder $query): Builder
+    {
+        return $query->where('type', self::TYPE_THEATER_ATTENDANT);
+    }
+
+    /**
      * Get the count of surgeries where this assistant is assigned.
      */
     public function getSurgeriesCountAttribute(): int
     {
         if ($this->type === self::TYPE_ANESTHESIA) {
             return Surgery::where('anesthesia_assistant_name', $this->name)->count();
+        }
+
+        if ($this->type === self::TYPE_THEATER_ATTENDANT) {
+            return \Illuminate\Support\Facades\Schema::hasColumn('surgeries', 'theater_attendant_name')
+                ? Surgery::where('theater_attendant_name', $this->name)->count()
+                : 0;
         }
 
         return Surgery::where('surgical_assistant_name', $this->name)->count();

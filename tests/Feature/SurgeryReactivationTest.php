@@ -20,11 +20,17 @@ class SurgeryReactivationTest extends TestCase
     use RefreshDatabase;
 
     protected Hospital $hospital;
+
     protected User $admin;
+
     protected User $staff;
+
     protected Doctor $doctor;
+
     protected Department $department;
+
     protected Room $room;
+
     protected SurgicalOperation $operation;
 
     protected function setUp(): void
@@ -103,6 +109,7 @@ class SurgeryReactivationTest extends TestCase
             'surgical_operation_id' => $this->operation->id,
             'surgery_type' => $this->operation->name,
             'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
             'status' => 'cancelled',
             'cancellation_reason' => 'إلغاء لظرف طارئ',
             'payment_status' => 'cancelled',
@@ -142,6 +149,7 @@ class SurgeryReactivationTest extends TestCase
             'surgical_operation_id' => $this->operation->id,
             'surgery_type' => $this->operation->name,
             'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
             'status' => 'cancelled',
             'cancellation_reason' => 'ألغيت بالخطأ',
             'payment_status' => 'cancelled',
@@ -161,6 +169,7 @@ class SurgeryReactivationTest extends TestCase
             'surgical_operation_id' => $this->operation->id,
             'surgery_type' => $this->operation->name,
             'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '11:00:00',
             'status' => 'waiting',
             'payment_status' => 'pending',
             'surgery_fee' => 500000,
@@ -201,6 +210,7 @@ class SurgeryReactivationTest extends TestCase
             'surgical_operation_id' => $this->operation->id,
             'surgery_type' => $this->operation->name,
             'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
             'status' => 'cancelled',
         ]);
 

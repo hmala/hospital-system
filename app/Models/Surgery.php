@@ -54,6 +54,7 @@ class Surgery extends Model
         'anesthesiologist_2_id',
         'surgical_assistant_name',
         'anesthesia_assistant_name',
+        'theater_attendant_name',
         'start_time',
         'end_time',
         'referring_physician',

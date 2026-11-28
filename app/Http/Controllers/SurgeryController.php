@@ -668,6 +668,7 @@ class SurgeryController extends Controller
 
         $surgicalAssistants = SurgicalAssistant::active()->surgical()->orderBy('name')->get();
         $anesthesiaAssistants = SurgicalAssistant::active()->anesthesia()->orderBy('name')->get();
+        $theaterAttendants = SurgicalAssistant::active()->theaterAttendant()->orderBy('name')->get();
 
         return view('surgeries.show', compact(
             'surgery',
@@ -688,7 +689,8 @@ class SurgeryController extends Controller
             'operationSupplyBatches',
             'orDispensedItems',
             'surgicalAssistants',
-            'anesthesiaAssistants'
+            'anesthesiaAssistants',
+            'theaterAttendants'
         ));
     }
 
@@ -1709,6 +1711,7 @@ class SurgeryController extends Controller
             'anesthesia_notes' => 'nullable|string|max:2000',
             'surgical_assistant_name' => 'nullable|string|max:255',
             'anesthesia_assistant_name' => 'nullable|string|max:255',
+            'theater_attendant_name' => 'nullable|string|max:255',
             'supplies' => 'nullable|string|max:10000',
             'start_time' => 'nullable|string',
             'end_time' => 'nullable|string',
@@ -1757,11 +1760,11 @@ class SurgeryController extends Controller
         } elseif ($requestedTab === 'detail_anesthesia') {
             $allowedKeys = ['anesthesia_type', 'anesthesia_position', 'asa_classification', 'anesthesia_start_time', 'anesthesia_end_time', 'anesthesia_notes'];
         } elseif ($requestedTab === 'detail_team') {
-            $allowedKeys = ['doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name'];
+            $allowedKeys = ['doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'theater_attendant_name'];
         } elseif ($requestedTab === 'detail_timing_location') {
             $allowedKeys = ['location_id', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
         } elseif ($requestedTab === 'detail_team_timing') {
-            $allowedKeys = ['location_id', 'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
+            $allowedKeys = ['location_id', 'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'theater_attendant_name', 'start_time', 'end_time', 'estimated_duration', 'estimated_duration_minutes'];
         } elseif ($requestedTab === 'detail_supplies' || $requestedTab === 'detail_devices') {
             $allowedKeys = ['supplies'];
         } else {
@@ -1787,7 +1790,7 @@ class SurgeryController extends Controller
             }
             if ($canWriteTeamTiming || $canWriteTeam) {
                 $allowedKeys = array_merge($allowedKeys, [
-                    'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name',
+                    'doctor_id', 'anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'theater_attendant_name',
                 ]);
             }
             if ($canWriteTeamTiming || $canWriteTimingLocation) {
@@ -1914,7 +1917,7 @@ class SurgeryController extends Controller
 
             // Sync / create AnesthesiaStation when saving anesthesia details or updating team/anesthesiologist
             $stationSync = [];
-            foreach (['anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'anesthesia_type'] as $field) {
+            foreach (['anesthesiologist_id', 'anesthesiologist_2_id', 'surgical_assistant_name', 'anesthesia_assistant_name', 'theater_attendant_name', 'anesthesia_type'] as $field) {
                 if (array_key_exists($field, $validated)) {
                     $stationSync[$field] = $validated[$field];
                 }

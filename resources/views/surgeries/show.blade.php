@@ -1896,6 +1896,47 @@
                                                         </div>
                                                     @endif
                                                 </div>
+
+                                                {{-- 6. معين الصالة --}}
+                                                <div class="col-lg col-md-6 col-sm-12">
+                                                    <div class="d-flex align-items-center justify-content-between mb-1" style="min-height: 22px;">
+                                                        <label for="team_theater_attendant_name" class="form-label text-dark small fw-semibold mb-0">
+                                                            <i class="fas fa-hands-helping text-warning me-1"></i>{{ __('معين الصالة:') }}
+                                                        </label>
+                                                        @canany(['view surgical assistants', 'manage surgical assistants'])
+                                                            <a href="{{ route('surgical-assistants.index', ['type' => 'theater_attendant']) }}" target="_blank" class="small text-decoration-none text-warning fw-semibold" style="font-size: 0.72rem;" title="{{ __('فتح دليل معيني الصالة في نافذة جديدة') }}">
+                                                                <i class="fas fa-external-link-alt me-1"></i>{{ __('دليل المعينين') }}
+                                                            </a>
+                                                        @endcanany
+                                                    </div>
+                                                    @php
+                                                        $savedTheaterAttendant = old('theater_attendant_name', $surgery->anesthesiaStation?->theater_attendant_name ?? $surgery->theater_attendant_name ?? '');
+                                                    @endphp
+                                                    @if($canWriteTeamTiming)
+                                                        <div class="position-relative" id="theaterAttendantAutocompleteWrapper">
+                                                            <div class="input-group input-group-sm">
+                                                                <span class="input-group-text bg-light text-warning"><i class="fas fa-hands-helping"></i></span>
+                                                                <input type="text" id="team_theater_attendant_name" name="theater_attendant_name"
+                                                                       class="form-control form-control-sm border-warning-subtle"
+                                                                       autocomplete="off"
+                                                                       placeholder="{{ __('اختيار أو كتابة...') }}"
+                                                                       value="{{ $savedTheaterAttendant }}">
+                                                                <button type="button" class="btn btn-outline-secondary {{ $savedTheaterAttendant ? '' : 'd-none' }}" id="clearTheaterAttendantBtn" title="{{ __('مسح') }}">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                                <button type="button" class="btn btn-outline-warning" id="toggleTheaterAttendantMenuBtn" title="{{ __('عرض القائمة') }}">
+                                                                    <i class="fas fa-chevron-down"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div id="theaterAttendantsMenu" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1065; max-height: 220px; overflow-y: auto; display: none; font-size: 0.82rem;"></div>
+                                                        </div>
+                                                    @else
+                                                        <div class="input-group input-group-sm">
+                                                            <span class="input-group-text bg-light text-warning"><i class="fas fa-hands-helping"></i></span>
+                                                            <input type="text" class="form-control form-control-sm bg-light" value="{{ $savedTheaterAttendant ?: __('غير محدد') }}" readonly disabled>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </div>
 
                                             @if($canWriteTeam)
@@ -2758,6 +2799,7 @@
         useThisName: @json(__('استخدام هذا الاسم')),
         noAssistants: @json(__('لا توجد أسماء مساعدين مسجلة')),
         noAnesthAssistants: @json(__('لا توجد أسماء مسجلة؛ يمكنك كتابة الاسم مباشرة')),
+        noTheaterAttendants: @json(__('لا توجد أسماء معيني صالة مسجلة؛ يمكنك كتابة الاسم مباشرة')),
         noAnesthDoctors: @json(__('لا يوجد أطباء تخدير مطابقين للبحث'))
     };
 
@@ -3450,6 +3492,7 @@
     // ================= منظومة القائمة المنسدلة الذكية لمساعد الجراح (مثل التصنيف الدولي للأمراض) =================
     window.surgicalAssistantsData = {!! json_encode($surgicalAssistants ?? [], JSON_UNESCAPED_UNICODE) !!};
     window.anesthesiaAssistantsData = {!! json_encode($anesthesiaAssistants ?? [], JSON_UNESCAPED_UNICODE) !!};
+    window.theaterAttendantsData = {!! json_encode($theaterAttendants ?? [], JSON_UNESCAPED_UNICODE) !!};
     window.anesthesiaDoctorsData = {!! json_encode(collect($anesthesiaDoctors ?? [])->map(function($doc) {
         return [
             'id' => $doc->id,
@@ -3671,6 +3714,118 @@
                 input.value = '';
                 this.classList.add('d-none');
                 renderAnesthAssistantOptions('');
+                input.focus();
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (wrapper && !wrapper.contains(e.target)) {
+                menu.style.display = 'none';
+            }
+        });
+    }
+
+    function setupTheaterAttendantAutocomplete() {
+        const input = document.getElementById('team_theater_attendant_name');
+        const menu = document.getElementById('theaterAttendantsMenu');
+        const clearBtn = document.getElementById('clearTheaterAttendantBtn');
+        const toggleBtn = document.getElementById('toggleTheaterAttendantMenuBtn');
+        const wrapper = document.getElementById('theaterAttendantAutocompleteWrapper');
+
+        if (!input || !menu) return;
+
+        function renderTheaterAttendantOptions(filterText = '') {
+            const query = (filterText || '').trim().toLowerCase();
+            const list = window.theaterAttendantsData || [];
+
+            let matched = list.filter(item => {
+                const name = (item.name || '').toLowerCase();
+                const notes = (item.notes || '').toLowerCase();
+                return !query || name.includes(query) || notes.includes(query);
+            });
+
+            if (matched.length === 0) {
+                if (query.length > 0) {
+                    menu.innerHTML = `
+                        <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1.5 px-2.5 theater-attendant-option-item" style="cursor: pointer; font-size: 0.8rem;">
+                            <div class="d-flex align-items-center text-truncate">
+                                <i class="fas fa-plus-circle text-warning me-2" style="font-size: 0.8rem;"></i>
+                                <span class="fw-bold text-dark text-truncate" style="font-size: 0.8rem;">${filterText}</span>
+                            </div>
+                            <span class="badge bg-warning-subtle text-warning-emphasis border py-0.5 px-1.5 ms-1" style="font-size: 0.68rem;">${S_I18N.useThisName}</span>
+                        </div>
+                    `;
+                    const customOpt = menu.querySelector('.theater-attendant-option-item');
+                    if (customOpt) {
+                        customOpt.addEventListener('click', function() {
+                            selectTheaterAttendant(filterText);
+                        });
+                    }
+                    menu.style.display = 'block';
+                } else {
+                    menu.innerHTML = `<div class="p-2.5 text-center text-muted small" style="font-size: 0.8rem;"><i class="fas fa-info-circle me-1"></i>${S_I18N.noTheaterAttendants}</div>`;
+                    menu.style.display = 'block';
+                }
+                return;
+            }
+
+            let html = '';
+            matched.forEach(item => {
+                const isSelected = input.value.trim() === item.name.trim();
+                const selectedClass = isSelected ? 'bg-warning-subtle border-warning' : '';
+
+                html += `
+                    <div class="list-group-item list-group-item-action d-flex align-items-center py-1.5 px-2.5 theater-attendant-option-item ${selectedClass}" style="cursor: pointer; font-size: 0.8rem;" data-attendant-name="${item.name.replace(/"/g, '&quot;')}">
+                        <i class="fas fa-hands-helping text-warning me-2" style="font-size: 0.8rem;"></i>
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 0.8rem;">${item.name}</span>
+                    </div>
+                `;
+            });
+
+            menu.innerHTML = html;
+            menu.style.display = 'block';
+
+            menu.querySelectorAll('.theater-attendant-option-item').forEach(el => {
+                el.addEventListener('click', function() {
+                    const name = this.getAttribute('data-attendant-name');
+                    if (name) selectTheaterAttendant(name);
+                });
+            });
+        }
+
+        function selectTheaterAttendant(name) {
+            input.value = name;
+            if (clearBtn) clearBtn.classList.remove('d-none');
+            menu.style.display = 'none';
+        }
+
+        input.addEventListener('focus', function() {
+            renderTheaterAttendantOptions(this.value);
+        });
+
+        input.addEventListener('input', function() {
+            if (clearBtn) clearBtn.classList.toggle('d-none', !this.value.trim());
+            renderTheaterAttendantOptions(this.value);
+        });
+
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (menu.style.display === 'block') {
+                    menu.style.display = 'none';
+                } else {
+                    renderTheaterAttendantOptions('');
+                    input.focus();
+                }
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                input.value = '';
+                this.classList.add('d-none');
+                renderTheaterAttendantOptions('');
                 input.focus();
             });
         }
@@ -3991,6 +4146,7 @@
             setupAnesthesiaDoctorAutocomplete(1);
             setupAnesthesiaDoctorAutocomplete(2);
             setupAnesthesiaAssistantAutocomplete();
+            setupTheaterAttendantAutocomplete();
             setupAnesthesiaTypeTemplateSync();
             initSinglePageNavigation();
         });
@@ -3999,6 +4155,7 @@
         setupAnesthesiaDoctorAutocomplete(1);
         setupAnesthesiaDoctorAutocomplete(2);
         setupAnesthesiaAssistantAutocomplete();
+        setupTheaterAttendantAutocomplete();
         setupAnesthesiaTypeTemplateSync();
         initSinglePageNavigation();
     }

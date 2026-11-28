@@ -106,6 +106,7 @@
                             <option value="">كافة الأنواع</option>
                             <option value="surgical" @selected(request('type') === 'surgical')>مساعد جراح</option>
                             <option value="anesthesia" @selected(request('type') === 'anesthesia')>مساعد تخدير</option>
+                            <option value="theater_attendant" @selected(request('type') === 'theater_attendant')>معين الصالة</option>
                         </select>
                     </div>
                     <div class="col-md-2 col-lg-2">
@@ -165,6 +166,10 @@
                                         @if(($assistant->type ?? 'surgical') === 'anesthesia')
                                             <span class="badge bg-info-subtle text-info border border-info-subtle py-0.5 px-2" style="font-size: 0.72rem;">
                                                 <i class="fas fa-syringe me-1"></i>مساعد تخدير
+                                            </span>
+                                        @elseif(($assistant->type ?? 'surgical') === 'theater_attendant')
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle py-0.5 px-2" style="font-size: 0.72rem;">
+                                                <i class="fas fa-hand-holding-medical me-1"></i>معين الصالة
                                             </span>
                                         @else
                                             <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-0.5 px-2" style="font-size: 0.72rem;">
@@ -268,14 +273,14 @@
                 @csrf
                 <div class="modal-header bg-primary text-white py-3">
                     <h5 class="modal-title fw-bold" id="createAssistantModalLabel">
-                        <i class="fas fa-user-plus me-2"></i>إضافة مساعد جراح / مساعد تخدير جديد
+                        <i class="fas fa-user-plus me-2"></i>إضافة مساعد جراح / مساعد تخدير / معين صالة جديد
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small">نوع ومجال المساعد <span class="text-danger">*</span></label>
-                        <div class="d-flex gap-3 p-2 rounded bg-light border">
+                        <label class="form-label fw-bold text-dark small">نوع ومجال المساعد / الكادر <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-3 p-2 rounded bg-light border flex-wrap">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="type" id="create_type_surgical" value="surgical" checked>
                                 <label class="form-check-label small fw-semibold text-primary" for="create_type_surgical">
@@ -286,6 +291,12 @@
                                 <input class="form-check-input" type="radio" name="type" id="create_type_anesthesia" value="anesthesia">
                                 <label class="form-check-label small fw-semibold text-info" for="create_type_anesthesia">
                                     <i class="fas fa-syringe me-1"></i>مساعد تخدير
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="create_type_theater_attendant" value="theater_attendant">
+                                <label class="form-check-label small fw-semibold text-warning-emphasis" for="create_type_theater_attendant">
+                                    <i class="fas fa-hand-holding-medical me-1"></i>معين الصالة
                                 </label>
                             </div>
                         </div>
@@ -331,8 +342,8 @@
                 </div>
                 <div class="modal-body p-4">
                     <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small">نوع ومجال المساعد <span class="text-danger">*</span></label>
-                        <div class="d-flex gap-3 p-2 rounded bg-light border">
+                        <label class="form-label fw-bold text-dark small">نوع ومجال المساعد / الكادر <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-3 p-2 rounded bg-light border flex-wrap">
                             <div class="form-check">
                                 <input class="form-check-input" type="radio" name="type" id="edit_type_surgical" value="surgical">
                                 <label class="form-check-label small fw-semibold text-primary" for="edit_type_surgical">
@@ -343,6 +354,12 @@
                                 <input class="form-check-input" type="radio" name="type" id="edit_type_anesthesia" value="anesthesia">
                                 <label class="form-check-label small fw-semibold text-info" for="edit_type_anesthesia">
                                     <i class="fas fa-syringe me-1"></i>مساعد تخدير
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="type" id="edit_type_theater_attendant" value="theater_attendant">
+                                <label class="form-check-label small fw-semibold text-warning-emphasis" for="edit_type_theater_attendant">
+                                    <i class="fas fa-hand-holding-medical me-1"></i>معين الصالة
                                 </label>
                             </div>
                         </div>
@@ -380,6 +397,8 @@
         document.getElementById('edit_name').value = name;
         if (type === 'anesthesia') {
             document.getElementById('edit_type_anesthesia').checked = true;
+        } else if (type === 'theater_attendant') {
+            document.getElementById('edit_type_theater_attendant').checked = true;
         } else {
             document.getElementById('edit_type_surgical').checked = true;
         }

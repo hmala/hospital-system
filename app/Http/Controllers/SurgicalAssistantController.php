@@ -27,6 +27,24 @@ class SurgicalAssistantController extends Controller
             abort(403, 'غير مصرح لك بالوصول إلى إدارة مساعدي الجراحين');
         }
 
+        // Auto-ensure theater_attendant_name column exists in database
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('surgeries', 'theater_attendant_name')) {
+            try {
+                \Illuminate\Support\Facades\Schema::table('surgeries', function ($table) {
+                    $table->string('theater_attendant_name')->nullable()->after('anesthesia_assistant_name');
+                });
+            } catch (\Throwable $e) {
+            }
+        }
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('anesthesia_stations', 'theater_attendant_name')) {
+            try {
+                \Illuminate\Support\Facades\Schema::table('anesthesia_stations', function ($table) {
+                    $table->string('theater_attendant_name')->nullable()->after('anesthesia_assistant_name');
+                });
+            } catch (\Throwable $e) {
+            }
+        }
+
         $query = SurgicalAssistant::query();
 
         // Search filter
@@ -48,8 +66,8 @@ class SurgicalAssistantController extends Controller
             }
         }
 
-        // Type filter (surgical / anesthesia)
-        if ($request->filled('type') && in_array($request->type, ['surgical', 'anesthesia'], true)) {
+        // Type filter (surgical / anesthesia / theater_attendant)
+        if ($request->filled('type') && in_array($request->type, ['surgical', 'anesthesia', 'theater_attendant'], true)) {
             $query->where('type', $request->type);
         }
 
@@ -57,13 +75,31 @@ class SurgicalAssistantController extends Controller
 
         // Get surgery counts for each assistant in batch
         $assistantNames = $assistants->pluck('name')->toArray();
-        $surgeriesCounts = ! empty($assistantNames)
-            ? Surgery::whereIn('surgical_assistant_name', $assistantNames)
-                ->selectRaw('surgical_assistant_name, count(*) as count')
+        $surgeriesCounts = [];
+        if (! empty($assistantNames)) {
+            $hasAttendantCol = \Illuminate\Support\Facades\Schema::hasColumn('surgeries', 'theater_attendant_name');
+            $surgCounts = Surgery::whereIn('surgical_assistant_name', $assistantNames)
+                ->selectRaw('surgical_assistant_name as name, count(*) as count')
                 ->groupBy('surgical_assistant_name')
-                ->pluck('count', 'surgical_assistant_name')
-                ->toArray()
-            : [];
+                ->pluck('count', 'name')
+                ->toArray();
+            $anesthCounts = Surgery::whereIn('anesthesia_assistant_name', $assistantNames)
+                ->selectRaw('anesthesia_assistant_name as name, count(*) as count')
+                ->groupBy('anesthesia_assistant_name')
+                ->pluck('count', 'name')
+                ->toArray();
+            $attendantCounts = $hasAttendantCol
+                ? Surgery::whereIn('theater_attendant_name', $assistantNames)
+                    ->selectRaw('theater_attendant_name as name, count(*) as count')
+                    ->groupBy('theater_attendant_name')
+                    ->pluck('count', 'name')
+                    ->toArray()
+                : [];
+
+            foreach ($assistantNames as $name) {
+                $surgeriesCounts[$name] = ($surgCounts[$name] ?? 0) + ($anesthCounts[$name] ?? 0) + ($attendantCounts[$name] ?? 0);
+            }
+        }
 
         $totalCount = SurgicalAssistant::count();
         $activeCount = SurgicalAssistant::where('is_active', true)->count();
@@ -90,7 +126,7 @@ class SurgicalAssistantController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:surgical_assistants,name',
-            'type' => 'nullable|string|in:surgical,anesthesia',
+            'type' => 'nullable|string|in:surgical,anesthesia,theater_attendant',
             'phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean',
@@ -104,7 +140,11 @@ class SurgicalAssistantController extends Controller
 
         SurgicalAssistant::create($validated);
 
-        $label = $validated['type'] === SurgicalAssistant::TYPE_ANESTHESIA ? 'مساعد التخدير' : 'مساعد الجراح';
+        $label = match ($validated['type']) {
+            SurgicalAssistant::TYPE_ANESTHESIA => 'مساعد التخدير',
+            SurgicalAssistant::TYPE_THEATER_ATTENDANT => 'معين الصالة',
+            default => 'مساعد الجراح',
+        };
 
         return redirect()->route('surgical-assistants.index')
             ->with('success', "تمت إضافة {$label} بنجاح");
@@ -119,7 +159,7 @@ class SurgicalAssistantController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:surgical_assistants,name,'.$surgicalAssistant->id,
-            'type' => 'nullable|string|in:surgical,anesthesia',
+            'type' => 'nullable|string|in:surgical,anesthesia,theater_attendant',
             'phone' => 'nullable|string|max:50',
             'notes' => 'nullable|string|max:500',
             'is_active' => 'nullable|boolean',
