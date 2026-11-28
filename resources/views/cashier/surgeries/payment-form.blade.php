@@ -71,25 +71,30 @@
         right: 0;
         left: 0;
         width: 100% !important;
-        min-width: 340px;
-        z-index: 1065 !important;
-        max-height: 380px;
+        min-width: 420px;
+        z-index: 1080 !important;
+        max-height: 400px;
         overflow-y: auto;
         background: #ffffff !important;
         border: 2px solid #f59e0b !important;
-        border-radius: 12px;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.22), 0 4px 12px rgba(245, 158, 11, 0.15) !important;
+        border-radius: 14px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25), 0 4px 15px rgba(245, 158, 11, 0.2) !important;
+        scrollbar-width: thin;
+        scrollbar-color: #cbd5e1 #f8fafc;
     }
     .extra-service-dropdown-header {
         background: linear-gradient(135deg, #fffbeb, #fef3c7);
         border-bottom: 1px solid #fde68a;
-        padding: 8px 14px;
-        font-size: 0.8rem;
+        padding: 10px 16px;
+        font-size: 0.85rem;
         font-weight: 700;
         color: #92400e;
+        position: sticky;
+        top: 0;
+        z-index: 2;
     }
     .extra-service-item {
-        padding: 9px 14px;
+        padding: 10px 16px;
         border-bottom: 1px solid #f1f5f9;
         cursor: pointer;
         transition: all 0.15s ease;
@@ -99,6 +104,7 @@
     .extra-service-item:hover, .extra-service-item.active {
         background-color: #fffbeb !important;
         border-right: 4px solid #f59e0b;
+        transform: translateX(-2px);
     }
     .extra-service-item:last-child {
         border-bottom: none;
@@ -106,20 +112,23 @@
     .extra-service-price-badge {
         font-family: monospace;
         font-weight: 700;
-        font-size: 0.85rem;
+        font-size: 0.88rem;
         background: #ecfdf5;
         color: #047857;
         border: 1px solid #a7f3d0;
-        padding: 2px 8px;
-        border-radius: 6px;
+        padding: 3px 10px;
+        border-radius: 8px;
         white-space: nowrap;
     }
     .extra-service-cat-badge {
         font-size: 0.72rem;
-        padding: 2px 7px;
-        border-radius: 5px;
+        padding: 3px 8px;
+        border-radius: 6px;
         font-weight: 600;
         white-space: nowrap;
+    }
+    .extra-service-name {
+        font-size: 0.92rem;
     }
     .extra-service-custom-option {
         background-color: #f8fafc;

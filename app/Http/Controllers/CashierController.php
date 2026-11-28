@@ -3505,6 +3505,14 @@ class CashierController extends Controller
             return redirect()->back()->with('warning', 'المريض مخرّج نهائياً بالفعل من المستشفى');
         }
 
+        // المنع الصارم: براءة الذمة والتخريج النهائي تشترط صدور إذن الخروج الطبي وتفريغ السرير من الطبيب المقيم أولاً
+        if (! $surgery->medical_discharged_at) {
+            return redirect()->back()->with(
+                'error',
+                'لا يمكن إتمام براءة الذمة والتخريج النهائي قبل صدور إذن الخروج الطبي وتفريغ السرير من الطبيب المقيم أولاً.'
+            );
+        }
+
         $clearance = $surgery->getFinancialClearanceSummary(now());
         if (! $clearance['cleared']) {
             return redirect()->back()->with(
@@ -4135,7 +4143,14 @@ class CashierController extends Controller
 
         $totalAmount = $totalSurgeryFee + $labTestsFee + $radiologyTestsFee + $extraServicesFee + $consultationsFee;
 
-        $availableExtraServices = HospitalExtraService::active()->forGeneral()->orderBy('name')->get();
+        $availableExtraServices = HospitalExtraService::active()
+            ->where(function ($q) {
+                $q->whereIn('department', ['general', 'all'])
+                  ->orWhereNull('department');
+            })
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
 
         return view('cashier.surgeries.payment-form', compact(
             'surgery',
