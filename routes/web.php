@@ -499,6 +499,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/surgeries/doctor-accounts/{doctor}/settle-surgery/{surgery}', [\App\Http\Controllers\CashierController::class, 'settleSingleSurgeryDoctorDue'])->name('surgeries.settle-single-surgery');
         Route::get('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'showSurgeryPaymentForm'])->name('surgeries.payment.form');
         Route::post('/surgeries/{surgery}/payment', [\App\Http\Controllers\CashierController::class, 'processSurgeryPayment'])->name('surgeries.payment.process');
+        Route::post('/surgeries/{surgery}/copay', [\App\Http\Controllers\CashierController::class, 'updateSurgeryCopay'])->name('surgeries.copay.update');
         Route::post('/surgeries/{surgery}/final-discharge', [\App\Http\Controllers\CashierController::class, 'finalDischarge'])->name('surgeries.final-discharge');
         Route::post('/surgeries/{surgery}/refund', [\App\Http\Controllers\CashierController::class, 'processSurgeryRefund'])->name('surgeries.payment.refund');
         Route::post('/surgeries/{surgery}/extra-services', [\App\Http\Controllers\CashierController::class, 'addSurgeryExtraService'])->name('surgeries.extra-services.add');

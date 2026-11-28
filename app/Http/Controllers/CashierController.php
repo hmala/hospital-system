@@ -4420,6 +4420,53 @@ class CashierController extends Controller
     }
 
     /**
+     * حفظ وتثبيت نسبة استقطاع العملية استثنائياً من قبل الأدمن
+     */
+    public function updateSurgeryCopay(Request $request, Surgery $surgery)
+    {
+        $user = Auth::user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin) {
+            abort(403, 'غير مصرح لك بتعديل نسبة الاستقطاع الخاصة بالعملية الجراحية، هذه الصلاحية محصورة بالإدارة فقط.');
+        }
+
+        $request->validate([
+            'copay_percentage' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $newCopay = (float) $request->input('copay_percentage');
+        $oldCopay = $surgery->copay_percentage;
+
+        $surgery->update([
+            'copay_percentage' => $newCopay,
+        ]);
+
+        \App\Services\UserActivityLogger::log(
+            action: 'surgery_admin_copay_override',
+            category: 'cashier',
+            description: "قام الأدمن ({$user->name}) بتعديل نسبة استقطاع العملية #{$surgery->id} إلى ({$newCopay}%) استثنائياً.",
+            subject: $surgery,
+            isSensitive: true,
+            properties: [
+                'old_copay' => $oldCopay,
+                'new_copay' => $newCopay,
+            ],
+            user: $user
+        );
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حفظ وتثبيت نسبة استقطاع العملية بنجاح إلى ' . $newCopay . '%',
+                'copay_percentage' => $newCopay,
+            ]);
+        }
+
+        return redirect()->route('cashier.surgeries.payment.form', $surgery)
+            ->with('success', 'تم حفظ وتثبيت نسبة استقطاع العملية بنجاح إلى ' . $newCopay . '% وسيتمكن موظف الكاشير من التسديد بموجبها فوراً.');
+    }
+
+    /**
      * معالجة دفع العملية الجراحية
      */
     public function processSurgeryPayment(Request $request, Surgery $surgery)
@@ -4535,7 +4582,12 @@ class CashierController extends Controller
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
             $patient = $surgery->patient;
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
-            if ($insuranceType === 'hi' && $patient?->healthInsuranceCategory) {
+
+            // إذا قام الأدمن بتحديد نسبة استثنائية للعملية، نعتمدها للعملية حصراً
+            $hasManualCopay = $isAdmin && $request->filled('copay_percentage') && is_numeric($request->copay_percentage);
+            if ($hasManualCopay) {
+                $surgeryCopay = (float) $request->copay_percentage;
+            } elseif ($insuranceType === 'hi' && $patient?->healthInsuranceCategory) {
                 $surgeryCopay = (float) $patient->getCopayPercentageFor('surgery');
             } elseif ($request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== '') {
                 $surgeryCopay = (float) $request->copay_percentage;
@@ -4544,9 +4596,17 @@ class CashierController extends Controller
             } else {
                 $surgeryCopay = (float) ($surgery->insurance_copay_percentage ?? $patient->copay_percentage ?? 15.0);
             }
-            $labCopay = $patient ? (float) $patient->getCopayPercentageFor('lab') : $surgeryCopay;
-            $radCopay = $patient ? (float) $patient->getCopayPercentageFor('radiology') : $surgeryCopay;
-            $ecgCopay = $patient ? (float) $patient->getCopayPercentageFor('ecg') : $surgeryCopay;
+
+            // الفحوصات والخدمات المرافقة تعتمد نسبتها الرسمية من فئة المريض أو نسبتها المحددة دون أن تتأثر بتعديل نسبة العملية الاستثنائي
+            if ($insuranceType === 'hi' && $patient?->healthInsuranceCategory) {
+                $labCopay = (float) $patient->getCopayPercentageFor('lab');
+                $radCopay = (float) $patient->getCopayPercentageFor('radiology');
+                $ecgCopay = (float) $patient->getCopayPercentageFor('ecg');
+            } else {
+                $labCopay = $patient ? (float) $patient->getCopayPercentageFor('lab') : $surgeryCopay;
+                $radCopay = $patient ? (float) $patient->getCopayPercentageFor('radiology') : $surgeryCopay;
+                $ecgCopay = $patient ? (float) $patient->getCopayPercentageFor('ecg') : $surgeryCopay;
+            }
 
             $surgeryApproved = 0.0;
             $surgeryPatientShare = 0.0;
@@ -5169,9 +5229,14 @@ class CashierController extends Controller
             $syncedStatus = $surgery->syncPaymentStatus();
             $allPaid = ($syncedStatus === 'paid');
 
-            $surgery->update([
+            $surgeryUpdatesOnPay = [
                 'payment_id' => $payment->id,
-            ]);
+            ];
+            if ($hasManualCopay) {
+                $surgeryUpdatesOnPay['copay_percentage'] = $surgeryCopay;
+            }
+
+            $surgery->update($surgeryUpdatesOnPay);
 
             // تحديث حالة الطلبات المرتبطة إذا تم الدفع الكامل
             if ($allPaid && $surgery->visit_id) {

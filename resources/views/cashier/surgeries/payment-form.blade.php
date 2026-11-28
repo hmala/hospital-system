@@ -873,17 +873,54 @@
 
                                     <!-- نسبة التحمل -->
                                     <div class="col-12" id="copay_section">
-                                        <div class="p-2 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                        @php
+                                            $canEditCopay = auth()->user() && auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+                                        @endphp
+                                        <div class="p-2.5 rounded-3 bg-white border d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-xs">
                                             <div class="d-flex align-items-center gap-2">
-                                                <i class="fas fa-percentage text-primary"></i>
-                                                <span class="small text-muted">{{ __('نسبة التحمل المقررة رسمياً على المريض:') }} <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong></span>
+                                                <i class="fas fa-percentage text-primary fs-5"></i>
+                                                <div>
+                                                    <span class="small text-muted d-block">{{ __('نسبة استقطاع رسوم العملية الجراحية على المريض:') }}</span>
+                                                    <strong class="text-primary fs-6" id="display_copay_badge">{{ (float)$defaultCopay }}%</strong>
+                                                </div>
                                             </div>
-                                            <span class="text-muted small">
-                                                <i class="fas fa-shield-alt text-success me-1"></i>
-                                                {{ __('مقفلة ومحددة آلياً وفق فئة المريض الرسمية') }}
-                                            </span>
+                                            
+                                            @if($canEditCopay)
+                                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                    <span class="badge bg-warning-subtle text-dark border border-warning px-2.5 py-1 small fw-bold">
+                                                        <i class="fas fa-user-shield me-1 text-warning"></i>{{ __('صلاحية الأدمن: تعديل استثنائي لنسبة العملية') }}
+                                                    </span>
+                                                    <div class="input-group input-group-sm" style="width: 130px;">
+                                                        <span class="input-group-text bg-light fw-bold text-primary">%</span>
+                                                        <input type="number" 
+                                                               class="form-control form-control-sm fw-bold text-center text-primary" 
+                                                               id="copay_percentage" 
+                                                               name="copay_percentage" 
+                                                               value="{{ (float)$defaultCopay }}" 
+                                                               min="0" 
+                                                               max="100" 
+                                                               step="1" 
+                                                               title="{{ __('تعديل نسبة العملية استثنائياً (مثل ناظور المعدة)') }}">
+                                                    </div>
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-primary rounded-pill px-3 fw-bold d-inline-flex align-items-center gap-1 shadow-xs" 
+                                                            id="btn_save_copay_permanently"
+                                                            data-url="{{ route('cashier.surgeries.copay.update', $surgery->id) }}"
+                                                            title="{{ __('حفظ النسبة في سجل العملية ليتمكن موظف الكاشير من فتحها وتسديدها فوراً بهذه النسبة') }}">
+                                                        <i class="fas fa-save"></i>
+                                                        <span>{{ __('حفظ وتثبيت النسبة') }}</span>
+                                                    </button>
+                                                </div>
+                                            @else
+                                                <div class="text-end">
+                                                    <span class="badge bg-light text-dark border px-2.5 py-1 small fw-bold d-inline-flex align-items-center gap-1">
+                                                        <i class="fas fa-lock text-success"></i>
+                                                        {{ __('مقفلة ومثبتة رسمياً للعملية: ') }} <strong class="text-primary">{{ (float)$defaultCopay }}%</strong>
+                                                    </span>
+                                                    <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$defaultCopay }}">
+                                                </div>
+                                            @endif
                                         </div>
-                                        <input type="hidden" id="copay_percentage" name="copay_percentage" value="{{ (float)$defaultCopay }}">
                                     </div>
                                 </div>
 
@@ -2149,13 +2186,24 @@ document.addEventListener('DOMContentLoaded', function() {
         let consultCopayPct = 100;
 
         if (currentInsType === 'hi') {
-            surgeryCopayPct = hiCopays.surgery;
+            // إذا قام الأدمن بتحديد نسبة استثنائية لرسوم العملية من الحقل
+            const manualCopayInput = document.getElementById('copay_percentage');
+            if (manualCopayInput && manualCopayInput.value !== '') {
+                surgeryCopayPct = parseFloat(manualCopayInput.value) || 0;
+            } else {
+                surgeryCopayPct = hiCopays.surgery;
+            }
             labCopayPct = hiCopays.lab;
             radCopayPct = hiCopays.radiology;
             ecgCopayPct = hiCopays.ecg;
             consultCopayPct = (hiCopays && hiCopays.consultation) ? hiCopays.consultation : (hiCopays.clinic || hiCopays.surgery || 15);
         } else if (currentInsType === 'moi') {
-            surgeryCopayPct = moiCopay;
+            const manualCopayInput = document.getElementById('copay_percentage');
+            if (manualCopayInput && manualCopayInput.value !== '') {
+                surgeryCopayPct = parseFloat(manualCopayInput.value) || 0;
+            } else {
+                surgeryCopayPct = moiCopay;
+            }
             labCopayPct = moiCopay;
             radCopayPct = moiCopay;
             ecgCopayPct = moiCopay;
@@ -2665,6 +2713,68 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('active', 'btn-primary');
         });
     });
+
+    // الاستماع لتعديل نسبة العملية من قبل الأدمن
+    const adminCopayInput = document.getElementById('copay_percentage');
+    const btnSaveCopayPermanently = document.getElementById('btn_save_copay_permanently');
+    if (adminCopayInput && adminCopayInput.type !== 'hidden') {
+        adminCopayInput.addEventListener('input', function() {
+            const dispBadge = document.getElementById('display_copay_badge');
+            if (dispBadge) {
+                dispBadge.textContent = (parseFloat(this.value) || 0) + '%';
+            }
+            calculateSelectedAmount();
+        });
+        adminCopayInput.addEventListener('change', function() {
+            const dispBadge = document.getElementById('display_copay_badge');
+            if (dispBadge) {
+                dispBadge.textContent = (parseFloat(this.value) || 0) + '%';
+            }
+            calculateSelectedAmount();
+        });
+    }
+
+    if (btnSaveCopayPermanently && adminCopayInput) {
+        btnSaveCopayPermanently.addEventListener('click', function() {
+            const targetUrl = this.getAttribute('data-url');
+            const val = parseFloat(adminCopayInput.value);
+            if (isNaN(val) || val < 0 || val > 100) {
+                alert('{{ __('يرجى إدخال نسبة صحيحة بين 0 و 100%') }}');
+                return;
+            }
+
+            const originalBtnHtml = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> {{ __('جاري الحفظ...') }}';
+
+            fetch(targetUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ copay_percentage: val })
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.disabled = false;
+                this.innerHTML = originalBtnHtml;
+                if (data.success) {
+                    alert(data.message || '{{ __('تم حفظ وتثبيت نسبة استقطاع العملية بنجاح!') }}');
+                    calculateSelectedAmount();
+                } else {
+                    alert(data.message || '{{ __('حدث خطأ أثناء حفظ النسبة') }}');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                this.disabled = false;
+                this.innerHTML = originalBtnHtml;
+                alert('{{ __('تعذر الاتصال بالخادم لحفظ النسبة') }}');
+            });
+        });
+    }
 
     document.querySelectorAll('.package-inclusion-switch').forEach(function(sw) {
         sw.addEventListener('change', calculateSelectedAmount);
