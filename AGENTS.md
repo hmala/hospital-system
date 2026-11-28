@@ -56,6 +56,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 332: الحسم المعماري لنسب استقطاع الضمان الصحي، ومنع تسريب نسب الداخلية، واعتماد الفئة الرسمية كمصدر وحيد للحقيقة Health Insurance Category Copay Enforcement & MOI Copay Isolation)
+
+### Done
+- **عزل راديو الداخلية ومنع التسريب البصري والبرمجي ([create.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/create.blade.php), [edit.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/edit.blade.php))**:
+  * في شاشات حجز وتعديل العمليات، كان راديو نسبة استقطاع الداخلية (15%) يرسل قيمته تلقائياً حتى عند إخفائه (`display: none`)، مما تسبب بتسريب نسبة 15% وتجاوز فئة المريض الرسمية.
+  * تم تعطيل حقول راديو الداخلية برمجياً (`disabled`) عند عدم اختيار تأمين الداخلية (`!isMoi`) في كل من Blade والـ JavaScript (`checkMoiVisibility`).
+  * إضافة قسم وبطاقة تعريفية رسمية لمرضى الضمان الصحي (`hiCopaySection`) توضح فئة المريض الرسمية ونسبة العمليات المقفلة آلياً (مثل الفئة H = 25%).
+- **اعتماد فئة الضمان الصحي كمرجع حاكم أول في الكاشير ([CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+  * جعل فئة الضمان الصحي المعتمدة للمريض (`healthInsuranceCategory`) هي المرجع الحاكم الإلزامي والأول (`Single Source of Truth`) في احتساب حصة المريض نقداً ومطالبة التأمين، متجاهلة أي نسبة قديمة مسربة.
+  * مطابقة النسبة في الجافاسكربت والعرض المبدئي في Blade.
+- **كنترولر العمليات وقاعدة البيانات ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [2026_11_28_180500_sync_health_insurance_surgery_copay_percentages.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_28_180500_sync_health_insurance_surgery_copay_percentages.php))**:
+  * في دالتي `store` و `update`: حفظ نسبة استقطاع الفئة الرسمية آلياً لمرضى `hi` وتصفير النسبة لغير المشمولين، وحصر حقول الراديو بتأمين الداخلية فقط.
+  * إنشاء مايجريشن لمزامنة وتصحيح نسب العمليات المعلقة لمرضى الضمان الصحي محلياً وسحابياً على خادم هوستنجر (`remote_hostinger`).
+
 ## Session log (2026-11-28 — المرحلة 331: إصلاح إلغاء وإعادة فتح وصولات العمليات الجراحية، عودة المريض التلقائية لقائمة انتظار الكاشير، وتصحيح تفصيل مبالغ الإيصال Surgery Payment Rebill/Void Cascade, Cashier Pending Return & Receipt Line Items Correction)
 
 ### Done

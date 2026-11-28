@@ -79,6 +79,17 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
+- **المرحلة 332 (2026-11-28 — `main`) — الحسم المعماري لنسب استقطاع الضمان الصحي، ومنع تسريب نسب الداخلية، واعتماد الفئة الرسمية كمصدر وحيد للحقيقة (Health Insurance Category Copay Enforcement & MOI Copay Isolation)**:
+  * **السبب الجذري وتصحيحه الجذري**:
+    - في شاشات حجز وتعديل العمليات (`create.blade.php` و `edit.blade.php`) كان راديو نسبة استقطاع الداخلية (15%) يرسل قيمته تلقائياً حتى عند إخفائه، مما يسرب نسبة 15% إلى عمليات مرضى الضمان الصحي الوطني (`hi`) ويحجب نسبة فئة المريض الحقيقية (مثل الفئة H = 25%).
+    - تم تعطيل حقول راديو الداخلية برمجياً عند عدم اختيار تأمين الداخلية (`disabled` عند `!isMoi`)، وإضافة قسم وبطاقة تعريفية رسمية لمرضى الضمان الصحي (`hiCopaySection`) توضح فئة المريض الرسمية ونسبة العمليات المقفلة آلياً (25% للفئة H).
+  * **معالجة الكاشير وسندات القبض ([CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [payment-form.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/surgeries/payment-form.blade.php))**:
+    - جعل فئة الضمان الصحي المعتمدة للمريض (`healthInsuranceCategory`) هي المرجع الحاكم الإلزامي والأول (`Single Source of Truth`) في احتساب حصة المريض نقداً ومطالبة التأمين، متجاهلة أي نسبة قديمة مسربة.
+    - مطابقة النسبة في الجافاسكربت والعرض المبدئي في Blade.
+  * **كنترولر العمليات وقاعدة البيانات ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
+    - في دالتي `store` و `update`: حفظ نسبة استقطاع الفئة الرسمية آلياً لمرضى `hi` وتصفير النسبة لغير المشمولين.
+    - إنشاء مايجريشن [2026_11_28_180500_sync_health_insurance_surgery_copay_percentages.php](file:///c:/wamp64/www/hospital-system/database/migrations/2026_11_28_180500_sync_health_insurance_surgery_copay_percentages.php) لمزامنة وتصحيح نسب العمليات المعلقة لمرضى الضمان الصحي محلياً وسحابياً على خادم هوستنجر (`remote_hostinger`).
+
 - **المرحلة 329 (2026-11-28 — `main`) — إصلاح استعلامات بحث الكاشير وتفعيل البحث الفوري التلقائي الذكي (Cashier Search Exception Fix & Real-time Live Debounced Search)**:
   * **إصلاح خطأ `Unknown column 'medical_number'` ([CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
     - تصحيح استعلامات البحث في جدول حواضن الخدج `incubator_reservations`، العناية المركزة `icu_admissions`، وفواتير الصيدلية `pharmacy_sales` باستبدال العمود غير الموجود `medical_number` بالحقل المعياري `national_id` (الرقم الوطني / رقم الهوية)، والبحث في علاقة `patient.user` بالاسم ورقم الهاتف.

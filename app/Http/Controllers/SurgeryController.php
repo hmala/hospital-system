@@ -375,12 +375,16 @@ class SurgeryController extends Controller
             $surgeryData['original_surgery_fee'] = $enteredFee;
         }
 
-        if ($bookingInsuranceType === 'moi') {
+        if ($bookingInsuranceType === 'hi') {
+            $surgeryData['copay_percentage'] = $patient?->healthInsuranceCategory
+                ? (float) $patient->getCopayPercentageFor('surgery')
+                : null;
+        } elseif ($bookingInsuranceType === 'moi') {
             $surgeryData['copay_percentage'] = $request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== ''
                 ? (float) $request->copay_percentage
                 : (float) ($patient->copay_percentage ?? 15.0);
         } else {
-            $surgeryData['copay_percentage'] = $request->filled('copay_percentage') ? (float) $request->copay_percentage : null;
+            $surgeryData['copay_percentage'] = null;
         }
 
         $scheduledTimeStr = $request->filled('scheduled_time') ? $request->scheduled_time : '00:00';
@@ -873,14 +877,18 @@ class SurgeryController extends Controller
             $surgeryData['insurance_card_no'] = $request->insurance_card_no;
         }
         $resolvedInsType = $surgeryData['insurance_type'] ?? $surgery->insurance_type;
-        if ($resolvedInsType === 'moi') {
+        if ($resolvedInsType === 'hi') {
+            $surgeryData['copay_percentage'] = $patient?->healthInsuranceCategory
+                ? (float) $patient->getCopayPercentageFor('surgery')
+                : null;
+        } elseif ($resolvedInsType === 'moi') {
             if ($request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== '') {
                 $surgeryData['copay_percentage'] = (float) $request->copay_percentage;
             } elseif ($patient) {
                 $surgeryData['copay_percentage'] = (float) ($patient->copay_percentage ?? 15.0);
             }
-        } elseif ($request->filled('copay_percentage')) {
-            $surgeryData['copay_percentage'] = (float) $request->copay_percentage;
+        } else {
+            $surgeryData['copay_percentage'] = null;
         }
 
         // معالجة تغيير الغرفة وإعادة احتساب الأجرة الفندقية

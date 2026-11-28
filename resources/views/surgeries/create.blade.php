@@ -619,8 +619,37 @@ body {
                             </div>
                         </div>
 
+                        <!-- بطاقة فئة الضمان الصحي الوطني (HI) وحساب الاستقطاع المعتمد آلياً -->
+                        @php
+                            $isPatientMoi = (old('insurance_type', $pInsType) === 'moi');
+                            $isPatientHi = (old('insurance_type', $pInsType) === 'hi');
+                            $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
+                            $hiSurgeryCopay = $patient ? $patient->getCopayPercentageFor('surgery') : 15.0;
+                        @endphp
+                        <div id="hiCopaySection" class="p-3 m-3 border rounded-3 bg-success-subtle border-success-subtle shadow-2xs" style="{{ $isPatientHi ? '' : 'display: none;' }}">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-success text-white px-2.5 py-1.5 fs-7">
+                                        <i class="fas fa-shield-alt me-1"></i> {{ __('هيئة الضمان الصحي الوطني') }}
+                                    </span>
+                                    @if($hiCategory)
+                                        <span class="badge bg-white text-success border border-success fw-bold px-2 py-1 fs-7">
+                                            {{ $hiCategory->name }} ({{ $hiCategory->code }})
+                                        </span>
+                                    @endif
+                                </div>
+                                <span class="badge bg-success fs-7 px-3 py-1.5 fw-bold">
+                                    {{ __('نسبة استقطاع العمليات المعتمدة:') }} {{ (float)$hiSurgeryCopay }}%
+                                </span>
+                            </div>
+                            <div class="small text-muted mt-2">
+                                <i class="fas fa-lock me-1 text-success"></i>
+                                {{ __('نسبة التحمل محددة ومقفلة آلياً وفق فئة الضمان الصحي المعتمدة في سجل المريض، وتُطبق في الكاشير بدقة.') }}
+                            </div>
+                        </div>
+
                         <!-- بطاقة تحديد نسبة تحمل مريض قوى الأمن الداخلي (MOI) وحساب المطالبة اللحظي -->
-                        <div id="moiCopaySection" class="p-3 m-3 border rounded-3 bg-primary-subtle border-primary-subtle shadow-2xs" style="{{ (old('insurance_type', $pInsType) === 'moi') ? '' : 'display: none;' }}">
+                        <div id="moiCopaySection" class="p-3 m-3 border rounded-3 bg-primary-subtle border-primary-subtle shadow-2xs" style="{{ $isPatientMoi ? '' : 'display: none;' }}">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2 pb-2 border-bottom border-primary border-opacity-25">
                                 <span class="badge bg-primary text-white px-2 py-1">
                                     <i class="fas fa-user-shield me-1"></i>
@@ -640,7 +669,7 @@ body {
                                 <div class="col-md-4">
                                     <label class="p-2 rounded-2 border d-flex align-items-center justify-content-between cursor-pointer bg-white h-100" id="tile_copay_15" style="border-width: 2px !important;">
                                         <div class="form-check m-0">
-                                            <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_15" value="15" {{ old('copay_percentage', '15') == '15' ? 'checked' : '' }}>
+                                            <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_15" value="15" {{ old('copay_percentage', '15') == '15' ? 'checked' : '' }} {{ $isPatientMoi ? '' : 'disabled' }}>
                                             <label class="form-check-label fw-bold text-primary cursor-pointer ms-1" for="copay_15">
                                                 {{ __('15% (النسبة القياسية)') }}
                                             </label>
@@ -651,7 +680,7 @@ body {
                                 <div class="col-md-4">
                                     <label class="p-2 rounded-2 border d-flex align-items-center justify-content-between cursor-pointer bg-white h-100" id="tile_copay_0" style="border-width: 2px !important;">
                                         <div class="form-check m-0">
-                                            <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_0" value="0" {{ old('copay_percentage') === '0' ? 'checked' : '' }}>
+                                            <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_0" value="0" {{ old('copay_percentage') === '0' ? 'checked' : '' }} {{ $isPatientMoi ? '' : 'disabled' }}>
                                             <label class="form-check-label fw-bold text-success cursor-pointer ms-1" for="copay_0">
                                                 {{ __('0% (إعفاء كامل - جرحى/شهداء)') }}
                                             </label>
@@ -662,7 +691,7 @@ body {
                                 <div class="col-md-4">
                                     <label class="p-2 rounded-2 border d-flex align-items-center justify-content-between cursor-pointer bg-white h-100" id="tile_copay_100" style="border-width: 2px !important;">
                                         <div class="form-check m-0">
-                                            <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_100" value="100" {{ old('copay_percentage') === '100' ? 'checked' : '' }}>
+                                            <input class="form-check-input moi-copay-radio" type="radio" name="copay_percentage" id="copay_100" value="100" {{ old('copay_percentage') === '100' ? 'checked' : '' }} {{ $isPatientMoi ? '' : 'disabled' }}>
                                             <label class="form-check-label fw-bold text-secondary cursor-pointer ms-1" for="copay_100">
                                                 {{ __('100% (تحمل كامل - خارج التغطية)') }}
                                             </label>
@@ -1106,19 +1135,25 @@ document.addEventListener('DOMContentLoaded', function() {
         function checkMoiVisibility() {
             const isApplyInsurance = $('input[name="apply_insurance"]:checked').val() === '1';
             const isMoi = isApplyInsurance && (patientInsuranceType === 'moi');
+            const isHi = isApplyInsurance && (patientInsuranceType === 'hi');
             
             if (isMoi) {
                 $('#moiCopaySection').slideDown(150);
+                $('#moiCopaySection input[name="copay_percentage"]').prop('disabled', false);
+                $('#hiCopaySection').slideUp(100);
                 $('#bannerInsuranceBadge').removeClass('bg-secondary bg-success').addClass('bg-primary text-white');
                 $('#bannerInsuranceLabel').text('ضمان قوى الأمن الداخلي (MOI)');
                 $('#surgery_insurance_option_text').text('🛡️ حجز تحت مظلة ضمان قوى الأمن الداخلي (MOI)');
             } else {
                 $('#moiCopaySection').slideUp(100);
-                if (isApplyInsurance && patientInsuranceType === 'hi') {
+                $('#moiCopaySection input[name="copay_percentage"]').prop('disabled', true);
+                if (isHi) {
+                    $('#hiCopaySection').slideDown(150);
                     $('#bannerInsuranceBadge').removeClass('bg-secondary bg-primary').addClass('bg-success text-white');
                     $('#bannerInsuranceLabel').text('هيئة الضمان الصحي الوطني');
                     $('#surgery_insurance_option_text').text('🛡️ حجز تحت مظلة هيئة الضمان الصحي الوطني');
-                } else if (!isApplyInsurance) {
+                } else {
+                    $('#hiCopaySection').slideUp(100);
                     $('#bannerInsuranceBadge').removeClass('bg-success bg-primary').addClass('bg-secondary text-white');
                     $('#bannerInsuranceLabel').text('حساب خاص (نقدي)');
                 }

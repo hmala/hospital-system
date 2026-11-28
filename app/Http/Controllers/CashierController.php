@@ -4462,7 +4462,9 @@ class CashierController extends Controller
             $insuranceType = $request->input('insurance_type', $surgery->insurance_type ?? $surgery->patient->insurance_type ?? 'none');
             $patient = $surgery->patient;
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
-            if ($request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== '') {
+            if ($insuranceType === 'hi' && $patient?->healthInsuranceCategory) {
+                $surgeryCopay = (float) $patient->getCopayPercentageFor('surgery');
+            } elseif ($request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== '') {
                 $surgeryCopay = (float) $request->copay_percentage;
             } elseif ($surgery->copay_percentage !== null) {
                 $surgeryCopay = (float) $surgery->copay_percentage;
