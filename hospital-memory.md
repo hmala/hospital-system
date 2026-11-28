@@ -2696,6 +2696,22 @@
   * **حزمة الاختبارات الآلية (`tests/Feature/DoctorReferralToAnotherDoctorTest.php`)**:
     - بناء واجتياز اختبارين يغطيان ظهور الزر دائماً وتحديث حالة الموعد والدور عند التحويل بنجاح تام (`2 passed, 9 assertions`).
 
+- **المرحلة 331 (إصلاح إلغاء وإعادة فتح وصولات العمليات الجراحية، عودة المريض التلقائية لقائمة انتظار الكاشير، وتصحيح تفصيل مبالغ الإيصال Surgery Payment Rebill/Void Cascade, Cashier Pending Return & Receipt Line Items Correction):**
+  * **إصلاح دورة إعادة فتح وإلغاء وصولات العمليات الجراحية (`PaymentVoidController.php`)**:
+    - إضافة معالجة متكاملة لمدفوعات العمليات الجراحية عند إلغاء الوصل أو إعادة فتحه للتصحيح (`void_type: 'rebill'` أو `'refund'`).
+    - تصفير وإعادة تعيين الخدمات الإضافية (`SurgeryExtraService`)، تحاليل العملية (`SurgeryLabTest`)، الأشعة (`SurgeryRadiologyTest`)، والاستشارات (`SurgeryConsultation`) المسددة بالوصل الملغى إلى حالة معلقة `payment_status = 'pending'` وفك ربطها بالوصل `payment_id = null`.
+    - إعادة احتساب المبالغ المسددة لرسوم العملية `surgery_fee_paid_amount` وأجور الغرفة `room_fee_paid_amount` تلقائياً باستبعاد كافة الوصولات المبطلة (`voided_at IS NOT NULL`).
+    - مزامنة الحالة المالية للعملية فورياً عبر `$surgery->syncPaymentStatus()`، وحذف استحقاقات الطبيب الجراح غير المعتمدة من `DoctorDue`.
+  * **معالجة استعلامات المدفوعات في موديل العمليات واستبعاد الوصولات الملغاة (`Surgery.php`)**:
+    - تعديل استعلامات `$this->payments()` في دالتي `calculatePendingItemsBreakdown` و `syncPaymentStatus` بحصرها بالدفعات غير الملغاة فقط عبر `whereNull('voided_at')`.
+    - معالجة مشكلة اختفاء المريضة "ايات حميد" (العملية #99) بعد إعادة فتح الوصل، حيث عادت العملية فورياً للظهور في قائمة كاشير العمليات المعلقة (`has_any_pending_reason = true`).
+  * **إصلاح شاشة وتفاصيل إيصال القبض للعمليات الجراحية ومنع تضخم المبالغ (`cashier/receipt.blade.php`)**:
+    - إزالة الاستعلام العشوائي السابق الذي كان يضيف كافة رسوم العملية الجراحية (450,000) وجميع الخدمات المسددة لمجرد وجود كلمة "رسوم العملية" بالوصف، مما كان يتسبب في إظهار جدول تفصيلي بـ 525,000 د.ع لإيصال قيمته 30,000 د.ع فقط.
+    - قراءة وتفكيك بنود الإيصال الفعلي بدقة من نص `العناصر المدفوعة:` والباقة `included_package_items`، وعرض العناصر التي سددت بالفعل في هذا الوصل المحدد بمبالغها المطابقة 100% لإجمالي الإيصال دون أي تضخم أو خلط.
+  * **الاختبارات وضمان الجودة (`tests/Feature/CashierSurgeryVoidAndReceiptTest.php`)**:
+    - بناء اختبارات ميزة تغطي دورة إعادة الفتح للتصحيح وعودة المريض للكاشير، والتحقق من دقة بنود الإيصال وعدم تضخمها (2 passed, 10 assertions).
+    - فحص وتنسيق الأكواد بأداة `Laravel Pint` (PASS).
+
 - **المرحلة 330 (تشغيل ترحيل جداول مستندات العمليات وحماية المسارات والواجهات من الخطأ القاعدي 1146 Surgery Documents Migration Execution, Defensive Schema Checks & Controller Multi-Document Restoration):**
   * **ترحيل قاعدة البيانات وإنشاء جدول مستندات العمليات (`create_surgery_documents_and_types_tables.php`)**:
     - تشغيل الترحيل المعلق `2026_11_28_132549_create_surgery_documents_and_types_tables` على قاعدة البيانات المحلية وتوليد جدولي `surgery_documents` و `surgery_document_types` بنجاح لمعالجة استثناء `Base table or view not found: 1146 Table 'hospital_pho.surgery_documents' doesn't exist`.

@@ -752,7 +752,7 @@ class Surgery extends Model
         $surgeryPaidAmount = (float) ($this->surgery_fee_paid_amount ?? 0);
         $remainingSurgeryFee = $isCancelled ? 0.0 : max(0.0, $totalSurgeryFee - $surgeryPaidAmount);
         $excessSurgeryFee = $isCancelled
-            ? max(0.0, (float) $this->payments()->sum('amount'))
+            ? max(0.0, (float) $this->payments()->whereNull('voided_at')->sum('amount'))
             : max(0.0, $surgeryPaidAmount - $totalSurgeryFee);
 
         $stayDetails = $this->calculateStayDetails($asOfTime);
@@ -789,7 +789,7 @@ class Surgery extends Model
             || $pendingExtraServices->isNotEmpty()
         );
 
-        $hasRefundDue = ($isCancelled && (($surgeryPaidAmount + $roomPaidAmount) > 0 || $this->payments()->where('amount', '>', 0)->exists()))
+        $hasRefundDue = ($isCancelled && (($surgeryPaidAmount + $roomPaidAmount) > 0 || $this->payments()->whereNull('voided_at')->where('amount', '>', 0)->exists()))
             || (! $isCancelled && ($excessSurgeryFee > 0 || $excessRoomFee > 0));
 
         return [
@@ -873,7 +873,7 @@ class Surgery extends Model
 
         $hasAnyPaidItem = $breakdown['surgery_paid_amount'] > 0
             || $breakdown['room_paid_amount'] > 0
-            || $this->payments()->where('amount', '>', 0)->exists()
+            || $this->payments()->whereNull('voided_at')->where('amount', '>', 0)->exists()
             || $this->labTests()->where('payment_status', 'paid')->exists()
             || $this->radiologyTests()->where('payment_status', 'paid')->exists()
             || $this->extraServices()->where('payment_status', 'paid')->exists()
@@ -930,7 +930,7 @@ class Surgery extends Model
             return;
         }
 
-        $payment = $this->payments()->where('payment_type', 'surgery')->latest()->first();
+        $payment = $this->payments()->whereNull('voided_at')->where('payment_type', 'surgery')->latest()->first();
         if (! $payment) {
             return;
         }

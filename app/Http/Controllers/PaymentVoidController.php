@@ -237,6 +237,77 @@ class PaymentVoidController extends Controller
                             ->update(['status' => 'pending_payment']);
                     }
                 }
+
+                // د) العمليات الجراحية (Surgeries - إعادة الفتح للتصحيح)
+                $surgery = $payment->surgery;
+                if (! $surgery && $payment->surgery_id) {
+                    $surgery = \App\Models\Surgery::find($payment->surgery_id);
+                }
+                if (! $surgery && $payment->payment_type === 'surgery' && preg_match('/ID: #(\d+)/', $payment->description, $sMatches)) {
+                    $surgery = \App\Models\Surgery::find($sMatches[1]);
+                }
+
+                if ($surgery) {
+                    // إعادة الخدمات الإضافية المسددة بهذا الوصل لحالة معلقة
+                    \App\Models\SurgeryExtraService::where('payment_id', $payment->id)
+                        ->orWhere(function ($q) use ($surgery, $payment) {
+                            $q->where('surgery_id', $surgery->id)
+                                ->where('payment_id', $payment->id);
+                        })
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    // إعادة تحاليل وفحوصات واستشارات العملية المسددة بهذا الوصل
+                    \App\Models\SurgeryLabTest::where('surgery_id', $surgery->id)
+                        ->where('payment_id', $payment->id)
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    \App\Models\SurgeryRadiologyTest::where('surgery_id', $surgery->id)
+                        ->where('payment_id', $payment->id)
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    \App\Models\SurgeryConsultation::where('surgery_id', $surgery->id)
+                        ->where('payment_id', $payment->id)
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    // إعادة احتساب مبالغ رسم العملية والغرفة بعد استبعاد هذا الوصل وكافة الوصولات المبطلة
+                    $otherValidPayments = \App\Models\Payment::where('surgery_id', $surgery->id)
+                        ->where('id', '!=', $payment->id)
+                        ->whereNull('voided_at')
+                        ->where('payment_type', 'surgery')
+                        ->get();
+
+                    if ($otherValidPayments->isEmpty()) {
+                        $surgery->update([
+                            'surgery_fee_paid_amount' => 0,
+                            'surgery_fee_paid' => 'pending',
+                            'room_fee_paid_amount' => 0,
+                            'payment_status' => 'pending',
+                        ]);
+                    } else {
+                        $recalcSurgeryPaid = 0.0;
+                        $recalcRoomPaid = 0.0;
+                        foreach ($otherValidPayments as $vp) {
+                            if (preg_match('/رسوم العملية الجراحية.+?- مدفوع:\s*([\d,]+)\s*د\.ع/', $vp->description, $spm)) {
+                                $recalcSurgeryPaid += (float) str_replace(',', '', $spm[1]);
+                            }
+                            if (preg_match('/أجور (?:الإقامة و)?الغرفة.+?- مدفوع:\s*([\d,]+)\s*د\.ع/', $vp->description, $rpm)) {
+                                $recalcRoomPaid += (float) str_replace(',', '', $rpm[1]);
+                            }
+                        }
+                        $totalSurgFee = $surgery->getTotalSurgeryPatientFee();
+                        $surgery->update([
+                            'surgery_fee_paid_amount' => $recalcSurgeryPaid,
+                            'surgery_fee_paid' => $recalcSurgeryPaid >= $totalSurgFee && $totalSurgFee > 0 ? 'paid' : ($recalcSurgeryPaid > 0 ? 'partial' : 'pending'),
+                            'room_fee_paid_amount' => $recalcRoomPaid,
+                        ]);
+                    }
+
+                    // مزامنة الحالة المالية للعملية
+                    $surgery->refresh()->syncPaymentStatus();
+
+                    // إلغاء استحقاقات الطبيب الجراح في جدول DoctorDue المرتبطة بهذا الوصل
+                    \App\Models\DoctorDue::where('payment_id', $payment->id)->delete();
+                }
             } else {
                 // حالة الاسترداد والإلغاء النهائي:
                 $payment->update([
@@ -280,6 +351,71 @@ class PaymentVoidController extends Controller
                             'details' => $rDetails,
                         ]);
                     }
+                }
+
+                // د) العمليات الجراحية (Surgeries - استرداد نقدي وإلغاء الرصيد المسدد)
+                $surgery = $payment->surgery;
+                if (! $surgery && $payment->surgery_id) {
+                    $surgery = \App\Models\Surgery::find($payment->surgery_id);
+                }
+                if (! $surgery && $payment->payment_type === 'surgery' && preg_match('/ID: #(\d+)/', $payment->description, $sMatches)) {
+                    $surgery = \App\Models\Surgery::find($sMatches[1]);
+                }
+
+                if ($surgery) {
+                    \App\Models\SurgeryExtraService::where('payment_id', $payment->id)
+                        ->orWhere(function ($q) use ($surgery, $payment) {
+                            $q->where('surgery_id', $surgery->id)
+                                ->where('payment_id', $payment->id);
+                        })
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    \App\Models\SurgeryLabTest::where('surgery_id', $surgery->id)
+                        ->where('payment_id', $payment->id)
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    \App\Models\SurgeryRadiologyTest::where('surgery_id', $surgery->id)
+                        ->where('payment_id', $payment->id)
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    \App\Models\SurgeryConsultation::where('surgery_id', $surgery->id)
+                        ->where('payment_id', $payment->id)
+                        ->update(['payment_status' => 'pending', 'payment_id' => null]);
+
+                    $otherValidPayments = \App\Models\Payment::where('surgery_id', $surgery->id)
+                        ->where('id', '!=', $payment->id)
+                        ->whereNull('voided_at')
+                        ->where('payment_type', 'surgery')
+                        ->get();
+
+                    if ($otherValidPayments->isEmpty()) {
+                        $surgery->update([
+                            'surgery_fee_paid_amount' => 0,
+                            'surgery_fee_paid' => 'pending',
+                            'room_fee_paid_amount' => 0,
+                            'payment_status' => 'pending',
+                        ]);
+                    } else {
+                        $recalcSurgeryPaid = 0.0;
+                        $recalcRoomPaid = 0.0;
+                        foreach ($otherValidPayments as $vp) {
+                            if (preg_match('/رسوم العملية الجراحية.+?- مدفوع:\s*([\d,]+)\s*د\.ع/', $vp->description, $spm)) {
+                                $recalcSurgeryPaid += (float) str_replace(',', '', $spm[1]);
+                            }
+                            if (preg_match('/أجور (?:الإقامة و)?الغرفة.+?- مدفوع:\s*([\d,]+)\s*د\.ع/', $vp->description, $rpm)) {
+                                $recalcRoomPaid += (float) str_replace(',', '', $rpm[1]);
+                            }
+                        }
+                        $totalSurgFee = $surgery->getTotalSurgeryPatientFee();
+                        $surgery->update([
+                            'surgery_fee_paid_amount' => $recalcSurgeryPaid,
+                            'surgery_fee_paid' => $recalcSurgeryPaid >= $totalSurgFee && $totalSurgFee > 0 ? 'paid' : ($recalcSurgeryPaid > 0 ? 'partial' : 'pending'),
+                            'room_fee_paid_amount' => $recalcRoomPaid,
+                        ]);
+                    }
+
+                    $surgery->refresh()->syncPaymentStatus();
+                    \App\Models\DoctorDue::where('payment_id', $payment->id)->delete();
                 }
             }
 

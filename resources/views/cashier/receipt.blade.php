@@ -400,52 +400,218 @@
             if ($surgery) {
                 $surgDoc = $surgery->doctor?->user?->name ? (__('د.') . ' ' . $surgery->doctor->user->name) : ($surgery->surgeon_name ?: __('جراحة'));
                 
-                // رسوم العملية
-                if (str_contains($payment->description ?? '', 'رسوم العملية')) {
-                    $surgFee = (float)$surgery->surgery_fee;
-                    $pat = $isInsured ? round($surgFee * ($copayPct / 100)) : $surgFee;
-                    $lineItems[] = [
-                        'name' => __('رسوم العملية الجراحية:') . ' ' . $surgery->surgery_type,
-                        'category' => __('عمليات'),
-                        'doctor' => $surgDoc,
-                        'approved' => $surgFee,
-                        'patient' => $pat,
-                        'insurance' => max(0, $surgFee - $pat),
-                    ];
-                }
+                $pkgItems = is_array($payment->included_package_items) ? $payment->included_package_items : (json_decode($payment->included_package_items, true) ?: []);
 
-                // رسوم الغرفة والإقامة
-                if (str_contains($payment->description ?? '', 'أجور الغرفة')) {
-                    $roomFee = (float)$surgery->room_fee;
-                    $pat = $isInsured ? round($roomFee * ($copayPct / 100)) : $roomFee;
-                    $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - ' . __('رقم') . ' ' . $surgery->room->room_number . ')') : '';
-                    $lineItems[] = [
-                        'name' => __('أجور الإقامة والغرفة') . $roomInfo,
-                        'category' => __('إقامة وفندقة'),
-                        'doctor' => $surgDoc,
-                        'approved' => $roomFee,
-                        'patient' => $pat,
-                        'insurance' => max(0, $roomFee - $pat),
-                    ];
-                }
+                if (preg_match('/العناصر المدفوعة:\n(.+)/s', $payment->description ?? '', $descMatches)) {
+                    $itemLines = explode("\n", trim($descMatches[1]));
+                    foreach ($itemLines as $line) {
+                        $line = trim(str_replace('- ', '', $line));
+                        if (empty($line) || str_starts_with($line, 'تغطية الضمان:') || str_starts_with($line, 'حصة المريض:') || str_starts_with($line, 'نوع التسديد:') || str_starts_with($line, 'طريقة السداد:')) {
+                            continue;
+                        }
 
-                // الخدمات الإضافية الملحقة المسددة بهذا الإيصال
-                $paidExtraServices = \App\Models\SurgeryExtraService::where('surgery_id', $surgery->id)
-                    ->where(function ($q) use ($payment) {
-                        $q->where('payment_id', $payment->id)
-                          ->orWhere('payment_status', 'paid');
-                    })
-                    ->get();
-                foreach ($paidExtraServices as $extraSvc) {
-                    $eTotal = (float)$extraSvc->total_amount;
-                    $lineItems[] = [
-                        'name' => __('خدمة إضافية:') . ' ' . $extraSvc->name . ($extraSvc->quantity > 1 ? " (×{$extraSvc->quantity})" : '') . ($extraSvc->notes ? ' - ' . $extraSvc->notes : ''),
-                        'category' => __('خدمات إضافية وفندقية'),
-                        'doctor' => $surgDoc,
-                        'approved' => $eTotal,
-                        'patient' => $eTotal,
-                        'insurance' => 0,
-                    ];
+                        // 1. رسوم العملية الجراحية
+                        if (str_contains($line, 'رسوم العملية الجراحية')) {
+                            $paid = 0.0;
+                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
+                                $paid = (float)str_replace(',', '', $pm[1]);
+                            } else {
+                                $paid = (float)($surgery->surgery_fee ?? $payment->amount);
+                            }
+                            
+                            $appr = $paid;
+                            if ($isInsured && $copayPct > 0) {
+                                $pat = round($appr * ($copayPct / 100));
+                                $ins = max(0, $appr - $pat);
+                            } else {
+                                $pat = $paid;
+                                $ins = 0;
+                            }
+
+                            $lineItems[] = [
+                                'name' => __('رسوم العملية الجراحية:') . ' ' . $surgery->surgery_type,
+                                'category' => __('عمليات'),
+                                'doctor' => $surgDoc,
+                                'approved' => $appr,
+                                'patient' => $pat,
+                                'insurance' => $ins,
+                            ];
+                        }
+                        // 2. أجور الغرفة والإقامة
+                        elseif (str_contains($line, 'أجور الغرفة') || str_contains($line, 'أجور الإقامة')) {
+                            $isPkg = (str_contains($line, 'مشمولة') || str_contains($line, '0 د.ع')) && ! preg_match('/مدفوع:\s*[1-9]/u', $line);
+                            $paid = 0.0;
+                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $pm)) {
+                                $paid = (float)str_replace(',', '', $pm[1]);
+                            }
+                            $roomInfo = $surgery->room ? (' (' . $surgery->room->room_type_name . ' - ' . __('رقم') . ' ' . $surgery->room->room_number . ')') : '';
+
+                            $lineItems[] = [
+                                'name' => __('أجور الإقامة والغرفة') . $roomInfo . ($isPkg ? ' (' . __('مشمولة بالباقة') . ')' : ''),
+                                'category' => __('إقامة وفندقة'),
+                                'doctor' => $surgDoc,
+                                'approved' => $paid,
+                                'patient' => $paid,
+                                'insurance' => 0,
+                            ];
+                        }
+                        // 3. خدمة إضافية
+                        elseif (str_contains($line, 'خدمة إضافية:')) {
+                            $rawClean = preg_replace('/^خدمة إضافية:\s*/u', '', $line);
+                            $isPkg = (str_contains($line, 'مشمولة') || str_contains($line, '0 د.ع')) && ! preg_match('/مدفوع:\s*[1-9]/u', $line);
+                            
+                            $paid = 0.0;
+                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $em)) {
+                                $paid = (float)str_replace(',', '', $em[1]);
+                            }
+
+                            $svcTitle = preg_replace('/\s*-\s*مدفوع.*$/u', '', $rawClean);
+                            $svcTitle = preg_replace('/\s*\(مشمولة.*$/u', '', $svcTitle);
+                            $svcTitle = trim($svcTitle);
+                            
+                            $appr = $paid;
+                            $ins = 0.0;
+                            $pat = $paid;
+
+                            if ($isPkg) {
+                                foreach ($pkgItems as $pi) {
+                                    if (($pi['type'] ?? '') === 'extra' && (str_contains($pi['name'] ?? '', $svcTitle) || str_contains($svcTitle, $pi['name'] ?? ''))) {
+                                        $pkgPrice = (float)($pi['price'] ?? 0);
+                                        if (($pi['bearer'] ?? '') === 'insurance') {
+                                            $appr = $pkgPrice;
+                                            $ins = $pkgPrice;
+                                            $pat = 0.0;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            $lineItems[] = [
+                                'name' => __('خدمة إضافية:') . ' ' . $svcTitle . ($isPkg ? ' (' . __('مشمولة بالباقة') . ')' : ''),
+                                'category' => __('خدمات إضافية وفندقية'),
+                                'doctor' => $surgDoc,
+                                'approved' => $appr,
+                                'patient' => $pat,
+                                'insurance' => $ins,
+                            ];
+                        }
+                        // 4. تحاليل
+                        elseif (str_contains($line, 'تحليل:')) {
+                            $rawClean = preg_replace('/^تحليل:\s*/u', '', $line);
+                            $isPkg = (str_contains($line, 'مشمول') || str_contains($line, '0 د.ع')) && ! preg_match('/مدفوع:\s*[1-9]/u', $line);
+                            $paid = 0.0;
+                            if (preg_match('/([\d,]+)\s*د\.ع/', $line, $lm)) {
+                                $paid = (float)str_replace(',', '', $lm[1]);
+                            }
+                            $svcTitle = preg_replace('/\s*\(.*$/u', '', $rawClean);
+                            $svcTitle = trim($svcTitle);
+
+                            $appr = $paid;
+                            $ins = 0.0;
+                            $pat = $paid;
+
+                            if ($isPkg) {
+                                foreach ($pkgItems as $pi) {
+                                    if (($pi['type'] ?? '') === 'lab' && (str_contains($pi['name'] ?? '', $svcTitle) || str_contains($svcTitle, $pi['name'] ?? ''))) {
+                                        $pkgPrice = (float)($pi['price'] ?? 0);
+                                        if (($pi['bearer'] ?? '') === 'insurance') {
+                                            $appr = $pkgPrice;
+                                            $ins = $pkgPrice;
+                                            $pat = 0.0;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            $lineItems[] = [
+                                'name' => __('تحليل:') . ' ' . $svcTitle . ($isPkg ? ' (' . __('مشمول بالباقة') . ')' : ''),
+                                'category' => __('تحاليل مختبرية'),
+                                'doctor' => $surgDoc,
+                                'approved' => $appr,
+                                'patient' => $pat,
+                                'insurance' => $ins,
+                            ];
+                        }
+                        // 5. أشعة
+                        elseif (str_contains($line, 'أشعة:')) {
+                            $rawClean = preg_replace('/^أشعة:\s*/u', '', $line);
+                            $isPkg = (str_contains($line, 'مشمولة') || str_contains($line, '0 د.ع')) && ! preg_match('/مدفوع:\s*[1-9]/u', $line);
+                            $paid = 0.0;
+                            if (preg_match('/([\d,]+)\s*د\.ع/', $line, $rm)) {
+                                $paid = (float)str_replace(',', '', $rm[1]);
+                            }
+                            $svcTitle = preg_replace('/\s*\(.*$/u', '', $rawClean);
+                            $svcTitle = trim($svcTitle);
+
+                            $appr = $paid;
+                            $ins = 0.0;
+                            $pat = $paid;
+
+                            if ($isPkg) {
+                                foreach ($pkgItems as $pi) {
+                                    if (($pi['type'] ?? '') === 'radiology' && (str_contains($pi['name'] ?? '', $svcTitle) || str_contains($svcTitle, $pi['name'] ?? ''))) {
+                                        $pkgPrice = (float)($pi['price'] ?? 0);
+                                        if (($pi['bearer'] ?? '') === 'insurance') {
+                                            $appr = $pkgPrice;
+                                            $ins = $pkgPrice;
+                                            $pat = 0.0;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            $lineItems[] = [
+                                'name' => __('أشعة:') . ' ' . $svcTitle . ($isPkg ? ' (' . __('مشمولة بالباقة') . ')' : ''),
+                                'category' => __('أشعة وتصوير'),
+                                'doctor' => $surgDoc,
+                                'approved' => $appr,
+                                'patient' => $pat,
+                                'insurance' => $ins,
+                            ];
+                        }
+                        // 6. استشارة
+                        elseif (str_contains($line, 'استشارة سريرية:')) {
+                            $rawClean = preg_replace('/^استشارة سريرية:\s*/u', '', $line);
+                            $isPkg = (str_contains($line, 'مشمولة') || str_contains($line, '0 د.ع')) && ! preg_match('/مدفوع:\s*[1-9]/u', $line);
+                            $paid = 0.0;
+                            if (preg_match('/مدفوع:\s*([\d,]+)\s*د\.ع/', $line, $cm)) {
+                                $paid = (float)str_replace(',', '', $cm[1]);
+                            }
+                            $svcTitle = preg_replace('/\s*-\s*مدفوع.*$/u', '', $rawClean);
+                            $svcTitle = preg_replace('/\s*\(.*$/u', '', $svcTitle);
+                            $svcTitle = trim($svcTitle);
+
+                            $appr = $paid;
+                            $ins = 0.0;
+                            $pat = $paid;
+
+                            if ($isPkg) {
+                                foreach ($pkgItems as $pi) {
+                                    if (($pi['type'] ?? '') === 'consultation' && (str_contains($pi['name'] ?? '', $svcTitle) || str_contains($svcTitle, $pi['name'] ?? ''))) {
+                                        $pkgPrice = (float)($pi['price'] ?? 0);
+                                        if (($pi['bearer'] ?? '') === 'insurance') {
+                                            $appr = $pkgPrice;
+                                            $ins = $pkgPrice;
+                                            $pat = 0.0;
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+
+                            $lineItems[] = [
+                                'name' => __('استشارة سريرية:') . ' ' . $svcTitle . ($isPkg ? ' (' . __('مشمولة بالباقة') . ')' : ''),
+                                'category' => __('استشارة طبية'),
+                                'doctor' => $surgDoc,
+                                'approved' => $appr,
+                                'patient' => $pat,
+                                'insurance' => $ins,
+                            ];
+                        }
+                    }
                 }
             }
         }
