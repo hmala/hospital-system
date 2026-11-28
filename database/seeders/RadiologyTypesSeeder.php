@@ -197,6 +197,18 @@ class RadiologyTypesSeeder extends Seeder
             ['main_category' => 'سونار', 'subcategory' => 'سونار', 'name' => 'سونار مفاصل', 'code' => 'US-046', 'base_price' => 50000, 'estimated_duration' => 25],
             ['main_category' => 'سونار', 'subcategory' => 'سونار', 'name' => 'سونار ملون للساقين', 'code' => 'US-047', 'base_price' => 120000, 'estimated_duration' => 35],
             ['main_category' => 'سونار', 'subcategory' => 'سونار', 'name' => 'سونار يوم الجمعة أستدعاء', 'code' => 'US-048', 'base_price' => 50000, 'estimated_duration' => 20],
+
+            // إيكو القلب (Echocardiography)
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'فحص إيكو القلب اعتيادي (Echocardiography Routine)', 'code' => 'ECHO-001', 'base_price' => 60000, 'estimated_duration' => 20],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'فحص إيكو القلب استدعاء طارئ (Echocardiography Emergency On-Call)', 'code' => 'ECHO-002', 'base_price' => 60000, 'estimated_duration' => 20],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'فحص إيكو دوبلر ملون للقلب والأوعية (Color Doppler Echo)', 'code' => 'ECHO-003', 'base_price' => 75000, 'estimated_duration' => 25],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'إيكو القلب عبر المريء (TEE - Transesophageal Echocardiography)', 'code' => 'ECHO-004', 'base_price' => 120000, 'estimated_duration' => 40],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'إيكو القلب للأطفال والتشوهات الولادية (Pediatric Echocardiography)', 'code' => 'ECHO-005', 'base_price' => 75000, 'estimated_duration' => 25],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'إيكو القلب مع الجهد الدوائي (Stress Echocardiography)', 'code' => 'ECHO-006', 'base_price' => 100000, 'estimated_duration' => 35],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'فحص إيكو القلب اعتيادي (Echocardiography)', 'code' => 'RAD-2026-058', 'base_price' => 60000, 'estimated_duration' => 20],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'فحص إيكو القلب استدعاء طارئ (Echocardiography On-Call)', 'code' => 'RAD-2026-059', 'base_price' => 60000, 'estimated_duration' => 20],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'فحص إيكو القلب اعتيادي (ECHO-ROUTINE)', 'code' => 'ECHO-ROUTINE', 'base_price' => 60000, 'estimated_duration' => 20],
+            ['main_category' => 'إيكو', 'subcategory' => 'إيكو', 'name' => 'فحص إيكو القلب استدعاء (ECHO-ONCALL)', 'code' => 'ECHO-ONCALL', 'base_price' => 60000, 'estimated_duration' => 20],
         ];
 
         $hasInsuranceCols = \Illuminate\Support\Facades\Schema::hasColumn('radiology_types', 'hi_price');
