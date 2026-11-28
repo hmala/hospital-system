@@ -39,15 +39,17 @@
 
                 <!-- فلتر نطاق التاريخ للمقبوضات المعلقة والبحث المباشر -->
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <form method="GET" action="{{ route('cashier.index') }}" class="d-flex align-items-center gap-2">
+                    <form method="GET" action="{{ route('cashier.index') }}" class="d-flex align-items-center gap-2" id="cashierSearchForm">
                         <input type="hidden" name="date_filter" value="{{ $dateFilter ?? 'today' }}">
-                        <div class="input-group input-group-sm shadow-sm" style="min-width: 240px;">
-                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                            <input type="text" name="search" class="form-control border-start-0" placeholder="{{ __("بحث باسم المريض، الهاتف، رقم الوصل...") }}" value="{{ $search ?? '' }}">
+                        @if(($dateFilter ?? '') === 'custom' && !empty($customDate))
+                            <input type="hidden" name="custom_date" value="{{ $customDate }}">
+                        @endif
+                        <div class="input-group input-group-sm shadow-sm" style="min-width: 270px;">
+                            <span class="input-group-text bg-white border-end-0 text-primary"><i class="fas fa-search"></i></span>
+                            <input type="text" name="search" id="cashierSearchInput" class="form-control border-start-0 border-end-0" placeholder="{{ __("بحث فوري بالمريض، الهاتف، رقم الوصل...") }}" value="{{ $search ?? '' }}" autocomplete="off">
                             @if(!empty($search))
-                                <a href="{{ route('cashier.index', ['date_filter' => $dateFilter ?? 'today', 'custom_date' => $customDate ?? '']) }}" class="btn btn-outline-secondary"><i class="fas fa-times"></i></a>
+                                <a href="{{ route('cashier.index', ['date_filter' => $dateFilter ?? 'today', 'custom_date' => $customDate ?? '']) }}" class="btn btn-white border-start-0 text-danger bg-white" title="{{ __('مسح البحث') }}"><i class="fas fa-times-circle"></i></a>
                             @endif
-                            <button type="submit" class="btn btn-primary fw-bold px-3">{{ __("بحث") }}</button>
                         </div>
                     </form>
 
@@ -2286,6 +2288,28 @@ $(document).on('click', '.filter-finance-btn', function() {
         }
     }
 });
+
+// البحث الفوري التلقائي الذكي لمحطة الكاشير بدون الحاجة لزر بحث
+let cashierSearchTimer = null;
+const cashierSearchInput = document.getElementById('cashierSearchInput');
+const cashierSearchForm = document.getElementById('cashierSearchForm');
+
+if (cashierSearchInput && cashierSearchForm) {
+    cashierSearchInput.addEventListener('input', function() {
+        clearTimeout(cashierSearchTimer);
+        const val = this.value;
+        const delay = val.trim() === '' ? 250 : 500;
+        cashierSearchTimer = setTimeout(() => {
+            cashierSearchForm.submit();
+        }, delay);
+    });
+
+    if (cashierSearchInput.value) {
+        cashierSearchInput.focus();
+        const len = cashierSearchInput.value.length;
+        cashierSearchInput.setSelectionRange(len, len);
+    }
+}
 </script>
 
 <style>

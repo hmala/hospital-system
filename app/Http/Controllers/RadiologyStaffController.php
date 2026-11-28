@@ -118,8 +118,7 @@ class RadiologyStaffController extends Controller
                         $pq->where('name', 'LIKE', "%{$search}%");
                     })
                     ->orWhereHas('visit.patient', function ($pq) use ($search) {
-                        $pq->where('medical_number', 'LIKE', "%{$search}%")
-                            ->orWhere('phone', 'LIKE', "%{$search}%");
+                        $pq->where('national_id', 'LIKE', "%{$search}%");
                     })
                     ->orWhereHas('visit.doctor.user', function ($dq) use ($search) {
                         $dq->where('name', 'LIKE', "%{$search}%");
@@ -252,7 +251,7 @@ class RadiologyStaffController extends Controller
                 $q->where('id', $search)
                     ->orWhere('description', 'LIKE', "%{$search}%")
                     ->orWhereHas('visit.patient.user', fn ($pq) => $pq->where('name', 'LIKE', "%{$search}%"))
-                    ->orWhereHas('visit.patient', fn ($pq) => $pq->where('medical_number', 'LIKE', "%{$search}%")->orWhere('phone', 'LIKE', "%{$search}%"))
+                    ->orWhereHas('visit.patient', fn ($pq) => $pq->where('national_id', 'LIKE', "%{$search}%"))
                     ->orWhereHas('visit.doctor.user', fn ($dq) => $dq->where('name', 'LIKE', "%{$search}%"));
             });
         }
@@ -525,7 +524,7 @@ class RadiologyStaffController extends Controller
                     'name' => $p?->name ?? $p?->user?->name ?? 'مريض',
                     'gender' => $p?->gender === 'male' ? 'ذكر' : ($p?->gender === 'female' ? 'أنثى' : ''),
                     'age' => $p?->age,
-                    'medical_number' => $p?->medical_number,
+                    'medical_number' => $p?->national_id ?? ('MRN-'.str_pad($p?->id ?? 0, 5, '0', STR_PAD_LEFT)),
                     'radiology_names' => $r->radiology_names ?: [$r->description ?: 'فحص تصوير'],
                     'subtype' => $r->subtype,
                     'doctor_name' => $r->visit?->doctor?->user?->name ?? 'الاستشارية',

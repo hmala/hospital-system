@@ -56,6 +56,20 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 329: إصلاح استعلامات بحث الكاشير وتفعيل البحث الفوري التلقائي الذكي Cashier Search Exception Fix & Real-time Live Debounced Search)
+
+### Done
+- **إصلاح خطأ `Unknown column 'medical_number'` ([CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+  * تصحيح استعلامات البحث في جدول حواضن الخدج `incubator_reservations`، العناية المركزة `icu_admissions`، وفواتير الصيدلية `pharmacy_sales` باستبدال العمود غير الموجود `medical_number` بالحقل المعياري `national_id` (الرقم الوطني / رقم الهوية)، والبحث في علاقة `patient.user` بالاسم ورقم الهاتف.
+  * تصحيح استعلامات محطة الأشعة والسونار في `RadiologyStaffController.php` وتوحيدها مع الموديل.
+- **تفعيل البحث الفوري الذكي (Real-time Instant Search) لشاشة الكاشير ([cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+  * إزالة زر "بحث" التقليدي استجابة لطلب المستخدم، والتحول إلى البحث الفوري التلقائي.
+  * إضافة محرك ارتداد وتأخير ذكي (Debounce Timer 450ms) يُطلق البحث تلقائياً بمجرد توقف المستخدم عن الكتابة دون الحاجة لضغط زر أو مفتاح Enter.
+  * إعادة تحميل النتائج الفورية عند مسح الحقل (250ms) أو النقر على زر الإلغاء السريع `[ ✖ ]`.
+  * الحفاظ التلقائي على تركيز مؤشر الكتابة داخل الحقل بعد التحديث لتمكين الكاشير من استكمال الكتابة بسلاسة تامة.
+- **ضمان الجودة والاختبارات البرمجية ([CashierSearchQueryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierSearchQueryTest.php))**:
+  * بناء اختبار برمجي مخصص لفحص استعلامات الكاشير النصية والتأكد من استقرار صفحة الكاشير عند البحث عن النصوص والأسماء العربية مثل "حسين" (1 test, 2 assertions passed).
+
 ## Session log (2026-11-28 — المرحلة 328: فصل تبويبات العمليات الموحدة، التبديل الذري للغرف، الإخلاء لوضع الانتظار، واستعادة المرضى من التخريج Master Surgery Table Tabs Isolation, Atomic Room Swap, Waiting Zone Evacuation & Undo Discharge Flow)
 
 ### Done

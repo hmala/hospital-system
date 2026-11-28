@@ -428,7 +428,7 @@ class CashierController extends Controller
                 $q->where('id', $search)
                     ->orWhere('baby_name', 'like', "%{$search}%")
                     ->orWhereHas('patient.user', fn ($qu) => $qu->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
-                    ->orWhereHas('patient', fn ($qp) => $qp->where('medical_number', 'like', "%{$search}%"));
+                    ->orWhereHas('patient', fn ($qp) => $qp->where('national_id', 'like', "%{$search}%"));
             });
         }
 
@@ -478,7 +478,7 @@ class CashierController extends Controller
             $icuAdmissionsQuery->where(function ($q) use ($search) {
                 $q->where('id', $search)
                     ->orWhereHas('patient.user', fn ($qu) => $qu->where('name', 'like', "%{$search}%")->orWhere('phone', 'like', "%{$search}%"))
-                    ->orWhereHas('patient', fn ($qp) => $qp->where('national_id', 'like', "%{$search}%")->orWhere('medical_number', 'like', "%{$search}%"));
+                    ->orWhereHas('patient', fn ($qp) => $qp->where('national_id', 'like', "%{$search}%"));
             });
         }
 
@@ -538,8 +538,7 @@ class CashierController extends Controller
                             ->orWhere('phone', 'like', "%{$search}%");
                     })
                     ->orWhereHas('patient', function ($qp) use ($search) {
-                        $qp->where('national_id', 'like', "%{$search}%")
-                            ->orWhere('medical_number', 'like', "%{$search}%");
+                        $qp->where('national_id', 'like', "%{$search}%");
                     });
             });
         }

@@ -79,7 +79,19 @@
 
 ## 4. الحالة الحالية للمشروع (Current Project State)
 
-- **المرحلة 327 (2026-11-28 — `main`) — فصل تبويبات العمليات (النشطة، المكتملة بالصالة، المخرّجون، الملغاة)، التبديل الذري للغرف، الإخلاء لوضع الانتظار، واستعادة المرضى من التخريج (Surgery Table Tabs Isolation, Atomic Room Swap, Waiting Zone Evacuation & Undo Discharge Flow)**:
+- **المرحلة 329 (2026-11-28 — `main`) — إصلاح استعلامات بحث الكاشير وتفعيل البحث الفوري التلقائي الذكي (Cashier Search Exception Fix & Real-time Live Debounced Search)**:
+  * **إصلاح خطأ `Unknown column 'medical_number'` ([CashierController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/CashierController.php), [RadiologyStaffController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/RadiologyStaffController.php))**:
+    - تصحيح استعلامات البحث في جدول حواضن الخدج `incubator_reservations`، العناية المركزة `icu_admissions`، وفواتير الصيدلية `pharmacy_sales` باستبدال العمود غير الموجود `medical_number` بالحقل المعياري `national_id` (الرقم الوطني / رقم الهوية)، والبحث في علاقة `patient.user` بالاسم ورقم الهاتف.
+    - تصحيح استعلامات محطة الأشعة والسونار في `RadiologyStaffController.php` وتوحيدها.
+  * **تفعيل البحث الفوري الذكي (Real-time Instant Search) لشاشة الكاشير ([cashier/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/cashier/index.blade.php))**:
+    - إزالة زر "بحث" التقليدي استجابة لطلب المستخدم، والتحول إلى البحث الفوري التلقائي.
+    - إضافة محرك ارتداد وتأخير ذكي (Debounce Timer 450ms) يُطلق البحث تلقائياً بمجرد توقف المستخدم عن الكتابة دون الحاجة لضغط زر أو مفتاح Enter.
+    - إعادة تحميل النتائج الفورية عند مسح الحقل (250ms) أو النقر على زر الإلغاء السريع `[ ✖ ]`.
+    - الحفاظ التلقائي على تركيز مؤشر الكتابة داخل الحقل بعد التحديث لتمكين الكاشير من استكمال الكتابة بسلاسة تامة.
+  * **ضمان الجودة والاختبارات البرمجية ([CashierSearchQueryTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/CashierSearchQueryTest.php))**:
+    - بناء اختبار برمجي مخصص لفحص استعلامات الكاشير النصية والتأكد من استقرار صفحة الكاشير عند البحث عن النصوص والأسماء العربية مثل "حسين" (1 test, 2 assertions passed).
+
+- **المرحلة 328 (2026-11-28 — `main`) — فصل تبويبات العمليات (النشطة، المكتملة بالصالة، المخرّجون، الملغاة)، التبديل الذري للغرف، الإخلاء لوضع الانتظار، واستعادة المرضى من التخريج (Surgery Table Tabs Isolation, Atomic Room Swap, Waiting Zone Evacuation & Undo Discharge Flow)**:
   * **عزل وفصل تبويبات جدول العمليات الجراحية الموحد ([surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php), [SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php))**:
     - فصل جدول العمليات إلى 4 تبويبات مستقلة تماماً بشارات أعداد مخصصة:
       1. `[ 🟢 العمليات النشطة ]` (`active`): العمليات المجدولة والمنتظرة والجارية داخل المسار الجراحي.
