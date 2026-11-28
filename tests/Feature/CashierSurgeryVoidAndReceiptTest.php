@@ -232,4 +232,27 @@ class CashierSurgeryVoidAndReceiptTest extends TestCase
         // Verify patient is now visible in the list
         $response->assertSee($this->patient->user->name);
     }
+
+    public function test_surgeries_paid_archive_renders_without_error_when_payment_paid_at_is_null(): void
+    {
+        // Payment with paid_at = null
+        Payment::create([
+            'patient_id' => $this->patient->id,
+            'cashier_id' => $this->admin->id,
+            'surgery_id' => $this->surgery->id,
+            'receipt_number' => 'REC-NULL-DATE',
+            'amount' => 50000,
+            'total_amount' => 50000,
+            'patient_share' => 50000,
+            'insurance_share' => 0,
+            'payment_method' => 'cash',
+            'payment_type' => 'surgery',
+            'description' => 'دفعة تجريبية بدون تاريخ دفع محدد',
+            'paid_at' => null,
+        ]);
+
+        $response = $this->actingAs($this->admin)->get(route('cashier.surgeries.paid'));
+        $response->assertOk();
+        $response->assertSee('REC-NULL-DATE');
+    }
 }
