@@ -418,63 +418,66 @@ body {
                             <!-- المريض محدد مسبقاً ومعروض في الشريط العلوي -->
                             <input type="hidden" name="patient_id" id="patient_id" value="{{ old('patient_id', $surgery->patient_id) }}">
 
-                            <!-- الطبيب الجراح -->
-                            <div class="mb-3">
-                                <label for="doctor_id" class="form-label">
-                                    {{ __('الطبيب الجراح') }} <span class="text-danger">*</span>
-                                </label>
-                                <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
-                                    <option value="">{{ __('اختر الجراح') }}</option>
-                                    @foreach($doctors as $doctor)
-                                        @php $doctorName = optional($doctor->user)->name ?? __('غير معروف'); @endphp
-                                        <option value="{{ $doctor->id }}" {{ (old('doctor_id', $surgery->doctor_id) == $doctor->id) ? 'selected' : '' }}>
-                                            د. {{ $doctorName }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('doctor_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            </div>
-
-                            <!-- الطبيب المرسل -->
-                            <div class="mb-3">
-                                <label class="form-label">
-                                    {{ __('الطبيب المرسل') }} <span class="text-danger">*</span>
-                                </label>
-                                <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
-                                    <option value="">{{ __('اختر الطبيب المرسل أو اكتب اسماً جديداً') }}</option>
-                                    <optgroup label="{{ __('أطباء المستشفى') }}">
+                            <!-- الأطباء: الجراح + المرسل -->
+                            <div class="row g-2 mb-2">
+                                <!-- الطبيب الجراح -->
+                                <div class="col-md-6">
+                                    <label for="doctor_id" class="form-label">
+                                        {{ __('الطبيب الجراح') }} <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="doctor_id" id="doctor_id" class="form-select @error('doctor_id') is-invalid @enderror" style="width: 100%;" required>
+                                        <option value="">{{ __('اختر الجراح') }}</option>
                                         @foreach($doctors as $doctor)
-                                            @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
-                                            <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', $surgery->referring_doctor_name) == $referringDoctorName) ? 'selected' : '' }}>
-                                                د. {{ $referringDoctorName ?: 'غير معروف' }}
+                                            @php $doctorName = optional($doctor->user)->name ?? __('غير معروف'); @endphp
+                                            <option value="{{ $doctor->id }}" {{ (old('doctor_id', $surgery->doctor_id) == $doctor->id) ? 'selected' : '' }}>
+                                                {{ __('د.') }} {{ $doctorName }}
                                             </option>
                                         @endforeach
-                                    </optgroup>
-                                    @php
-                                        $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
-                                            ->distinct()
-                                            ->pluck('referring_doctor_name')
-                                            ->filter()
-                                            ->unique()
-                                            ->reject(function($name) use ($doctors) {
-                                                return $doctors->pluck('user.name')->contains($name);
-                                            })
-                                            ->sort();
-                                    @endphp
-                                    @if($externalDoctors->isNotEmpty())
-                                        <optgroup label="{{ __('أطباء خارجيين سابقين') }}">
-                                            @foreach($externalDoctors as $externalDoctor)
-                                                <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', $surgery->referring_doctor_name) == $externalDoctor) ? 'selected' : '' }}>
-                                                    {{ $externalDoctor }}
+                                    </select>
+                                    @error('doctor_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                </div>
+
+                                <!-- الطبيب المرسل -->
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        {{ __('الطبيب المرسل') }} <span class="text-danger">*</span>
+                                    </label>
+                                    <select name="referring_doctor_name" id="referring_doctor_name_select" class="form-select @error('referring_doctor_name') is-invalid @enderror" style="width: 100%;" required>
+                                        <option value="">{{ __('اختر أو اكتب جديد') }}</option>
+                                        <optgroup label="{{ __('أطباء المستشفى') }}">
+                                            @foreach($doctors as $doctor)
+                                                @php $referringDoctorName = optional($doctor->user)->name ?? ''; @endphp
+                                                <option value="{{ $referringDoctorName }}" {{ (old('referring_doctor_name', $surgery->referring_doctor_name) == $referringDoctorName) ? 'selected' : '' }}>
+                                                    {{ __('د.') }} {{ $referringDoctorName ?: __('غير معروف') }}
                                                 </option>
                                             @endforeach
                                         </optgroup>
-                                    @endif
-                                    @if($surgery->referring_doctor_name && !$doctors->pluck('user.name')->contains($surgery->referring_doctor_name) && !$externalDoctors->contains($surgery->referring_doctor_name))
-                                        <option value="{{ $surgery->referring_doctor_name }}" selected>{{ $surgery->referring_doctor_name }}</option>
-                                    @endif
-                                </select>
-                                @error('referring_doctor_name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                        @php
+                                            $externalDoctors = \App\Models\Surgery::whereNotNull('referring_doctor_name')
+                                                ->distinct()
+                                                ->pluck('referring_doctor_name')
+                                                ->filter()
+                                                ->unique()
+                                                ->reject(function($name) use ($doctors) {
+                                                    return $doctors->pluck('user.name')->contains($name);
+                                                })
+                                                ->sort();
+                                        @endphp
+                                        @if($externalDoctors->isNotEmpty())
+                                            <optgroup label="{{ __('أطباء خارجيين سابقين') }}">
+                                                @foreach($externalDoctors as $externalDoctor)
+                                                    <option value="{{ $externalDoctor }}" {{ (old('referring_doctor_name', $surgery->referring_doctor_name) == $externalDoctor) ? 'selected' : '' }}>
+                                                        {{ $externalDoctor }}
+                                                    </option>
+                                                @endforeach
+                                            </optgroup>
+                                        @endif
+                                        @if($surgery->referring_doctor_name && !$doctors->pluck('user.name')->contains($surgery->referring_doctor_name) && !$externalDoctors->contains($surgery->referring_doctor_name))
+                                            <option value="{{ $surgery->referring_doctor_name }}" selected>{{ $surgery->referring_doctor_name }}</option>
+                                        @endif
+                                    </select>
+                                    @error('referring_doctor_name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                                </div>
                             </div>
 
                             <!-- تاريخ العملية -->
@@ -1101,38 +1104,6 @@ document.addEventListener('DOMContentLoaded', function() {
             initPrimaryOperationSelect2();
         });
 
-        // تفاصيل المريض المختار
-        $('#patient_id').on('change', function() {
-            const selectedOption = $(this).find(':selected');
-            const patientData = selectedOption.data('patient');
-            
-            if (patientData && patientData.name) {
-                // تحديث شريط هوية المريض التنفيذي العلوي (Executive Banner)
-                $('#bannerPatientName').text(patientData.name);
-                $('#bannerPatientId').text(patientData.id || '-');
-                $('#bannerPatientAge').text((patientData.age || '-') + ' سنة');
-                $('#bannerPatientGender').text(patientData.gender || '-');
-                $('#bannerPatientPhone').text(patientData.phone || '-');
-                
-                if (patientData.history_url) {
-                    $('#bannerHistoryBtn').attr('href', patientData.history_url).show();
-                }
-                if (patientData.dossier_url) {
-                    $('#bannerDossierBtn').attr('href', patientData.dossier_url).show();
-                }
-
-                if (patientData.insurance_type && patientData.insurance_type !== 'none') {
-                    $('#bannerInsuranceBadge').removeClass('bg-secondary').addClass('bg-success');
-                    $('#bannerInsuranceLabel').text(patientData.insurance_label);
-
-                    $('#patientInsuranceBadgeLabel').text('المريض مسجل بالضمان: ' + patientData.insurance_label);
-                    if (patientData.insurance_card_no) {
-                        $('#bannerCardNo').text(patientData.insurance_card_no);
-                        $('#bannerCardSpan').show();
-                        $('#patientInsuranceCardNo').text(patientData.insurance_card_no);
-                        $('#patientInsuranceCardSpan').show();
-                    } else {
-                        $('#bannerCardSpan').hide();
         const patientInsuranceType = '{{ $surgery->insurance_type ?: ($surgery->patient?->insurance_type ?? 'none') }}';
 
         function checkMoiVisibility() {
