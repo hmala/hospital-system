@@ -159,10 +159,10 @@
     $isInsurance = ($defaultInsurance !== 'none');
     $defaultCardNo = $patient->insurance_card_no ?? $patient->insurance_booklet_number ?? '';
     $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
-    if ($defaultInsurance === 'hi' && $patient?->healthInsuranceCategory) {
-        $defaultCopay = (float)$patient->getCopayPercentageFor('surgery');
-    } elseif ($surgery->copay_percentage !== null) {
+    if ($surgery->copay_percentage !== null) {
         $defaultCopay = (float)$surgery->copay_percentage;
+    } elseif ($defaultInsurance === 'hi' && $patient?->healthInsuranceCategory) {
+        $defaultCopay = (float)$patient->getCopayPercentageFor('surgery');
     } else {
         $defaultCopay = (float)($patient->copay_percentage ?? 15.0);
     }

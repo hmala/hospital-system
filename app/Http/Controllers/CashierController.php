@@ -4583,16 +4583,16 @@ class CashierController extends Controller
             $patient = $surgery->patient;
             $isInsurance = ($insuranceType === 'moi' || $insuranceType === 'hi');
 
-            // إذا قام الأدمن بتحديد نسبة استثنائية للعملية، نعتمدها للعملية حصراً
+            // إذا قام الأدمن بتحديد نسبة استثنائية للعملية أو كانت مثبتة مسبقاً، نعتمدها للعملية حصراً
             $hasManualCopay = $isAdmin && $request->filled('copay_percentage') && is_numeric($request->copay_percentage);
             if ($hasManualCopay) {
                 $surgeryCopay = (float) $request->copay_percentage;
+            } elseif ($surgery->copay_percentage !== null) {
+                $surgeryCopay = (float) $surgery->copay_percentage;
             } elseif ($insuranceType === 'hi' && $patient?->healthInsuranceCategory) {
                 $surgeryCopay = (float) $patient->getCopayPercentageFor('surgery');
             } elseif ($request->has('copay_percentage') && $request->copay_percentage !== null && $request->copay_percentage !== '') {
                 $surgeryCopay = (float) $request->copay_percentage;
-            } elseif ($surgery->copay_percentage !== null) {
-                $surgeryCopay = (float) $surgery->copay_percentage;
             } else {
                 $surgeryCopay = (float) ($surgery->insurance_copay_percentage ?? $patient->copay_percentage ?? 15.0);
             }
