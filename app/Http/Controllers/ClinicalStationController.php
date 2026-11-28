@@ -2272,7 +2272,7 @@ class ClinicalStationController extends Controller
      */
     public function syncSurgeryTreatmentsToPharmacy(Surgery $surgery): int
     {
-        $unsentTreatments = $surgery->treatments()
+        $unsentTreatments = $surgery->surgeryTreatments()
             ->where('item_type', SurgeryTreatment::TYPE_MEDICATION)
             ->whereNotNull('medicine_id')
             ->whereNull('prescription_item_id')
