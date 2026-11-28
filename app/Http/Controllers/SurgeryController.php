@@ -15,6 +15,8 @@ use App\Models\Room;
 use App\Models\StockBatch;
 use App\Models\StockMovement;
 use App\Models\Surgery;
+use App\Models\SurgeryDocument;
+use App\Models\SurgeryDocumentType;
 use App\Models\SurgeryTabPermission;
 use App\Models\SurgeryTreatment;
 use App\Models\SurgicalAssistant;
@@ -285,8 +287,9 @@ class SurgeryController extends Controller
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
         $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->where('status', 'available')->orderBy('room_type')->orderBy('room_number')->get();
         $locations = \App\Models\Location::orderBy('name')->get();
+        $documentTypes = SurgeryDocumentType::active()->get();
 
-        return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations', 'selectedPatient'));
+        return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations', 'selectedPatient', 'documentTypes'));
     }
 
     public function store(Request $request)
@@ -468,7 +471,22 @@ class SurgeryController extends Controller
                 'notes' => 'مرفق تلقائي من حجز العملية #'.$surgery->id,
                 'uploaded_by' => Auth::id(),
             ]);
+
+            // توثيق ورقة التحويل كمستند للعملية
+            $surgery->documents()->create([
+                'patient_id' => $surgery->patient_id,
+                'document_type_name' => 'ورقة تحويل طبي',
+                'title' => 'ورقة تحويل طبي',
+                'file_path' => $path,
+                'file_name' => basename($path),
+                'file_type' => 'image/jpeg',
+                'file_size' => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
+                'uploaded_by' => Auth::id(),
+            ]);
         }
+
+        // معالجة وحفظ المستندات المتعددة الإضافية للعملية
+        $this->processSurgeryDocuments($request, $surgery);
 
         // إنشاء زيارة للعملية إذا لم تكن موجودة
         if (! $surgery->visit_id) {
@@ -702,7 +720,35 @@ class SurgeryController extends Controller
             abort(403, 'غير مصرح لك بتعديل حجز العمليات الجراحية');
         }
 
-        $surgery->load(['patient.user', 'doctor.user', 'department', 'visit', 'labTests.labTest', 'radiologyTests.radiologyType', 'anesthesiologist.user', 'anesthesiologist2.user', 'anesthesiaStation', 'room', 'additionalOperations.surgicalOperation']);
+        // ضمان توثيق ورقة التحويل السابقة كمستند للعملية إن وجدت لضمان ظهورها بالقائمة
+        if ($surgery->referral_letter_path && ! $surgery->documents()->where('file_path', $surgery->referral_letter_path)->exists()) {
+            $surgery->documents()->create([
+                'patient_id' => $surgery->patient_id,
+                'document_type_name' => 'ورقة تحويل طبي',
+                'title' => 'ورقة تحويل طبي',
+                'file_path' => $surgery->referral_letter_path,
+                'file_name' => basename($surgery->referral_letter_path),
+                'file_type' => 'image/jpeg',
+                'file_size' => Storage::disk('public')->exists($surgery->referral_letter_path) ? Storage::disk('public')->size($surgery->referral_letter_path) : null,
+                'uploaded_by' => $surgery->room_checkin_by ?? Auth::id(),
+            ]);
+        }
+
+        $surgery->load([
+            'patient.user',
+            'doctor.user',
+            'department',
+            'visit',
+            'labTests.labTest',
+            'radiologyTests.radiologyType',
+            'anesthesiologist.user',
+            'anesthesiologist2.user',
+            'anesthesiaStation',
+            'room',
+            'additionalOperations.surgicalOperation',
+            'documents.documentType',
+            'documents.uploader',
+        ]);
         $patients = $surgery->patient ? collect([$surgery->patient]) : collect();
         $doctors = Doctor::with('user')
             ->where('is_active', true)
@@ -733,8 +779,9 @@ class SurgeryController extends Controller
             ->orderBy('room_type')
             ->orderBy('room_number')
             ->get();
+        $documentTypes = SurgeryDocumentType::active()->get();
 
-        return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'surgicalOperations', 'rooms'));
+        return view('surgeries.edit', compact('surgery', 'patients', 'doctors', 'surgicalOperations', 'rooms', 'documentTypes'));
     }
 
     public function print(Surgery $surgery)
@@ -962,7 +1009,23 @@ class SurgeryController extends Controller
                 'notes' => 'مرفق محدث للعملية الجراحية #'.$surgery->id,
                 'uploaded_by' => Auth::id(),
             ]);
+
+            if (! $surgery->documents()->where('file_path', $path)->exists()) {
+                $surgery->documents()->create([
+                    'patient_id' => $surgery->patient_id,
+                    'document_type_name' => 'ورقة تحويل طبي',
+                    'title' => 'ورقة تحويل طبي',
+                    'file_path' => $path,
+                    'file_name' => basename($path),
+                    'file_type' => 'image/jpeg',
+                    'file_size' => Storage::disk('public')->exists($path) ? Storage::disk('public')->size($path) : null,
+                    'uploaded_by' => Auth::id(),
+                ]);
+            }
         }
+
+        // معالجة وحفظ المستندات المتعددة الجديدة المرفقة بالعملية
+        $this->processSurgeryDocuments($request, $surgery);
 
         // إنشاء طلبات الأشعة - فقط إذا تم تحديد أشعة معينة
         $radiologyTypeIds = $request->input('radiology_tests', []);
@@ -2538,5 +2601,144 @@ class SurgeryController extends Controller
 
             return redirect()->back()->with('error', 'حدث خطأ أثناء حذف العملية: '.$e->getMessage());
         }
+    }
+
+    /**
+     * معالجة وأرشفة المستندات المتعددة المرفقة بالعملية (سواء ملفات أو سحب مباشر بالسكانر)
+     */
+    private function processSurgeryDocuments(Request $request, Surgery $surgery): void
+    {
+        $documentsInput = $request->input('surgery_documents', []);
+        $documentsFiles = $request->file('surgery_documents', []);
+
+        if (! is_array($documentsInput)) {
+            $documentsInput = [];
+        }
+
+        foreach ($documentsInput as $index => $docData) {
+            $hasUploadedFile = isset($documentsFiles[$index]['file']) && $documentsFiles[$index]['file']->isValid();
+            $scannedBase64 = $docData['scanned_data'] ?? null;
+
+            if (! $hasUploadedFile && empty($scannedBase64)) {
+                continue;
+            }
+
+            $typeId = ! empty($docData['document_type_id']) ? (int) $docData['document_type_id'] : null;
+            $docType = $typeId ? SurgeryDocumentType::find($typeId) : null;
+            $typeName = $docType?->name ?? ($docData['document_type_name'] ?? null);
+            $title = ! empty($docData['title']) ? trim($docData['title']) : ($typeName ?: 'مستند عملية جراحية');
+
+            $path = null;
+            $fileName = null;
+            $fileType = null;
+            $fileSize = null;
+
+            if ($hasUploadedFile) {
+                /** @var \Illuminate\Http\UploadedFile $file */
+                $file = $documentsFiles[$index]['file'];
+                $path = $file->store('surgery_documents/'.$surgery->id, 'public');
+                $fileName = $file->getClientOriginalName();
+                $fileType = $file->getClientMimeType();
+                $fileSize = $file->getSize();
+            } elseif (! empty($scannedBase64)) {
+                $base64Data = $scannedBase64;
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64Data, $typeMatches)) {
+                    $base64Data = substr($base64Data, strpos($base64Data, ',') + 1);
+                    $ext = strtolower($typeMatches[1]);
+                } else {
+                    $ext = 'jpg';
+                }
+
+                $decoded = base64_decode($base64Data);
+                if ($decoded !== false) {
+                    $storedName = 'surgery_scan_'.time().'_'.uniqid().'.'.$ext;
+                    $relativePath = 'surgery_documents/'.$surgery->id.'/'.$storedName;
+                    Storage::disk('public')->put($relativePath, $decoded);
+                    $path = $relativePath;
+                    $fileName = $storedName;
+                    $fileType = 'image/'.($ext === 'jpg' ? 'jpeg' : $ext);
+                    $fileSize = strlen($decoded);
+                }
+            }
+
+            if ($path) {
+                $surgery->documents()->create([
+                    'patient_id' => $surgery->patient_id,
+                    'surgery_document_type_id' => $typeId,
+                    'document_type_name' => $typeName,
+                    'title' => $title,
+                    'file_path' => $path,
+                    'file_name' => $fileName,
+                    'file_type' => $fileType,
+                    'file_size' => $fileSize,
+                    'notes' => $docData['notes'] ?? null,
+                    'uploaded_by' => Auth::id(),
+                ]);
+
+                // أرشفة تلقائية في سجل المريض العام
+                if ($surgery->patient_id) {
+                    PatientDocument::create([
+                        'patient_id' => $surgery->patient_id,
+                        'title' => 'مستند عملية #'.$surgery->id.': '.$title,
+                        'category' => 'surgery_consent',
+                        'file_path' => $path,
+                        'file_type' => $fileType,
+                        'file_size' => $fileSize,
+                        'notes' => 'مرفق من العملية الجراحية #'.$surgery->id.' ('.$title.')',
+                        'uploaded_by' => Auth::id(),
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * حذف مستند مرفق بالعملية الجراحية
+     */
+    public function deleteDocument(Request $request, Surgery $surgery, SurgeryDocument $document)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin']);
+        if (! $isAdmin && (! $user || ! $user->can('edit surgeries'))) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'غير مصرح لك بحذف مستندات العملية'], 403);
+            }
+            abort(403, 'غير مصرح لك بحذف مستندات العملية');
+        }
+
+        if ($document->surgery_id !== $surgery->id) {
+            abort(404);
+        }
+
+        if ($document->file_path && Storage::disk('public')->exists($document->file_path)) {
+            Storage::disk('public')->delete($document->file_path);
+        }
+
+        $document->delete();
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حذف المستند بنجاح',
+            ]);
+        }
+
+        return back()->with('success', 'تم حذف المستند بنجاح');
+    }
+
+    /**
+     * معاينة أو تحميل مستند العملية الجراحية
+     */
+    public function viewDocument(Surgery $surgery, SurgeryDocument $document)
+    {
+        if ($document->surgery_id !== $surgery->id) {
+            abort(404);
+        }
+
+        if (! $document->file_path || ! Storage::disk('public')->exists($document->file_path)) {
+            abort(404, 'الملف غير موجود على الخادم');
+        }
+
+        return Storage::disk('public')->response($document->file_path, $document->file_name ?? basename($document->file_path));
     }
 }

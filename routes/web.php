@@ -847,6 +847,15 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/theaters/quick-store', [SurgeryController::class, 'quickStoreTheater'])->name('surgeries.theaters.quick-store');
     Route::post('/surgeries/{surgery}/quick-update-schedule', [SurgeryController::class, 'quickUpdateSchedule'])->name('surgeries.quick-update-schedule');
 
+    // مستندات ومرفقات العمليات الجراحية
+    Route::get('/surgeries/{surgery}/documents/{document}', [SurgeryController::class, 'viewDocument'])->name('surgeries.documents.view');
+    Route::delete('/surgeries/{surgery}/documents/{document}', [SurgeryController::class, 'deleteDocument'])->name('surgeries.documents.delete');
+
+    // إدارة أنواع مستندات العمليات الجراحية
+    Route::get('/surgery-document-types', [\App\Http\Controllers\SurgeryDocumentTypeController::class, 'index'])->name('surgery-document-types.index');
+    Route::post('/surgery-document-types', [\App\Http\Controllers\SurgeryDocumentTypeController::class, 'store'])->name('surgery-document-types.store');
+    Route::delete('/surgery-document-types/{type}', [\App\Http\Controllers\SurgeryDocumentTypeController::class, 'destroy'])->name('surgery-document-types.destroy');
+
     // مسارات مباشرة لتوثيق وإلغاء الاستشارات السريرية من لوحة تحكم الطبيب أو الرابط المباشر
     Route::post('/clinical/{surgery}/consultations/{consultation}/respond', [\App\Http\Controllers\ClinicalStationController::class, 'respondConsultation']);
     Route::delete('/clinical/{surgery}/consultations/{consultation}', [\App\Http\Controllers\ClinicalStationController::class, 'cancelConsultation']);

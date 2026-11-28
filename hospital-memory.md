@@ -2660,6 +2660,16 @@
   * **حزمة الاختبارات الآلية (`tests/Feature/DoctorReferralToAnotherDoctorTest.php`)**:
     - بناء واجتياز اختبارين يغطيان ظهور الزر دائماً وتحديث حالة الموعد والدور عند التحويل بنجاح تام (`2 passed, 9 assertions`).
 
+- **المرحلة 325 (بناء نظام المستندات والمرفقات المتعددة للعمليات الجراحية ودعم السكانر المباشر ورفع الملفات مع إدارة ديناميكية للقائمة المنسدلة للأنواع وتوثيقها التلقائي بأرشيف المريض Surgery Multi-Document Attachment System, Dynamic Dropdown Types Management & USB Scanner Integration):**
+  * **هيكلية قاعدة البيانات وموديلات المستندات والأنواع (`surgery_documents` و `surgery_document_types`)**:
+    - إنشاء جدول `surgery_document_types` وقائمته الافتراضية، وجدول `surgery_documents` وتحديث علاقات `Surgery` و `Patient`.
+  * **واجهات الإضافة والتعديل (`create.blade.php`, `edit.blade.php`, `surgeries/partials/documents-section.blade.php`)**:
+    - استبدال حقل التحويل المنفرد بمكون ديناميكي يدعم إضافة عدة مستندات وتسميتها واختيار نوعها من قائمة منسدلة قابلة للإدارة الفورية بمودال AJAX، مع دعم السكانر USB ورفع الملفات ومعاينتها وحذفها.
+  * **الكنترولر والمزامنة التلقائية مع أرشيف المريض (`SurgeryController.php`)**:
+    - معالجة `surgery_documents` في `store` و `update`، وحفظها تلقائياً في `PatientDocument` لتوثيقها في ملف المريض الشامل مع الحفاظ على التوافقية العكسية 100%.
+  * **حزمة الاختبارات الآلية (`tests/Feature/SurgeryMultiDocumentTest.php`)**:
+    - اجتياز 4 اختبارات شاملة (29 assertions) بنجاح تام.
+
 - **المرحلة 122 (معالجة خطأ طباعة أشعة الطوارئ والتحصين الشامل Emergency Radiology Print Undefined Variable Fix & Automated Coverage):**
   * **معالجة الخطأ في واجهة طباعة أشعة الطوارئ (`resources/views/staff/requests/emergency-radiology-print.blade.php`)**:
     - تصحيح استدعاء الدالة المجهولة `radiologyTypes->map(function ($type) use ($emergencyRadiology) { ... })` وتمرير المتغير عبر `use ($emergencyRadiology)` في السطر 451، مما حل خطأ `ErrorException: Undefined variable $emergencyRadiology` نهائياً.

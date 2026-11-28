@@ -56,6 +56,33 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 327: بناء نظام المستندات والمرفقات المتعددة للعمليات الجراحية ودعم السكانر المباشر ورفع الملفات مع إدارة ديناميكية للقائمة المنسدلة للأنواع وتوثيقها التلقائي بأرشيف المريض Surgery Multi-Document Attachment System, Dynamic Dropdown Types Management & USB Scanner Integration)
+
+### Done
+- **هيكلية قاعدة البيانات وموديلات المستندات والأنواع ([create_surgery_documents_and_types_tables.php](file:///c:/get/hospital-system/database/migrations/2026_11_28_132549_create_surgery_documents_and_types_tables.php), [SurgeryDocument.php](file:///c:/get/hospital-system/app/Models/SurgeryDocument.php), [SurgeryDocumentType.php](file:///c:/get/hospital-system/app/Models/SurgeryDocumentType.php))**:
+  * إنشاء جدول `surgery_document_types` وتزويده بالأنواع الطبية الافتراضية الشائعة (ورقة تحويل طبي، استمارة موافقة وتعهد العملية، فحص واستشارة التخدير/الباطنية، تقرير أشعة/سونار/رنين، تقرير تخطيط القلب/إيكو، نتائج تحاليل ومطابقة دم، هوية/بطاقة الضمان أو التأمين، ومستندات أخرى).
+  * إنشاء جدول `surgery_documents` لربط وحفظ كافة المرفقات المتعددة برقم العملية `surgery_id` والمريض `patient_id` ونوع المستند وعنوانه ومسار التخزين والنوع والحجم والملاحظات ورافع المستند.
+  * تحديث العلاقات في `Surgery.php` (`documents()`) و `Patient.php` (`surgeryDocuments()`).
+- **تطوير واجهات الإضافة والتعديل التفاعلية والمكون الجزئي المشترك ([documents-section.blade.php](file:///c:/get/hospital-system/resources/views/surgeries/partials/documents-section.blade.php), [create.blade.php](file:///c:/get/hospital-system/resources/views/surgeries/create.blade.php), [edit.blade.php](file:///c:/get/hospital-system/resources/views/surgeries/edit.blade.php))**:
+  * استبدال حقل ورقة التحويل المنفرد بـ **مكون إدارة المرفقات المتعددة الشامل**:
+    - **في التعديل (`/surgeries/{id}/edit`)**: عرض المستندات المرفوعة مسبقاً في بطاقات أنيقة مع شارة النوع والحجم والتاريخ وأزرار `[ 👁️ معاينة ]` و `[ 🗑️ حذف مباشر ]`.
+    - **زر `[ ➕ إضافة مستند ]`**: يولد سطراً ديناميكياً فورياً يحتوي على:
+      1. قائمة منسدلة لأنواع المستندات.
+      2. حقل اسم/وصف المستند (يُملأ تلقائياً عند اختيار النوع وقابل للتعديل المباشر).
+      3. أزرار الإرفاق: `[ 📁 رفع ملف (PDF/صورة) ]` و `[ 🖨️ مسح بالسكانر USB ]`.
+      4. مؤشر حالة الملف ومعه زر معاينة فوري وسريع قبل الحفظ.
+      5. زر إلغاء وحذف السطر قبل الحفظ.
+    - **زر ونافذة `[ ⚙️ إدارة القائمة ]`**: مودال سريع يتيح إضافة نوع مستند جديد أو حذفه من القائمة المنسدلة فورياً عبر AJAX دون مغادرة شاشة العملية.
+- **تطوير المعالجة بالكنترولر والمزامنة التلقائية مع أرشيف المريض ([SurgeryController.php](file:///c:/get/hospital-system/app/Http/Controllers/SurgeryController.php), [SurgeryDocumentTypeController.php](file:///c:/get/hospital-system/app/Http/Controllers/SurgeryDocumentTypeController.php), [routes/web.php](file:///c:/get/hospital-system/routes/web.php))**:
+  * معالجة مصفوفة المستندات `surgery_documents` في دالتي `store` و `update` وتخزين الملفات وسحب السكانر base64.
+  * المزامنة التلقائية مع `PatientDocument` لضمان ظهور كافة وثائق وموافقات العملية الجراحية في الأرشيف الطبي العام للمريض.
+  * مسارات وإجراءات حذف ومعاينة المستندات: `surgeries.documents.view` و `surgeries.documents.delete`.
+  * حماية التوافقية العكسية 100% وتحويل أي ورقة تحويل قديمة `referral_letter_path` تلقائياً لقائمة المستندات دون أي فقدان للبيانات.
+- **الاختبارات وضمان الجودة ([SurgeryMultiDocumentTest.php](file:///c:/get/hospital-system/tests/Feature/SurgeryMultiDocumentTest.php))**:
+  * بناء حزمة اختبارات شاملة تغطي: إدارة الأنواع، إنشاء عملية بعدة مستندات وسكانر، تعديل العملية وإضافة مستندات، وحذف المستند.
+  * اجتياز كافة الاختبارات الآلية (4 passed, 29 assertions).
+  * نجاح مسح وتخزين كاش القوالب `view:cache` وتنسيق الأكواد عبر `Laravel Pint`.
+
 ## Session log (2026-11-28 — المرحلة 326: إضافة خيار ودليل معين الصالة وقائمة الاختيار الذكية بصالة العمليات Operating Theater Attendant / Orderly in Surgical Assistants Directory & Operation Theater Show View)
 
 ### Done

@@ -210,6 +210,11 @@ class Surgery extends Model
         return $this->hasMany(SurgeryRadiologyTest::class);
     }
 
+    public function documents()
+    {
+        return $this->hasMany(SurgeryDocument::class);
+    }
+
     public function consultations()
     {
         return $this->hasMany(SurgeryConsultation::class);
