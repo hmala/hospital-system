@@ -738,10 +738,6 @@
                                                     <span>{{ __('تخريج وبراءة ذمة') }}</span>
                                                 </button>
                                             </form>
-
-                                            <a href="{{ route('surgeries.show', $inpatient->id) }}" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 shadow-2xs" title="{{ __('عرض تفاصيل العملية') }}" target="_blank">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
                                         </div>
                                     </td>
                                 </tr>

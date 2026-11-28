@@ -3530,16 +3530,16 @@ class CashierController extends Controller
         }
 
         \App\Services\UserActivityLogger::log(
-            user: $user,
             action: 'surgery_final_cashier_discharge',
-            module: 'cashier',
+            category: 'cashier',
             description: "تمت براءة الذمة والتخريج النهائي للعملية #{$surgery->id} للمريض ({$surgery->patient?->user?->name}) وإغلاق الملف مالياً.",
-            oldValues: ['discharged_at' => null],
-            newValues: [
+            subject: $surgery,
+            isSensitive: false,
+            properties: [
                 'discharged_at' => $surgery->discharged_at,
                 'discharged_by' => $surgery->discharged_by,
             ],
-            targetModel: $surgery
+            user: $user
         );
 
         broadcast(new \App\Events\SurgeryUpdated($surgery));

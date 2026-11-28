@@ -738,15 +738,15 @@
                                         <div class="position-relative extra-service-autocomplete-wrapper">
                                             <div class="input-group input-group-sm shadow-xs">
                                                 <span class="input-group-text bg-white border-warning text-warning"><i class="fas fa-search" id="extra-service-search-icon"></i></span>
-                                                <input type="text" class="form-control form-control-sm fw-bold border-warning" id="service_name_input" name="service_name" placeholder="{{ __('انقر لاختيار خدمة أو اكتب للبحث الذكي...') }}" required autocomplete="off">
+                                                <input type="text" class="form-control form-control-sm fw-bold border-warning" id="service_name_input" name="service_name" list="extra_services_catalog_list" placeholder="{{ __('انقر لاختيار خدمة أو اكتب للبحث الذكي...') }}" required autocomplete="off">
                                                 <button type="button" class="btn btn-outline-secondary px-2 d-none" id="btn-clear-extra-service" title="{{ __('مسح') }}">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
-                                            <datalist id="extra_services_catalog_list" style="display: none;">
+                                            <datalist id="extra_services_catalog_list">
                                                 @foreach($availableExtraServices as $asrv)
-                                                    <option value="{{ $asrv->name }}" data-price="{{ (float)$asrv->default_price }}" data-id="{{ $asrv->id }}" data-category="{{ $asrv->category ?? 'general' }}">
-                                                        {{ $asrv->name }} ({{ __('افتراضي:') }} {{ number_format($asrv->default_price, 0) }} {{ __('د.ع') }})
+                                                    <option value="{{ $asrv->name }}">
+                                                        {{ $asrv->name }} ({{ number_format($asrv->default_price, 0) }} د.ع)
                                                     </option>
                                                 @endforeach
                                             </datalist>
@@ -1999,14 +1999,18 @@
                         </div>
                     </form>
                     @elseif($totalExcess <= 0 && !$hasPendingItems)
-                    <!-- لا توجد عناصر معلقة -->
-                    <div class="alert alert-success text-center">
-                        <i class="fas fa-check-circle fa-3x mb-3"></i>
-                        <h5>{{ __('تم دفع جميع رسوم هذه العملية!') }}</h5>
-                        <p class="mb-0">{{ __('لا توجد مبالغ معلقة للدفع أو مسترجعات مالية.') }}</p>
-                        <a href="{{ route('cashier.surgeries.index') }}" class="btn btn-primary mt-3">
+                    <!-- تنبيه النزيل المسدد مع إمكانية إضافة خدمات إضافية فوراً -->
+                    <div class="alert alert-success d-flex align-items-center justify-content-between p-3 rounded-4 shadow-sm mb-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                            <div>
+                                <h6 class="fw-bold mb-1 text-success">{{ __('هذه العملية مسددة بالكامل حالياً!') }}</h6>
+                                <p class="mb-0 small text-muted">{{ __('يمكنك إضافة أي خدمات إضافية، فندقية، مستلزمات، أو استشارات جديدة من الصندوق أعلاه لتوليد وصل قبض جديد فوراً دون إعادة فتح الوصل القديم.') }}</p>
+                            </div>
+                        </div>
+                        <a href="{{ route('cashier.surgeries.index', ['tab' => 'inpatient']) }}" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-bold">
                             <i class="fas fa-arrow-left me-1"></i>
-                            {{ __('العودة لقائمة العمليات') }}
+                            {{ __('العودة لقائمة نزلاء الردهة') }}
                         </a>
                     </div>
                     @endif
@@ -2016,7 +2020,6 @@
     </div>
 </div>
 
-@if($pendingAmount > 0 || $hasPendingItems)
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const pendingAmount = {{ $pendingAmount }};
@@ -2976,17 +2979,47 @@ document.addEventListener('DOMContentLoaded', function() {
             renderExtraServicesDropdown(this.value.trim());
         });
 
-        // 2. تصفية القائمة عند الكتابة
+        // 2. تصفية القائمة عند الكتابة أو الاختيار من datalist
         serviceNameInput.addEventListener('input', function() {
             const val = this.value.trim();
             if (val.length > 0) {
                 if (clearExtraBtn) clearExtraBtn.classList.remove('d-none');
+                
+                // فحص إذا كان المستخدم قد اختار خدمة تطابق تماماً اسماً في الكتالوج (عبر datalist)
+                const exactMatch = extraServicesCatalog.find(item => item.name.toLowerCase() === val.toLowerCase());
+                if (exactMatch) {
+                    selectExtraServiceItem(
+                        exactMatch.id,
+                        exactMatch.name,
+                        exactMatch.price,
+                        exactMatch.formatted_price,
+                        exactMatch.category
+                    );
+                    return;
+                }
             } else {
                 if (clearExtraBtn) clearExtraBtn.classList.add('d-none');
                 if (serviceIdHidden) serviceIdHidden.value = '';
                 if (selectedExtraCard) selectedExtraCard.classList.add('d-none');
             }
             renderExtraServicesDropdown(val);
+        });
+
+        // التقاط حدث التغيير عند اختيار عنصر من datalist
+        serviceNameInput.addEventListener('change', function() {
+            const val = this.value.trim();
+            if (val.length > 0) {
+                const exactMatch = extraServicesCatalog.find(item => item.name.toLowerCase() === val.toLowerCase());
+                if (exactMatch) {
+                    selectExtraServiceItem(
+                        exactMatch.id,
+                        exactMatch.name,
+                        exactMatch.price,
+                        exactMatch.formatted_price,
+                        exactMatch.category
+                    );
+                }
+            }
         });
 
         // 3. النقر على عنصر من القائمة المنسدلة
@@ -3284,8 +3317,9 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // حساب أولي
-    calculateSelectedAmount();
+    if (typeof calculateSelectedAmount === 'function') {
+        calculateSelectedAmount();
+    }
 });
 </script>
-@endif
 @endsection

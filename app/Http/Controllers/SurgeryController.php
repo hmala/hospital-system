@@ -1439,17 +1439,17 @@ class SurgeryController extends Controller
             }
         }
 
-        UserActivityLogger::log(
-            user: $user,
+        \App\Services\UserActivityLogger::log(
             action: 'surgery_medical_discharge',
-            module: 'surgeries',
+            category: 'surgery',
             description: "تم منح إذن الخروج الطبي وتفريغ السرير للمريض ({$surgery->patient?->user?->name}) في العملية #{$surgery->id} وهو الآن بانتظار تصفية الحساب في الكاشير.",
-            oldValues: ['medical_discharged_at' => null],
-            newValues: [
+            subject: $surgery,
+            isSensitive: false,
+            properties: [
                 'medical_discharged_at' => $surgery->medical_discharged_at,
                 'medical_discharge_by' => $surgery->medical_discharge_by,
             ],
-            targetModel: $surgery
+            user: $user
         );
 
         broadcast(new SurgeryUpdated($surgery));
@@ -1494,14 +1494,16 @@ class SurgeryController extends Controller
             }
         }
 
-        UserActivityLogger::log(
-            user: $user,
+        \App\Services\UserActivityLogger::log(
             action: 'surgery_undo_medical_discharge',
-            module: 'surgeries',
+            category: 'surgery',
             description: "تم إلغاء إذن الخروج الطبي للمريض ({$surgery->patient?->user?->name}) وإعادته للإقامة بالردهة الجراحية.",
-            oldValues: ['medical_discharged_at' => now()],
-            newValues: ['medical_discharged_at' => null],
-            targetModel: $surgery
+            subject: $surgery,
+            isSensitive: false,
+            properties: [
+                'medical_discharged_at' => null,
+            ],
+            user: $user
         );
 
         broadcast(new SurgeryUpdated($surgery));
