@@ -37,7 +37,7 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
     {
         parent::setUp();
 
-        Permission::firstOrCreate(['name' => 'view surgeries cashier']);
+        Permission::firstOrCreate(['name' => 'view cashier surgeries']);
         Permission::firstOrCreate(['name' => 'control surgeries']);
         Permission::firstOrCreate(['name' => 'edit surgeries']);
         Permission::firstOrCreate(['name' => 'assign surgery room']);
@@ -47,7 +47,7 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
         $adminRole->givePermissionTo(Permission::all());
 
         $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
-        $cashierRole->givePermissionTo(['process cashier payments', 'view surgeries cashier']);
+        $cashierRole->givePermissionTo(['process cashier payments', 'view cashier surgeries']);
 
         $this->hospital = Hospital::create([
             'name' => 'مستشفى الشفاء التخصصي',
