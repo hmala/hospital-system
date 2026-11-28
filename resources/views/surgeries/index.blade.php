@@ -797,27 +797,6 @@
                                                 </form>
                                             </div>
                                         @endif
-
-                                        @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()->can('control surgeries') || auth()->user()->can('edit surgeries') || auth()->user()->can('assign surgery room'))
-                                            <div class="mt-1 d-inline-flex gap-1 align-items-center">
-                                                @if(!$surgery->medical_discharged_at)
-                                                    <button type="button" 
-                                                            class="btn btn-xs btn-outline-success rounded-pill px-2 py-0 fw-semibold d-inline-flex align-items-center gap-1" 
-                                                            style="font-size: 0.68rem;" 
-                                                            onclick="openMedicalDischargeModal({{ $surgery->id }}, '{{ addslashes($patientName) }}', '{{ $room ? $room->room_number : '-' }}')" 
-                                                            title="{{ __('منح إذن خروج طبي وتفريغ السرير فوراً ونقل المريض لبراءة ذمة الكاشير') }}">
-                                                        <i class="fas fa-stethoscope"></i> {{ __('إذن خروج وتفريغ') }}
-                                                    </button>
-                                                @else
-                                                    <form action="{{ route('surgeries.undo-medical-discharge', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد التراجع عن إذن الخروج الطبي للمريض (:name) وإعادته للإقامة بالردهة؟', ['name' => $patientName]) }}');">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0" style="font-size: 0.68rem;" title="{{ __('إلغاء الإذن الطبي وإعادة المريض لمتابعة الردهة') }}">
-                                                            <i class="fas fa-undo"></i> {{ __('إلغاء الإذن') }}
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </div>
-                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -992,27 +971,6 @@
                                                         <i class="fas fa-hourglass-half"></i> {{ __('للانتظار') }}
                                                     </button>
                                                 </form>
-                                            </div>
-                                        @endif
-
-                                        @if(auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()->can('control surgeries') || auth()->user()->can('edit surgeries') || auth()->user()->can('assign surgery room'))
-                                            <div class="mt-1 d-inline-flex gap-1 align-items-center">
-                                                @if(!$surgery->medical_discharged_at)
-                                                    <button type="button" 
-                                                            class="btn btn-xs btn-outline-success rounded-pill px-2 py-0 fw-semibold d-inline-flex align-items-center gap-1" 
-                                                            style="font-size: 0.68rem;" 
-                                                            onclick="openMedicalDischargeModal({{ $surgery->id }}, '{{ addslashes($patientName) }}', '{{ $room ? $room->room_number : '-' }}')" 
-                                                            title="{{ __('منح إذن خروج طبي وتفريغ السرير فوراً ونقل المريض لبراءة ذمة الكاشير') }}">
-                                                        <i class="fas fa-stethoscope"></i> {{ __('إذن خروج وتفريغ') }}
-                                                    </button>
-                                                @else
-                                                    <form action="{{ route('surgeries.undo-medical-discharge', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد التراجع عن إذن الخروج الطبي للمريض (:name) وإعادته للإقامة بالردهة؟', ['name' => $patientName]) }}');">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-xs btn-outline-secondary rounded-pill px-2 py-0" style="font-size: 0.68rem;" title="{{ __('إلغاء الإذن الطبي وإعادة المريض لمتابعة الردهة') }}">
-                                                            <i class="fas fa-undo"></i> {{ __('إلغاء الإذن') }}
-                                                        </button>
-                                                    </form>
-                                                @endif
                                             </div>
                                         @endif
                                     </div>
@@ -1571,50 +1529,6 @@
     <input type="hidden" name="cancellation_reason" id="cancel_reason_input" value="">
 </form>
 
-{{-- نافذة منح إذن الخروج الطبي وتفريغ السرير للمريض --}}
-<div class="modal fade" id="medicalDischargeModal" tabindex="-1" aria-labelledby="medicalDischargeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-            <form id="medicalDischargeForm" method="POST" action="">
-                @csrf
-                <div class="modal-header bg-success-subtle border-0 py-3">
-                    <h5 class="modal-title fs-6 fw-bold text-success d-flex align-items-center gap-2" id="medicalDischargeModalLabel">
-                        <i class="fas fa-stethoscope"></i>
-                        <span>{{ __('إذن خروج طبي وتفريغ السرير') }}</span>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <div class="p-3 bg-light rounded-3 mb-3 border">
-                        <div class="small text-muted mb-1">{{ __('المريض:') }}</div>
-                        <div class="fw-bold text-dark fs-6" id="mdPatientName">-</div>
-                        <div class="small text-muted mt-1">
-                            {{ __('الغرفة والسرير المراد تفريغها فوراً:') }}
-                            <span class="badge bg-primary text-white font-monospace px-2 py-0.5 ms-1" id="mdRoomNumber">-</span>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-info py-2 px-3 small border-0 rounded-3 mb-3">
-                        <i class="fas fa-info-circle me-1"></i>
-                        {{ __('هذا الإجراء يحرر السرير فوراً ويجعله شاغراً لاستقبال مريض آخر، ويحوّل المريض لحالة (بانتظار براءة الذمة وتصفية الحساب بالكاشير). لن يتم إغلاق ملف المريض إلا عند استلام الكاشير لكافة المستحقات.') }}
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-dark">{{ __('توصيات وملاحظات الخروج الطبية (اختياري):') }}</label>
-                        <textarea name="medical_discharge_notes" class="form-control rounded-3" rows="3" placeholder="{{ __('أدوية المنزل، موعد المراجعة، نصائح غذائية...') }}"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer bg-light border-0 py-2.5 px-4 d-flex justify-content-between">
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">{{ __('إلغاء') }}</button>
-                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-4 fw-bold">
-                        <i class="fas fa-check-circle me-1"></i> {{ __('تأكيد إذن الخروج وتفريغ السرير') }}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 {{-- نافذة تبديل أو نقل الغرفة الذكي للمريض --}}
 <div class="modal fade" id="swapRoomModal" tabindex="-1" aria-labelledby="swapRoomModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -2098,18 +2012,5 @@
         modal.show();
     }
     window.openSwapRoomModal = openSwapRoomModal;
-
-    function openMedicalDischargeModal(surgeryId, patientName, roomNumber) {
-        const form = document.getElementById('medicalDischargeForm');
-        const pName = document.getElementById('mdPatientName');
-        const rNum = document.getElementById('mdRoomNumber');
-        if (!form) return;
-        form.action = '{{ url("/surgeries") }}/' + surgeryId + '/medical-discharge';
-        if (pName) pName.textContent = patientName;
-        if (rNum) rNum.textContent = roomNumber;
-        const modal = new bootstrap.Modal(document.getElementById('medicalDischargeModal'));
-        modal.show();
-    }
-    window.openMedicalDischargeModal = openMedicalDischargeModal;
 </script>
 @endsection
