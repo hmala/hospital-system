@@ -623,8 +623,9 @@ body {
                         @php
                             $isPatientMoi = (old('insurance_type', $pInsType) === 'moi');
                             $isPatientHi = (old('insurance_type', $pInsType) === 'hi');
-                            $hiCategory = $patient ? $patient->healthInsuranceCategory : null;
-                            $hiSurgeryCopay = $patient ? $patient->getCopayPercentageFor('surgery') : 15.0;
+                            $curPatient = $selectedPatient ?? (isset($patient) ? $patient : null);
+                            $hiCategory = $curPatient?->healthInsuranceCategory;
+                            $hiSurgeryCopay = $curPatient ? $curPatient->getCopayPercentageFor('surgery') : 15.0;
                         @endphp
                         <div id="hiCopaySection" class="p-3 m-3 border rounded-3 bg-success-subtle border-success-subtle shadow-2xs" style="{{ $isPatientHi ? '' : 'display: none;' }}">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
