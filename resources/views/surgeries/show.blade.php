@@ -470,6 +470,15 @@
                 </a>
             @endif
 
+            @if($surgery->discharged_at && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()->can('control surgeries') || auth()->user()->can('edit surgeries')))
+                <form action="{{ route('surgeries.undo-discharge', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد التراجع عن تخريج المريض وإعادته لقائمة العمليات النشطة؟') }}');">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-xs fw-bold">
+                        <i class="fas fa-undo me-1"></i> {{ __('استعادة المريض من التخريج') }}
+                    </button>
+                </form>
+            @endif
+
             <a href="{{ url()->previous() && !str_contains(url()->previous(), 'surgeries/' . $surgery->id) ? url()->previous() : route('surgeries.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3 shadow-xs">
                 <i class="fas {{ app()->getLocale() === 'en' ? 'fa-arrow-left' : 'fa-arrow-right' }} me-1"></i> {{ __('العودة لجدول العمليات') }}
             </a>
@@ -569,6 +578,58 @@
                     <span class="badge bg-secondary-subtle text-secondary border px-2.5 py-1.5" style="font-size: 0.8rem;">
                         <i class="fas fa-money-bill-wave me-1"></i>{{ __('نقدي (كاش)') }}
                     </span>
+                @endif
+
+                <div class="vr mx-1 d-none d-md-block" style="height: 22px; opacity: 0.25;"></div>
+
+                {{-- الإقامة والغرفة وإجراءات التبديل والانتظار السريعة --}}
+                <span class="small text-muted fw-bold">{{ __('الغرفة:') }}</span>
+                @if($surgery->room)
+                    @php
+                        $srType = $surgery->room->room_type;
+                    @endphp
+                    <span class="badge {{ $srType === 'vvip' ? 'bg-dark text-warning border border-warning' : ($srType === 'vip' ? 'bg-warning text-dark border' : 'bg-primary-subtle text-primary border border-primary-subtle') }} px-2.5 py-1.5" style="font-size: 0.8rem;">
+                        @if($srType === 'vvip')
+                            <i class="fas fa-gem text-warning me-1"></i>VVIP {{ $surgery->room->room_number }}
+                        @elseif($srType === 'vip')
+                            <i class="fas fa-crown text-warning me-1"></i>VIP {{ $surgery->room->room_number }}
+                        @else
+                            <i class="fas fa-bed me-1"></i>{{ __('غرفة') }} {{ $surgery->room->room_number }}
+                        @endif
+                        @if($surgery->room->floor)
+                            <span class="opacity-75 ms-1">({{ $surgery->room->floor }})</span>
+                        @endif
+                    </span>
+                    @if(!$surgery->discharged_at && $surgery->status !== 'cancelled' && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']) || auth()->user()->can('assign surgery room') || auth()->user()->can('edit surgeries')))
+                        <button type="button" 
+                                class="btn btn-xs btn-outline-info rounded-pill px-2 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" 
+                                style="font-size: 0.72rem;" 
+                                onclick="openSwapRoomModal({{ $surgery->id }}, '{{ addslashes($surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'المريض') }}', '{{ $surgery->room->room_number }}')" 
+                                title="{{ __('تبديل الغرفة مع مريض آخر') }}">
+                            <i class="fas fa-exchange-alt"></i>
+                            <span>{{ __('تبديل') }}</span>
+                        </button>
+                        <form action="{{ route('surgeries.move-to-waiting-zone', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('هل أنت متأكد من إخلاء الغرفة (:room) ونقل المريض إلى وضع انتظار الغرفة؟', ['room' => $surgery->room->room_number]) }}');">
+                            @csrf
+                            <button type="submit" 
+                                    class="btn btn-xs btn-outline-warning rounded-pill px-2 py-1 fw-bold text-dark d-inline-flex align-items-center gap-1 shadow-2xs" 
+                                    style="font-size: 0.72rem;" 
+                                    title="{{ __('إخلاء الغرفة ونقل المريض إلى وضع الانتظار') }}">
+                                <i class="fas fa-hourglass-half"></i>
+                                <span>{{ __('إخلاء للانتظار') }}</span>
+                            </button>
+                        </form>
+                    @endif
+                @else
+                    <span class="badge bg-warning-subtle text-dark border border-warning px-2.5 py-1.5" style="font-size: 0.8rem;">
+                        <i class="fas fa-hourglass-half text-warning me-1"></i>{{ __('وضع انتظار الغرفة') }}
+                    </span>
+                    @if($surgery->status !== 'cancelled' && !$surgery->discharged_at && (auth()->user()->hasRole(['admin', 'admin-hsop', 'hospital_admin']) || auth()->user()->can('assign surgery room')))
+                        <a href="{{ route('inquiry.occupancy', ['tab' => 'waiting_room']) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs" style="font-size: 0.72rem;" title="{{ __('تخصيص غرفة من وضع الانتظار') }}">
+                            <i class="fas fa-bed"></i>
+                            <span>{{ __('تخصيص غرفة') }}</span>
+                        </a>
+                    @endif
                 @endif
 
                 @if(isset($visibleTabs['detail_badges']))
@@ -2711,6 +2772,55 @@
     </div>
 </div>
 
+{{-- نافذة تبديل الغرفة الذكي بين مريضين --}}
+<div class="modal fade" id="swapRoomModal" tabindex="-1" aria-labelledby="swapRoomModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <form id="swapRoomForm" method="POST" action="">
+                @csrf
+                <div class="modal-header bg-light border-0 py-3">
+                    <h5 class="modal-title fs-6 fw-bold text-dark d-flex align-items-center gap-2" id="swapRoomModalLabel">
+                        <i class="fas fa-exchange-alt text-primary"></i>
+                        <span>{{ __('تبديل الغرفة مع مريض آخر') }}</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="small text-muted mb-1">{{ __('المريض الحالي:') }}</div>
+                        <div class="fw-bold text-dark fs-6" id="swapCurrentPatientName">-</div>
+                        <div class="small text-muted mt-1">
+                            {{ __('الغرفة الحالية:') }}
+                            <span class="badge bg-primary text-white font-monospace px-2 py-1 ms-1" id="swapCurrentRoomNumber">-</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="swapTargetSurgerySelect" class="form-label fw-bold text-dark small">
+                            <i class="fas fa-bed text-primary me-1"></i>{{ __('اختر المريض / الغرفة المراد التبديل معها:') }}
+                        </label>
+                        <select name="target_surgery_id" id="swapTargetSurgerySelect" class="form-select form-select-sm" required>
+                            <option value="">{{ __('-- اختر المريض أو الغرفة --') }}</option>
+                        </select>
+                        <div class="form-text text-muted small mt-1">
+                            <i class="fas fa-info-circle me-1 text-info"></i>
+                            {{ __('سيتم نقل المريض الحالي إلى الغرفة المختارة، ونقل المريض الآخر إلى هذه الغرفة آلياً وبشكل فوري.') }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0 py-2.5">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-dismiss="modal">
+                        {{ __('إلغاء') }}
+                    </button>
+                    <button type="submit" class="btn btn-sm btn-primary rounded-pill px-4 fw-bold">
+                        <i class="fas fa-exchange-alt me-1"></i> {{ __('تأكيد التبديل المباشر') }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Postpone / Reschedule -->
 <div class="modal fade" id="postponeSurgeryModal" tabindex="-1" aria-labelledby="postponeSurgeryModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -3488,6 +3598,52 @@
 
         form.submit();
     };
+
+    // ================= منظومة تبديل الغرف الذكي بين المرضى =================
+    window.occupiedSurgeriesForSwap = {!! json_encode(collect($occupiedSurgeriesForSwap ?? [])->map(function($s) {
+        return [
+            'id' => $s->id,
+            'patient_name' => $s->patient?->user?->name ?? $s->patient?->name ?? __('غير محدد'),
+            'room_number' => $s->room?->room_number ?? '',
+            'room_type' => strtoupper($s->room?->room_type ?? 'عادية'),
+            'surgery_type' => $s->surgery_type ?? '',
+        ];
+    })->values(), JSON_UNESCAPED_UNICODE) !!};
+
+    function openSwapRoomModal(currentSurgeryId, currentPatientName, currentRoomNumber) {
+        const form = document.getElementById('swapRoomForm');
+        const pNameEl = document.getElementById('swapCurrentPatientName');
+        const rNumEl = document.getElementById('swapCurrentRoomNumber');
+        const selectEl = document.getElementById('swapTargetSurgerySelect');
+
+        if (!form || !selectEl) return;
+
+        form.action = '/surgeries/' + currentSurgeryId + '/swap-room';
+        if (pNameEl) pNameEl.textContent = currentPatientName;
+        if (rNumEl) rNumEl.textContent = currentRoomNumber;
+
+        selectEl.innerHTML = '<option value="">-- ' + '{{ __("اختر المريض أو الغرفة للتبديل") }}' + ' --</option>';
+
+        const list = window.occupiedSurgeriesForSwap || [];
+        let count = 0;
+        list.forEach(item => {
+            if (Number(item.id) !== Number(currentSurgeryId)) {
+                count++;
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = 'غرفة ' + item.room_number + ' (' + item.room_type + ') — ' + item.patient_name + (item.surgery_type ? ' [' + item.surgery_type + ']' : '');
+                selectEl.appendChild(opt);
+            }
+        });
+
+        if (count === 0) {
+            selectEl.innerHTML = '<option value="">' + '{{ __("لا يوجد مرضى آخرون في غرف حالياً للتبديل معهم") }}' + '</option>';
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('swapRoomModal'));
+        modal.show();
+    }
+    window.openSwapRoomModal = openSwapRoomModal;
 
     // ================= منظومة القائمة المنسدلة الذكية لمساعد الجراح (مثل التصنيف الدولي للأمراض) =================
     window.surgicalAssistantsData = {!! json_encode($surgicalAssistants ?? [], JSON_UNESCAPED_UNICODE) !!};

@@ -77,7 +77,7 @@ class SurgeryController extends Controller
             }
         }
 
-        // العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته أو تم تخريجه رسمياً من المستشفى)
+        // 1. العمليات النشطة (المجدولة والمنتظرة والجارية فقط - استبعاد ما اكتملت صالته أو تم تخريجه رسمياً من المستشفى)
         $activeSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
             ->whereIn('status', ['scheduled', 'waiting', 'in_progress'])
             ->whereNull('discharged_at')
@@ -85,99 +85,79 @@ class SurgeryController extends Controller
                 $q->where('status', 'completed');
             });
 
-        // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
-        if ($user->doctor && ! $isAdmin && ! $user->hasRole(['receptionist', 'surgery_staff'])) {
-            // إخفاء العمليات عن الأطباء الاستشاريين
-            if ($user->doctor->type === 'consultant') {
-                // لا نعرض أي عمليات للطبيب الاستشاري
-                $activeSurgeriesQuery->whereRaw('1 = 0');
-            } else {
-                // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
-                $activeSurgeriesQuery->where(function ($q) use ($user) {
-                    $q->where('doctor_id', $user->doctor->id)
-                        ->orWhere('anesthesiologist_id', $user->doctor->id)
-                        ->orWhere('anesthesiologist_2_id', $user->doctor->id);
-                });
-            }
-        }
-
-        // تطبيق البحث والفلترة
-        if (request('search')) {
-            $search = request('search');
-            $activeSurgeriesQuery->where(function ($query) use ($search) {
-                $query->whereHas('patient.user', function ($q) use ($search) {
-                    $q->where('name', 'like', '%'.$search.'%');
-                })
-                    ->orWhereHas('doctor.user', function ($q) use ($search) {
-                        $q->where('name', 'like', '%'.$search.'%');
-                    })
-                    ->orWhere('surgery_type', 'like', '%'.$search.'%');
-            });
-        }
-
-        if (request('status') && request('status') !== '') {
-            $activeSurgeriesQuery->where('status', request('status'));
-        }
-
-        if (request('date')) {
-            $activeSurgeriesQuery->whereDate('scheduled_date', request('date'));
-        }
-
-        $activeSurgeries = $activeSurgeriesQuery->orderBy('scheduled_date', 'desc')
-            ->orderBy('scheduled_time', 'desc')
-            ->paginate(20)
-            ->appends(request()->query());
-
-        // العمليات المكتملة والملغاة (بما فيها التي اكتملت صالة عملياتها أو تم تخريج مرضاها)
+        // 2. العمليات المكتملة بالصالة (قيد الرقود والاستشفاء ولم تُخرّج بعد)
         $completedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
+            ->whereNull('discharged_at')
+            ->where('status', '!=', 'cancelled')
             ->where(function ($q) {
-                $q->whereIn('status', ['completed', 'cancelled'])
-                    ->orWhereNotNull('discharged_at')
+                $q->where('status', 'completed')
                     ->orWhereHas('operationTheaterStation', function ($oq) {
                         $oq->where('status', 'completed');
                     });
             });
 
-        // فلترة حسب الطبيب إذا كان المستخدم طبيباً جراحاً أو تخدير (وليس استشاري)
-        if ($user->doctor && ! $isAdmin && ! $user->hasRole(['receptionist', 'surgery_staff'])) {
-            // إخفاء العمليات عن الأطباء الاستشاريين
-            if ($user->doctor->type === 'consultant') {
-                // لا نعرض أي عمليات للطبيب الاستشاري
-                $completedSurgeriesQuery->whereRaw('1 = 0');
-            } else {
-                // عرض العمليات الخاصة بالطبيب الجراح أو المخدر
-                $completedSurgeriesQuery->where(function ($q) use ($user) {
-                    $q->where('doctor_id', $user->doctor->id)
-                        ->orWhere('anesthesiologist_id', $user->doctor->id)
-                        ->orWhere('anesthesiologist_2_id', $user->doctor->id);
+        // 3. المرضى المخرّجين رسمياً من المستشفى (تم إخلاء الأسرة)
+        $dischargedSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
+            ->whereNotNull('discharged_at')
+            ->where('status', '!=', 'cancelled');
+
+        // 4. العمليات الملغاة
+        $cancelledSurgeriesQuery = Surgery::with(['patient.user', 'doctor.user', 'department', 'room', 'operationTheaterStation'])
+            ->where('status', 'cancelled');
+
+        // تطبيق الفلترة حسب الطبيب والبحث والتاريخ على جميع الاستعلامات
+        $applyFilters = function ($query) use ($user, $isAdmin) {
+            if ($user->doctor && ! $isAdmin && ! $user->hasRole(['receptionist', 'surgery_staff'])) {
+                if ($user->doctor->type === 'consultant') {
+                    $query->whereRaw('1 = 0');
+                } else {
+                    $query->where(function ($q) use ($user) {
+                        $q->where('doctor_id', $user->doctor->id)
+                            ->orWhere('anesthesiologist_id', $user->doctor->id)
+                            ->orWhere('anesthesiologist_2_id', $user->doctor->id);
+                    });
+                }
+            }
+
+            if (request('search')) {
+                $search = request('search');
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('patient.user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', '%'.$search.'%');
+                    })
+                        ->orWhereHas('doctor.user', function ($dq) use ($search) {
+                            $dq->where('name', 'like', '%'.$search.'%');
+                        })
+                        ->orWhere('surgery_type', 'like', '%'.$search.'%');
                 });
             }
-        }
 
-        if (request('search')) {
-            $search = request('search');
-            $completedSurgeriesQuery->where(function ($query) use ($search) {
-                $query->whereHas('patient.user', function ($q) use ($search) {
-                    $q->where('name', 'like', '%'.$search.'%');
-                })
-                    ->orWhereHas('doctor.user', function ($q) use ($search) {
-                        $q->where('name', 'like', '%'.$search.'%');
-                    })
-                    ->orWhere('surgery_type', 'like', '%'.$search.'%');
-            });
-        }
+            if (request('date')) {
+                $query->whereDate('scheduled_date', request('date'));
+            }
+        };
 
-        if (request('status') && in_array(request('status'), ['completed', 'cancelled'])) {
-            $completedSurgeriesQuery->where('status', request('status'));
-        }
+        $applyFilters($activeSurgeriesQuery);
+        $applyFilters($completedSurgeriesQuery);
+        $applyFilters($dischargedSurgeriesQuery);
+        $applyFilters($cancelledSurgeriesQuery);
 
-        if (request('date')) {
-            $completedSurgeriesQuery->whereDate('scheduled_date', request('date'));
-        }
+        $activeSurgeries = $activeSurgeriesQuery->orderBy('scheduled_date', 'desc')
+            ->orderBy('scheduled_time', 'desc')
+            ->paginate(20, ['*'], 'active_page')
+            ->appends(request()->query());
 
         $completedSurgeries = $completedSurgeriesQuery->orderBy('scheduled_date', 'desc')
             ->orderBy('scheduled_time', 'desc')
-            ->paginate(20)
+            ->paginate(20, ['*'], 'completed_page')
+            ->appends(request()->query());
+
+        $dischargedSurgeries = $dischargedSurgeriesQuery->orderBy('discharged_at', 'desc')
+            ->paginate(20, ['*'], 'discharged_page')
+            ->appends(request()->query());
+
+        $cancelledSurgeries = $cancelledSurgeriesQuery->orderBy('updated_at', 'desc')
+            ->paginate(20, ['*'], 'cancelled_page')
             ->appends(request()->query());
 
         // احتساب إحصاءات ومؤشرات العمليات الشاملة للوحة المؤشرات
@@ -196,7 +176,8 @@ class SurgeryController extends Controller
                 SUM(CASE WHEN status = 'scheduled' AND discharged_at IS NULL AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as scheduled,
                 SUM(CASE WHEN status = 'waiting' AND discharged_at IS NULL AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as waiting,
                 SUM(CASE WHEN status = 'in_progress' AND discharged_at IS NULL AND NOT EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed') THEN 1 ELSE 0 END) as in_progress,
-                SUM(CASE WHEN (status = 'completed' OR discharged_at IS NOT NULL OR EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed')) AND status != 'cancelled' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN (status = 'completed' OR EXISTS (SELECT 1 FROM operation_theater_stations WHERE operation_theater_stations.surgery_id = surgeries.id AND operation_theater_stations.status = 'completed')) AND discharged_at IS NULL AND status != 'cancelled' THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN discharged_at IS NOT NULL AND status != 'cancelled' THEN 1 ELSE 0 END) as discharged,
                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
             ")
             ->first();
@@ -226,14 +207,24 @@ class SurgeryController extends Controller
                 ->get();
         }
 
-        $allowedIndexTabs = $canViewOrStoreTab ? ['active', 'completed', 'or_store'] : ['active', 'completed'];
+        $allowedIndexTabs = $canViewOrStoreTab
+            ? ['active', 'completed', 'discharged', 'cancelled', 'or_store']
+            : ['active', 'completed', 'discharged', 'cancelled'];
         $activeIndexTab = in_array(request()->query('tab'), $allowedIndexTabs, true)
             ? request()->query('tab')
             : 'active';
 
+        $occupiedSurgeriesForSwap = Surgery::with(['patient.user', 'room'])
+            ->whereNull('discharged_at')
+            ->whereNotNull('room_id')
+            ->where('status', '!=', 'cancelled')
+            ->get();
+
         return view('surgeries.index', compact(
             'activeSurgeries',
             'completedSurgeries',
+            'dischargedSurgeries',
+            'cancelledSurgeries',
             'stats',
             'canViewOrStoreTab',
             'orLocations',
@@ -241,7 +232,8 @@ class SurgeryController extends Controller
             'isOperationCustodian',
             'orStockBatches',
             'orRecentMovements',
-            'activeIndexTab'
+            'activeIndexTab',
+            'occupiedSurgeriesForSwap'
         ));
     }
 
@@ -688,6 +680,13 @@ class SurgeryController extends Controller
         $anesthesiaAssistants = SurgicalAssistant::active()->anesthesia()->orderBy('name')->get();
         $theaterAttendants = SurgicalAssistant::active()->theaterAttendant()->orderBy('name')->get();
 
+        $occupiedSurgeriesForSwap = Surgery::with(['patient.user', 'room'])
+            ->whereNull('discharged_at')
+            ->whereNotNull('room_id')
+            ->where('status', '!=', 'cancelled')
+            ->where('id', '!=', $surgery->id)
+            ->get();
+
         return view('surgeries.show', compact(
             'surgery',
             'patients',
@@ -708,7 +707,8 @@ class SurgeryController extends Controller
             'orDispensedItems',
             'surgicalAssistants',
             'anesthesiaAssistants',
-            'theaterAttendants'
+            'theaterAttendants',
+            'occupiedSurgeriesForSwap'
         ));
     }
 
@@ -1448,6 +1448,86 @@ class SurgeryController extends Controller
     }
 
     /**
+     * إلغاء التخريج واستعادة المريض إلى قائمة العمليات النشطة (في حال تم تخريجه بالخطأ)
+     */
+    public function undoDischarge(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('control surgeries') && ! $user->can('edit surgeries')))) {
+            abort(403, 'غير مصرح لك بالتراجع عن تخريج المريض.');
+        }
+
+        if (! $surgery->discharged_at) {
+            return redirect()->back()->with('warning', 'المريض لم يتم تخريجه بعد.');
+        }
+
+        if ($surgery->status === 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن التراجع عن تخريج عملية ملغاة.');
+        }
+
+        try {
+            $msg = DB::transaction(function () use ($surgery) {
+                $lockedSurgery = Surgery::where('id', $surgery->id)->lockForUpdate()->firstOrFail();
+
+                $roomWarning = null;
+
+                if ($lockedSurgery->room_id) {
+                    $room = Room::where('id', $lockedSurgery->room_id)->lockForUpdate()->first();
+
+                    if ($room) {
+                        // التحقق هل الغرفة مشغولة حالياً بمريض نشط آخر
+                        $isOccupiedByAnother = Surgery::where('room_id', $room->id)
+                            ->where('id', '!=', $lockedSurgery->id)
+                            ->whereNull('discharged_at')
+                            ->whereNotIn('status', ['cancelled'])
+                            ->exists();
+
+                        if (! $isOccupiedByAnother) {
+                            $room->update(['status' => 'occupied']);
+                        } else {
+                            // الغرفة أصبحت مشغولة بمريض آخر: نقله إلى وضع الانتظار
+                            $lockedSurgery->room_id = null;
+                            $lockedSurgery->room_fee = 0;
+                            $roomWarning = "الغرفة السابقة ({$room->room_number}) مشغولة حالياً بمريض آخر، لذا تم نقل المريض إلى وضع انتظار الغرفة.";
+                        }
+                    }
+                }
+
+                $lockedSurgery->discharged_at = null;
+                $lockedSurgery->discharge_notes = null;
+                $lockedSurgery->save();
+
+                $lockedSurgery->syncPaymentStatus();
+
+                $patientName = $lockedSurgery->patient?->user?->name ?? $lockedSurgery->patient?->name ?? 'المريض';
+
+                \App\Services\UserActivityLogger::log(
+                    action: 'surgery_undo_discharge',
+                    category: 'surgery',
+                    description: "التراجع عن تخريج المريض {$patientName} وإعادته إلى قائمة العمليات النشطة".($roomWarning ? " ($roomWarning)" : ''),
+                    subject: $lockedSurgery,
+                    isSensitive: false
+                );
+
+                return $roomWarning;
+            });
+
+            broadcast(new SurgeryUpdated($surgery));
+
+            $patientName = $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'المريض';
+            $successMsg = "تم بنجاح التراجع عن تخريج المريض ({$patientName}) واستعادته إلى قائمة العمليات.";
+            if ($msg) {
+                return redirect()->back()->with('warning', "{$successMsg} {$msg}");
+            }
+
+            return redirect()->back()->with('success', $successMsg);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'حدث خطأ أثناء استعادة المريض من التخريج: '.$e->getMessage());
+        }
+    }
+
+    /**
      * تخصيص غرفة لمريض عملية (من وضع الانتظار أو تبديل الغرفة لاحقاً) حسب الصلاحية المخصصة
      */
     public function assignRoom(Request $request, Surgery $surgery)
@@ -1510,6 +1590,172 @@ class SurgeryController extends Controller
             );
 
             return redirect()->back()->with('success', "تم تخصيص الغرفة ({$assignedRoom->room_number}) للمريض بنجاح".($assignedRoom->daily_fee > 0 ? ' وتم تحديث الكشف المالي بالكاشير.' : '.'));
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function swapRoom(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('assign surgery room') && ! $user->can('edit surgeries')))) {
+            abort(403, 'غير مصرح لك بتبديل غرف العمليات.');
+        }
+
+        if ($surgery->status === 'cancelled') {
+            return redirect()->back()->with('error', 'لا يمكن تبديل غرفة لعملية ملغاة.');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('error', 'تم تخريج المريض مسبقاً ولا يمكن تبديل غرفته.');
+        }
+
+        if (! $surgery->room_id) {
+            return redirect()->back()->with('error', 'هذه العملية لا تملك غرفة حالياً للتبديل. يرجى استخدام تخصيص الغرفة بدلاً من ذلك.');
+        }
+
+        $validated = $request->validate([
+            'target_surgery_id' => 'required|exists:surgeries,id',
+        ], [
+            'target_surgery_id.required' => 'يرجى اختيار المريض / العملية المراد التبديل معها.',
+        ]);
+
+        if ((int) $surgery->id === (int) $validated['target_surgery_id']) {
+            return redirect()->back()->with('error', 'لا يمكن التبديل مع نفس المريض.');
+        }
+
+        try {
+            $result = DB::transaction(function () use ($validated, $surgery) {
+                $currentSurgery = Surgery::where('id', $surgery->id)->lockForUpdate()->firstOrFail();
+                $targetSurgery = Surgery::where('id', $validated['target_surgery_id'])->lockForUpdate()->firstOrFail();
+
+                if ($targetSurgery->status === 'cancelled' || $targetSurgery->discharged_at) {
+                    throw new \RuntimeException('لا يمكن التبديل مع عملية ملغاة أو مريض تم تخريجه.');
+                }
+
+                if (! $targetSurgery->room_id) {
+                    throw new \RuntimeException('العملية المختارة للتبديل لا تملك غرفة حالياً.');
+                }
+
+                if ((int) $currentSurgery->room_id === (int) $targetSurgery->room_id) {
+                    throw new \RuntimeException('كلا المريضين مسجلان في نفس الغرفة بالفعل.');
+                }
+
+                $room1 = Room::where('id', $currentSurgery->room_id)->lockForUpdate()->firstOrFail();
+                $room2 = Room::where('id', $targetSurgery->room_id)->lockForUpdate()->firstOrFail();
+
+                $room1Id = $room1->id;
+                $room1Number = $room1->room_number;
+                $room2Id = $room2->id;
+                $room2Number = $room2->room_number;
+
+                // التبديل الذكي بين الغرفتين
+                $currentSurgery->update([
+                    'room_id' => $room2Id,
+                    'room_fee' => Room::getInitialFeeForType($room2->room_type),
+                ]);
+
+                $targetSurgery->update([
+                    'room_id' => $room1Id,
+                    'room_fee' => Room::getInitialFeeForType($room1->room_type),
+                ]);
+
+                $currentSurgery->refresh()->syncPaymentStatus();
+                $targetSurgery->refresh()->syncPaymentStatus();
+
+                return [
+                    'currentSurgery' => $currentSurgery,
+                    'targetSurgery' => $targetSurgery,
+                    'room1Number' => $room1Number,
+                    'room2Number' => $room2Number,
+                ];
+            });
+
+            broadcast(new SurgeryUpdated($result['currentSurgery']));
+            broadcast(new SurgeryUpdated($result['targetSurgery']));
+
+            $p1Name = $result['currentSurgery']->patient?->user?->name ?? $result['currentSurgery']->patient?->name ?? 'المريض الأول';
+            $p2Name = $result['targetSurgery']->patient?->user?->name ?? $result['targetSurgery']->patient?->name ?? 'المريض الثاني';
+
+            \App\Services\UserActivityLogger::log(
+                action: 'surgery_swap_rooms',
+                category: 'surgery',
+                description: "تبديل الغرف بين العملية #{$result['currentSurgery']->id} ({$p1Name}) في الغرفة {$result['room1Number']} والعملية #{$result['targetSurgery']->id} ({$p2Name}) في الغرفة {$result['room2Number']}",
+                subject: $surgery,
+                isSensitive: false
+            );
+
+            return redirect()->back()->with('success', "تم بنجاح تبديل الغرف: انتقل ({$p1Name}) إلى الغرفة ({$result['room2Number']})، وانتقل ({$p2Name}) إلى الغرفة ({$result['room1Number']}).");
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function moveToWaitingZone(Request $request, Surgery $surgery)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
+        if (! $isAdmin && (! $user || (! $user->can('assign surgery room') && ! $user->can('edit surgeries')))) {
+            abort(403, 'غير مصرح لك بإخلاء الغرف ونقل المرضى لوضع الانتظار.');
+        }
+
+        if ($surgery->status === 'cancelled') {
+            return redirect()->back()->with('error', 'العملية ملغاة بالفعل.');
+        }
+
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('error', 'تم تخريج المريض مسبقاً.');
+        }
+
+        if (! $surgery->room_id) {
+            return redirect()->back()->with('warning', 'المريض موجود بالفعل في وضع الانتظار بدون غرفة.');
+        }
+
+        try {
+            $clearedRoom = DB::transaction(function () use ($surgery) {
+                $lockedSurgery = Surgery::where('id', $surgery->id)->lockForUpdate()->firstOrFail();
+                $room = Room::where('id', $lockedSurgery->room_id)->lockForUpdate()->first();
+
+                $roomNumber = $room ? $room->room_number : 'المحددة';
+
+                $lockedSurgery->update([
+                    'room_id' => null,
+                    'room_fee' => 0,
+                    'room_checkin_at' => null,
+                    'room_checkin_by' => null,
+                ]);
+
+                if ($room) {
+                    $otherActive = Surgery::where('room_id', $room->id)
+                        ->where('id', '!=', $lockedSurgery->id)
+                        ->whereNull('discharged_at')
+                        ->whereNotIn('status', ['cancelled'])
+                        ->exists();
+
+                    if (! $otherActive) {
+                        $room->update(['status' => 'available']);
+                    }
+                }
+
+                $lockedSurgery->refresh()->syncPaymentStatus();
+
+                return $roomNumber;
+            });
+
+            broadcast(new SurgeryUpdated($surgery));
+
+            $pName = $surgery->patient?->user?->name ?? $surgery->patient?->name ?? 'المريض';
+
+            \App\Services\UserActivityLogger::log(
+                action: 'surgery_move_to_waiting_zone',
+                category: 'surgery',
+                description: "إخلاء الغرفة رقم {$clearedRoom} ونقل العملية #{$surgery->id} ({$pName}) إلى وضع انتظار الغرفة",
+                subject: $surgery,
+                isSensitive: false
+            );
+
+            return redirect()->back()->with('success', "تم إخلاء الغرفة ({$clearedRoom}) بنجاح، ونقل المريض ({$pName}) إلى وضع انتظار الغرفة.");
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', $e->getMessage());
         }

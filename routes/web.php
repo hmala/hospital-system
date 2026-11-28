@@ -840,7 +840,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/surgeries/{surgery}/start', [SurgeryController::class, 'start'])->name('surgeries.start');
     Route::post('/surgeries/{surgery}/complete', [SurgeryController::class, 'complete'])->name('surgeries.complete');
     Route::post('/surgeries/{surgery}/discharge', [SurgeryController::class, 'discharge'])->name('surgeries.discharge');
+    Route::post('/surgeries/{surgery}/undo-discharge', [SurgeryController::class, 'undoDischarge'])->name('surgeries.undo-discharge');
     Route::post('/surgeries/{surgery}/assign-room', [SurgeryController::class, 'assignRoom'])->name('surgeries.assign-room');
+    Route::post('/surgeries/{surgery}/swap-room', [SurgeryController::class, 'swapRoom'])->name('surgeries.swap-room');
+    Route::post('/surgeries/{surgery}/move-to-waiting-zone', [SurgeryController::class, 'moveToWaitingZone'])->name('surgeries.move-to-waiting-zone');
     Route::post('/surgeries/{surgery}/cancel', [SurgeryController::class, 'cancel'])->name('surgeries.cancel');
     Route::post('/surgeries/{surgery}/reactivate', [SurgeryController::class, 'reactivate'])->name('surgeries.reactivate');
     Route::post('/surgeries/{surgery}/return-to-waiting', [SurgeryController::class, 'returnToWaiting'])->name('surgeries.return-to-waiting');
