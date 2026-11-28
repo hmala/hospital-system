@@ -56,6 +56,28 @@ Consult these files before making changes or proposing fixes:
 - Validate Laravel-specific changes with `php artisan test` or `composer test` when appropriate.
 - When working on permissions or role-related logic, search for `spatie/laravel-permission`, `RolesAndPermissionsSeeder`, and `permission:cache-reset`.
 
+## Session log (2026-11-28 — المرحلة 334: المنع الصارم لظهور الغرف المشغولة بالحالات الجراحية أو الرقود في الحجز والتعديل والتبديل وتحديث مزامنة المراقب Strict Occupied Room Exclusion Across Surgery Booking, Edit & Transfer, and Observer Sync Fix)
+
+### Done
+- **نطاق الغرف الشاغرة الفعلي والموثوق (`Room::scopeAvailableBeds`) ([Room.php](file:///c:/wamp64/www/hospital-system/app/Models/Room.php))**:
+  * إضافة نطاق استعلام صارم `scopeAvailableBeds(?int $excludeSurgeryId = null)` لا يكتفي بفحص `status = available`، بل يتحقق صراحة من:
+    1. خلو الغرفة من أي عملية جراحية نشطة (`whereDoesntHave('surgeries')` حيث `discharged_at IS NULL` و `medical_discharged_at IS NULL` و `status != 'cancelled'`).
+    2. خلو الغرفة من أي حجز سرير مؤكد أو معلق (`whereDoesntHave('bedReservations')` حيث `status IN ('pending', 'confirmed')`).
+    3. استثناء العملية الحالية في شاشة التعديل حتى لا تفقد عمليتها غرفتها الحالية.
+- **تحديث مراقب الحجوزات ومزامنة حالة الغرف ([BedReservationObserver.php](file:///c:/wamp64/www/hospital-system/app/Observers/BedReservationObserver.php))**:
+  * إصلاح الخلل الجذري الذي كان يعيد الغرف المشغولة بعمليات جراحية إلى `available` عند مزامنة الأسرة.
+  * تحديث `syncRoomStatus` و `syncAllRooms` للتحقق من وجود أي حجز سرير نشط أو عملية جراحية نشطة قبل تحويل الغرفة إلى `available`.
+- **حوكمة شاشات العمليات: الحجز، التعديل، والتبديل ([SurgeryController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/SurgeryController.php), [surgeries/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgeries/index.blade.php))**:
+  * **شاشة الحجز (`create`)**: استخدام `Room::availableBeds()` فقط لمنع ظهور الغرف المشغولة بمريض سابق (مثل الغرفة 501).
+  * **شاشة التعديل (`edit`)**: استخدام `Room::availableBeds($surgery->id)` مع إبقاء الغرفة الحالية لنفس العملية فقط.
+  * **دوال الحفظ والتعديل (`store` و `update` و `assignRoom`)**: تدعيم بوابات التحقق البرمجية الصارمة لمنع إسناد أي غرفة مشغولة بعملية نشطة أو حجز سرير، حتى لو حاول المستخدم التلاعب بالطلب.
+  * **مودال تبديل الغرفة (`index.blade.php`)**: استثناء غرفة المريض الحالية تلقائياً من قائمة الغرف الشاغرة للنقل.
+- **محاذاة أزرار التخريج في محطات المقيم والتمريض ([ResidentStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/ResidentStationController.php), [NursingStationController.php](file:///c:/wamp64/www/hospital-system/app/Http/Controllers/NursingStationController.php), [surgery-stations/resident/index.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/resident/index.blade.php), [surgery-stations/clinical/show.blade.php](file:///c:/wamp64/www/hospital-system/resources/views/surgery-stations/clinical/show.blade.php))**:
+  * استبدال كود التخريج القديم `roomCheckout` الذي كان يضع `discharged_at = now()` ويتجاوز الكاشير؛ ليقوم بمنح `medical_discharged_at = now()` وتفريغ السرير فقط، وإبقاء التخريج النهائي وبراءة الذمة المالية محصورة بالكاشير.
+  * تحديث نص وشارة الزر إلى `[ 🩺 إذن خروج وتفريغ السرير ]`.
+- **الاختبارات وضمان الجودة ([SurgeryRoomSwapAndWaitingZoneTest.php](file:///c:/wamp64/www/hospital-system/tests/Feature/SurgeryRoomSwapAndWaitingZoneTest.php))**:
+  * إضافة اختبارات ميزة تغطي استبعاد الغرف المشغولة في الحجز والتعديل (7 tests).
+
 ## Session log (2026-11-28 — المرحلة 333: المسار الثنائي للتخريج الطبي وتفريغ السرير، تبويب نزلاء الردهة المسددين في كاشير العمليات، وحصر براءة الذمة النهائية بالكاشير Two-Step Medical & Financial Discharge, Instant Room Evacuation & Cashier Inpatients Navigation Hub)
 
 ### Done

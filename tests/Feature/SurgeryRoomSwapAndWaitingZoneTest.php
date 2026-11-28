@@ -439,7 +439,8 @@ class SurgeryRoomSwapAndWaitingZoneTest extends TestCase
             'room_purpose' => 'beds',
         ]);
 
-        $patient = Patient::factory()->create(['hospital_id' => $this->hospital->id]);
+        $patientUser = User::factory()->create();
+        $patient = Patient::create(['user_id' => $patientUser->id]);
 
         Surgery::create([
             'hospital_id' => $this->hospital->id,
@@ -447,6 +448,7 @@ class SurgeryRoomSwapAndWaitingZoneTest extends TestCase
             'doctor_id' => $this->doctor->id,
             'department_id' => $this->department->id,
             'surgical_operation_id' => $this->operation->id,
+            'surgery_type' => $this->operation->name,
             'room_id' => $staleRoom->id,
             'scheduled_date' => now()->toDateString(),
             'scheduled_time' => '10:00:00',
@@ -479,6 +481,84 @@ class SurgeryRoomSwapAndWaitingZoneTest extends TestCase
         $this->assertTrue($availableRooms->contains('id', $trulyVacantRoom->id));
 
         // Ensure dynamic URL is used in the rendered script
-        $response->assertSee(url('/surgeries') . '/\' + activeSwapSurgeryId + \'/assign-room', false);
+        $response->assertSee(url('/surgeries').'/\' + activeSwapSurgeryId + \'/assign-room', false);
+    }
+
+    public function test_surgery_create_and_edit_exclude_occupied_rooms()
+    {
+        $occupiedRoom = Room::create([
+            'hospital_id' => $this->hospital->id,
+            'room_number' => '501-TEST',
+            'room_type' => 'regular',
+            'status' => 'available', // Stale or misconfigured
+            'daily_fee' => 50000,
+            'is_active' => true,
+            'room_purpose' => 'beds',
+        ]);
+
+        $vacantRoom = Room::create([
+            'hospital_id' => $this->hospital->id,
+            'room_number' => '502-TEST',
+            'room_type' => 'regular',
+            'status' => 'available',
+            'daily_fee' => 50000,
+            'is_active' => true,
+            'room_purpose' => 'beds',
+        ]);
+
+        $patientUser = User::factory()->create();
+        $patient = Patient::create(['user_id' => $patientUser->id]);
+
+        $surgery = Surgery::create([
+            'hospital_id' => $this->hospital->id,
+            'patient_id' => $patient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgical_operation_id' => $this->operation->id,
+            'surgery_type' => $this->operation->name,
+            'room_id' => $occupiedRoom->id,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '10:00:00',
+            'status' => 'scheduled',
+            'custom_surgery_fee' => 500000,
+            'room_fee' => 0,
+            'referring_doctor_name' => 'د. فاحص',
+            'surgery_category' => 'major',
+            'expected_stay_days' => 1,
+        ]);
+
+        // 1. In Create
+        $createResponse = $this->actingAs($this->admin)->get(route('surgeries.create'));
+        $createResponse->assertOk();
+        $createRooms = $createResponse->viewData('rooms');
+        $this->assertFalse($createRooms->contains('id', $occupiedRoom->id));
+        $this->assertTrue($createRooms->contains('id', $vacantRoom->id));
+
+        // 2. In Edit for another surgery
+        $otherPatientUser = User::factory()->create();
+        $otherPatient = Patient::create(['user_id' => $otherPatientUser->id]);
+        $otherSurgery = Surgery::create([
+            'hospital_id' => $this->hospital->id,
+            'patient_id' => $otherPatient->id,
+            'doctor_id' => $this->doctor->id,
+            'department_id' => $this->department->id,
+            'surgical_operation_id' => $this->operation->id,
+            'surgery_type' => $this->operation->name,
+            'room_id' => null,
+            'scheduled_date' => now()->toDateString(),
+            'scheduled_time' => '11:00:00',
+            'status' => 'scheduled',
+            'custom_surgery_fee' => 500000,
+            'room_fee' => 0,
+            'referring_doctor_name' => 'د. فاحص',
+            'surgery_category' => 'major',
+            'expected_stay_days' => 1,
+        ]);
+
+        $editResponse = $this->actingAs($this->admin)->get(route('surgeries.edit', $otherSurgery));
+        $editResponse->assertOk();
+        $editRooms = $editResponse->viewData('rooms');
+        $this->assertFalse($editRooms->contains('id', $occupiedRoom->id));
+        $this->assertTrue($editRooms->contains('id', $vacantRoom->id));
     }
 }

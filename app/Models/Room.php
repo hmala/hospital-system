@@ -187,6 +187,28 @@ class Room extends Model
     }
 
     /**
+     * نطاق الغرف الشاغرة فعلياً والجاهزة لحجز سرير أو عملية
+     * خالية من أي مريض عملية نشط وخالية من أي حجز سرير مؤكد
+     */
+    public function scopeAvailableBeds($query, ?int $excludeSurgeryId = null)
+    {
+        return $query->where('status', self::STATUS_AVAILABLE)
+            ->where('is_active', true)
+            ->where('room_purpose', 'beds')
+            ->whereDoesntHave('surgeries', function ($q) use ($excludeSurgeryId) {
+                $q->whereNull('discharged_at')
+                    ->whereNull('medical_discharged_at')
+                    ->where('status', '!=', 'cancelled');
+                if ($excludeSurgeryId) {
+                    $q->where('id', '!=', $excludeSurgeryId);
+                }
+            })
+            ->whereDoesntHave('bedReservations', function ($q) {
+                $q->whereIn('status', ['pending', 'confirmed']);
+            });
+    }
+
+    /**
      * نطاق الغرف النشطة
      */
     public function scopeActive($query)

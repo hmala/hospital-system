@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\BedReservation;
 use App\Models\Room;
+use App\Models\Surgery;
 
 class BedReservationObserver
 {
@@ -61,13 +62,21 @@ class BedReservationObserver
             return;
         }
 
-        // التحقق من وجود حجوزات نشطة في هذه الغرفة
+        // التحقق من وجود حجوزات نشطة أو مريض عملية جراحية في هذه الغرفة
         $hasActiveReservations = BedReservation::where('room_id', $roomId)
             ->where('status', 'confirmed')
             ->exists();
 
+        $hasActiveSurgery = Surgery::where('room_id', $roomId)
+            ->whereNull('discharged_at')
+            ->whereNull('medical_discharged_at')
+            ->where('status', '!=', 'cancelled')
+            ->exists();
+
+        $isOccupied = $hasActiveReservations || $hasActiveSurgery;
+
         // تحديث حالة الغرفة
-        $newStatus = $hasActiveReservations ? 'occupied' : 'available';
+        $newStatus = $isOccupied ? 'occupied' : 'available';
         
         // تحديث فقط إذا كانت الحالة مختلفة (وليست صيانة)
         if ($room->status !== 'maintenance' && $room->status !== $newStatus) {
@@ -88,7 +97,14 @@ class BedReservationObserver
                 ->where('status', 'confirmed')
                 ->exists();
 
-            $newStatus = $hasActiveReservations ? 'occupied' : 'available';
+            $hasActiveSurgery = Surgery::where('room_id', $room->id)
+                ->whereNull('discharged_at')
+                ->whereNull('medical_discharged_at')
+                ->where('status', '!=', 'cancelled')
+                ->exists();
+
+            $isOccupied = $hasActiveReservations || $hasActiveSurgery;
+            $newStatus = $isOccupied ? 'occupied' : 'available';
             
             if ($room->status !== $newStatus) {
                 $room->update(['status' => $newStatus]);

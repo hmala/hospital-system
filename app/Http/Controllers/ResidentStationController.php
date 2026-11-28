@@ -448,7 +448,7 @@ class ResidentStationController extends Controller
     }
 
     /**
-     * تخريج المريض من الغرفة في الطابق وتحرير السرير بواسطة الطبيب المقيم
+     * إذن الخروج الطبي وتفريغ السرير بواسطة الطبيب المقيم
      */
     public function roomCheckout(Request $request, Surgery $surgery)
     {
@@ -456,21 +456,21 @@ class ResidentStationController extends Controller
         $isAdmin = $user && $user->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin']);
         $isResident = $user && ($user->can('view resident station') || $user->hasRole(['resident', 'doctor', 'surgeon']));
         if (! $isAdmin && ! $isResident) {
-            abort(403, 'غير مصرح لك بتخريج المريض من الغرفة. هذا الإجراء الطبي من صلاحية الطبيب المقيم المشرف.');
+            abort(403, 'غير مصرح لك بإصدار إذن الخروج الطبي وتفريغ الغرفة. هذا الإجراء الطبي من صلاحية الطبيب المقيم المشرف.');
         }
 
-        // بوابة براءة الذمة المالية: منع التخريج إذا كانت هناك مستحقات غير مسددة في الكاشير
-        $clearance = $surgery->getFinancialClearanceSummary(now());
-        if (! $clearance['cleared']) {
-            return redirect()->back()->with(
-                'error',
-                'لا يمكن تخريج المريض قبل تسوية كافة المستحقات المالية في الكاشير: '.implode(' | ', $clearance['reasons'])
-            );
+        if ($surgery->discharged_at) {
+            return redirect()->back()->with('warning', 'المريض مخرّج نهائياً بالفعل من المستشفى.');
+        }
+
+        if ($surgery->medical_discharged_at) {
+            return redirect()->back()->with('warning', 'تم منح إذن الخروج الطبي وتفريغ السرير لهذا المريض مسبقاً.');
         }
 
         $surgery->update([
-            'discharged_at' => now(),
-            'discharge_notes' => $request->input('discharge_notes') ?: $surgery->discharge_notes,
+            'medical_discharged_at' => now(),
+            'medical_discharge_by' => auth()->id(),
+            'medical_discharge_notes' => $request->input('discharge_notes') ?: $surgery->medical_discharge_notes,
         ]);
 
         if ($surgery->room) {
@@ -478,15 +478,15 @@ class ResidentStationController extends Controller
         }
 
         \App\Services\UserActivityLogger::log(
-            action: 'surgery_room_checkout',
+            action: 'surgery_medical_discharge',
             category: 'resident',
-            description: "تخريج المريض {$surgery->patient?->name} من الغرفة رقم {$surgery->room?->room_number} وتحرير السرير بواسطة الطبيب المقيم",
+            description: "منح إذن الخروج الطبي للمريض {$surgery->patient?->name} من الغرفة رقم {$surgery->room?->room_number} وتفريغ السرير بواسطة الطبيب المقيم",
             subject: $surgery,
             isSensitive: false
         );
 
         $roomNum = $surgery->room?->room_number ?? 'غير محددة';
 
-        return redirect()->back()->with('success', "تم تخريج المريض وتحرير الغرفة ({$roomNum}) بنجاح وتثبيت حساب الإقامة النهائي.");
+        return redirect()->back()->with('success', "تم منح إذن الخروج الطبي وتفريغ الغرفة ({$roomNum}) بنجاح. المريض الآن بانتظار تصفية الحساب وبراءة الذمة لدى الكاشير.");
     }
 }

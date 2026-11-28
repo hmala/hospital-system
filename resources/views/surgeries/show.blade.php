@@ -3618,7 +3618,7 @@
 
         if (!form || !selectEl) return;
 
-        form.action = '{{ url("/surgeries") }}/' + currentSurgeryId + '/swap-room';
+        form.action = '/surgeries/' + currentSurgeryId + '/swap-room';
         if (pNameEl) pNameEl.textContent = currentPatientName;
         if (rNumEl) rNumEl.textContent = currentRoomNumber;
 

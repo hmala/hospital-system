@@ -216,11 +216,29 @@ class SurgeryController extends Controller
 
         $occupiedSurgeriesForSwap = Surgery::with(['patient.user', 'room'])
             ->whereNull('discharged_at')
+            ->whereNull('medical_discharged_at')
             ->whereNotNull('room_id')
             ->where('status', '!=', 'cancelled')
             ->get();
 
-        $availableRoomsForTransfer = Room::available()
+        $surgeryOccupiedRoomIds = $occupiedSurgeriesForSwap->pluck('room_id')->filter()->unique();
+
+        $bedReservationOccupiedRoomIds = \App\Models\BedReservation::whereNotNull('room_id')
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->pluck('room_id')
+            ->filter()
+            ->unique();
+
+        $allOccupiedRoomIds = $surgeryOccupiedRoomIds->merge($bedReservationOccupiedRoomIds)->unique();
+
+        if ($allOccupiedRoomIds->isNotEmpty()) {
+            Room::whereIn('id', $allOccupiedRoomIds)
+                ->where('status', 'available')
+                ->update(['status' => 'occupied']);
+        }
+
+        $availableRoomsForTransfer = Room::availableBeds()
+            ->whereNotIn('id', $allOccupiedRoomIds)
             ->orderBy('room_number')
             ->get();
 
@@ -282,7 +300,7 @@ class SurgeryController extends Controller
         $labTests = LabTest::active()->orderBy('name')->get();
         $radiologyTypes = RadiologyType::active()->orderBy('name')->get();
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        $rooms = Room::where('is_active', true)->where('room_purpose', 'beds')->where('status', 'available')->orderBy('room_type')->orderBy('room_number')->get();
+        $rooms = Room::availableBeds()->orderBy('room_type')->orderBy('room_number')->get();
         $locations = \App\Models\Location::orderBy('name')->get();
 
         return view('surgeries.create', compact('patients', 'doctors', 'labTests', 'radiologyTypes', 'surgicalOperations', 'rooms', 'locations', 'selectedPatient'));
@@ -394,13 +412,18 @@ class SurgeryController extends Controller
         if ($request->filled('room_id')) {
             $room = Room::find($request->room_id);
             if ($room) {
-                // التحقق الصارم: منع حجز غرفة مشغولة بمريض آخر
+                // التحقق الصارم: منع حجز غرفة مشغولة بمريض آخر في عملية جراحية أو رقود سريري
                 $isOccupiedByActiveSurgery = Surgery::where('room_id', $room->id)
                     ->whereNull('discharged_at')
+                    ->whereNull('medical_discharged_at')
                     ->whereNotIn('status', ['cancelled'])
                     ->exists();
 
-                if ($room->status !== 'available' || $isOccupiedByActiveSurgery) {
+                $isOccupiedByBedReservation = \App\Models\BedReservation::where('room_id', $room->id)
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->exists();
+
+                if ($room->status !== 'available' || $isOccupiedByActiveSurgery || $isOccupiedByBedReservation) {
                     return back()->withInput()->with('error', "الغرفة ({$room->room_number}) مشغولة حالياً بمريض آخر ولا يمكن حجزها إلا بعد تخريجه وإخلاء السرير.");
                 }
 
@@ -749,14 +772,10 @@ class SurgeryController extends Controller
                 return optional($d->user)->name ?? '';
             });
         $surgicalOperations = \App\Models\SurgicalOperation::where('is_active', true)->orderBy('category')->orderBy('name')->get();
-        // إحضار الغرف المتاحة فقط مع الغرفة المحجوزة حالياً لنفس العملية
-        $rooms = Room::where('room_purpose', 'beds')
-            ->where('is_active', true)
-            ->where(function ($query) use ($surgery) {
-                $query->where('status', 'available');
-                if ($surgery->room_id) {
-                    $query->orWhere('id', $surgery->room_id);
-                }
+        // إحضار الغرف المتاحة فعلياً مع الغرفة الحالية لنفس العملية فقط
+        $rooms = Room::availableBeds($surgery->id)
+            ->when($surgery->room_id, function ($query) use ($surgery) {
+                $query->orWhere('id', $surgery->room_id);
             })
             ->orderBy('room_type')
             ->orderBy('room_number')
@@ -896,14 +915,19 @@ class SurgeryController extends Controller
             if ($request->filled('room_id')) {
                 $newRoom = Room::find($request->room_id);
                 if ($newRoom) {
-                    // التحقق الصارم: منع إسناد غرفة مشغولة بمريض آخر
+                    // التحقق الصارم: منع إسناد غرفة مشغولة بمريض آخر في عملية جراحية أو رقود سريري
                     $isOccupiedByAnother = Surgery::where('room_id', $newRoom->id)
                         ->where('id', '!=', $surgery->id)
                         ->whereNull('discharged_at')
+                        ->whereNull('medical_discharged_at')
                         ->whereNotIn('status', ['cancelled'])
                         ->exists();
 
-                    if ($newRoom->status !== 'available' || $isOccupiedByAnother) {
+                    $isOccupiedByBed = \App\Models\BedReservation::where('room_id', $newRoom->id)
+                        ->whereIn('status', ['pending', 'confirmed'])
+                        ->exists();
+
+                    if ($newRoom->status !== 'available' || $isOccupiedByAnother || $isOccupiedByBed) {
                         return back()->withInput()->with('error', "الغرفة ({$newRoom->room_number}) مشغولة حالياً بمريض آخر ولا يمكن إسنادها.");
                     }
 
@@ -1641,7 +1665,18 @@ class SurgeryController extends Controller
             $assignedRoom = DB::transaction(function () use ($validated, $surgery, $user) {
                 $newRoom = Room::where('id', $validated['room_id'])->lockForUpdate()->firstOrFail();
 
-                if ($newRoom->status !== 'available' && (int) $surgery->room_id !== (int) $newRoom->id) {
+                $isOccupiedBySurgery = Surgery::where('room_id', $newRoom->id)
+                    ->where('id', '!=', $surgery->id)
+                    ->whereNull('discharged_at')
+                    ->whereNull('medical_discharged_at')
+                    ->whereNotIn('status', ['cancelled'])
+                    ->exists();
+
+                $isOccupiedByBedRes = \App\Models\BedReservation::where('room_id', $newRoom->id)
+                    ->whereIn('status', ['pending', 'confirmed'])
+                    ->exists();
+
+                if (($newRoom->status !== 'available' || $isOccupiedBySurgery || $isOccupiedByBedRes) && (int) $surgery->room_id !== (int) $newRoom->id) {
                     throw new \RuntimeException("الغرفة ({$newRoom->room_number}) مشغولة أو غير متاحة حالياً.");
                 }
 

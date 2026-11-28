@@ -2077,16 +2077,18 @@
             swapSelect.innerHTML = '<option value="">' + '{{ __("لا يوجد مرضى آخرون في غرف حالياً للتبديل معهم") }}' + '</option>';
         }
 
-        // 2. Populate vacant available rooms for transfer
+        // 2. Populate vacant available rooms for transfer (excluding current room)
         transferSelect.innerHTML = '<option value="">-- ' + '{{ __("اختر الغرفة الشاغرة للنقل إليها") }}' + ' --</option>';
         const vacantList = window.availableRoomsForTransfer || [];
         let countVacant = 0;
         vacantList.forEach(room => {
-            countVacant++;
-            const opt = document.createElement('option');
-            opt.value = room.id;
-            opt.textContent = 'غرفة ' + room.room_number + ' (' + room.room_type + ')' + (room.daily_fee > 0 ? ' — ' + Number(room.daily_fee).toLocaleString() + ' د.ع' : ' — مجانية');
-            transferSelect.appendChild(opt);
+            if (String(room.room_number).trim() !== String(currentRoomNumber).trim()) {
+                countVacant++;
+                const opt = document.createElement('option');
+                opt.value = room.id;
+                opt.textContent = 'غرفة ' + room.room_number + ' (' + room.room_type + ')' + (room.daily_fee > 0 ? ' — ' + Number(room.daily_fee).toLocaleString() + ' د.ع' : ' — مجانية');
+                transferSelect.appendChild(opt);
+            }
         });
         if (countVacant === 0) {
             transferSelect.innerHTML = '<option value="">' + '{{ __("لا توجد غرف شاغرة ومتاحة حالياً") }}' + '</option>';

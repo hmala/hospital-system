@@ -692,16 +692,21 @@
                     @endif
 
                     @if($surgery->discharged_at)
-                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('تم تخريج المريض من المستشفى') }}">
+                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary border border-primary-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('تم تخريج المريض نهائياً من المستشفى') }}">
                             <i class="fas fa-sign-out-alt text-primary"></i>
-                            <span>{{ __('تم التخريج') }}: {{ $surgery->discharged_at->format('Y-m-d h:i A') }}</span>
+                            <span>{{ __('تم التخريج النهائي') }}: {{ $surgery->discharged_at->format('Y-m-d h:i A') }}</span>
+                        </span>
+                    @elseif($surgery->medical_discharged_at)
+                        <span class="badge rounded-pill bg-success bg-opacity-10 text-success border border-success-subtle px-3 py-1.5 fw-bold d-inline-flex align-items-center gap-1.5 shadow-xs" title="{{ __('تم منح إذن الخروج الطبي وتفريغ السرير') }}">
+                            <i class="fas fa-stethoscope text-success"></i>
+                            <span>{{ __('إذن خروج طبي وتفريغ السرير صادر') }}</span>
                         </span>
                     @elseif($surgery->room_id && (auth()->user()?->hasRole(['admin', 'admin-hsop', 'hospital_admin', 'super_admin', 'resident', 'doctor', 'surgeon']) || auth()->user()?->can('view resident station')))
-                        <form action="{{ route('resident-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إنهاء احتساب الإقامة وتحرير الغرفة.') }}')">
+                        <form action="{{ route('resident-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد منح إذن الخروج الطبي للمريض وتفريغ السرير؟ سيتم تحرير الغرفة فوراً لاستقبال حالات جديدة ونقل المريض للكاشير لتصفية الحساب.') }}')">
                             @csrf
-                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" title="{{ __('تخريج المريض وإخلاء السرير (قرار الطبيب المقيم)') }}">
-                                <i class="fas fa-sign-out-alt"></i>
-                                <span>{{ __('تخريج المريض من الغرفة') }}</span>
+                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1.5 fw-bold shadow-xs d-inline-flex align-items-center gap-1.5" title="{{ __('إذن خروج طبي وتفريغ السرير (قرار الطبيب المقيم)') }}">
+                                <i class="fas fa-stethoscope"></i>
+                                <span>{{ __('إذن خروج طبي وتفريغ السرير') }}</span>
                             </button>
                         </form>
                     @endif

@@ -247,11 +247,15 @@
                                                     <a href="{{ route('resident-station.show', $surgery) }}{{ $isPostOp ? '?phase=post_op' : '' }}" class="btn btn-sm btn-primary rounded-pill px-3 py-1.5 shadow-sm fw-bold">
                                                         <i class="fas fa-user-md me-1"></i> {{ __('عرض وتعديل') }}
                                                     </a>
-                                                    @if($surgery->room_id && !$surgery->discharged_at)
-                                                        <form action="{{ route('resident-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد تخريج المريض من الغرفة وإخلاء السرير؟ سيتم إنهاء احتساب الإقامة وتحرير الغرفة.') }}')">
+                                                    @if($surgery->medical_discharged_at)
+                                                        <span class="badge bg-success bg-opacity-10 text-success border border-success-subtle rounded-pill px-2.5 py-1.5 fw-bold" title="{{ __('تم منح إذن الخروج الطبي وتفريغ السرير') }}">
+                                                            <i class="fas fa-stethoscope me-1"></i> {{ __('إذن طبي صادر') }}
+                                                        </span>
+                                                    @elseif($surgery->room_id && !$surgery->discharged_at)
+                                                        <form action="{{ route('resident-station.room-checkout', $surgery) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد منح إذن الخروج الطبي للمريض وتفريغ السرير؟ سيتم تحرير الغرفة فوراً لاستقبال حالات جديدة ونقل المريض للكاشير لتصفية الحساب.') }}')">
                                                             @csrf
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2.5 py-1.5 shadow-sm fw-bold" title="{{ __('تخريج المريض وإخلاء السرير (صلاحية الطبيب المقيم)') }}">
-                                                                <i class="fas fa-sign-out-alt me-1"></i> {{ __('تخريج') }}
+                                                            <button type="submit" class="btn btn-sm btn-outline-success rounded-pill px-2.5 py-1.5 shadow-sm fw-bold" title="{{ __('إذن خروج طبي وتفريغ السرير (صلاحية الطبيب المقيم)') }}">
+                                                                <i class="fas fa-stethoscope me-1"></i> {{ __('إذن خروج وتفريغ') }}
                                                             </button>
                                                         </form>
                                                     @endif
