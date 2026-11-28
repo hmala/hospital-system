@@ -256,14 +256,21 @@
                                         <small>{{ $payment->cashier->name ?? __('غير محدد') }}</small>
                                     </td>
                                     <td>
-                                        <div>
-                                            <i class="fas fa-calendar text-muted me-1"></i>
-                                            {{ $payment->paid_at->format('Y-m-d') }}
-                                        </div>
-                                        <small class="text-muted">
-                                            <i class="fas fa-clock me-1"></i>
-                                            {{ $payment->paid_at->format('H:i') }}
-                                        </small>
+                                        @php
+                                            $paidDate = $payment->paid_at ?? $payment->created_at;
+                                        @endphp
+                                        @if($paidDate)
+                                            <div>
+                                                <i class="fas fa-calendar text-muted me-1"></i>
+                                                {{ $paidDate->format('Y-m-d') }}
+                                            </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ $paidDate->format('H:i') }}
+                                            </small>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
