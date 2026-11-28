@@ -728,16 +728,26 @@
                                                 <span>{{ __('إضافة خدمة') }}</span>
                                             </a>
 
-                                            {{-- زر التخريج النهائي وبراءة الذمة من الكاشير --}}
-                                            <form action="{{ route('cashier.surgeries.final-discharge', $inpatient->id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد إتمام براءة الذمة والتخريج النهائي للمريض (:name) وإغلاق ملف العملية مالياً؟', ['name' => $inpPatientName]) }}');">
-                                                @csrf
-                                                <button type="submit" 
-                                                        class="btn btn-sm btn-success rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs"
-                                                        title="{{ __('إتمام براءة الذمة وتخريج المريض نهائياً من المستشفى وأرشفة العملية') }}">
-                                                    <i class="fas fa-sign-out-alt"></i>
+                                            {{-- زر التخريج النهائي وبراءة الذمة من الكاشير (مشروط بصدور إذن الخروج الطبي وتفريغ السرير من المقيم) --}}
+                                            @if($inpatient->medical_discharged_at)
+                                                <form action="{{ route('cashier.surgeries.final-discharge', $inpatient->id) }}" method="POST" class="d-inline" onsubmit="return confirm('{{ __('تأكيد إتمام براءة الذمة والتخريج النهائي للمريض (:name) وإغلاق ملف العملية مالياً؟', ['name' => $inpPatientName]) }}');">
+                                                    @csrf
+                                                    <button type="submit" 
+                                                            class="btn btn-sm btn-success rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 shadow-2xs"
+                                                            title="{{ __('إتمام براءة الذمة وتخريج المريض نهائياً من المستشفى وأرشفة العملية') }}">
+                                                        <i class="fas fa-sign-out-alt"></i>
+                                                        <span>{{ __('تخريج وبراءة ذمة') }}</span>
+                                                    </button>
+                                                </form>
+                                            @else
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-secondary rounded-pill px-2.5 py-1 fw-bold d-inline-flex align-items-center gap-1 opacity-60" 
+                                                        disabled
+                                                        title="{{ __('غير متاح: بانتظار قيام الطبيب المقيم بإعطاء إذن الخروج الطبي وتفريغ السرير أولاً') }}">
+                                                    <i class="fas fa-lock text-warning"></i>
                                                     <span>{{ __('تخريج وبراءة ذمة') }}</span>
                                                 </button>
-                                            </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

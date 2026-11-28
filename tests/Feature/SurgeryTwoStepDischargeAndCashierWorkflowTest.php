@@ -37,6 +37,7 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
     {
         parent::setUp();
 
+        Permission::firstOrCreate(['name' => 'view surgeries cashier']);
         Permission::firstOrCreate(['name' => 'control surgeries']);
         Permission::firstOrCreate(['name' => 'edit surgeries']);
         Permission::firstOrCreate(['name' => 'assign surgery room']);
@@ -46,7 +47,7 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
         $adminRole->givePermissionTo(Permission::all());
 
         $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
-        $cashierRole->givePermissionTo('process cashier payments');
+        $cashierRole->givePermissionTo(['process cashier payments', 'view surgeries cashier']);
 
         $this->hospital = Hospital::create([
             'name' => 'مستشفى الشفاء التخصصي',
@@ -63,7 +64,11 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
         $this->cashier->assignRole('cashier');
 
         $this->department = Department::create([
+            'hospital_id' => $this->hospital->id,
             'name' => 'قسم الجراحة العامة',
+            'type' => 'surgical',
+            'room_number' => '101',
+            'consultation_fee' => 25000,
             'code' => 'GEN-SURG',
             'is_active' => true,
         ]);
@@ -73,6 +78,8 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
             'user_id' => $doctorUser->id,
             'department_id' => $this->department->id,
             'specialization' => 'جراحة عامة',
+            'qualification' => 'استشاري جراحة',
+            'license_number' => 'DOC-SURG-001',
             'is_active' => true,
         ]);
 
@@ -87,6 +94,7 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
         $this->operation = SurgicalOperation::create([
             'name' => 'استئصال الزائدة الدودية بالمنظار',
             'code' => 'APP-01',
+            'category' => 'major',
             'default_price' => 300000,
             'department_id' => $this->department->id,
         ]);
@@ -173,11 +181,19 @@ class SurgeryTwoStepDischargeAndCashierWorkflowTest extends TestCase
         ]);
 
         // فتح شاشة كاشير العمليات
-        $response = $this->actingAs($this->cashier)->get(route('cashier.surgeries.pending'));
+        $response = $this->actingAs($this->cashier)->get(route('cashier.surgeries.index'));
         $response->assertStatus(200);
         $response->assertViewHas('inpatientSurgeries');
 
-        // التخريج النهائي من الكاشير
+        // محاولة التخريج قبل إذن المقيم يجب أن تُحظر
+        $blockedResponse = $this->actingAs($this->cashier)->post(route('cashier.surgeries.final-discharge', $surgery));
+        $blockedResponse->assertSessionHas('error');
+        $this->assertNull($surgery->fresh()->discharged_at);
+
+        // صدور إذن المقيم الطبي وتفريغ السرير
+        $surgery->update(['medical_discharged_at' => now()]);
+
+        // الآن ينجح التخريج النهائي من الكاشير
         $dischargeResponse = $this->actingAs($this->cashier)->post(route('cashier.surgeries.final-discharge', $surgery));
         $dischargeResponse->assertRedirect();
         $surgery->refresh();
