@@ -1,34 +1,67 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h2>
-                        <i class="fas fa-x-ray me-2"></i>
-                        {{ __("طلبات الأشعة للعمليات الجراحية") }}
-                    </h2>
-                    <a href="{{ route('staff.surgery-radiology-tests.selection') }}" class="btn btn-outline-light btn-sm mt-2">
-                        <i class="fas fa-list me-1"></i>
-                        {{ __("العمليات التي تحتاج اختيار أشعة") }}
+<div class="container-fluid py-3">
+    @php
+        $pendingSelectionCount = \App\Models\Surgery::whereIn('status', ['scheduled', 'waiting', 'in_progress'])
+            ->whereDoesntHave('radiologyTests', fn($q) => $q->whereNotNull('radiology_type_id'))
+            ->count();
+    @endphp
+
+    <!-- الرأس التنفيذي والزر البارز للعمليات التي تحتاج اختيار أشعة -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #e2e8f0 !important;">
+        <div class="card-body p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-4 d-flex align-items-center justify-content-center shadow-xs" 
+                         style="width: 52px; height: 52px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #fff;">
+                        <i class="fas fa-x-ray fa-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="fw-bold mb-1 text-slate-800" style="font-size: 1.35rem;">
+                            {{ __("طلبات الأشعة للعمليات الجراحية") }}
+                        </h3>
+                        <p class="text-muted small mb-0">
+                            {{ __("إدارة ومتابعة طلبات وفحوصات الأشعة والتصوير الطبي لمرضى صالات العمليات") }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- زر بارز جداً ومميز للعمليات التي تحتاج اختيار أشعة -->
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <a href="{{ route('staff.surgery-radiology-tests.selection') }}" 
+                       class="btn btn-primary rounded-pill px-4 py-2.5 fw-bold shadow-sm d-inline-flex align-items-center gap-2 text-white"
+                       style="background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%); border: none; font-size: 0.95rem;">
+                        <i class="fas fa-procedures fa-lg"></i>
+                        <span>{{ __("العمليات التي تحتاج اختيار أشعة") }}</span>
+                        @if($pendingSelectionCount > 0)
+                            <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1 font-monospace fw-bold shadow-xs">
+                                {{ $pendingSelectionCount }} {{ __('عملية') }}
+                            </span>
+                        @else
+                            <span class="badge bg-white bg-opacity-25 text-white rounded-pill px-2 py-0.5 small">0</span>
+                        @endif
+                        <i class="fas fa-arrow-left fa-xs ms-1"></i>
                     </a>
                 </div>
-                <div class="stats-summary">
-                    <span class="badge bg-info me-2">
-                        <i class="fas fa-clock me-1"></i>
-                        {{ $radiologyTests->where('status', 'pending')->count() }} {{ __('في الانتظار') }}
-                    </span>
-                    <span class="badge bg-success me-2">
-                        <i class="fas fa-check-circle me-1"></i>
-                        {{ $radiologyTests->where('status', 'completed')->count() }} {{ __('مكتمل') }}
-                    </span>
-                    <span class="badge bg-danger">
-                        <i class="fas fa-times-circle me-1"></i>
-                        {{ $radiologyTests->where('status', 'cancelled')->count() }} {{ __('ملغي') }}
-                    </span>
-                </div>
+            </div>
+
+            <hr class="my-3 text-muted opacity-25">
+
+            <!-- مؤشرات سريعة هادئة (بدون أحمر) -->
+            <div class="d-flex flex-wrap align-items-center gap-2.5">
+                <span class="badge bg-info-subtle text-info border border-info-subtle rounded-pill px-3 py-1.5 fw-semibold" style="font-size: 0.82rem;">
+                    <i class="fas fa-clock me-1"></i>
+                    {{ __('في الانتظار:') }} <strong class="font-monospace ms-1">{{ $radiologyTests->where('status', 'pending')->count() }}</strong>
+                </span>
+                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1.5 fw-semibold" style="font-size: 0.82rem;">
+                    <i class="fas fa-check-circle me-1"></i>
+                    {{ __('مكتمل:') }} <strong class="font-monospace ms-1">{{ $radiologyTests->where('status', 'completed')->count() }}</strong>
+                </span>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-3 py-1.5 fw-semibold" style="font-size: 0.82rem;">
+                    <i class="fas fa-ban me-1"></i>
+                    {{ __('ملغي:') }} <strong class="font-monospace ms-1">{{ $radiologyTests->where('status', 'cancelled')->count() }}</strong>
+                </span>
             </div>
         </div>
     </div>
@@ -121,7 +154,7 @@
                     </thead>
                     <tbody>
                         @foreach($radiologyTests as $index => $test)
-                        <tr class="test-row {{ $test->status == 'pending' ? 'table-warning' : ($test->status == 'completed' ? 'table-success' : 'table-danger') }}">
+                        <tr class="test-row">
                             <td class="text-center">{{ $loop->iteration }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
@@ -193,10 +226,19 @@
                                 </div>
                             </td>
                             <td class="text-center">
-                                <span class="badge bg-{{ $test->status_color }} fs-6">
-                                    <i class="fas {{ $test->status == 'pending' ? 'fa-clock' : ($test->status == 'completed' ? 'fa-check-circle' : 'fa-times-circle') }} me-1"></i>
-                                    {{ $test->status_text }}
-                                </span>
+                                @if($test->status === 'completed')
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 fw-bold">
+                                        <i class="fas fa-check-circle me-1"></i>{{ $test->status_text }}
+                                    </span>
+                                @elseif($test->status === 'pending')
+                                    <span class="badge bg-warning-subtle text-dark border border-warning rounded-pill px-2.5 py-1 fw-bold">
+                                        <i class="fas fa-clock me-1 text-warning"></i>{{ $test->status_text }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle rounded-pill px-2.5 py-1 fw-semibold">
+                                        <i class="fas fa-ban me-1"></i>{{ $test->status_text }}
+                                    </span>
+                                @endif
                             </td>
                             <td>
                                 <i class="fas fa-clock text-info me-1"></i>
