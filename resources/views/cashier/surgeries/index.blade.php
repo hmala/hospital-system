@@ -244,16 +244,19 @@
     <!-- جدول العمليات الموحد المباشر (Master Cashier Surgery Table) -->
     <div class="card border-0 shadow-xs rounded-4 overflow-hidden mb-4" style="background: #ffffff; border: 1px solid #e2e8f0 !important;">
         <div class="card-header bg-white py-3 px-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-3">
+            @php
+                $activeTabKey = request('tab', 'pending');
+            @endphp
             <ul class="nav nav-pills p-1.5 bg-light rounded-pill border" id="cashierSurgeryTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active rounded-pill fw-bold px-3.5 py-1.5 d-flex align-items-center gap-2" id="tab-pending-btn" data-bs-toggle="pill" data-bs-target="#tab-pending-pane" type="button" role="tab">
+                    <button class="nav-link {{ $activeTabKey === 'pending' ? 'active' : '' }} rounded-pill fw-bold px-3.5 py-1.5 d-flex align-items-center gap-2" id="tab-pending-btn" data-bs-toggle="pill" data-bs-target="#tab-pending-pane" type="button" role="tab">
                         <i class="fas fa-clock text-danger"></i>
                         <span>{{ __('قيد المحاسبة (المعلقة)') }}</span>
                         <span class="badge bg-danger rounded-pill px-2 py-0.5" id="visibleSurgeriesCount">{{ $flatSurgeries->count() }}</span>
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link rounded-pill fw-bold px-3.5 py-1.5 d-flex align-items-center gap-2" id="tab-inpatient-btn" data-bs-toggle="pill" data-bs-target="#tab-inpatient-pane" type="button" role="tab">
+                    <button class="nav-link {{ $activeTabKey === 'inpatient' ? 'active' : '' }} rounded-pill fw-bold px-3.5 py-1.5 d-flex align-items-center gap-2" id="tab-inpatient-btn" data-bs-toggle="pill" data-bs-target="#tab-inpatient-pane" type="button" role="tab">
                         <i class="fas fa-bed text-success"></i>
                         <span>{{ __('نزلاء الردهة المسددون (قيد الإقامة)') }}</span>
                         <span class="badge bg-success rounded-pill px-2 py-0.5">{{ isset($inpatientSurgeries) ? $inpatientSurgeries->count() : 0 }}</span>
@@ -274,7 +277,7 @@
         <div class="card-body p-0">
             <div class="tab-content" id="cashierSurgeryTabContent">
                 {{-- التبويب الأول: قيد المحاسبة (المعلقة) --}}
-                <div class="tab-pane fade show active" id="tab-pending-pane" role="tabpanel">
+                <div class="tab-pane fade {{ $activeTabKey === 'pending' ? 'show active' : '' }}" id="tab-pending-pane" role="tabpanel">
             @if($flatSurgeries && $flatSurgeries->count() > 0)
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 text-right" id="surgeriesMasterTable" style="direction: rtl;">
@@ -618,7 +621,7 @@
         {{-- نهاية التبويب الأول (المعلقة) --}}
 
         {{-- التبويب الثاني: نزلاء الردهة المسددون (قيد الإقامة) --}}
-        <div class="tab-pane fade" id="tab-inpatient-pane" role="tabpanel">
+        <div class="tab-pane fade {{ $activeTabKey === 'inpatient' ? 'show active' : '' }}" id="tab-inpatient-pane" role="tabpanel">
             @if(isset($inpatientSurgeries) && $inpatientSurgeries->count() > 0)
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0 text-right" style="direction: rtl;">
@@ -641,8 +644,9 @@
                                     $inpRoom = $inpatient->room;
                                     $inpStay = $inpatient->calculateStayDetails();
                                     $inpPaidTotal = (float)($inpatient->surgery_fee_paid_amount ?? 0) + (float)($inpatient->room_fee_paid_amount ?? 0) + (float)$inpatient->extraServices->where('payment_status', 'paid')->sum('total_amount');
+                                    $isHighlighted = (string)request('highlight') === (string)$inpatient->id;
                                 @endphp
-                                <tr class="inpatient-table-row">
+                                <tr class="inpatient-table-row {{ $isHighlighted ? 'table-success' : '' }}" style="{{ $isHighlighted ? 'border-right: 4px solid #10b981 !important;' : '' }}">
                                     <td class="text-center font-monospace fw-bold text-muted">
                                         #{{ $inpatient->id }}
                                     </td>

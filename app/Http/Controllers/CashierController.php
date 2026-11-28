@@ -3446,8 +3446,11 @@ class CashierController extends Controller
             'consultations.doctor.user',
             'consultations.doctor.department',
         ])
-            ->where($pendingSurgeryCondition)
             ->whereNull('discharged_at')
+            ->where(function ($q) use ($pendingSurgeryCondition) {
+                $q->where($pendingSurgeryCondition)
+                    ->orWhereIn('status', ['scheduled', 'waiting', 'in_progress', 'completed']);
+            })
             ->orderBy('scheduled_date', 'desc')
             ->get();
 
@@ -3526,7 +3529,7 @@ class CashierController extends Controller
             }
         }
 
-        UserActivityLogger::log(
+        \App\Services\UserActivityLogger::log(
             user: $user,
             action: 'surgery_final_cashier_discharge',
             module: 'cashier',
@@ -4089,9 +4092,9 @@ class CashierController extends Controller
         $hasPendingConsultations = ! $isCancelled && $surgery->consultations()->where('payment_status', '!=', 'paid')->where('status', '!=', 'cancelled')->exists();
         $isPricePendingReview = ! $isCancelled && $surgery->billing_status === 'pending_review';
 
-        if (! $isCancelled && ! $isPricePendingReview && $surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasExcessRoomFee && ! $hasExcessSurgeryFee && ! $hasRemainingSurgeryFee && ! $hasPendingExtraServices && ! $hasPendingLab && ! $hasPendingRad && ! $hasPendingConsultations) {
+        if ($surgery->discharged_at) {
             return redirect()->route('cashier.surgeries.index')
-                ->with('warning', 'هذه العملية تم دفعها مسبقاً بالكامل');
+                ->with('warning', 'تم تخريج المريض نهائياً وبراءة ذمته مسبقاً ولا يمكن فتح نموذج الدفع.');
         }
 
         $surgery->load([
@@ -4284,8 +4287,8 @@ class CashierController extends Controller
         ]);
         $surgery->syncPaymentStatus();
 
-        if (class_exists(UserActivityLogger::class)) {
-            UserActivityLogger::log(
+        if (class_exists(\App\Services\UserActivityLogger::class)) {
+            \App\Services\UserActivityLogger::log(
                 'cancel',
                 'surgery',
                 "إلغاء طلب استشارة سريرية (د. {$doctorName}) للعملية #{$surgery->id} من الكاشير بواسطة {$user->name}",
@@ -4470,9 +4473,9 @@ class CashierController extends Controller
         $hasPendingRad = $surgery->radiologyTests()->where('payment_status', '!=', 'paid')->exists();
         $hasPendingConsultations = $surgery->consultations()->where('payment_status', '!=', 'paid')->exists();
 
-        if ($surgery->payment_status === 'paid' && ! $hasRemainingRoomFee && ! $hasPendingExtraServices && ! $hasPendingLab && ! $hasPendingRad && ! $hasPendingConsultations) {
+        if ($surgery->discharged_at) {
             return redirect()->route('cashier.surgeries.index')
-                ->with('error', 'هذه العملية تم دفعها مسبقاً بالكامل');
+                ->with('error', 'تم تخريج المريض نهائياً وبراءة ذمته مسبقاً.');
         }
 
         // determine if user marked cost as inclusive
@@ -5188,7 +5191,9 @@ class CashierController extends Controller
                 : 'تم تسجيل الدفع الجزئي بنجاح! المتبقي سيُدفع لاحقاً.';
             $successMessage .= ' رقم الإيصال: '.$payment->receipt_number;
 
-            return redirect()->route('cashier.surgeries.index')
+            $targetTab = $allPaid ? 'inpatient' : 'pending';
+
+            return redirect()->route('cashier.surgeries.index', ['tab' => $targetTab, 'highlight' => $surgery->id])
                 ->with('success', $successMessage)
                 ->with('payment_id', $payment->id);
 
