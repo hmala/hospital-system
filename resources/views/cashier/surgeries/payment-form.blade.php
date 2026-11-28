@@ -693,24 +693,24 @@
                     @endif
 
                     @if(!$isCancelled)
-                    <!-- صندوق إضافة الخدمات الإضافية والفندقية الذكي (مستوحى من محرك ICD-10) -->
-                    <div class="card border border-warning border-opacity-50 rounded-4 mb-4 shadow-sm bg-white overflow-visible position-relative" style="z-index: 1050;">
-                        <div class="card-header bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-2.5 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <!-- صندوق إضافة الخدمات الإضافية والفندقية الذكي -->
+                    <div class="card border border-warning border-opacity-75 rounded-4 mb-4 shadow-sm bg-white overflow-visible position-relative" style="z-index: 1050;">
+                        <div class="card-header bg-gradient bg-warning bg-opacity-10 border-bottom border-warning border-opacity-25 py-2.5 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <h6 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
-                                <span class="badge bg-warning text-dark p-2 rounded-circle">
+                                <span class="badge bg-warning text-dark p-2 rounded-circle shadow-xs">
                                     <i class="fas fa-concierge-bell"></i>
                                 </span>
-                                <span>{{ __('إضافة خدمات إضافية وفندقية للعملية الجراحية (تخطيط قلب، مرافق، تزيين، طبلة، غرامات...)') }}</span>
+                                <span>{{ __('إضافة خدمات إضافية وفندقية ومستلزمات للعملية الجراحية') }}</span>
                             </h6>
-                            <span class="badge bg-warning bg-opacity-20 text-dark border border-warning border-opacity-50 px-2.5 py-1 rounded-pill small">
-                                <i class="fas fa-magic me-1"></i> {{ __('تصنيف ذكي وبحث فوري مثل ICD-10') }}
+                            <span class="badge bg-white text-dark border border-warning border-opacity-50 px-2.5 py-1 rounded-pill small shadow-xs">
+                                <i class="fas fa-sparkles text-warning me-1"></i> {{ __('دليل الخدمات المعتمد والبحث الذكي') }}
                             </span>
                         </div>
                         <div class="card-body p-3">
                             <!-- شرائح التصفية السريعة للفئات -->
-                            <div class="d-flex flex-wrap align-items-center gap-1.5 mb-2.5">
-                                <span class="small text-muted fw-bold me-1"><i class="fas fa-filter me-1 text-warning"></i> {{ __('تصنيف سريع:') }}</span>
-                                <button type="button" class="btn btn-sm btn-warning fw-bold rounded-pill px-2.5 py-0.5 extra-cat-filter-btn active" data-category="all" style="font-size: 11px;">
+                            <div class="d-flex flex-wrap align-items-center gap-1.5 mb-3 p-2 bg-light rounded-3 border border-secondary border-opacity-10">
+                                <span class="small text-muted fw-bold me-1"><i class="fas fa-filter me-1 text-warning"></i> {{ __('تصنيف الخدمات:') }}</span>
+                                <button type="button" class="btn btn-sm btn-warning fw-bold rounded-pill px-2.5 py-0.5 extra-cat-filter-btn active shadow-xs" data-category="all" style="font-size: 11px;">
                                     {{ __('الكل') }} ({{ $availableExtraServices->count() }})
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2.5 py-0.5 extra-cat-filter-btn" data-category="medical" style="font-size: 11px;">
@@ -733,23 +733,19 @@
                             <form action="{{ route('cashier.surgeries.extra-services.add', $surgery) }}" method="POST" id="addExtraServiceForm">
                                 @csrf
                                 <div class="row g-2 align-items-end">
-                                    <div class="col-md-5">
-                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('اسم الخدمة الإضافية (ابحث أو اختر أو اكتب خدمة جديدة) *') }}</label>
+                                    <div class="col-lg-4 col-md-5">
+                                        <label class="form-label small text-dark mb-1 fw-bold">
+                                            <i class="fas fa-tag text-warning me-1"></i>
+                                            {{ __('اسم الخدمة الإضافية') }} <span class="text-danger">*</span>
+                                        </label>
                                         <div class="position-relative extra-service-autocomplete-wrapper">
                                             <div class="input-group input-group-sm shadow-xs">
                                                 <span class="input-group-text bg-white border-warning text-warning"><i class="fas fa-search" id="extra-service-search-icon"></i></span>
-                                                <input type="text" class="form-control form-control-sm fw-bold border-warning" id="service_name_input" name="service_name" list="extra_services_catalog_list" placeholder="{{ __('انقر لاختيار خدمة أو اكتب للبحث الذكي...') }}" required autocomplete="off">
+                                                <input type="text" class="form-control form-control-sm fw-bold border-warning" id="service_name_input" name="service_name" placeholder="{{ __('انقر لاختيار خدمة أو اكتب للبحث...') }}" required autocomplete="off">
                                                 <button type="button" class="btn btn-outline-secondary px-2 d-none" id="btn-clear-extra-service" title="{{ __('مسح') }}">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
-                                            <datalist id="extra_services_catalog_list">
-                                                @foreach($availableExtraServices as $asrv)
-                                                    <option value="{{ $asrv->name }}">
-                                                        {{ $asrv->name }} ({{ number_format($asrv->default_price, 0) }} د.ع)
-                                                    </option>
-                                                @endforeach
-                                            </datalist>
                                             <input type="hidden" name="service_id" id="service_id_hidden">
                                             <input type="hidden" name="service_category" id="service_category_hidden" value="general">
 
@@ -757,24 +753,34 @@
                                             <div id="extra_services_dropdown" class="extra-services-autocomplete-dropdown shadow-lg d-none"></div>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('السعر المعتمد للوحدة (IQD) *') }}</label>
+                                    <div class="col-lg-3 col-md-3 col-sm-6">
+                                        <label class="form-label small text-dark mb-1 fw-bold">
+                                            <i class="fas fa-coins text-success me-1"></i>
+                                            {{ __('السعر للوحدة (IQD)') }} <span class="text-danger">*</span>
+                                        </label>
                                         <div class="input-group input-group-sm shadow-xs">
                                             <span class="input-group-text bg-light text-success fw-bold">IQD</span>
-                                            <input type="number" class="form-control form-control-sm fw-bold text-success fs-6" id="service_price_input" name="service_price" min="0" step="any" placeholder="0" required>
+                                            <input type="number" class="form-control form-control-sm fw-bold text-success fs-6 text-end" id="service_price_input" name="service_price" min="0" step="any" placeholder="0" required>
                                         </div>
                                     </div>
-                                    <div class="col-md-1">
-                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('الكمية') }}</label>
-                                        <input type="number" class="form-control form-control-sm text-center fw-bold" id="service_qty_input" name="service_quantity" min="1" value="1">
+                                    <div class="col-lg-1 col-md-2 col-sm-6">
+                                        <label class="form-label small text-dark mb-1 fw-bold text-center d-block">
+                                            <i class="fas fa-cubes text-secondary me-1"></i>
+                                            {{ __('العدد') }}
+                                        </label>
+                                        <input type="number" class="form-control form-control-sm text-center fw-bold shadow-xs" id="service_qty_input" name="service_quantity" min="1" value="1">
                                     </div>
-                                    <div class="col-md-2">
-                                        <label class="form-label small text-muted mb-1 fw-bold">{{ __('ملاحظات (اختياري)') }}</label>
-                                        <input type="text" class="form-control form-control-sm" name="service_notes" placeholder="{{ __('ملاحظة أو تفصيل...') }}">
+                                    <div class="col-lg-2 col-md-8 col-sm-8">
+                                        <label class="form-label small text-muted mb-1 fw-bold">
+                                            <i class="fas fa-comment-alt text-muted me-1"></i>
+                                            {{ __('ملاحظات أو تفاصيل') }}
+                                        </label>
+                                        <input type="text" class="form-control form-control-sm shadow-xs" name="service_notes" placeholder="{{ __('تفاصيل اختيارية...') }}">
                                     </div>
-                                    <div class="col-md-1">
-                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs" id="btnAddExtraService">
-                                            <i class="fas fa-plus me-1"></i> {{ __('إضافة') }}
+                                    <div class="col-lg-2 col-md-4 col-sm-4">
+                                        <button type="submit" class="btn btn-warning btn-sm w-100 fw-bold text-dark shadow-xs d-flex align-items-center justify-content-center gap-1 py-1.5" id="btnAddExtraService">
+                                            <i class="fas fa-plus-circle"></i>
+                                            <span>{{ __('إضافة الخدمة') }}</span>
                                         </button>
                                     </div>
                                 </div>
